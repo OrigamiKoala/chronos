@@ -109,9 +109,9 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
             <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Chemistry Difficulty Scale Reference:</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
-              <div><strong>1:</strong> Simple Honors/early AP chem</div>
-              <div><strong>3:</strong> Harder problems on ACS Local Exam</div>
-              <div><strong>5:</strong> Harder problems on USNCO Nationals</div>
+              <div><strong>1:</strong> Honors and early AP Chem</div>
+              <div><strong>3:</strong> Harder problems on ACS LSE</div>
+              <div><strong>5:</strong> Harder problems on USNCO</div>
               <div><strong>10:</strong> Hardest problem on IChO</div>
             </div>
           </div>
