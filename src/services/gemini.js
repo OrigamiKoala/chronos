@@ -44,6 +44,7 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
     - 3: harder problems on the ACS Local Exam
     - 5: harder problems on the USNCO Nationals
     - 10: hardest problem on the IChO
+    For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid), and represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\text{H}_2\text{SO}_4$, $\text{Fe}^{3+}$).
     
     The output must be pure JSON with the following schema:
     {
@@ -115,6 +116,7 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
     - 3: harder problems on the ACS Local Exam
     - 5: harder problems on the USNCO Nationals
     - 10: hardest problem on the IChO
+    For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid), and represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\text{H}_2\text{SO}_4$, $\text{Fe}^{3+}$).
     
     The output must be a pure JSON array containing exactly ${count} objects, with the following schema for each object:
     {

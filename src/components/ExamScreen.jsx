@@ -43,6 +43,12 @@ export function ExamScreen({ config, onFinish }) {
   }, []); // Initial load
 
   useEffect(() => {
+    if (!loading && problem && window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise();
+    }
+  }, [loading, problem]);
+
+  useEffect(() => {
     if (loading || !problem) return;
 
     timerRef.current = setInterval(() => {

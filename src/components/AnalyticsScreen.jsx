@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Activity, CheckCircle2, XCircle, TrendingUp, Award } from 'lucide-react';
 
 const getSubjectLevelName = (subject, rating) => {
@@ -37,6 +38,12 @@ export function AnalyticsScreen({ results: resultsObj, onRestart }) {
 
   // Identify Panic Points (wrong answer, time spent > 1.5x average)
   const panicPoints = results.filter(r => !r.isCorrect && r.timeSpent > (avgTime * 1.5));
+
+  useEffect(() => {
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise();
+    }
+  }, [resultsObj]);
 
   return (
     <div className="glass-panel animate-fade-in" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
