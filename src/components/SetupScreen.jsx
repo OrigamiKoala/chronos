@@ -3,7 +3,7 @@ import { Settings, Play, ShieldAlert, Timer } from 'lucide-react';
 
 export function SetupScreen({ onStart }) {
   const [config, setConfig] = useState({
-    subject: 'Math and Logic',
+    subject: 'Math',
     startingDifficulty: 5,
     numQuestions: 5,
     stressMode: 'dynamic', // 'none', 'hidden', 'strict', 'dynamic'
@@ -28,13 +28,13 @@ export function SetupScreen({ onStart }) {
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        
+
         <div>
           <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Subject</label>
           <select name="subject" value={config.subject} onChange={handleChange} className="input-field">
-            <option value="Math and Logic">Math and Logic</option>
+            <option value="Math">Math</option>
             <option value="Physics">Physics</option>
-            <option value="Computer Science">Computer Science</option>
+            <option value="Chemistry">Chemistry</option>
           </select>
         </div>
 
@@ -49,12 +49,49 @@ export function SetupScreen({ onStart }) {
           </div>
         </div>
 
+        {config.subject === 'Math' && (
+          <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
+            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Math Difficulty Scale Reference:</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+              <div><strong>1:</strong> MATHCOUNTS school/chapter</div>
+              <div><strong>5:</strong> AMC 12 question 20-ish</div>
+              <div><strong>8:</strong> Average USAJMO problem</div>
+              <div><strong>10:</strong> Hardest IMO problems</div>
+            </div>
+          </div>
+        )}
+
+        {config.subject === 'Physics' && (
+          <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
+            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Physics Difficulty Scale Reference:</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+              <div><strong>1:</strong> Introductory level</div>
+              <div><strong>3:</strong> AP Physics C level</div>
+              <div><strong>5:</strong> F=ma level</div>
+              <div><strong>8:</strong> USAPhO level</div>
+              <div><strong>10:</strong> Hardest problem on IPhO</div>
+            </div>
+          </div>
+        )}
+
+        {config.subject === 'Chemistry' && (
+          <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
+            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Chemistry Difficulty Scale Reference:</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+              <div><strong>1:</strong> Simple Honors/early AP chem</div>
+              <div><strong>3:</strong> Harder problems on ACS Local Exam</div>
+              <div><strong>5:</strong> Harder problems on USNCO Nationals</div>
+              <div><strong>10:</strong> Hardest problem on IChO</div>
+            </div>
+          </div>
+        )}
+
         <div style={{ padding: '1.5rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger-glass)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--danger)' }}>
             <ShieldAlert size={20} />
             <h3 style={{ margin: 0 }}>Stress Factors</h3>
           </div>
-          
+
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Stress Mode</label>
             <select name="stressMode" value={config.stressMode} onChange={handleChange} className="input-field">

@@ -1,11 +1,12 @@
+/* eslint-disable */
 import { useState, useEffect, useRef } from 'react';
-import { generateProblem } from '../services/gemini';
+import { generateProblems } from '../services/gemini';
 import { Loader2, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 
 export function ExamScreen({ config, onFinish }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentDifficulty, setCurrentDifficulty] = useState(config.startingDifficulty);
-  const [problem, setProblem] = useState(null);
+  const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(config.timeLimitPerQuestion);
   const [answer, setAnswer] = useState('');
@@ -15,25 +16,30 @@ export function ExamScreen({ config, onFinish }) {
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
 
-  const fetchNextProblem = async (difficulty) => {
+  const problem = problems[currentQuestionIndex];
+
+  const fetchProblems = async () => {
     setLoading(true);
     setError(null);
     try {
-      const newProblem = await generateProblem(difficulty, config.subject);
-      setProblem(newProblem);
+      const generated = await generateProblems(config.numQuestions, config.startingDifficulty, config.subject);
+      setProblems(generated);
+      if (generated && generated.length > 0) {
+        setCurrentDifficulty(generated[0].difficulty || config.startingDifficulty);
+      }
       setTimeLeft(config.timeLimitPerQuestion);
       setAnswer('');
       startTimeRef.current = Date.now();
     } catch (err) {
-      setError("Failed to fetch problem. Retrying...");
-      setTimeout(() => fetchNextProblem(difficulty), 2000);
+      setError("Failed to fetch problems. Retrying...");
+      setTimeout(() => fetchProblems(), 2000);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchNextProblem(currentDifficulty);
+    fetchProblems();
   }, []); // Initial load
 
   useEffect(() => {
@@ -82,7 +88,7 @@ export function ExamScreen({ config, onFinish }) {
       isCorrect,
       timeSpent,
       timeOut: isTimeout,
-      difficultyAtTime: currentDifficulty
+      difficultyAtTime: problem.difficulty || currentDifficulty
     };
 
     const updatedResults = [...results, questionResult];
@@ -91,9 +97,16 @@ export function ExamScreen({ config, onFinish }) {
     if (currentQuestionIndex + 1 >= config.numQuestions) {
       onFinish(updatedResults);
     } else {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setCurrentDifficulty(nextDifficulty);
-      fetchNextProblem(nextDifficulty);
+      const nextIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(nextIndex);
+      if (problems[nextIndex]) {
+        setCurrentDifficulty(problems[nextIndex].difficulty || nextDifficulty);
+      } else {
+        setCurrentDifficulty(nextDifficulty);
+      }
+      setTimeLeft(config.timeLimitPerQuestion);
+      setAnswer('');
+      startTimeRef.current = Date.now();
     }
   };
 
@@ -101,8 +114,8 @@ export function ExamScreen({ config, onFinish }) {
     return (
       <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
-        <h3>Generating Problem...</h3>
-        <p style={{ color: 'var(--text-secondary)' }}>Difficulty Level: {currentDifficulty}/10</p>
+        <h3>Generating Problems...</h3>
+        <p style={{ color: 'var(--text-secondary)' }}>Preparing exam with {config.numQuestions} questions</p>
         {error && <p style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</p>}
       </div>
     );
