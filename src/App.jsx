@@ -76,7 +76,7 @@ function App() {
       <header className="app-header">
         <div className="logo text-gradient">
           <BrainCircuit size={32} color="var(--accent-primary)" />
-          Mock-Exam Stress Sandbox
+          Chronos Bot
         </div>
       </header>
 
