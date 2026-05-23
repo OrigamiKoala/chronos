@@ -1,7 +1,33 @@
 import { useState } from 'react';
 import { Settings, Play, ShieldAlert, Timer } from 'lucide-react';
 
-export function SetupScreen({ onStart }) {
+const getSubjectLevelName = (subject, rating) => {
+  if (subject === 'Math') {
+    if (rating >= 3000) return 'IMO Level';
+    if (rating >= 2500) return 'USAMO Level';
+    if (rating >= 1500) return 'AIME Level';
+    if (rating >= 1000) return 'Intermediate AMC 10/12 Level';
+    return 'Basic School Math Level';
+  } else if (subject === 'Chemistry') {
+    if (rating >= 3000) return 'IMChO Level';
+    if (rating >= 2500) return 'IChO Level';
+    if (rating >= 2000) return 'Camp Level';
+    if (rating >= 1500) return 'USNCO Honors Level';
+    if (rating >= 1000) return 'USNCO Level';
+    if (rating >= 500) return 'AP Chem / ACS Local level';
+    return 'Basic Honors/AP Chem Level';
+  } else if (subject === 'Physics') {
+    if (rating >= 3000) return 'IPhO Level';
+    if (rating >= 2500) return 'Camp Level';
+    if (rating >= 2000) return 'USAPhO Level';
+    if (rating >= 1000) return 'F=ma Level';
+    if (rating >= 500) return 'AP Physics Level';
+    return 'Basic HS Physics Level';
+  }
+  return 'Novice';
+};
+
+export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chemistry: 100 } }) {
   const [config, setConfig] = useState({
     subject: 'Math',
     startingDifficulty: 5,
@@ -30,7 +56,12 @@ export function SetupScreen({ onStart }) {
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Subject</label>
+          <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+            <span>Subject</span>
+            <span style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>
+              Rating: {ratings[config.subject] || 100} ({getSubjectLevelName(config.subject, ratings[config.subject] || 100)})
+            </span>
+          </label>
           <select name="subject" value={config.subject} onChange={handleChange} className="input-field">
             <option value="Math">Math</option>
             <option value="Physics">Physics</option>

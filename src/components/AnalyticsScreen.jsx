@@ -1,6 +1,33 @@
-import { BarChart, Activity, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Activity, CheckCircle2, XCircle, TrendingUp, Award } from 'lucide-react';
 
-export function AnalyticsScreen({ results, onRestart }) {
+const getSubjectLevelName = (subject, rating) => {
+  if (subject === 'Math') {
+    if (rating >= 3000) return 'IMO Level';
+    if (rating >= 2500) return 'USAMO Level';
+    if (rating >= 1500) return 'AIME Level';
+    if (rating >= 1000) return 'Intermediate AMC 10/12 Level';
+    return 'Basic School Math Level';
+  } else if (subject === 'Chemistry') {
+    if (rating >= 3000) return 'IMChO Level';
+    if (rating >= 2500) return 'IChO Level';
+    if (rating >= 2000) return 'Camp Level';
+    if (rating >= 1500) return 'USNCO Honors Level';
+    if (rating >= 1000) return 'USNCO Level';
+    if (rating >= 500) return 'AP Chem / ACS Local level';
+    return 'Basic Honors/AP Chem Level';
+  } else if (subject === 'Physics') {
+    if (rating >= 3000) return 'IPhO Level';
+    if (rating >= 2500) return 'Camp Level';
+    if (rating >= 2000) return 'USAPhO Level';
+    if (rating >= 1000) return 'F=ma Level';
+    if (rating >= 500) return 'AP Physics Level';
+    return 'Basic HS Physics Level';
+  }
+  return 'Novice';
+};
+
+export function AnalyticsScreen({ results: resultsObj, onRestart }) {
+  const { results, subject, oldRating, newRating, ratingChange } = resultsObj;
   const totalQuestions = results.length;
   const correctAnswers = results.filter(r => r.isCorrect).length;
   const accuracy = Math.round((correctAnswers / totalQuestions) * 100) || 0;
@@ -19,29 +46,32 @@ export function AnalyticsScreen({ results, onRestart }) {
         <p style={{ color: 'var(--text-secondary)' }}>Review your performance and identify stress bottlenecks.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem', marginBottom: '3rem' }}>
         
-        <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
-          <Activity size={32} color="var(--accent-primary)" style={{ margin: '0 auto 1rem' }} />
-          <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Accuracy</h4>
-          <span style={{ fontSize: '2rem', fontWeight: '700', color: accuracy > 70 ? 'var(--success)' : accuracy > 40 ? 'var(--warning)' : 'var(--danger)' }}>
+        <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
+          <Activity size={28} color="var(--accent-primary)" style={{ margin: '0 auto 0.75rem' }} />
+          <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.9rem' }}>Accuracy</h4>
+          <span style={{ fontSize: '1.75rem', fontWeight: '700', color: accuracy > 70 ? 'var(--success)' : accuracy > 40 ? 'var(--warning)' : 'var(--danger)' }}>
             {accuracy}%
           </span>
         </div>
 
-        <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
-          <Clock size={32} color="var(--accent-secondary)" style={{ margin: '0 auto 1rem' }} />
-          <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Avg Time</h4>
-          <span style={{ fontSize: '2rem', fontWeight: '700' }}>
-            {avgTime}s <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>/ q</span>
+        <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
+          <TrendingUp size={28} color={ratingChange >= 0 ? 'var(--success)' : 'var(--danger)'} style={{ margin: '0 auto 0.75rem' }} />
+          <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.9rem' }}>Rating Change</h4>
+          <span style={{ fontSize: '1.75rem', fontWeight: '700', color: ratingChange >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+            {ratingChange >= 0 ? `+${ratingChange}` : ratingChange}
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: '0.25rem', display: 'block' }}>
+              ({oldRating} → {newRating})
+            </span>
           </span>
         </div>
 
-        <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
-          <BarChart size={32} color="var(--text-primary)" style={{ margin: '0 auto 1rem' }} />
-          <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Final Difficulty</h4>
-          <span style={{ fontSize: '2rem', fontWeight: '700' }}>
-            Level {results[results.length - 1]?.difficultyAtTime || 0}
+        <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center', background: 'var(--bg-tertiary)', gridColumn: 'span 2' }}>
+          <Award size={28} color="var(--accent-secondary)" style={{ margin: '0 auto 0.75rem' }} />
+          <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.9rem' }}>Current {subject} Level</h4>
+          <span style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+            {getSubjectLevelName(subject, newRating)}
           </span>
         </div>
       </div>
