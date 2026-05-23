@@ -7,7 +7,7 @@ const getSubjectLevelName = (subject, rating) => {
     if (rating >= 2500) return 'USAMO Level';
     if (rating >= 1500) return 'AIME Level';
     if (rating >= 1000) return 'Intermediate AMC 10/12 Level';
-    return 'Basic School Math Level';
+    return 'School Math Level';
   } else if (subject === 'Chemistry') {
     if (rating >= 3000) return 'IMChO Level';
     if (rating >= 2500) return 'IChO Level';
@@ -15,14 +15,14 @@ const getSubjectLevelName = (subject, rating) => {
     if (rating >= 1500) return 'USNCO Honors Level';
     if (rating >= 1000) return 'USNCO Level';
     if (rating >= 500) return 'AP Chem / ACS Local level';
-    return 'Basic Honors/AP Chem Level';
+    return 'Honors/AP Chem Level';
   } else if (subject === 'Physics') {
     if (rating >= 3000) return 'IPhO Level';
     if (rating >= 2500) return 'Camp Level';
     if (rating >= 2000) return 'USAPhO Level';
     if (rating >= 1000) return 'F=ma Level';
     if (rating >= 500) return 'AP Physics Level';
-    return 'Basic HS Physics Level';
+    return 'HS Physics Level';
   }
   return 'Novice';
 };

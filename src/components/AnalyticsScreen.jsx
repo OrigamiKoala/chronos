@@ -7,7 +7,7 @@ const getSubjectLevelName = (subject, rating) => {
     if (rating >= 2500) return 'USAMO Level';
     if (rating >= 1500) return 'AIME Level';
     if (rating >= 1000) return 'Intermediate AMC 10/12 Level';
-    return 'Basic School Math Level';
+    return 'School Math Level';
   } else if (subject === 'Chemistry') {
     if (rating >= 3000) return 'IMChO Level';
     if (rating >= 2500) return 'IChO Level';
@@ -15,14 +15,14 @@ const getSubjectLevelName = (subject, rating) => {
     if (rating >= 1500) return 'USNCO Honors Level';
     if (rating >= 1000) return 'USNCO Level';
     if (rating >= 500) return 'AP Chem / ACS Local level';
-    return 'Basic Honors/AP Chem Level';
+    return 'Honors/AP Chem Level';
   } else if (subject === 'Physics') {
     if (rating >= 3000) return 'IPhO Level';
     if (rating >= 2500) return 'Camp Level';
     if (rating >= 2000) return 'USAPhO Level';
     if (rating >= 1000) return 'F=ma Level';
     if (rating >= 500) return 'AP Physics Level';
-    return 'Basic HS Physics Level';
+    return 'HS Physics Level';
   }
   return 'Novice';
 };
@@ -32,7 +32,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart }) {
   const totalQuestions = results.length;
   const correctAnswers = results.filter(r => r.isCorrect).length;
   const accuracy = Math.round((correctAnswers / totalQuestions) * 100) || 0;
-  
+
   const totalTime = results.reduce((acc, curr) => acc + curr.timeSpent, 0);
   const avgTime = Math.round(totalTime / totalQuestions) || 0;
 
@@ -47,14 +47,14 @@ export function AnalyticsScreen({ results: resultsObj, onRestart }) {
 
   return (
     <div className="glass-panel animate-fade-in" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      
+
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
         <h2 className="text-gradient" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Session Complete</h2>
         <p style={{ color: 'var(--text-secondary)' }}>Review your performance and identify stress bottlenecks.</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem', marginBottom: '3rem' }}>
-        
+
         <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
           <Activity size={28} color="var(--accent-primary)" style={{ margin: '0 auto 0.75rem' }} />
           <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.9rem' }}>Accuracy</h4>
@@ -94,7 +94,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart }) {
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {panicPoints.map((p, i) => (
               <li key={i} style={{ background: 'var(--bg-primary)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem' }}>
-                <strong>Q:</strong> {p.question} <br/>
+                <strong>Q:</strong> {p.question} <br />
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Time Spent: {p.timeSpent}s (Avg: {avgTime}s)</span>
               </li>
             ))}
@@ -114,7 +114,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart }) {
                 </span>
               </div>
               <p style={{ marginBottom: '1rem' }}>{r.question}</p>
-              
+
               <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem' }}>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Your Answer: </span>
