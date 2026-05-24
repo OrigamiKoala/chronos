@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       FORMAT("Topic: %s (Accuracy: %d%%)", sub_category, CAST(accuracy_rate * 100 AS INT64)), 
       "; "
     ) AS weaknesses
-  FROM \`your_project.your_dataset.user_topic_mastery\`
+  FROM \`chronos-stress-sandbox.chronos_users.user_topic_mastery\`
   WHERE accuracy_rate < 0.65 AND user_id = @targetUserId
   GROUP BY user_id
 )
@@ -37,7 +37,7 @@ SELECT
   ml_generate_text_result AS ai_response
 FROM
   ML.GENERATE_TEXT(
-    MODEL \`your_project.your_dataset.gemini_pro_model\`,
+    MODEL \`chronos-stress-sandbox.chronos_users.gemini_pro_model\`,
     (
       SELECT 
         CONCAT(
