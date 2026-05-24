@@ -8,13 +8,16 @@ export function ExamScreen({ config, onFinish }) {
   const [currentDifficulty, setCurrentDifficulty] = useState(config.startingDifficulty);
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(config.timeLimitPerQuestion);
-  const [answer, setAnswer] = useState('');
+  const [questionTimesLeft, setQuestionTimesLeft] = useState(() => 
+    Array(config.numQuestions).fill(config.timeLimitPerQuestion)
+  );
+  const [answers, setAnswers] = useState(() => 
+    Array(config.numQuestions).fill('')
+  );
   const [results, setResults] = useState([]);
   const [error, setError] = useState(null);
 
   const timerRef = useRef(null);
-  const startTimeRef = useRef(null);
 
   const problem = problems[currentQuestionIndex];
 
@@ -32,22 +35,17 @@ export function ExamScreen({ config, onFinish }) {
         config.startingDifficulty,
         config.subject,
         config.username || 'default_user',
-        // onQuestion callback — fired for each question the instant it arrives
         (question, index) => {
           setProblems(prev => [...prev, question]);
 
           if (!firstReceived) {
             firstReceived = true;
             setCurrentDifficulty(question.difficulty || config.startingDifficulty);
-            setTimeLeft(config.timeLimitPerQuestion);
-            setAnswer('');
-            startTimeRef.current = Date.now();
             setLoading(false);
           }
         }
       );
 
-      // Final reconciliation — set the canonical complete array
       if (generated && generated.length > 0) {
         setProblems(generated);
       }
@@ -55,50 +53,56 @@ export function ExamScreen({ config, onFinish }) {
       setError("Failed to fetch problems. Retrying...");
       setTimeout(() => fetchProblems(), 2000);
     } finally {
-      // Safety: clear loading even if zero questions arrived (e.g. empty response)
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchProblems();
-  }, []); // Initial load
+  }, []);
 
   useEffect(() => {
     if (!loading && problem && window.MathJax && window.MathJax.typesetPromise) {
       window.MathJax.typesetPromise();
     }
-  }, [loading, problem]);
+  }, [loading, currentQuestionIndex, problem]);
 
   useEffect(() => {
     if (loading || !problem) return;
 
+    const timeForThisQuestion = questionTimesLeft[currentQuestionIndex];
+    if (timeForThisQuestion <= 0) return;
+
     timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
+      setQuestionTimesLeft((prev) => {
+        const next = [...prev];
+        const currentVal = next[currentQuestionIndex];
+        if (currentVal <= 1) {
           clearInterval(timerRef.current);
           handleTimeUp();
-          return 0;
+          next[currentQuestionIndex] = 0;
+        } else {
+          next[currentQuestionIndex] = currentVal - 1;
         }
-        return prev - 1;
+        return next;
       });
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [loading, problem]);
+  }, [loading, currentQuestionIndex, problem]);
 
   const handleTimeUp = () => {
     if (config.stressMode === 'strict') {
-      submitAnswer(true); // Auto submit on timeout
+      submitStrictAnswer(true);
     }
   };
 
-  const submitAnswer = (isTimeout = false) => {
+  const submitStrictAnswer = (isTimeout = false) => {
     clearInterval(timerRef.current);
-    const timeSpent = Math.floor((Date.now() - startTimeRef.current) / 1000);
-    const isCorrect = !isTimeout && answer.trim().toLowerCase() === problem.answer.trim().toLowerCase();
+    const activeAnswer = answers[currentQuestionIndex] || '';
+    const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[currentQuestionIndex];
+    const isCorrect = !isTimeout && activeAnswer.trim().toLowerCase() === problem.answer.trim().toLowerCase();
 
-    // Scaling Logic
     let nextDifficulty = currentDifficulty;
     if (isCorrect) {
       if (timeSpent < config.timeLimitPerQuestion / 2 && currentDifficulty < 10) {
@@ -112,7 +116,7 @@ export function ExamScreen({ config, onFinish }) {
 
     const questionResult = {
       ...problem,
-      userAnswer: isTimeout ? '[Time Out]' : answer,
+      userAnswer: isTimeout ? '[Time Out]' : activeAnswer,
       isCorrect,
       timeSpent,
       timeOut: isTimeout,
@@ -132,13 +136,39 @@ export function ExamScreen({ config, onFinish }) {
       } else {
         setCurrentDifficulty(nextDifficulty);
       }
-      setTimeLeft(config.timeLimitPerQuestion);
-      setAnswer('');
-      startTimeRef.current = Date.now();
     }
   };
 
-  // Initial loading — waiting for the very first question
+  const handleFinishExam = () => {
+    clearInterval(timerRef.current);
+    
+    const finalResults = problems.map((prob, idx) => {
+      const userAnswer = answers[idx] || '';
+      const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[idx];
+      const isTimeout = questionTimesLeft[idx] <= 0;
+      const isCorrect = !isTimeout && userAnswer.trim().toLowerCase() === prob.answer.trim().toLowerCase();
+      
+      return {
+        ...prob,
+        userAnswer: isTimeout && !userAnswer ? '[Time Out]' : userAnswer,
+        isCorrect,
+        timeSpent,
+        timeOut: isTimeout,
+        difficultyAtTime: prob.difficulty || config.startingDifficulty
+      };
+    });
+    
+    onFinish(finalResults);
+  };
+
+  const handleAnswerSelect = (opt) => {
+    setAnswers(prev => {
+      const next = [...prev];
+      next[currentQuestionIndex] = opt;
+      return next;
+    });
+  };
+
   if (loading) {
     return (
       <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
@@ -150,7 +180,6 @@ export function ExamScreen({ config, onFinish }) {
     );
   }
 
-  // Edge case: user answered faster than the stream delivered the next question
   if (!problem) {
     return (
       <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
@@ -161,12 +190,14 @@ export function ExamScreen({ config, onFinish }) {
     );
   }
 
-  const isLowTime = timeLeft <= 10;
+  const activeTimeLeft = questionTimesLeft[currentQuestionIndex] ?? config.timeLimitPerQuestion;
+  const isTimeOut = activeTimeLeft <= 0;
+  const isLowTime = activeTimeLeft <= 10;
   const isHidden = config.stressMode === 'hidden' && !isLowTime;
   const isDynamicStress = config.stressMode === 'dynamic' && isLowTime;
 
   const totalTime = config.timeLimitPerQuestion;
-  const percentage = Math.max(0, Math.min(100, (timeLeft / totalTime) * 100));
+  const percentage = Math.max(0, Math.min(100, (activeTimeLeft / totalTime) * 100));
 
   let progressColor = 'var(--success)';
   if (percentage <= 25) {
@@ -174,6 +205,8 @@ export function ExamScreen({ config, onFinish }) {
   } else if (percentage <= 55) {
     progressColor = 'var(--warning)';
   }
+
+  const activeAnswer = answers[currentQuestionIndex] || '';
 
   return (
     <div className="glass-panel animate-fade-in" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
@@ -199,7 +232,7 @@ export function ExamScreen({ config, onFinish }) {
           ) : (
             <>
               {isLowTime ? <AlertTriangle size={24} /> : <Clock size={24} />}
-              {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+              {isTimeOut ? 'Time Out' : `${Math.floor(activeTimeLeft / 60)}:${(activeTimeLeft % 60).toString().padStart(2, '0')}`}
             </>
           )}
         </div>
@@ -225,6 +258,23 @@ export function ExamScreen({ config, onFinish }) {
         </div>
       )}
 
+      {isTimeOut && (
+        <div style={{ 
+          background: 'var(--danger-glass)', 
+          border: '1px solid var(--danger)', 
+          borderRadius: 'var(--radius-sm)', 
+          padding: '0.75rem 1rem', 
+          marginBottom: '1.5rem', 
+          color: 'var(--danger)', 
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <AlertTriangle size={18} /> Time limit reached for this question. Edits are locked.
+        </div>
+      )}
+
       <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
         <p>{problem.question}</p>
       </div>
@@ -234,9 +284,10 @@ export function ExamScreen({ config, onFinish }) {
           {problem.options.map((opt, i) => (
             <button 
               key={i} 
-              className={`btn btn-outline ${answer === opt ? 'selected' : ''}`}
-              style={{ justifyContent: 'flex-start', background: answer === opt ? 'var(--bg-tertiary)' : 'transparent', borderColor: answer === opt ? 'var(--accent-primary)' : '' }}
-              onClick={() => setAnswer(opt)}
+              className={`btn btn-outline ${activeAnswer === opt ? 'selected' : ''}`}
+              style={{ justifyContent: 'flex-start', background: activeAnswer === opt ? 'var(--bg-tertiary)' : 'transparent', borderColor: activeAnswer === opt ? 'var(--accent-primary)' : '' }}
+              onClick={() => handleAnswerSelect(opt)}
+              disabled={isTimeOut}
             >
               {opt}
             </button>
@@ -250,20 +301,59 @@ export function ExamScreen({ config, onFinish }) {
             type="text" 
             placeholder="Type your answer here..." 
             className="input-field" 
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && answer.trim() && submitAnswer()}
+            value={activeAnswer}
+            onChange={(e) => handleAnswerSelect(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && activeAnswer.trim() && (config.stressMode === 'strict' ? submitStrictAnswer() : handleFinishExam())}
+            disabled={isTimeOut}
           />
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {config.stressMode !== 'strict' && (
+          <button 
+            className="btn btn-outline" 
+            disabled={currentQuestionIndex === 0}
+            onClick={() => {
+              clearInterval(timerRef.current);
+              setCurrentQuestionIndex(prev => prev - 1);
+            }}
+          >
+            Previous
+          </button>
+        )}
+        
+        <div style={{ flex: 1 }} />
+
+        {config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
+          <button 
+            className="btn btn-outline" 
+            style={{ marginRight: '0.75rem' }}
+            onClick={() => {
+              clearInterval(timerRef.current);
+              setCurrentQuestionIndex(prev => prev + 1);
+            }}
+          >
+            Next
+          </button>
+        )}
+
         <button 
           className="btn btn-primary" 
-          disabled={!answer.trim()}
-          onClick={() => submitAnswer()}
+          disabled={config.stressMode === 'strict' && !activeAnswer.trim()}
+          onClick={() => {
+            if (config.stressMode === 'strict') {
+              submitStrictAnswer();
+            } else {
+              handleFinishExam();
+            }
+          }}
         >
-          {currentQuestionIndex + 1 === config.numQuestions ? 'Finish Exam' : 'Next Question'} <ArrowRight size={18} />
+          {config.stressMode === 'strict' 
+            ? (currentQuestionIndex + 1 === config.numQuestions ? 'Finish Exam' : 'Next Question')
+            : 'Finish Exam'
+          } 
+          <ArrowRight size={18} />
         </button>
       </div>
       

@@ -28,13 +28,20 @@ const getSubjectLevelName = (subject, rating) => {
 };
 
 export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chemistry: 100 }, onSubjectChange }) {
-  const [config, setConfig] = useState({
-    subject: 'Math',
-    startingDifficulty: 5,
-    numQuestions: 5,
-    stressMode: 'dynamic', // 'none', 'hidden', 'strict', 'dynamic'
-    timeLimitPerQuestion: 60, // seconds
+  const [config, setConfig] = useState(() => {
+    const saved = localStorage.getItem('chronos_exam_config');
+    return saved ? JSON.parse(saved) : {
+      subject: 'Math',
+      startingDifficulty: 5,
+      numQuestions: 5,
+      stressMode: 'dynamic', // 'none', 'hidden', 'strict', 'dynamic'
+      timeLimitPerQuestion: 60, // seconds
+    };
   });
+
+  useEffect(() => {
+    localStorage.setItem('chronos_exam_config', JSON.stringify(config));
+  }, [config]);
 
   useEffect(() => {
     if (onSubjectChange) {
