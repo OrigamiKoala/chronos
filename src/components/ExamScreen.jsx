@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateProblems } from '../services/gemini';
 import { Loader2, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
+import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 
 export function ExamScreen({ config, onFinish }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -276,7 +277,7 @@ export function ExamScreen({ config, onFinish }) {
       )}
 
       <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
-        <p>{problem.question}</p>
+        <p><ChemicalText text={problem.question} theme="dark" /></p>
       </div>
 
       {problem.type === 'multiple_choice' && problem.options && (
@@ -285,11 +286,20 @@ export function ExamScreen({ config, onFinish }) {
             <button 
               key={i} 
               className={`btn btn-outline ${activeAnswer === opt ? 'selected' : ''}`}
-              style={{ justifyContent: 'flex-start', background: activeAnswer === opt ? 'var(--bg-tertiary)' : 'transparent', borderColor: activeAnswer === opt ? 'var(--accent-primary)' : '' }}
+              style={{ 
+                justifyContent: 'flex-start', 
+                background: activeAnswer === opt ? 'var(--bg-tertiary)' : 'transparent', 
+                borderColor: activeAnswer === opt ? 'var(--accent-primary)' : '',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                minHeight: '48px',
+                padding: '0.5rem 1rem'
+              }}
               onClick={() => handleAnswerSelect(opt)}
               disabled={isTimeOut}
             >
-              {opt}
+              {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
             </button>
           ))}
         </div>

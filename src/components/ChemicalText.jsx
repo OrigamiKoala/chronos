@@ -1,0 +1,170 @@
+import { useEffect, useRef } from 'react';
+import SmilesDrawer from 'smiles-drawer';
+
+// Helper to determine if a token is a SMILES string
+export function isSmiles(word) {
+  if (!word || word.length < 2) return false;
+
+  const englishWords = new Set([
+    'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'by', 'is', 'are', 'was', 'were', 'be', 'been',
+    'has', 'have', 'had', 'do', 'does', 'did', 'but', 'or', 'and', 'if', 'then', 'else', 'no', 'not', 'so',
+    'up', 'out', 'into', 'with', 'about', 'as', 'at', 'from', 'this', 'that', 'these', 'those', 'i', 'you',
+    'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'its', 'our',
+    'their', 'which', 'who', 'what', 'whose', 'whom', 'where', 'when', 'why', 'how', 'all', 'any', 'both',
+    'each', 'few', 'more', 'most', 'other', 'some', 'such', 'than', 'too', 'very', 'can', 'will', 'should',
+    'would', 'could', 'may', 'might', 'must', 'shall', 'has', 'have', 'had', 'what'
+  ]);
+
+  // Clean the word to check against English dictionary
+  const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").toLowerCase();
+  if (englishWords.has(cleanWord)) {
+    return false;
+  }
+
+  // Must contain organic/aromatic atoms (C, O, N, S, P, F, Cl, Br, I, H)
+  if (!/[conpsfclbri]/i.test(word)) {
+    return false;
+  }
+
+  // Check valid SMILES character set
+  const smilesCharsRegex = /^[A-Za-z0-9@+\-\[\]\(\)\\\/=#$.%]+$/;
+  if (!smilesCharsRegex.test(word)) {
+    return false;
+  }
+
+  // If it has branching, ring numbers, double/triple bonds, charge, brackets, or stereochemistry indicators:
+  const hasSmiIndicators = /[\(\)=\[\]#@+\-\\\/]/.test(word) || /[0-9]/.test(word);
+  if (hasSmiIndicators) {
+    return true;
+  }
+
+  // If it has no indicators, it might be a simple chain like CCO, CCC, CCCCC, CO, etc.
+  const organicOnlyRegex = /^(C|O|N|P|S|F|H|Cl|Br|I|c|o|n|s|p)+$/;
+  if (organicOnlyRegex.test(word) && word.length >= 2) {
+    // Avoid matching typical words like "In", "No", "On", "So", "He", etc.
+    if (word.length === 2 && ['no', 'in', 'on', 'so', 'he', 'cl'].includes(word.toLowerCase())) {
+      return word.toLowerCase() === 'cl'; // Cl is Chlorine
+    }
+    return true;
+  }
+
+  return false;
+}
+
+export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dark' }) {
+  const svgRef = useRef(null);
+
+  useEffect(() => {
+    if (!svgRef.current || !smiles) return;
+
+    try {
+      // Clear previous drawing
+      svgRef.current.innerHTML = '';
+
+      // Initialize the SvgDrawer with custom theme options
+      const drawer = new SmilesDrawer.SvgDrawer({
+        width,
+        height,
+        bondThickness: 1.8,
+        bondLength: 15,
+        fontSizeLarge: 11,
+        fontSizeSmall: 8,
+        padding: 8,
+        themes: {
+          dark: {
+            PRIMARY: '#ffffff',
+            BACKGROUND: 'transparent',
+            ACCENT: '#a78bfa',
+            C: '#ffffff',
+            O: '#f87171',
+            N: '#60a5fa',
+            F: '#34d399',
+            CL: '#34d399',
+            BR: '#f59e0b',
+            I: '#ec4899',
+            S: '#fbbf24',
+            P: '#8b5cf6'
+          },
+          light: {
+            PRIMARY: '#1e293b',
+            BACKGROUND: 'transparent',
+            ACCENT: '#6366f1',
+            C: '#1e293b',
+            O: '#ef4444',
+            N: '#3b82f6',
+            F: '#10b981',
+            CL: '#10b981',
+            BR: '#d97706',
+            I: '#db2777',
+            S: '#f59e0b',
+            P: '#6366f1'
+          }
+        }
+      });
+
+      SmilesDrawer.parse(smiles, (tree) => {
+        drawer.draw(tree, svgRef.current, theme, false);
+      }, (err) => {
+        console.error('SMILES parse error:', err);
+      });
+    } catch (error) {
+      console.error('Error drawing SMILES:', error);
+    }
+  }, [smiles, width, height, theme]);
+
+  return (
+    <span style={{ 
+      display: 'inline-flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      background: 'rgba(255, 255, 255, 0.03)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: '8px',
+      padding: '4px',
+      verticalAlign: 'middle',
+      margin: '4px 6px',
+      boxShadow: '0 4px 10px -2px rgba(0,0,0,0.15)'
+    }}>
+      <svg ref={svgRef} width={width} height={height} style={{ maxWidth: '100%', height: 'auto' }} />
+    </span>
+  );
+}
+
+export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, defaultHeight = 130 }) {
+  if (!text) return null;
+
+  // Let's split the text by whitespace to check each token
+  const tokens = text.split(/(\s+)/);
+
+  return (
+    <span style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
+      {tokens.map((token, index) => {
+        if (/^\s+$/.test(token)) {
+          return <span key={index}>{token}</span>;
+        }
+
+        // Extract core word by removing leading/trailing punctuation/quotes
+        const match = token.match(/^([`'"\(\{\[<]*)(.*?)([`'"\)\}\]>.,;:!?-]*)$/);
+        if (!match) {
+          return <span key={index}>{token}</span>;
+        }
+
+        const prefix = match[1];
+        const coreWord = match[2];
+        const suffix = match[3];
+
+        if (isSmiles(coreWord)) {
+          return (
+            <span key={index} style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle' }}>
+              {prefix}
+              <SmilesRenderer smiles={coreWord} width={defaultWidth} height={defaultHeight} theme={theme} />
+              {suffix}
+            </span>
+          );
+        }
+
+        return <span key={index}>{token}</span>;
+      })}
+    </span>
+  );
+}

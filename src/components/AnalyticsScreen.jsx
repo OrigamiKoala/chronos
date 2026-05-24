@@ -11,6 +11,7 @@ import {
   Legend
 } from 'chart.js';
 import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle as TriangleIcon, BookOpen, Save, Check } from 'lucide-react';
+import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -295,7 +296,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId }
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {panicPoints.map((p, i) => (
               <li key={i} style={{ background: 'var(--bg-primary)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem' }}>
-                <strong>Q:</strong> {p.question} <br />
+                <strong>Q:</strong> <ChemicalText text={p.question} theme="dark" /> <br />
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Time Spent: {p.timeSpent}s (Avg: {avgTime}s)</span>
               </li>
             ))}
@@ -359,17 +360,21 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId }
                   {r.timeSpent}s {r.isCorrect ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
                 </span>
               </div>
-              <p style={{ marginBottom: '1rem' }}>{r.question}</p>
+              <p style={{ marginBottom: '1rem' }}><ChemicalText text={r.question} theme="dark" /></p>
 
-              <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem', alignItems: 'center' }}>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Your Answer: </span>
-                  <span style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)' }}>{r.userAnswer}</span>
+                  <span style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)' }}>
+                    {isSmiles(r.userAnswer) ? <SmilesRenderer smiles={r.userAnswer} width={70} height={70} theme="dark" /> : <ChemicalText text={r.userAnswer} theme="dark" />}
+                  </span>
                 </div>
                 {!r.isCorrect && (
                   <div>
                     <span style={{ color: 'var(--text-muted)' }}>Correct Answer: </span>
-                    <span style={{ color: 'var(--success)' }}>{r.answer}</span>
+                    <span style={{ color: 'var(--success)' }}>
+                      {isSmiles(r.answer) ? <SmilesRenderer smiles={r.answer} width={70} height={70} theme="dark" /> : <ChemicalText text={r.answer} theme="dark" />}
+                    </span>
                   </div>
                 )}
               </div>
@@ -432,7 +437,9 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId }
                         borderLeft: '3px solid var(--accent-secondary)',
                         color: 'var(--text-secondary)'
                       }}>
-                        <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{activeExplanations[i].text}</p>
+                        <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
+                          <ChemicalText text={activeExplanations[i].text} theme="dark" defaultWidth={110} defaultHeight={110} />
+                        </p>
                       </div>
                     )}
 
