@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Activity, CheckCircle2, XCircle, TrendingUp, Award } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2 } from 'lucide-react';
 
 const getSubjectLevelName = (subject, rating) => {
   if (subject === 'Math') {
@@ -38,6 +38,76 @@ export function AnalyticsScreen({ results: resultsObj, onRestart }) {
 
   // Identify Panic Points (wrong answer, time spent > 1.5x average)
   const panicPoints = results.filter(r => !r.isCorrect && r.timeSpent > (avgTime * 1.5));
+
+  const [activeExplanations, setActiveExplanations] = useState({});
+
+  const handleAskAI = async (index, problemObj, userQuery = '') => {
+    setActiveExplanations(prev => ({
+      ...prev,
+      [index]: {
+        ...prev[index],
+        loading: true,
+        error: null
+      }
+    }));
+
+    try {
+      const response = await fetch('/api/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: problemObj.question,
+          answer: problemObj.answer,
+          userAnswer: problemObj.userAnswer,
+          isCorrect: problemObj.isCorrect,
+          userQuery
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch explanation');
+      }
+
+      const data = await response.json();
+      setActiveExplanations(prev => ({
+        ...prev,
+        [index]: {
+          ...prev[index],
+          loading: false,
+          text: data.explanation,
+          query: ''
+        }
+      }));
+
+      // Trigger MathJax typesetting for newly rendered content
+      setTimeout(() => {
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise();
+        }
+      }, 100);
+
+    } catch (err) {
+      console.error('AI Explanation failed:', err);
+      setActiveExplanations(prev => ({
+        ...prev,
+        [index]: {
+          ...prev[index],
+          loading: false,
+          error: 'Failed to retrieve explanation from AI. Please try again.'
+        }
+      }));
+    }
+  };
+
+  const updateExplanationQuery = (index, value) => {
+    setActiveExplanations(prev => ({
+      ...prev,
+      [index]: {
+        ...prev[index],
+        query: value
+      }
+    }));
+  };
 
   useEffect(() => {
     if (window.MathJax && window.MathJax.typesetPromise) {
@@ -124,6 +194,67 @@ export function AnalyticsScreen({ results: resultsObj, onRestart }) {
                   <div>
                     <span style={{ color: 'var(--text-muted)' }}>Correct Answer: </span>
                     <span style={{ color: 'var(--success)' }}>{r.answer}</span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
+                {!activeExplanations[i] ? (
+                  <button 
+                    className="btn btn-outline" 
+                    style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    onClick={() => handleAskAI(i, r)}
+                  >
+                    <BrainCircuit size={16} color="var(--accent-secondary)" /> Ask AI why this is correct
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {activeExplanations[i].text && (
+                      <div style={{ 
+                        background: 'var(--bg-tertiary)', 
+                        padding: '1rem', 
+                        borderRadius: 'var(--radius-sm)', 
+                        fontSize: '0.9rem', 
+                        lineHeight: '1.6',
+                        borderLeft: '3px solid var(--accent-secondary)',
+                        color: 'var(--text-secondary)'
+                      }}>
+                        <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{activeExplanations[i].text}</p>
+                      </div>
+                    )}
+
+                    {activeExplanations[i].loading && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        <Loader2 size={16} className="animate-spin" /> Analyzing problem...
+                      </div>
+                    )}
+
+                    {activeExplanations[i].error && (
+                      <div style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
+                        {activeExplanations[i].error}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Ask a follow-up or custom question..." 
+                        className="input-field" 
+                        style={{ flex: 1, padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                        value={activeExplanations[i].query || ''}
+                        onChange={(e) => updateExplanationQuery(i, e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && activeExplanations[i].query?.trim() && handleAskAI(i, r, activeExplanations[i].query)}
+                        disabled={activeExplanations[i].loading}
+                      />
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+                        onClick={() => handleAskAI(i, r, activeExplanations[i].query)}
+                        disabled={activeExplanations[i].loading || !activeExplanations[i].query?.trim()}
+                      >
+                        Ask
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
