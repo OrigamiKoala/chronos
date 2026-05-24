@@ -285,6 +285,10 @@ export function AnalyticsDashboard({ user, onBack }) {
   }
 
   const summary = data?.summary || {};
+  const displayedStreak = missedADay ? 0 : (summary.currentStreak || 0);
+  const streakColor = summary.streakType === 'correct' && !missedADay
+    ? 'var(--success)'
+    : (missedADay ? 'var(--danger)' : 'var(--text-primary)');
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
@@ -317,8 +321,8 @@ export function AnalyticsDashboard({ user, onBack }) {
           <Flame size={22} color="var(--warning)" />
           <div>
             <span className="analytics-stat-label">Current Streak</span>
-            <span className="analytics-stat-value" style={{ color: summary.streakType === 'correct' ? 'var(--success)' : 'var(--danger)' }}>
-              {summary.currentStreak || 0} {summary.streakType === 'correct' ? '🔥' : (missedADay ? '❄️' : '')}
+            <span className="analytics-stat-value" style={{ color: streakColor }}>
+              {displayedStreak} {summary.streakType === 'correct' && !missedADay ? '🔥' : (missedADay ? '❄️' : '')}
             </span>
           </div>
         </div>
