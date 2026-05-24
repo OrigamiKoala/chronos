@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
+import { GoogleGenAI } from '@google/genai';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -176,6 +177,9 @@ export default async function handler(req, res) {
 
     // 4. Trigger asynchronous background update of user weaknesses using BigQuery AI remote model
     updateAIWeaknesses(sanitizedUser, subject);
+
+    // 5. Trigger asynchronous mistake analysis and save in BigQuery
+    analyzeMistakesAndSave(sanitizedUser, examId, subject, results);
 
     return res.status(200).json({ success: true });
 
@@ -390,5 +394,66 @@ async function updateAIWeaknesses(username, subject) {
     }
   } catch (err) {
     console.error('Background AI weaknesses update failed:', err);
+  }
+}
+
+async function analyzeMistakesAndSave(username, examId, subject, results) {
+  try {
+    // Create mistake analysis table if not exists
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` (
+        user_id STRING NOT NULL,
+        exam_id STRING NOT NULL,
+        subject STRING NOT NULL,
+        mistake_patterns STRING NOT NULL,
+        created_at TIMESTAMP NOT NULL
+      )
+    `;
+    await bq.query(createTableQuery);
+
+    const prompt = `You are an expert tutor. Analyze the user's performance on this ${subject} exam.
+Look closely at their answers to determine what kind of mistakes they made (e.g., conceptual gaps, calculation errors, timing issues, or panic).
+
+Exam attempt details:
+${results.map((r, i) => `
+Question ${i+1}: ${r.question}
+Correct Answer: ${r.answer}
+User's Answer: ${r.userAnswer}
+Is Correct: ${r.isCorrect ? 'Yes' : 'No'}
+Time Spent: ${r.timeSpent}s
+Timed Out: ${r.timeOut ? 'Yes' : 'No'}
+`).join('\n')}
+
+Provide a professional, diagnostic summary of their mistake patterns and concrete recommendations to avoid these mistakes in the future.
+Be direct, supportive, and pedagogical. Do not include markdown headers or greetings.`;
+
+    // Run BigQuery AI ML.GENERATE_TEXT and insert the result in a single persistent cloud query
+    const query = `
+      INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+        (user_id, exam_id, subject, mistake_patterns, created_at)
+      SELECT 
+        @username AS user_id,
+        @examId AS exam_id,
+        @subject AS subject,
+        ml_generate_text_result AS mistake_patterns,
+        CURRENT_TIMESTAMP() AS created_at
+      FROM ML.GENERATE_TEXT(
+        MODEL \`${projectId}\`.\`chronos_users\`.\`gemini_flash_model\`,
+        (SELECT @prompt AS prompt),
+        STRUCT(0.3 AS temperature)
+      )
+    `;
+
+    await bq.query({
+      query,
+      params: {
+        username,
+        examId,
+        subject,
+        prompt
+      }
+    });
+  } catch (err) {
+    console.error('Error in BigQuery mistake analysis background job:', err);
   }
 }

@@ -233,7 +233,8 @@ function App() {
         subject: h.subject,
         oldRating: h.new_rating - h.rating_change,
         newRating: h.new_rating,
-        ratingChange: h.rating_change
+        ratingChange: h.rating_change,
+        mistakePatterns: data.mistakePatterns
       });
       setCurrentScreen('analytics');
     } catch (err) {

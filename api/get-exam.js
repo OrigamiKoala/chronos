@@ -38,7 +38,28 @@ export default async function handler(req, res) {
     }
 
     const results = JSON.parse(rows[0].results_json);
-    return res.status(200).json({ results });
+
+    // Query mistake patterns if table exists
+    let mistakePatterns = null;
+    try {
+      const mistakeQuery = `
+        SELECT mistake_patterns
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+        WHERE exam_id = @examId
+        LIMIT 1
+      `;
+      const [mistakeRows] = await bq.query({
+        query: mistakeQuery,
+        params: { examId }
+      });
+      if (mistakeRows.length > 0) {
+        mistakePatterns = mistakeRows[0].mistake_patterns;
+      }
+    } catch {
+      // ignore if table doesn't exist or query fails
+    }
+
+    return res.status(200).json({ results, mistakePatterns });
   } catch (err) {
     console.error('Get exam error:', err);
     return res.status(500).json({ error: err.message || 'Internal Server Error' });

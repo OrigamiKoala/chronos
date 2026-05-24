@@ -171,6 +171,23 @@ export function AnalyticsScreen({ results: resultsObj, onRestart }) {
           </ul>
         </div>
       )}
+      {resultsObj.mistakePatterns && (
+        <div style={{ 
+          padding: '1.5rem', 
+          background: 'rgba(168, 85, 247, 0.05)', 
+          borderRadius: 'var(--radius-md)', 
+          border: '1px solid rgba(168, 85, 247, 0.2)', 
+          marginBottom: '3rem',
+          boxShadow: '0 4px 20px -2px rgba(168, 85, 247, 0.1)'
+        }}>
+          <h3 style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', margin: 0 }}>
+            <BrainCircuit size={20} /> AI Error & Mistake Pattern Diagnosis
+          </h3>
+          <p style={{ fontSize: '0.925rem', lineHeight: '1.6', color: 'var(--text-secondary)', marginTop: '0.75rem', marginBottom: 0, whiteSpace: 'pre-line' }}>
+            {resultsObj.mistakePatterns}
+          </p>
+        </div>
+      )}
 
       <div>
         <h3 style={{ marginBottom: '1.5rem' }}>Question Breakdown</h3>
