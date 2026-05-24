@@ -14,7 +14,7 @@
   * **Dynamic Acceleration**: Speeds up timer animations and pulses when time runs low, simulating panic triggers.
 * **Pause-and-Resume Multi-Directional Timers**: Tracks individual time left for each question in non-strict modes. Switch freely between questions; the timer pauses and resumes exactly where you left off.
 * **Clickable Strengths & Weaknesses (AI Breakdown)**: Click any topic tag on your dashboard to instantly review a pre-compiled, highly specific breakdown of what you are `"good at"` and `"not good at"`, stored dynamically in BigQuery.
-* **Inline AI Tutor Breakdown**: Open a custom dialog on any completed question in the test review breakdown. Ask the AI tutor exactly why the correct answer is correct and ask follow-up questions in real-time.
+* **Inline AI Tutor Breakdown**: Ask AI about any completed question in the test review breakdown. Ask the AI tutor exactly why the correct answer is correct and ask follow-up questions in real-time.
 * **Full Session Caching**: Automatic caching of active usernames and previous test configurations in local storage for seamless onboarding.
 
 ---
