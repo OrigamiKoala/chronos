@@ -143,10 +143,16 @@ export default async function handler(req, res) {
         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
         WHERE user_id = @username AND sub_category = @topic AND subject = @subject
       `;
-      const [existingMastery] = await bq.query({
+      // Forcing direct stream mapping bypasses anonymous table caching lookups
+      const streamMastery = bq.createQueryStream({
         query: checkMastery,
-        params: { username: sanitizedUser, topic, subject }
+        params: { username: sanitizedUser, topic, subject },
+        location: 'US'
       });
+      const existingMastery = [];
+      for await (const row of streamMastery) {
+        existingMastery.push(row);
+      }
 
       if (existingMastery.length > 0) {
         const nextCorrect = existingMastery[0].correct_count + stats.correct;
@@ -223,10 +229,16 @@ async function updateAIWeaknesses(username, subject) {
       FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
       WHERE user_id = @username AND subject = @subject
     `;
-    const [wrongProblems] = await bq.query({
+    // Forcing direct stream mapping bypasses anonymous table caching lookups
+    const streamWrong = bq.createQueryStream({
       query: fetchWrongProblemsQuery,
-      params: { username, subject }
+      params: { username, subject },
+      location: 'US'
     });
+    const wrongProblems = [];
+    for await (const row of streamWrong) {
+      wrongProblems.push(row);
+    }
     
     if (!wrongProblems || wrongProblems.length === 0) return;
 
@@ -282,10 +294,16 @@ Incorrect questions: ${wrongProblemsString}`;
             FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
             WHERE user_id = @username AND sub_category = @topic AND subject = @subject
           `;
-          const [exists] = await bq.query({
+          // Forcing direct stream mapping bypasses anonymous table caching lookups
+          const streamExists = bq.createQueryStream({
             query: checkQuery,
-            params: { username, topic, subject }
+            params: { username, topic, subject },
+            location: 'US'
           });
+          const exists = [];
+          for await (const row of streamExists) {
+            exists.push(row);
+          }
 
           if (exists.length > 0) {
             // Raise their accuracy rate to register as strength
@@ -322,10 +340,16 @@ Incorrect questions: ${wrongProblemsString}`;
             FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
             WHERE user_id = @username AND sub_category = @topic AND subject = @subject
           `;
-          const [exists] = await bq.query({
+          // Forcing direct stream mapping bypasses anonymous table caching lookups
+          const streamExistsWeak = bq.createQueryStream({
             query: checkQuery,
-            params: { username, topic, subject }
+            params: { username, topic, subject },
+            location: 'US'
           });
+          const exists = [];
+          for await (const row of streamExistsWeak) {
+            exists.push(row);
+          }
 
           if (exists.length > 0) {
             // Lower their accuracy rate below 0.65 to register as weakness

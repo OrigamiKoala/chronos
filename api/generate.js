@@ -89,10 +89,16 @@ export default async function handler(req, res) {
       WHERE accuracy_rate < 0.65 AND user_id = @targetUserId AND subject = @subject
     `;
 
-    const [rows] = await bq.query({
+    // Forcing direct stream mapping bypasses anonymous table caching lookups
+    const bqStream = bq.createQueryStream({
       query: weaknessesQuery,
       params: { targetUserId: sanitizedUser, subject },
+      location: 'US'
     });
+    const rows = [];
+    for await (const row of bqStream) {
+      rows.push(row);
+    }
 
     const weaknesses = rows[0]?.weaknesses || 'None (excellent performance across all topics)';
 

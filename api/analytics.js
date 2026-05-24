@@ -31,10 +31,16 @@ export default async function handler(req, res) {
       WHERE user_id = @username
       ORDER BY created_at ASC
     `;
-    const [eloHistory] = await bq.query({
+    // Forcing direct stream mapping bypasses anonymous table caching lookups
+    const streamElo = bq.createQueryStream({
       query: eloQuery,
-      params: { username: sanitizedUser }
+      params: { username: sanitizedUser },
+      location: 'US'
     });
+    const eloHistory = [];
+    for await (const row of streamElo) {
+      eloHistory.push(row);
+    }
 
     // 2. Problem tags aggregated by exam
     let tagData = [];
@@ -47,10 +53,16 @@ export default async function handler(req, res) {
         WHERE t.user_id = @username
         ORDER BY h.created_at ASC
       `;
-      const [rows] = await bq.query({
+      // Forcing direct stream mapping bypasses anonymous table caching lookups
+      const streamTags = bq.createQueryStream({
         query: tagQuery,
-        params: { username: sanitizedUser }
+        params: { username: sanitizedUser },
+        location: 'US'
       });
+      const rows = [];
+      for await (const row of streamTags) {
+        rows.push(row);
+      }
       tagData = rows;
     } catch {
       // table may not exist yet
@@ -108,10 +120,16 @@ export default async function handler(req, res) {
         WHERE r.user_id = @username
         ORDER BY h.created_at ASC
       `;
-      const [resultRows] = await bq.query({
+      // Forcing direct stream mapping bypasses anonymous table caching lookups
+      const streamResults = bq.createQueryStream({
         query: resultsQuery,
-        params: { username: sanitizedUser }
+        params: { username: sanitizedUser },
+        location: 'US'
       });
+      const resultRows = [];
+      for await (const row of streamResults) {
+        resultRows.push(row);
+      }
 
       efficiencyData = resultRows.map(row => {
         const results = JSON.parse(row.results_json);
@@ -146,10 +164,16 @@ export default async function handler(req, res) {
         WHERE user_id = @username AND total_count > 0
         ORDER BY subject, accuracy_rate DESC
       `;
-      const [masteryRows] = await bq.query({
+      // Forcing direct stream mapping bypasses anonymous table caching lookups
+      const streamMastery = bq.createQueryStream({
         query: masteryQuery,
-        params: { username: sanitizedUser }
+        params: { username: sanitizedUser },
+        location: 'US'
       });
+      const masteryRows = [];
+      for await (const row of streamMastery) {
+        masteryRows.push(row);
+      }
       topicMastery = masteryRows;
     } catch {
       // ignore
