@@ -21,19 +21,41 @@ export function ExamScreen({ config, onFinish }) {
   const fetchProblems = async () => {
     setLoading(true);
     setError(null);
+    setProblems([]);
+    setCurrentQuestionIndex(0);
+
+    let firstReceived = false;
+
     try {
-      const generated = await generateProblems(config.numQuestions, config.startingDifficulty, config.subject, config.username || 'default_user');
-      setProblems(generated);
+      const generated = await generateProblems(
+        config.numQuestions,
+        config.startingDifficulty,
+        config.subject,
+        config.username || 'default_user',
+        // onQuestion callback — fired for each question the instant it arrives
+        (question, index) => {
+          setProblems(prev => [...prev, question]);
+
+          if (!firstReceived) {
+            firstReceived = true;
+            setCurrentDifficulty(question.difficulty || config.startingDifficulty);
+            setTimeLeft(config.timeLimitPerQuestion);
+            setAnswer('');
+            startTimeRef.current = Date.now();
+            setLoading(false);
+          }
+        }
+      );
+
+      // Final reconciliation — set the canonical complete array
       if (generated && generated.length > 0) {
-        setCurrentDifficulty(generated[0].difficulty || config.startingDifficulty);
+        setProblems(generated);
       }
-      setTimeLeft(config.timeLimitPerQuestion);
-      setAnswer('');
-      startTimeRef.current = Date.now();
     } catch (err) {
       setError("Failed to fetch problems. Retrying...");
       setTimeout(() => fetchProblems(), 2000);
     } finally {
+      // Safety: clear loading even if zero questions arrived (e.g. empty response)
       setLoading(false);
     }
   };
@@ -116,6 +138,7 @@ export function ExamScreen({ config, onFinish }) {
     }
   };
 
+  // Initial loading — waiting for the very first question
   if (loading) {
     return (
       <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
@@ -123,6 +146,17 @@ export function ExamScreen({ config, onFinish }) {
         <h3>Generating Problems...</h3>
         <p style={{ color: 'var(--text-secondary)' }}>Preparing exam with {config.numQuestions} questions</p>
         {error && <p style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</p>}
+      </div>
+    );
+  }
+
+  // Edge case: user answered faster than the stream delivered the next question
+  if (!problem) {
+    return (
+      <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+        <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
+        <h3>Loading next question...</h3>
+        <p style={{ color: 'var(--text-secondary)' }}>Streaming question {currentQuestionIndex + 1} of {config.numQuestions}</p>
       </div>
     );
   }
