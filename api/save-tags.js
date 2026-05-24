@@ -11,6 +11,8 @@ const bq = new BigQuery({
   },
 });
 
+let tagsTableEnsured = false;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -25,39 +27,33 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // Ensure table exists
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\` (
-        user_id STRING NOT NULL,
-        exam_id STRING NOT NULL,
-        question_index INT64 NOT NULL,
-        tag STRING NOT NULL,
-        is_correct BOOL NOT NULL,
-        points_value FLOAT64,
-        created_at TIMESTAMP NOT NULL
-      )
-    `;
-    await bq.query(createTableQuery);
+    // Ensure table exists (once per cold start)
+    if (!tagsTableEnsured) {
+      await bq.query(`
+        CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\` (
+          user_id STRING NOT NULL, exam_id STRING NOT NULL, question_index INT64 NOT NULL,
+          tag STRING NOT NULL, is_correct BOOL NOT NULL, points_value FLOAT64, created_at TIMESTAMP NOT NULL
+        )
+      `);
+      tagsTableEnsured = true;
+    }
 
     // Delete any existing tags for this exam (allows re-tagging)
-    const deleteQuery = `
-      DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
-      WHERE user_id = @username AND exam_id = @examId
-    `;
     await bq.query({
-      query: deleteQuery,
+      query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+        WHERE user_id = @username AND exam_id = @examId`,
       params: { username: sanitizedUser, examId }
     });
 
-    // Insert all tags
-    for (const t of tags) {
-      const insertQuery = `
-        INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
-          (user_id, exam_id, question_index, tag, is_correct, points_value, created_at)
-        VALUES
-          (@username, @examId, @questionIndex, @tag, @isCorrect, @pointsValue, CURRENT_TIMESTAMP())
-      `;
-      await bq.query({
+    // Insert all tags in parallel
+    const insertQuery = `
+      INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+        (user_id, exam_id, question_index, tag, is_correct, points_value, created_at)
+      VALUES
+        (@username, @examId, @questionIndex, @tag, @isCorrect, @pointsValue, CURRENT_TIMESTAMP())
+    `;
+    await Promise.all(tags.map(t =>
+      bq.query({
         query: insertQuery,
         params: {
           username: sanitizedUser,
@@ -67,8 +63,8 @@ export default async function handler(req, res) {
           isCorrect: t.isCorrect,
           pointsValue: t.pointsValue || 0
         }
-      });
-    }
+      })
+    ));
 
     return res.status(200).json({ success: true });
   } catch (err) {

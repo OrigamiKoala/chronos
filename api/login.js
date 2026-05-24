@@ -12,6 +12,7 @@ const bq = new BigQuery({
 });
 
 const ELO_ALGORITHM_VERSION = 1;
+let schemaEnsured = false;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -29,18 +30,21 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // 0. Ensure recovery and password columns exist in users table
-    try {
-      const alterQuery = `
-        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`users\`
-        ADD COLUMN IF NOT EXISTS password STRING,
-        ADD COLUMN IF NOT EXISTS recovery_question STRING,
-        ADD COLUMN IF NOT EXISTS recovery_answer STRING,
-        ADD COLUMN IF NOT EXISTS elo_version INT64
-      `;
-      await bq.query(alterQuery);
-    } catch (e) {
-      console.warn("Alter table error or already exists:", e);
+    // 0. Ensure recovery and password columns exist (once per cold start)
+    if (!schemaEnsured) {
+      try {
+        const alterQuery = `
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`users\`
+          ADD COLUMN IF NOT EXISTS password STRING,
+          ADD COLUMN IF NOT EXISTS recovery_question STRING,
+          ADD COLUMN IF NOT EXISTS recovery_answer STRING,
+          ADD COLUMN IF NOT EXISTS elo_version INT64
+        `;
+        await bq.query(alterQuery);
+      } catch (e) {
+        console.warn("Alter table error or already exists:", e);
+      }
+      schemaEnsured = true;
     }
 
     const checkQuery = `
@@ -148,7 +152,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 3. Fetch ALL past tests for ELO recalculation if ELO version is outdated
+    // 3. Fire independent queries in parallel: history, mastery, analysis, breakdowns
     const currentEloVersion = userData.elo_version;
     const needsRecalculation = currentEloVersion === null || currentEloVersion === undefined || currentEloVersion < ELO_ALGORITHM_VERSION;
 
@@ -158,10 +162,33 @@ export default async function handler(req, res) {
       WHERE user_id = @username
       ORDER BY created_at ASC
     `;
-    const [allHistory] = await bq.query({
-      query: allHistoryQuery,
-      params: { username: sanitizedUser }
-    });
+    const masteryQuery = `
+      SELECT sub_category, subject, accuracy_rate, total_count
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+      WHERE user_id = @username
+    `;
+    const analysisQuery = `
+      SELECT subject, detailed_analysis
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
+      WHERE user_id = @username
+    `;
+    const breakdownQuery = `
+      SELECT topic, good_at, not_good_at
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+      WHERE user_id = @username
+    `;
+
+    const [historyResult, masteryResult, analysisResult, breakdownResult] = await Promise.allSettled([
+      bq.query({ query: allHistoryQuery, params: { username: sanitizedUser } }),
+      bq.query({ query: masteryQuery, params: { username: sanitizedUser } }),
+      bq.query({ query: analysisQuery, params: { username: sanitizedUser } }),
+      bq.query({ query: breakdownQuery, params: { username: sanitizedUser } })
+    ]);
+
+    const allHistory = historyResult.status === 'fulfilled' ? historyResult.value[0] : [];
+    const mastery = masteryResult.status === 'fulfilled' ? masteryResult.value[0] : [];
+    const analyses = analysisResult.status === 'fulfilled' ? analysisResult.value[0] : [];
+    const breakdowns = breakdownResult.status === 'fulfilled' ? breakdownResult.value[0] : [];
 
     if (needsRecalculation) {
       const subjectRatings = { Math: 100, Physics: 100, Chemistry: 100 };
@@ -257,68 +284,13 @@ export default async function handler(req, res) {
       .sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at))
       .slice(0, 25);
 
-    // 4. Fetch mastery (strengths >= 70%, weaknesses < 65%)
-    const masteryQuery = `
-      SELECT sub_category, subject, accuracy_rate, total_count
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-      WHERE user_id = @username
-    `;
-    const [mastery] = await bq.query({
-      query: masteryQuery,
-      params: { username: sanitizedUser }
-    });
-
     const strengths = mastery.filter(m => m.total_count > 5 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
     const weaknesses = mastery.filter(m => m.total_count > 5 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
-
-    // 5. Ensure user_weakness_analysis and user_topic_breakdown tables exist
-    const createAnalysisTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
-        user_id STRING NOT NULL,
-        subject STRING NOT NULL,
-        detailed_analysis STRING NOT NULL,
-        updated_at TIMESTAMP NOT NULL
-      )
-    `;
-    await bq.query(createAnalysisTableQuery);
-
-    const createBreakdownTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
-        user_id STRING NOT NULL,
-        subject STRING NOT NULL,
-        topic STRING NOT NULL,
-        good_at STRING NOT NULL,
-        not_good_at STRING NOT NULL,
-        updated_at TIMESTAMP NOT NULL
-      )
-    `;
-    await bq.query(createBreakdownTableQuery);
-
-    // 6. Query analysis and topic breakdowns
-    const analysisQuery = `
-      SELECT subject, detailed_analysis
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
-      WHERE user_id = @username
-    `;
-    const [analyses] = await bq.query({
-      query: analysisQuery,
-      params: { username: sanitizedUser }
-    });
 
     const detailedAnalysis = {};
     for (const a of analyses) {
       detailedAnalysis[a.subject] = a.detailed_analysis;
     }
-
-    const breakdownQuery = `
-      SELECT topic, good_at, not_good_at
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-      WHERE user_id = @username
-    `;
-    const [breakdowns] = await bq.query({
-      query: breakdownQuery,
-      params: { username: sanitizedUser }
-    });
 
     const topicBreakdowns = {};
     for (const b of breakdowns) {

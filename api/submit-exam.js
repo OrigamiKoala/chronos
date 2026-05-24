@@ -13,6 +13,7 @@ const bq = new BigQuery({
 });
 
 const ELO_ALGORITHM_VERSION = 1;
+let tablesEnsured = false;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -28,83 +29,73 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // 0. Ensure user_wrong_problems and user_weakness_analysis tables exist
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` (
-        user_id STRING NOT NULL,
-        exam_id STRING NOT NULL,
-        question_id STRING NOT NULL,
-        subject STRING NOT NULL,
-        topic STRING NOT NULL,
-        question_text STRING NOT NULL,
-        user_answer STRING,
-        correct_answer STRING NOT NULL,
-        created_at TIMESTAMP NOT NULL
-      )
-    `;
-    await bq.query(createTableQuery);
+    // 0. Ensure tables exist (once per cold start)
+    if (!tablesEnsured) {
+      await Promise.all([
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` (
+            user_id STRING NOT NULL, exam_id STRING NOT NULL, question_id STRING NOT NULL,
+            subject STRING NOT NULL, topic STRING NOT NULL, question_text STRING NOT NULL,
+            user_answer STRING, correct_answer STRING NOT NULL, created_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
+            user_id STRING NOT NULL, subject STRING NOT NULL,
+            detailed_analysis STRING NOT NULL, updated_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` (
+            user_id STRING NOT NULL, exam_id STRING NOT NULL,
+            results_json STRING NOT NULL, created_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
+            user_id STRING NOT NULL, subject STRING NOT NULL, topic STRING NOT NULL,
+            good_at STRING NOT NULL, not_good_at STRING NOT NULL, updated_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` (
+            user_id STRING NOT NULL, exam_id STRING NOT NULL, subject STRING NOT NULL,
+            mistake_patterns STRING NOT NULL, created_at TIMESTAMP NOT NULL
+          )
+        `)
+      ]);
+      tablesEnsured = true;
+    }
 
-    const createAnalysisTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
-        user_id STRING NOT NULL,
-        subject STRING NOT NULL,
-        detailed_analysis STRING NOT NULL,
-        updated_at TIMESTAMP NOT NULL
-      )
-    `;
-    await bq.query(createAnalysisTableQuery);
-
-    // 1. Insert into user_exam_history
-    const insertHistoryQuery = `
-      INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
-        (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at)
-      VALUES 
-        (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP())
-    `;
-    await bq.query({
-      query: insertHistoryQuery,
-      params: { username: sanitizedUser, examId, subject, accuracy, avgTime, ratingChange, newRating }
-    });
-
-    // 1b. Create user_exam_results table and insert full results JSON
-    const createResultsTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` (
-        user_id STRING NOT NULL,
-        exam_id STRING NOT NULL,
-        results_json STRING NOT NULL,
-        created_at TIMESTAMP NOT NULL
-      )
-    `;
-    await bq.query(createResultsTableQuery);
-
-    const insertResultsQuery = `
-      INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-        (user_id, exam_id, results_json, created_at)
-      VALUES
-        (@username, @examId, @resultsJson, CURRENT_TIMESTAMP())
-    `;
-    await bq.query({
-      query: insertResultsQuery,
-      params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(results) }
-    });
-
-    // 2. Update user rating in users table
+    // 1. Fire history insert, results insert, and rating update in parallel
     let ratingColumn = 'math_rating';
     if (subject === 'Physics') ratingColumn = 'physics_rating';
     else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
 
-    const updateRatingQuery = `
-      UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
-      SET ${ratingColumn} = @newRating, elo_version = @eloVersion
-      WHERE user_id = @username
-    `;
-    await bq.query({
-      query: updateRatingQuery,
-      params: { username: sanitizedUser, newRating, eloVersion: ELO_ALGORITHM_VERSION }
-    });
+    await Promise.all([
+      bq.query({
+        query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
+          (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at)
+          VALUES (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP())`,
+        params: { username: sanitizedUser, examId, subject, accuracy, avgTime, ratingChange, newRating }
+      }),
+      bq.query({
+        query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+          (user_id, exam_id, results_json, created_at)
+          VALUES (@username, @examId, @resultsJson, CURRENT_TIMESTAMP())`,
+        params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(results) }
+      }),
+      bq.query({
+        query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+          SET ${ratingColumn} = @newRating, elo_version = @eloVersion
+          WHERE user_id = @username`,
+        params: { username: sanitizedUser, newRating, eloVersion: ELO_ALGORITHM_VERSION }
+      })
+    ]);
 
-    // 3. Update strengths/weaknesses (user_topic_mastery) and record wrong problems
+    // 2. Record wrong problems + update topic mastery
     const topicStats = {};
+    const wrongInsertPromises = [];
     for (const r of results) {
       const topic = r.topic || 'General';
       if (!topicStats[topic]) {
@@ -114,68 +105,70 @@ export default async function handler(req, res) {
       if (r.isCorrect) {
         topicStats[topic].correct += 1;
       } else {
-        // PUSH WRONG PROBLEM TO BIGQUERY
-        const insertWrongQuery = `
-          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-            (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at)
-          VALUES
-            (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP())
-        `;
-        await bq.query({
-          query: insertWrongQuery,
-          params: {
-            username: sanitizedUser,
-            examId,
-            questionId: r.id || String(Date.now()),
-            subject,
-            topic,
-            questionText: r.question,
-            userAnswer: r.userAnswer || '',
-            correctAnswer: r.answer || ''
-          }
-        });
+        wrongInsertPromises.push(
+          bq.query({
+            query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+              (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at)
+              VALUES (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP())`,
+            params: {
+              username: sanitizedUser, examId,
+              questionId: r.id || String(Date.now()),
+              subject, topic,
+              questionText: r.question,
+              userAnswer: r.userAnswer || '',
+              correctAnswer: r.answer || ''
+            }
+          })
+        );
       }
     }
 
-    for (const [topic, stats] of Object.entries(topicStats)) {
-      const checkMastery = `
-        SELECT correct_count, total_count 
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-        WHERE user_id = @username AND sub_category = @topic AND subject = @subject
-      `;
-      const [existingMastery] = await bq.query({
-        query: checkMastery,
-        params: { username: sanitizedUser, topic, subject }
+    // Fetch all existing mastery rows for this user+subject in one query
+    const topicNames = Object.keys(topicStats);
+    let existingMasteryMap = {};
+    if (topicNames.length > 0) {
+      const [masteryRows] = await bq.query({
+        query: `SELECT sub_category, correct_count, total_count
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+          WHERE user_id = @username AND subject = @subject`,
+        params: { username: sanitizedUser, subject }
       });
+      for (const row of masteryRows) {
+        existingMasteryMap[row.sub_category] = row;
+      }
+    }
 
-      if (existingMastery.length > 0) {
-        const nextCorrect = existingMastery[0].correct_count + stats.correct;
-        const nextTotal = existingMastery[0].total_count + stats.total;
+    // Build mastery upsert promises
+    const masteryPromises = [];
+    for (const [topic, stats] of Object.entries(topicStats)) {
+      const existing = existingMasteryMap[topic];
+      if (existing) {
+        const nextCorrect = existing.correct_count + stats.correct;
+        const nextTotal = existing.total_count + stats.total;
         const nextAccuracy = nextCorrect / nextTotal;
-
-        const updateMastery = `
-          UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-          SET correct_count = @nextCorrect, total_count = @nextTotal, accuracy_rate = @nextAccuracy
-          WHERE user_id = @username AND sub_category = @topic AND subject = @subject
-        `;
-        await bq.query({
-          query: updateMastery,
-          params: { username: sanitizedUser, topic, subject, nextCorrect, nextTotal, nextAccuracy }
-        });
+        masteryPromises.push(
+          bq.query({
+            query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+              SET correct_count = @nextCorrect, total_count = @nextTotal, accuracy_rate = @nextAccuracy
+              WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
+            params: { username: sanitizedUser, topic, subject, nextCorrect, nextTotal, nextAccuracy }
+          })
+        );
       } else {
         const accuracyRate = stats.correct / stats.total;
-        const insertMastery = `
-          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` 
-            (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
-          VALUES 
-            (@username, @topic, @subject, @correct, @total, @accuracyRate)
-        `;
-        await bq.query({
-          query: insertMastery,
-          params: { username: sanitizedUser, topic, subject, correct: stats.correct, total: stats.total, accuracyRate }
-        });
+        masteryPromises.push(
+          bq.query({
+            query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` 
+              (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+              VALUES (@username, @topic, @subject, @correct, @total, @accuracyRate)`,
+            params: { username: sanitizedUser, topic, subject, correct: stats.correct, total: stats.total, accuracyRate }
+          })
+        );
       }
     }
+
+    // Fire wrong inserts + mastery upserts in parallel
+    await Promise.all([...wrongInsertPromises, ...masteryPromises]);
 
     // 4. Trigger update of user weaknesses using direct Gemini model
     await updateAIWeaknesses(sanitizedUser, subject);
@@ -194,28 +187,7 @@ export default async function handler(req, res) {
 // Background worker function to analyze wrong problems and update weaknesses
 async function updateAIWeaknesses(username, subject) {
   try {
-    // Ensure all tables exist
-    const createAnalysisTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
-        user_id STRING NOT NULL,
-        subject STRING NOT NULL,
-        detailed_analysis STRING NOT NULL,
-        updated_at TIMESTAMP NOT NULL
-      )
-    `;
-    await bq.query(createAnalysisTableQuery);
-
-    const createBreakdownTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
-        user_id STRING NOT NULL,
-        subject STRING NOT NULL,
-        topic STRING NOT NULL,
-        good_at STRING NOT NULL,
-        not_good_at STRING NOT NULL,
-        updated_at TIMESTAMP NOT NULL
-      )
-    `;
-    await bq.query(createBreakdownTableQuery);
+    // Tables already ensured in cold-start block
 
     // A. Fetch incorrect questions for this user and subject
     const fetchWrongProblemsQuery = `
@@ -274,120 +246,129 @@ Incorrect questions: ${wrongProblemsString}`;
       const detailedAnalysis = responseObj.detailed_analysis;
       const topicBreakdowns = responseObj.topic_breakdowns;
       
-      if (Array.isArray(strengths)) {
-        for (const topic of strengths) {
-          // Check if this mastery entry exists
-          const checkQuery = `
-            SELECT correct_count, total_count 
-            FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-            WHERE user_id = @username AND sub_category = @topic AND subject = @subject
-          `;
-          const [exists] = await bq.query({
-            query: checkQuery,
-            params: { username, topic, subject }
+      if (Array.isArray(strengths) || Array.isArray(weaknesses)) {
+        // Fetch all existing mastery rows in one query
+        const allTopics = [...new Set([...(strengths || []), ...(weaknesses || [])])];
+        let masteryMap = {};
+        if (allTopics.length > 0) {
+          const [rows] = await bq.query({
+            query: `SELECT sub_category, correct_count, total_count
+              FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+              WHERE user_id = @username AND subject = @subject`,
+            params: { username, subject }
           });
-
-          if (exists.length > 0) {
-            // Raise their accuracy rate to register as strength
-            const updateQuery = `
-              UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-              SET correct_count = 4, total_count = 6, accuracy_rate = 0.80
-              WHERE user_id = @username AND sub_category = @topic AND subject = @subject
-            `;
-            await bq.query({
-              query: updateQuery,
-              params: { username, topic, subject }
-            });
-          } else {
-            // Insert baseline strong mastery
-            const insertQuery = `
-              INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-                (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
-              VALUES
-                (@username, @topic, @subject, 4, 6, 0.80)
-            `;
-            await bq.query({
-              query: insertQuery,
-              params: { username, topic, subject }
-            });
+          for (const row of rows) {
+            masteryMap[row.sub_category] = row;
           }
         }
-      }
 
-      if (Array.isArray(weaknesses)) {
-        for (const topic of weaknesses) {
-          // Check if this mastery entry exists
-          const checkQuery = `
-            SELECT correct_count, total_count 
-            FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-            WHERE user_id = @username AND sub_category = @topic AND subject = @subject
-          `;
-          const [exists] = await bq.query({
-            query: checkQuery,
-            params: { username, topic, subject }
-          });
+        const upsertPromises = [];
 
-          if (exists.length > 0) {
-            // Lower their accuracy rate below 0.65 to register as weakness
-            const updateQuery = `
-              UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-              SET correct_count = 2, total_count = 6, accuracy_rate = 0.40
-              WHERE user_id = @username AND sub_category = @topic AND subject = @subject
-            `;
-            await bq.query({
-              query: updateQuery,
-              params: { username, topic, subject }
-            });
-          } else {
-            // Insert baseline weak mastery
-            const insertQuery = `
-              INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-                (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
-              VALUES
-                (@username, @topic, @subject, 2, 6, 0.40)
-            `;
-            await bq.query({
-              query: insertQuery,
-              params: { username, topic, subject }
-            });
+        if (Array.isArray(strengths)) {
+          for (const topic of strengths) {
+            if (masteryMap[topic]) {
+              upsertPromises.push(bq.query({
+                query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+                  SET correct_count = 4, total_count = 6, accuracy_rate = 0.80
+                  WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
+                params: { username, topic, subject }
+              }));
+            } else {
+              upsertPromises.push(bq.query({
+                query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+                  (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+                  VALUES (@username, @topic, @subject, 4, 6, 0.80)`,
+                params: { username, topic, subject }
+              }));
+            }
           }
         }
-      }
 
-      if (Array.isArray(topicBreakdowns)) {
-        for (const b of topicBreakdowns) {
-          const mergeBreakdownQuery = `
-            MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
-            USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
-            ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-            WHEN MATCHED THEN
-              UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
-            WHEN NOT MATCHED THEN
-              INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
-              VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())
-          `;
-          await bq.query({
-            query: mergeBreakdownQuery,
-            params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
-          });
+        if (Array.isArray(weaknesses)) {
+          for (const topic of weaknesses) {
+            if (masteryMap[topic]) {
+              upsertPromises.push(bq.query({
+                query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+                  SET correct_count = 2, total_count = 6, accuracy_rate = 0.40
+                  WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
+                params: { username, topic, subject }
+              }));
+            } else {
+              upsertPromises.push(bq.query({
+                query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+                  (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+                  VALUES (@username, @topic, @subject, 2, 6, 0.40)`,
+                params: { username, topic, subject }
+              }));
+            }
+          }
         }
-      }
 
-      if (detailedAnalysis) {
-        const mergeAnalysisQuery = `
-          MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
-          USING (SELECT @username AS user_id, @subject AS subject) S
-          ON T.user_id = S.user_id AND T.subject = S.subject
-          WHEN MATCHED THEN
-            UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
-          WHEN NOT MATCHED THEN
-            INSERT (user_id, subject, detailed_analysis, updated_at)
-            VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())
-        `;
-        await bq.query({
-          query: mergeAnalysisQuery,
-          params: { username, subject, detailedAnalysis }
-        });
+        // Fire topic breakdowns in parallel too
+        if (Array.isArray(topicBreakdowns)) {
+          for (const b of topicBreakdowns) {
+            upsertPromises.push(bq.query({
+              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+                USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
+                ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
+                WHEN MATCHED THEN
+                  UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
+                WHEN NOT MATCHED THEN
+                  INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
+                  VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
+              params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
+            }));
+          }
+        }
+
+        // Fire analysis merge in parallel
+        if (detailedAnalysis) {
+          upsertPromises.push(bq.query({
+            query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
+              USING (SELECT @username AS user_id, @subject AS subject) S
+              ON T.user_id = S.user_id AND T.subject = S.subject
+              WHEN MATCHED THEN
+                UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
+              WHEN NOT MATCHED THEN
+                INSERT (user_id, subject, detailed_analysis, updated_at)
+                VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())`,
+            params: { username, subject, detailedAnalysis }
+          }));
+        }
+
+        await Promise.all(upsertPromises);
+      } else {
+        // No strengths/weaknesses but may have analysis/breakdowns
+        const miscPromises = [];
+        if (Array.isArray(topicBreakdowns)) {
+          for (const b of topicBreakdowns) {
+            miscPromises.push(bq.query({
+              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+                USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
+                ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
+                WHEN MATCHED THEN
+                  UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
+                WHEN NOT MATCHED THEN
+                  INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
+                  VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
+              params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
+            }));
+          }
+        }
+        if (detailedAnalysis) {
+          miscPromises.push(bq.query({
+            query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
+              USING (SELECT @username AS user_id, @subject AS subject) S
+              ON T.user_id = S.user_id AND T.subject = S.subject
+              WHEN MATCHED THEN
+                UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
+              WHEN NOT MATCHED THEN
+                INSERT (user_id, subject, detailed_analysis, updated_at)
+                VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())`,
+            params: { username, subject, detailedAnalysis }
+          }));
+        }
+        if (miscPromises.length > 0) await Promise.all(miscPromises);
       }
     }
   } catch (err) {
@@ -397,17 +378,7 @@ Incorrect questions: ${wrongProblemsString}`;
 
 async function analyzeMistakesAndSave(username, examId, subject, results) {
   try {
-    // Create mistake analysis table if not exists
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` (
-        user_id STRING NOT NULL,
-        exam_id STRING NOT NULL,
-        subject STRING NOT NULL,
-        mistake_patterns STRING NOT NULL,
-        created_at TIMESTAMP NOT NULL
-      )
-    `;
-    await bq.query(createTableQuery);
+    // Table already ensured in cold-start block
 
     const prompt = `You are an expert tutor. Analyze the user's performance on this ${subject} exam.
 Look closely at their answers to determine what kind of mistakes they made (e.g., conceptual gaps, calculation errors, timing issues, or panic).

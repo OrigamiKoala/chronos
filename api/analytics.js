@@ -24,40 +24,50 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // 1. ELO over time — full exam history ordered chronologically
+    // Fire all 4 independent reads in parallel
     const eloQuery = `
       SELECT exam_id, subject, accuracy, new_rating, rating_change, created_at
       FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
       WHERE user_id = @username
       ORDER BY created_at ASC
     `;
-    const [eloHistory] = await bq.query({
-      query: eloQuery,
-      params: { username: sanitizedUser }
-    });
+    const tagQuery = `
+      SELECT t.exam_id, t.tag, t.is_correct, t.points_value, h.created_at, h.subject
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\` t
+      JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
+        ON t.exam_id = h.exam_id AND t.user_id = h.user_id
+      WHERE t.user_id = @username
+      ORDER BY h.created_at ASC
+    `;
+    const resultsQuery = `
+      SELECT r.exam_id, r.results_json, h.created_at, h.subject
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
+      JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
+        ON r.exam_id = h.exam_id AND r.user_id = h.user_id
+      WHERE r.user_id = @username
+      ORDER BY h.created_at ASC
+    `;
+    const masteryQuery = `
+      SELECT sub_category, subject, correct_count, total_count, accuracy_rate
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+      WHERE user_id = @username AND total_count > 0
+      ORDER BY subject, accuracy_rate DESC
+    `;
 
-    // 2. Problem tags aggregated by exam
-    let tagData = [];
-    try {
-      const tagQuery = `
-        SELECT t.exam_id, t.tag, t.is_correct, t.points_value, h.created_at, h.subject
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\` t
-        JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
-          ON t.exam_id = h.exam_id AND t.user_id = h.user_id
-        WHERE t.user_id = @username
-        ORDER BY h.created_at ASC
-      `;
-      const [rows] = await bq.query({
-        query: tagQuery,
-        params: { username: sanitizedUser }
-      });
-      tagData = rows;
-    } catch {
-      // table may not exist yet
-    }
+    const params = { username: sanitizedUser };
+    const [eloResult, tagResult, resultsResult, masteryResult] = await Promise.allSettled([
+      bq.query({ query: eloQuery, params }),
+      bq.query({ query: tagQuery, params }),
+      bq.query({ query: resultsQuery, params }),
+      bq.query({ query: masteryQuery, params })
+    ]);
 
-    // 3. Build silly vs concept point differentials over time
-    // Group by exam_id, sum points lost for each tag type
+    const eloHistory = eloResult.status === 'fulfilled' ? eloResult.value[0] : [];
+    const tagData = tagResult.status === 'fulfilled' ? tagResult.value[0] : [];
+    const resultRows = resultsResult.status === 'fulfilled' ? resultsResult.value[0] : [];
+    const topicMastery = masteryResult.status === 'fulfilled' ? masteryResult.value[0] : [];
+
+    // Build silly vs concept point differentials over time
     const examTagMap = {};
     for (const row of tagData) {
       const eid = row.exam_id;
@@ -81,7 +91,7 @@ export default async function handler(req, res) {
       return da - db;
     });
 
-    // 4. Intuition series (cumulative unsure accuracy over time)
+    // Intuition series (cumulative unsure accuracy over time)
     let cumulativeUnsureCorrect = 0;
     let cumulativeUnsureTotal = 0;
     const intuitionSeries = tagTimeSeries.filter(t => t.unsure_total > 0).map(t => {
@@ -96,66 +106,29 @@ export default async function handler(req, res) {
       };
     });
 
-    // 5. Point efficiency per exam — points earned per minute
-    // Points = sum of difficulty of correct questions; Time = total seconds / 60
-    let efficiencyData = [];
-    try {
-      const resultsQuery = `
-        SELECT r.exam_id, r.results_json, h.created_at, h.subject
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
-        JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
-          ON r.exam_id = h.exam_id AND r.user_id = h.user_id
-        WHERE r.user_id = @username
-        ORDER BY h.created_at ASC
-      `;
-      const [resultRows] = await bq.query({
-        query: resultsQuery,
-        params: { username: sanitizedUser }
-      });
+    // Point efficiency per exam
+    const efficiencyData = resultRows.map(row => {
+      const results = JSON.parse(row.results_json);
+      const totalTimeSeconds = results.reduce((acc, r) => acc + (r.timeSpent || 0), 0);
+      const totalMinutes = Math.max(totalTimeSeconds / 60, 0.1);
+      const pointsEarned = results.filter(r => r.isCorrect).reduce((acc, r) => acc + (r.difficulty || r.difficultyAtTime || 1), 0);
+      const totalPoints = results.reduce((acc, r) => acc + (r.difficulty || r.difficultyAtTime || 1), 0);
+      const avgTimePerQuestion = results.length > 0 ? Math.round(totalTimeSeconds / results.length) : 0;
 
-      efficiencyData = resultRows.map(row => {
-        const results = JSON.parse(row.results_json);
-        const totalTimeSeconds = results.reduce((acc, r) => acc + (r.timeSpent || 0), 0);
-        const totalMinutes = Math.max(totalTimeSeconds / 60, 0.1);
-        const pointsEarned = results.filter(r => r.isCorrect).reduce((acc, r) => acc + (r.difficulty || r.difficultyAtTime || 1), 0);
-        const totalPoints = results.reduce((acc, r) => acc + (r.difficulty || r.difficultyAtTime || 1), 0);
-        const avgTimePerQuestion = results.length > 0 ? Math.round(totalTimeSeconds / results.length) : 0;
+      return {
+        exam_id: row.exam_id,
+        subject: row.subject,
+        created_at: row.created_at,
+        pointsEarned,
+        totalPoints,
+        totalMinutes: Math.round(totalMinutes * 10) / 10,
+        efficiency: Math.round((pointsEarned / totalMinutes) * 10) / 10,
+        avgTimePerQuestion,
+        questionCount: results.length
+      };
+    });
 
-        return {
-          exam_id: row.exam_id,
-          subject: row.subject,
-          created_at: row.created_at,
-          pointsEarned,
-          totalPoints,
-          totalMinutes: Math.round(totalMinutes * 10) / 10,
-          efficiency: Math.round((pointsEarned / totalMinutes) * 10) / 10,
-          avgTimePerQuestion,
-          questionCount: results.length
-        };
-      });
-    } catch {
-      // table may not exist yet
-    }
-
-    // 6. Topic mastery breakdown
-    let topicMastery = [];
-    try {
-      const masteryQuery = `
-        SELECT sub_category, subject, correct_count, total_count, accuracy_rate
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-        WHERE user_id = @username AND total_count > 0
-        ORDER BY subject, accuracy_rate DESC
-      `;
-      const [masteryRows] = await bq.query({
-        query: masteryQuery,
-        params: { username: sanitizedUser }
-      });
-      topicMastery = masteryRows;
-    } catch {
-      // ignore
-    }
-
-    // 7. Summary stats
+    // Summary stats
     const totalExams = eloHistory.length;
     const subjectCounts = {};
     const subjectAccuracies = {};

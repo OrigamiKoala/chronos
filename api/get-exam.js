@@ -22,60 +22,45 @@ export default async function handler(req, res) {
   }
 
   try {
-    const query = `
+    const resultsQuery = `
       SELECT results_json
       FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
       WHERE exam_id = @examId
       LIMIT 1
     `;
-    const [rows] = await bq.query({
-      query,
-      params: { examId }
-    });
+    const mistakeQuery = `
+      SELECT mistake_patterns
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+      WHERE exam_id = @examId
+      LIMIT 1
+    `;
+    const tagsQuery = `
+      SELECT question_index, tag
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+      WHERE exam_id = @examId
+      ORDER BY question_index ASC
+    `;
 
-    if (rows.length === 0) {
+    const params = { examId };
+    const [resultsResult, mistakeResult, tagsResult] = await Promise.allSettled([
+      bq.query({ query: resultsQuery, params }),
+      bq.query({ query: mistakeQuery, params }),
+      bq.query({ query: tagsQuery, params })
+    ]);
+
+    // Results are required
+    if (resultsResult.status !== 'fulfilled' || resultsResult.value[0].length === 0) {
       return res.status(404).json({ error: 'Exam results not found' });
     }
+    const results = JSON.parse(resultsResult.value[0][0].results_json);
 
-    const results = JSON.parse(rows[0].results_json);
+    // Mistakes are optional
+    const mistakeRows = mistakeResult.status === 'fulfilled' ? mistakeResult.value[0] : [];
+    const mistakePatterns = mistakeRows.length > 0 ? mistakeRows[0].mistake_patterns : null;
 
-    // Query mistake patterns if table exists
-    let mistakePatterns = null;
-    try {
-      const mistakeQuery = `
-        SELECT mistake_patterns
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
-        WHERE exam_id = @examId
-        LIMIT 1
-      `;
-      const [mistakeRows] = await bq.query({
-        query: mistakeQuery,
-        params: { examId }
-      });
-      if (mistakeRows.length > 0) {
-        mistakePatterns = mistakeRows[0].mistake_patterns;
-      }
-    } catch {
-      // ignore if table doesn't exist or query fails
-    }
-
-    // Query saved tags if table exists
-    let savedTags = [];
-    try {
-      const tagsQuery = `
-        SELECT question_index, tag
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
-        WHERE exam_id = @examId
-        ORDER BY question_index ASC
-      `;
-      const [tagRows] = await bq.query({
-        query: tagsQuery,
-        params: { examId }
-      });
-      savedTags = tagRows.map(r => ({ questionIndex: r.question_index, tag: r.tag }));
-    } catch {
-      // ignore if table doesn't exist
-    }
+    // Tags are optional
+    const tagRows = tagsResult.status === 'fulfilled' ? tagsResult.value[0] : [];
+    const savedTags = tagRows.map(r => ({ questionIndex: r.question_index, tag: r.tag }));
 
     return res.status(200).json({ results, mistakePatterns, savedTags });
   } catch (err) {
