@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   try {
     // 1. Insert into user_exam_history
     const insertHistoryQuery = `
-      INSERT INTO \`chronos-stress-sandbox.chronos_users.user_exam_history\` 
+      INSERT INTO \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_exam_history\` 
         (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at)
       VALUES 
         (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP())
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
 
     const updateRatingQuery = `
-      UPDATE \`chronos-stress-sandbox.chronos_users.users\`
+      UPDATE \`chronos-stress-sandbox\`.\`chronos_users\`.\`users\`
       SET ${ratingColumn} = @newRating
       WHERE user_id = @username
     `;
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     for (const [topic, stats] of Object.entries(topicStats)) {
       const checkMastery = `
         SELECT correct_count, total_count 
-        FROM \`chronos-stress-sandbox.chronos_users.user_topic_mastery\`
+        FROM \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\`
         WHERE user_id = @username AND sub_category = @topic
       `;
       const [existingMastery] = await bq.query({
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
         const nextAccuracy = nextCorrect / nextTotal;
 
         const updateMastery = `
-          UPDATE \`chronos-stress-sandbox.chronos_users.user_topic_mastery\`
+          UPDATE \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\`
           SET correct_count = @nextCorrect, total_count = @nextTotal, accuracy_rate = @nextAccuracy
           WHERE user_id = @username AND sub_category = @topic
         `;
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
       } else {
         const accuracyRate = stats.correct / stats.total;
         const insertMastery = `
-          INSERT INTO \`chronos-stress-sandbox.chronos_users.user_topic_mastery\` 
+          INSERT INTO \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\` 
             (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
           VALUES 
             (@username, @topic, @subject, @correct, @total, @accuracyRate)

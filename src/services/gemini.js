@@ -184,7 +184,7 @@ export function generateBigQuerySQL(count, startingDifficulty, subject = "Math")
       FORMAT("Topic: %s (Accuracy: %d%%)", sub_category, CAST(accuracy_rate * 100 AS INT64)), 
       "; "
     ) AS weaknesses
-  FROM \`your_project.your_dataset.user_topic_mastery\`
+  FROM \`your_project\`.\`your_dataset\`.\`user_topic_mastery\`
   WHERE accuracy_rate < 0.65 AND user_id = @targetUserId
   GROUP BY user_id
 )
@@ -193,7 +193,7 @@ SELECT
   ml_generate_text_llm_result AS ai_response
 FROM
   ML.GENERATE_TEXT(
-    MODEL \`your_project.your_dataset.gemini_pro_model\`,
+    MODEL \`your_project\`.\`your_dataset\`.\`gemini_pro_model\`,
     (
       SELECT 
         CONCAT(
