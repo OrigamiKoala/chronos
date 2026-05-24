@@ -24,6 +24,7 @@ function App() {
   const [history, setHistory] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('Math');
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginModalMode, setLoginModalMode] = useState('login'); // 'login', 'setup_recovery', 'forgot_username', 'forgot_verify'
@@ -425,10 +426,41 @@ function App() {
               >
                 <BarChart3 size={16} /> Analytics
               </button>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Welcome, <strong style={{ color: 'var(--accent-primary)' }}>{user.user_id}</strong></span>
-              <button className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={handleLogout}>
-                <LogOut size={16} /> Logout
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button 
+                  className="btn btn-outline"
+                  style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                >
+                  <User size={14} /> {user.user_id}
+                </button>
+                {showUserDropdown && (
+                  <div style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '100%',
+                    marginTop: '0.5rem',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.25rem',
+                    zIndex: 100,
+                    minWidth: '120px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                  }}>
+                    <button 
+                      className="btn btn-outline" 
+                      style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--danger)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
+                      onClick={() => {
+                        handleLogout();
+                        setShowUserDropdown(false);
+                      }}
+                    >
+                      <LogOut size={14} /> Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <button className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => setShowLoginModal(true)}>
