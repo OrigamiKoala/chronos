@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, Play, ShieldAlert, Timer } from 'lucide-react';
 
 const getSubjectLevelName = (subject, rating) => {
@@ -27,7 +27,7 @@ const getSubjectLevelName = (subject, rating) => {
   return 'Novice';
 };
 
-export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chemistry: 100 } }) {
+export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chemistry: 100 }, onSubjectChange }) {
   const [config, setConfig] = useState({
     subject: 'Math',
     startingDifficulty: 5,
@@ -36,9 +36,22 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     timeLimitPerQuestion: 60, // seconds
   });
 
+  useEffect(() => {
+    if (onSubjectChange) {
+      onSubjectChange(config.subject);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setConfig((prev) => ({ ...prev, [name]: isNaN(value) ? value : Number(value) || value }));
+    setConfig((prev) => {
+      const next = { ...prev, [name]: isNaN(value) ? value : Number(value) || value };
+      if (name === 'subject' && onSubjectChange) {
+        onSubjectChange(value);
+      }
+      return next;
+    });
   };
 
   const handleSubmit = (e) => {

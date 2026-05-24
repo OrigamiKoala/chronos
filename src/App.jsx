@@ -17,10 +17,19 @@ function App() {
   const [user, setUser] = useState(null);
   const [strengths, setStrengths] = useState([]);
   const [weaknesses, setWeaknesses] = useState([]);
+  const [detailedAnalysis, setDetailedAnalysis] = useState({});
   const [history, setHistory] = useState([]);
+  const [selectedSubject, setSelectedSubject] = useState('Math');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+
+  const formatDate = (dateVal) => {
+    if (!dateVal) return '';
+    const dateStr = typeof dateVal === 'object' && dateVal.value ? dateVal.value : dateVal;
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? 'Recent' : d.toLocaleDateString();
+  };
 
   useEffect(() => {
     localStorage.setItem('mock_exam_ratings', JSON.stringify(ratings));
@@ -45,6 +54,7 @@ function App() {
           setUser(data.user);
           setStrengths(data.strengths);
           setWeaknesses(data.weaknesses);
+          setDetailedAnalysis(data.detailedAnalysis || {});
           setHistory(data.history);
           setRatings({
             Math: data.user.math_rating || 100,
@@ -72,6 +82,7 @@ function App() {
         setUser(data.user);
         setStrengths(data.strengths);
         setWeaknesses(data.weaknesses);
+        setDetailedAnalysis(data.detailedAnalysis || {});
         setHistory(data.history);
         setRatings({
           Math: data.user.math_rating || 100,
@@ -95,6 +106,7 @@ function App() {
     setUser(null);
     setStrengths([]);
     setWeaknesses([]);
+    setDetailedAnalysis({});
     setHistory([]);
     setRatings({ Math: 100, Physics: 100, Chemistry: 100 });
     localStorage.removeItem('chronos_logged_user');
@@ -170,6 +182,7 @@ function App() {
             setUser(data.user);
             setStrengths(data.strengths);
             setWeaknesses(data.weaknesses);
+            setDetailedAnalysis(data.detailedAnalysis || {});
             setHistory(data.history);
           });
         }
@@ -193,10 +206,22 @@ function App() {
     setCurrentScreen('setup');
   };
 
+  const filteredStrengths = strengths
+    .filter(s => s.subject === selectedSubject)
+    .map(s => s.topic);
+
+  const filteredWeaknesses = weaknesses
+    .filter(w => w.subject === selectedSubject)
+    .map(w => w.topic);
+
   return (
     <div className="app-container">
       <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem' }}>
-        <div className="logo text-gradient" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div 
+          className="logo text-gradient" 
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+          onClick={restart}
+        >
           <BrainCircuit size={32} color="var(--accent-primary)" />
           Chronos Bot
         </div>
@@ -219,19 +244,19 @@ function App() {
       <main className="animate-fade-in" style={{ padding: '2rem 1rem' }}>
         {currentScreen === 'setup' && (
           <div style={{ display: 'grid', gridTemplateColumns: user ? '1fr 1fr' : '1fr', gap: '2rem', maxWidth: user ? '1200px' : '600px', margin: '0 auto', alignItems: 'start' }}>
-            <SetupScreen onStart={startExam} ratings={ratings} />
+            <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} />
             {user && (
               <div className="glass-panel animate-fade-in" style={{ padding: '2rem' }}>
                 <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Award size={24} /> {user.user_id}'s Analytics Dashboard
+                  <Award size={24} /> {user.user_id}'s {selectedSubject} Analytics Dashboard
                 </h3>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                   <div style={{ padding: '1rem', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
-                    <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>Strengths</h4>
-                    {strengths.length > 0 ? (
+                    <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Strengths</h4>
+                    {filteredStrengths.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                        {strengths.map((s, i) => (
+                        {filteredStrengths.map((s, i) => (
                           <span key={i} style={{ background: 'rgba(74, 222, 128, 0.1)', color: 'var(--success)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>{s}</span>
                         ))}
                       </div>
@@ -240,10 +265,10 @@ function App() {
                     )}
                   </div>
                   <div style={{ padding: '1rem', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-sm)' }}>
-                    <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>Weaknesses</h4>
-                    {weaknesses.length > 0 ? (
+                    <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Weaknesses</h4>
+                    {filteredWeaknesses.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                        {weaknesses.map((w, i) => (
+                        {filteredWeaknesses.map((w, i) => (
                           <span key={i} style={{ background: 'rgba(248, 113, 113, 0.1)', color: 'var(--danger)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>{w}</span>
                         ))}
                       </div>
@@ -253,6 +278,24 @@ function App() {
                   </div>
                 </div>
 
+                {detailedAnalysis[selectedSubject] && (
+                  <div style={{ 
+                    marginBottom: '2rem', 
+                    padding: '1.25rem', 
+                    background: 'rgba(168, 85, 247, 0.05)', 
+                    border: '1px solid rgba(168, 85, 247, 0.2)', 
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: '0 4px 20px -2px rgba(168, 85, 247, 0.1)'
+                  }}>
+                    <h4 style={{ color: 'var(--accent-secondary)', marginBottom: '0.75rem', fontSize: '1rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <BrainCircuit size={18} /> Detailed {selectedSubject} Diagnosis
+                    </h4>
+                    <p style={{ fontSize: '0.875rem', lineHeight: '1.6', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'pre-line' }}>
+                      {detailedAnalysis[selectedSubject]}
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem', color: 'var(--text-primary)' }}>Past Exam History (Last 25)</h4>
                   {history.length > 0 ? (
@@ -261,7 +304,7 @@ function App() {
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
                           <div>
                             <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>
-                            <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{new Date(h.created_at).toLocaleDateString()}</span>
+                            <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{formatDate(h.created_at)}</span>
                           </div>
                           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                             <span style={{ color: h.accuracy >= 0.70 ? 'var(--success)' : h.accuracy >= 0.40 ? 'var(--warning)' : 'var(--danger)' }}>{Math.round(h.accuracy * 100)}% Acc</span>

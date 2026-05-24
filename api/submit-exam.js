@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // 0. Ensure user_wrong_problems table exists
+    // 0. Ensure user_wrong_problems and user_weakness_analysis tables exist
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` (
         user_id STRING NOT NULL,
@@ -40,6 +40,16 @@ export default async function handler(req, res) {
       )
     `;
     await bq.query(createTableQuery);
+
+    const createAnalysisTableQuery = `
+      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
+        user_id STRING NOT NULL,
+        subject STRING NOT NULL,
+        detailed_analysis STRING NOT NULL,
+        updated_at TIMESTAMP NOT NULL
+      )
+    `;
+    await bq.query(createAnalysisTableQuery);
 
     // 1. Insert into user_exam_history
     const insertHistoryQuery = `
@@ -177,12 +187,15 @@ async function updateAIWeaknesses(username, subject) {
         MODEL \`${projectId}\`.\`chronos_users\`.\`gemini_flash_model\`,
         (
           SELECT CONCAT(
-            "Analyze these incorrect olympiad exam questions attempted by user '", @username, "'. ",
-            "List up to 5 highly specific topic sub-categories (e.g. 'Stoichiometry', 'Organic Synthesis', 'Rotational Mechanics') that the user is weak in. ",
-            "Return strictly a valid JSON array of strings containing ONLY the sub-category names, like: [\\"Stoichiometry\\", \\"Rotational Mechanics\\"]. ",
-            "Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON array.",
+            "Analyze these incorrect ", @subject, " exam questions attempted by user '", @username, "'. ",
+            "First, list up to 5 highly specific topic sub-categories (e.g., 'SN2 Reaction Kinetics', 'Conservation of Angular Momentum', 'Implicit Differentiation with Trigonometric Functions') that the user is weak in. Be very precise about exactly what sub-concept they missed. ",
+            "Second, generate a detailed diagnostic response explaining exactly what the user is missing, where they are struggling, and what they need to master. ",
+            "Return strictly a valid JSON object with two fields:\n",
+            "1. \\"weaknesses\\": a JSON array of up to 5 strings, each being a highly specific weakness tag (maximum 4-5 words per tag).\n",
+            "2. \\"detailed_analysis\\": a string containing the detailed diagnostic explanation of what the user is missing.\n",
+            "Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.\n\n",
             "Incorrect questions: ",
-            STRING_AGG(CONCAT("Subject: ", subject, " | Topic: ", topic, " | Question: ", question_text), " ; ")
+            STRING_AGG(CONCAT("Topic: ", topic, " | Question: ", question_text, " | User Answer: ", COALESCE(user_answer, "None"), " | Correct Answer: ", correct_answer), " ; ")
           ) AS prompt
           FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
           WHERE user_id = @username AND subject = @subject
@@ -200,7 +213,9 @@ async function updateAIWeaknesses(username, subject) {
       const responseText = aiRows[0].analysis;
       // Clean up markdown block if present
       const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const weaknesses = JSON.parse(cleanedText);
+      const responseObj = JSON.parse(cleanedText);
+      const weaknesses = responseObj.weaknesses;
+      const detailedAnalysis = responseObj.detailed_analysis;
       
       if (Array.isArray(weaknesses)) {
         for (const topic of weaknesses) {
@@ -240,6 +255,23 @@ async function updateAIWeaknesses(username, subject) {
             });
           }
         }
+      }
+
+      if (detailedAnalysis) {
+        const mergeAnalysisQuery = `
+          MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
+          USING (SELECT @username AS user_id, @subject AS subject) S
+          ON T.user_id = S.user_id AND T.subject = S.subject
+          WHEN MATCHED THEN
+            UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
+          WHEN NOT MATCHED THEN
+            INSERT (user_id, subject, detailed_analysis, updated_at)
+            VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())
+        `;
+        await bq.query({
+          query: mergeAnalysisQuery,
+          params: { username, subject, detailedAnalysis }
+        });
       }
     }
   } catch (err) {

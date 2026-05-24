@@ -106,14 +106,41 @@ export default async function handler(req, res) {
       params: { username: sanitizedUser }
     });
 
-    const strengths = mastery.filter(m => m.accuracy_rate >= 0.70).map(m => m.sub_category);
-    const weaknesses = mastery.filter(m => m.accuracy_rate < 0.65).map(m => m.sub_category);
+    const strengths = mastery.filter(m => m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
+    const weaknesses = mastery.filter(m => m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
+
+    // 5. Ensure user_weakness_analysis table exists and fetch detailed diagnostic paragraphs
+    const createAnalysisTableQuery = `
+      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
+        user_id STRING NOT NULL,
+        subject STRING NOT NULL,
+        detailed_analysis STRING NOT NULL,
+        updated_at TIMESTAMP NOT NULL
+      )
+    `;
+    await bq.query(createAnalysisTableQuery);
+
+    const analysisQuery = `
+      SELECT subject, detailed_analysis
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
+      WHERE user_id = @username
+    `;
+    const [analyses] = await bq.query({
+      query: analysisQuery,
+      params: { username: sanitizedUser }
+    });
+
+    const detailedAnalysis = {};
+    for (const a of analyses) {
+      detailedAnalysis[a.subject] = a.detailed_analysis;
+    }
 
     return res.status(200).json({
       user: userData,
       history,
       strengths,
-      weaknesses
+      weaknesses,
+      detailedAnalysis
     });
 
   } catch (err) {

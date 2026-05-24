@@ -86,12 +86,12 @@ export default async function handler(req, res) {
           "None (excellent performance across all topics)"
         ) AS weaknesses
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-      WHERE accuracy_rate < 0.65 AND user_id = @targetUserId
+      WHERE accuracy_rate < 0.65 AND user_id = @targetUserId AND subject = @subject
     `;
 
     const [rows] = await bq.query({
       query: weaknessesQuery,
-      params: { targetUserId: sanitizedUser },
+      params: { targetUserId: sanitizedUser, subject },
     });
 
     const weaknesses = rows[0]?.weaknesses || 'None (excellent performance across all topics)';
