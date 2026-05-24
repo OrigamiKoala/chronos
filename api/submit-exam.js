@@ -63,6 +63,28 @@ export default async function handler(req, res) {
       params: { username: sanitizedUser, examId, subject, accuracy, avgTime, ratingChange, newRating }
     });
 
+    // 1b. Create user_exam_results table and insert full results JSON
+    const createResultsTableQuery = `
+      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` (
+        user_id STRING NOT NULL,
+        exam_id STRING NOT NULL,
+        results_json STRING NOT NULL,
+        created_at TIMESTAMP NOT NULL
+      )
+    `;
+    await bq.query(createResultsTableQuery);
+
+    const insertResultsQuery = `
+      INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+        (user_id, exam_id, results_json, created_at)
+      VALUES
+        (@username, @examId, @resultsJson, CURRENT_TIMESTAMP())
+    `;
+    await bq.query({
+      query: insertResultsQuery,
+      params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(results) }
+    });
+
     // 2. Update user rating in users table
     let ratingColumn = 'math_rating';
     if (subject === 'Physics') ratingColumn = 'physics_rating';

@@ -231,3 +231,8 @@ input, select, textarea {
   align-items: center;
   gap: 0.5rem;
 }
+
+.history-row:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}

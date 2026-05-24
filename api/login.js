@@ -82,18 +82,103 @@ export default async function handler(req, res) {
       };
     }
 
-    // 3. Fetch past 25 tests history
-    const historyQuery = `
+    // 3. Fetch ALL past tests for ELO recalculation
+    const allHistoryQuery = `
       SELECT exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at
       FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
       WHERE user_id = @username
-      ORDER BY created_at DESC
-      LIMIT 25
+      ORDER BY created_at ASC
     `;
-    const [history] = await bq.query({
-      query: historyQuery,
+    const [allHistory] = await bq.query({
+      query: allHistoryQuery,
       params: { username: sanitizedUser }
     });
+
+    const subjectRatings = { Math: 100, Physics: 100, Chemistry: 100 };
+    const subjectChallenged = { Math: false, Physics: false, Chemistry: false };
+    const updatesToMake = [];
+
+    for (const h of allHistory) {
+      const sub = h.subject;
+      const currentRating = subjectRatings[sub] || 100;
+      const score = h.accuracy;
+      const avgQuestionRating = h.avg_time;
+
+      const expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
+      
+      if (score < 0.75) {
+        subjectChallenged[sub] = true;
+      }
+      
+      const K = (subjectChallenged[sub] || score < 0.75) ? 32 : 250;
+      const ratingChange = Math.round(K * (score - expectedScore));
+      const newRating = Math.max(100, currentRating + ratingChange);
+
+      if (h.rating_change !== ratingChange || h.new_rating !== newRating) {
+        updatesToMake.push({
+          exam_id: h.exam_id,
+          rating_change: ratingChange,
+          new_rating: newRating
+        });
+        h.rating_change = ratingChange;
+        h.new_rating = newRating;
+      }
+
+      subjectRatings[sub] = newRating;
+    }
+
+    if (updatesToMake.length > 0) {
+      const updatePromises = updatesToMake.map(update => {
+        const query = `
+          UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+          SET rating_change = @rating_change, new_rating = @new_rating
+          WHERE user_id = @username AND exam_id = @exam_id
+        `;
+        return bq.query({
+          query,
+          params: {
+            username: sanitizedUser,
+            exam_id: update.exam_id,
+            rating_change: update.rating_change,
+            new_rating: update.new_rating
+          }
+        });
+      });
+      await Promise.all(updatePromises);
+    }
+
+    // Update users table with final ratings if they changed
+    const finalMath = subjectRatings.Math;
+    const finalPhys = subjectRatings.Physics;
+    const finalChem = subjectRatings.Chemistry;
+
+    if (
+      userData.math_rating !== finalMath ||
+      userData.physics_rating !== finalPhys ||
+      userData.chemistry_rating !== finalChem
+    ) {
+      const updateUsersQuery = `
+        UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+        SET math_rating = @finalMath, physics_rating = @finalPhys, chemistry_rating = @finalChem
+        WHERE user_id = @username
+      `;
+      await bq.query({
+        query: updateUsersQuery,
+        params: {
+          username: sanitizedUser,
+          finalMath,
+          finalPhys,
+          finalChem
+        }
+      });
+      userData.math_rating = finalMath;
+      userData.physics_rating = finalPhys;
+      userData.chemistry_rating = finalChem;
+    }
+
+    const history = [...allHistory]
+      .sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at))
+      .slice(0, 25);
 
     // 4. Fetch mastery (strengths >= 70%, weaknesses < 65%)
     const masteryQuery = `

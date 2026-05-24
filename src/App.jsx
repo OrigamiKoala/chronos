@@ -25,6 +25,7 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [loadingExamId, setLoadingExamId] = useState(null);
 
   const formatDate = (dateVal) => {
     if (!dateVal) return '';
@@ -150,7 +151,8 @@ function App() {
     const avgQuestionRating = sumQuestionRatings / totalQuestions;
 
     const expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
-    const K = 32;
+    const isChallenged = history.some(h => h.subject === subject && h.accuracy < 0.75);
+    const K = (isChallenged || score < 0.75) ? 32 : 250;
     const ratingChange = Math.round(K * (score - expectedScore));
     const newRating = Math.max(100, currentRating + ratingChange);
 
@@ -170,8 +172,18 @@ function App() {
           ratingChange,
           newRating,
           results: results.map(r => ({
+            id: r.id,
             topic: r.topic || 'General',
-            isCorrect: r.isCorrect
+            question: r.question,
+            type: r.type,
+            options: r.options,
+            answer: r.answer,
+            difficulty: r.difficulty,
+            userAnswer: r.userAnswer,
+            isCorrect: r.isCorrect,
+            timeSpent: r.timeSpent,
+            timeOut: r.timeOut,
+            difficultyAtTime: r.difficultyAtTime
           }))
         })
       })
@@ -205,6 +217,31 @@ function App() {
       ratingChange
     });
     setCurrentScreen('analytics');
+  };
+
+  const reviewPastExam = async (h) => {
+    setLoadingExamId(h.exam_id);
+    try {
+      const res = await fetch(`/api/get-exam?examId=${h.exam_id}`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch exam results');
+      }
+      const data = await res.json();
+      setExamConfig({ subject: h.subject });
+      setExamResults({
+        results: data.results,
+        subject: h.subject,
+        oldRating: h.new_rating - h.rating_change,
+        newRating: h.new_rating,
+        ratingChange: h.rating_change
+      });
+      setCurrentScreen('analytics');
+    } catch (err) {
+      console.error(err);
+      alert('Could not retrieve full exam details. Past history might not have question data stored.');
+    } finally {
+      setLoadingExamId(null);
+    }
   };
 
   const restart = () => {
@@ -380,7 +417,23 @@ function App() {
                   {history.length > 0 ? (
                     <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
                       {history.map((h, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                        <div 
+                          key={i} 
+                          style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            background: 'var(--bg-tertiary)', 
+                            padding: '0.75rem', 
+                            borderRadius: 'var(--radius-sm)', 
+                            border: '1px solid rgba(255,255,255,0.05)', 
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                          }}
+                          className="history-row"
+                          onClick={() => loadingExamId === null && reviewPastExam(h)}
+                        >
                           <div>
                             <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>
                             <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{formatDate(h.created_at)}</span>
@@ -390,6 +443,15 @@ function App() {
                             <strong style={{ color: h.rating_change >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                               {h.rating_change >= 0 ? `+${h.rating_change}` : h.rating_change} ({h.new_rating})
                             </strong>
+                            <span style={{ 
+                              fontSize: '0.75rem', 
+                              color: 'var(--accent-secondary)', 
+                              textDecoration: 'underline',
+                              marginLeft: '0.5rem',
+                              opacity: 0.8
+                            }}>
+                              {loadingExamId === h.exam_id ? 'Loading...' : 'Review'}
+                            </span>
                           </div>
                         </div>
                       ))}

@@ -9,6 +9,48 @@ if (apiKey) {
     console.warn("GEMINI_API_KEY is not set. Problem generation will fail unless set.");
 }
 
+function extractCompleteObjects(jsonStr) {
+  const objects = [];
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  let objStart = -1;
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const ch = jsonStr[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (inString) {
+      if (ch === '\\') escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+    } else if (ch === '{') {
+      if (depth === 0) objStart = i;
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0 && objStart !== -1) {
+        try {
+          objects.push(JSON.parse(jsonStr.substring(objStart, i + 1)));
+        } catch {
+          // ignore incomplete JSON blocks
+        }
+        objStart = -1;
+      }
+    }
+  }
+
+  return objects;
+}
+
 export async function generateProblem(difficultyLevel, subject = "Math") {
     if (!ai) {
         console.warn("Using fallback mock data due to missing API key.");
@@ -226,7 +268,7 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
     `;
 
     try {
-        const response = await ai.models.generateContent({
+        const stream = await ai.models.generateContentStream({
             model: 'gemini-3.5-flash',
             contents: prompt,
             config: {
@@ -238,9 +280,24 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
             }
         });
 
-        const data = JSON.parse(response.text);
-        const questions = Array.isArray(data) ? data : [data];
-        if (onQuestion) questions.forEach((q, i) => onQuestion(q, i));
+        let accumulated = '';
+        let questionsSent = 0;
+        const questions = [];
+
+        for await (const chunk of stream) {
+            const text = chunk.text;
+            if (text) {
+                accumulated += text;
+                const parsed = extractCompleteObjects(accumulated);
+                while (questionsSent < parsed.length) {
+                    const q = parsed[questionsSent];
+                    questions.push(q);
+                    if (onQuestion) onQuestion(q, questionsSent);
+                    questionsSent++;
+                }
+            }
+        }
+
         return questions;
     } catch (error) {
         console.error("Error generating problems:", error);
