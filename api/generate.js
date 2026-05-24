@@ -85,11 +85,14 @@ export default async function handler(req, res) {
 
     // 3. Call the Gemini API directly
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
         temperature: 0.3,
+        thinkingConfig: {
+          thinkingBudget: 1024,
+        },
       },
     });
 

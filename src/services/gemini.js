@@ -65,7 +65,10 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                temperature: 0.7
+                temperature: 0.7,
+                thinkingConfig: {
+                    thinkingBudget: 1024
+                }
             }
         });
 
@@ -164,7 +167,10 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                temperature: 0.7
+                temperature: 0.7,
+                thinkingConfig: {
+                    thinkingBudget: 1024
+                }
             }
         });
 
