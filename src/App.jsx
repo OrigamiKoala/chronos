@@ -243,10 +243,10 @@ function App() {
 
       <main className="animate-fade-in" style={{ padding: '2rem 1rem' }}>
         {currentScreen === 'setup' && (
-          <div style={{ display: 'grid', gridTemplateColumns: user ? '1fr 1fr' : '1fr', gap: '2rem', maxWidth: user ? '1200px' : '600px', margin: '0 auto', alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: user ? '1fr 1fr' : '1fr', gap: '2rem', maxWidth: user ? '1200px' : '600px', margin: '0 auto', alignItems: 'stretch' }}>
             <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} />
             {user && (
-              <div className="glass-panel animate-fade-in" style={{ padding: '2rem' }}>
+              <div className="glass-panel animate-fade-in" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
                 <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Award size={24} /> {user.user_id}'s {selectedSubject} Analytics Dashboard
                 </h3>

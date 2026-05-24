@@ -60,7 +60,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
+    <div className="glass-panel" style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto', height: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
         <Settings size={28} className="text-gradient" />
         <h2>Configure Exam Session</h2>
