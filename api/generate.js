@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
-import { GoogleGenAI } from '@google-cloud/genai';
+import { GoogleGenAI } from '@google/genai';
 
 const bq = new BigQuery({
   projectId: process.env.BIGQUERY_PROJECT_ID,
@@ -27,6 +27,7 @@ export default async function handler(req, res) {
   }
 
   const sanitizedUser = String(targetUserId).replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
+  const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
   try {
     // 1. Fetch user weaknesses from BigQuery
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
           ),
           "None (excellent performance across all topics)"
         ) AS weaknesses
-      FROM \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\`
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
       WHERE accuracy_rate < 0.65 AND user_id = @targetUserId
     `;
 

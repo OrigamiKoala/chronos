@@ -1,8 +1,10 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
 
+const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
+
 const bq = new BigQuery({
-  projectId: process.env.BIGQUERY_PROJECT_ID,
+  projectId: projectId,
   credentials: {
     client_email: process.env.BIGQUERY_CLIENT_EMAIL,
     private_key: process.env.BIGQUERY_PRIVATE_KEY?.replace(/\\n/g, '\n'),
@@ -25,7 +27,7 @@ export default async function handler(req, res) {
     // 1. Check if user exists
     const checkQuery = `
       SELECT user_id, math_rating, physics_rating, chemistry_rating 
-      FROM \`chronos-stress-sandbox\`.\`chronos_users\`.\`users\`
+      FROM \`${projectId}\`.\`chronos_users\`.\`users\`
       WHERE user_id = @username
     `;
     const [existingUsers] = await bq.query({
@@ -40,7 +42,7 @@ export default async function handler(req, res) {
     } else {
       // 2. Register New User
       const insertUserQuery = `
-        INSERT INTO \`chronos-stress-sandbox\`.\`chronos_users\`.\`users\` (user_id, created_at, math_rating, physics_rating, chemistry_rating)
+        INSERT INTO \`${projectId}\`.\`chronos_users\`.\`users\` (user_id, created_at, math_rating, physics_rating, chemistry_rating)
         VALUES (@username, CURRENT_TIMESTAMP(), 100, 100, 100)
       `;
       await bq.query({
@@ -63,7 +65,7 @@ export default async function handler(req, res) {
 
       for (const t of topics) {
         const insertMastery = `
-          INSERT INTO \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\` (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
           VALUES (@username, @topic, @subject, 3, 5, 0.60)
         `;
         await bq.query({
@@ -83,7 +85,7 @@ export default async function handler(req, res) {
     // 3. Fetch past 25 tests history
     const historyQuery = `
       SELECT exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at
-      FROM \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_exam_history\`
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
       WHERE user_id = @username
       ORDER BY created_at DESC
       LIMIT 25
@@ -96,7 +98,7 @@ export default async function handler(req, res) {
     // 4. Fetch mastery (strengths >= 70%, weaknesses < 65%)
     const masteryQuery = `
       SELECT sub_category, subject, accuracy_rate
-      FROM \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\`
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
       WHERE user_id = @username
     `;
     const [mastery] = await bq.query({

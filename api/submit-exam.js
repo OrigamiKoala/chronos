@@ -1,8 +1,10 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
 
+const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
+
 const bq = new BigQuery({
-  projectId: process.env.BIGQUERY_PROJECT_ID,
+  projectId: projectId,
   credentials: {
     client_email: process.env.BIGQUERY_CLIENT_EMAIL,
     private_key: process.env.BIGQUERY_PRIVATE_KEY?.replace(/\\n/g, '\n'),
@@ -25,7 +27,7 @@ export default async function handler(req, res) {
   try {
     // 0. Ensure user_wrong_problems table exists
     const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_wrong_problems\` (
+      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` (
         user_id STRING NOT NULL,
         exam_id STRING NOT NULL,
         question_id STRING NOT NULL,
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
 
     // 1. Insert into user_exam_history
     const insertHistoryQuery = `
-      INSERT INTO \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_exam_history\` 
+      INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
         (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at)
       VALUES 
         (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP())
@@ -57,7 +59,7 @@ export default async function handler(req, res) {
     else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
 
     const updateRatingQuery = `
-      UPDATE \`chronos-stress-sandbox\`.\`chronos_users\`.\`users\`
+      UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
       SET ${ratingColumn} = @newRating
       WHERE user_id = @username
     `;
@@ -79,7 +81,7 @@ export default async function handler(req, res) {
       } else {
         // PUSH WRONG PROBLEM TO BIGQUERY
         const insertWrongQuery = `
-          INSERT INTO \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_wrong_problems\`
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
             (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at)
           VALUES
             (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP())
@@ -103,7 +105,7 @@ export default async function handler(req, res) {
     for (const [topic, stats] of Object.entries(topicStats)) {
       const checkMastery = `
         SELECT correct_count, total_count 
-        FROM \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\`
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
         WHERE user_id = @username AND sub_category = @topic AND subject = @subject
       `;
       const [existingMastery] = await bq.query({
@@ -117,7 +119,7 @@ export default async function handler(req, res) {
         const nextAccuracy = nextCorrect / nextTotal;
 
         const updateMastery = `
-          UPDATE \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\`
+          UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
           SET correct_count = @nextCorrect, total_count = @nextTotal, accuracy_rate = @nextAccuracy
           WHERE user_id = @username AND sub_category = @topic AND subject = @subject
         `;
@@ -128,7 +130,7 @@ export default async function handler(req, res) {
       } else {
         const accuracyRate = stats.correct / stats.total;
         const insertMastery = `
-          INSERT INTO \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\` 
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` 
             (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
           VALUES 
             (@username, @topic, @subject, @correct, @total, @accuracyRate)
@@ -157,7 +159,7 @@ async function updateAIWeaknesses(username, subject) {
     // A. Count wrong problems for this user and subject to ensure there is data to analyze
     const countQuery = `
       SELECT COUNT(*) AS cnt 
-      FROM \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_wrong_problems\`
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
       WHERE user_id = @username AND subject = @subject
     `;
     const [countRows] = await bq.query({
@@ -172,7 +174,7 @@ async function updateAIWeaknesses(username, subject) {
     const aiQuery = `
       SELECT ml_generate_text_result AS analysis
       FROM ML.GENERATE_TEXT(
-        MODEL \`chronos-stress-sandbox\`.\`chronos_users\`.\`gemini_flash_model\`,
+        MODEL \`${projectId}\`.\`chronos_users\`.\`gemini_flash_model\`,
         (
           SELECT CONCAT(
             "Analyze these incorrect olympiad exam questions attempted by user '", @username, "'. ",
@@ -182,7 +184,7 @@ async function updateAIWeaknesses(username, subject) {
             "Incorrect questions: ",
             STRING_AGG(CONCAT("Subject: ", subject, " | Topic: ", topic, " | Question: ", question_text), " ; ")
           ) AS prompt
-          FROM \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_wrong_problems\`
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
           WHERE user_id = @username AND subject = @subject
         ),
         STRUCT(0.2 AS temperature)
@@ -205,7 +207,7 @@ async function updateAIWeaknesses(username, subject) {
           // Check if this mastery entry exists
           const checkQuery = `
             SELECT correct_count, total_count 
-            FROM \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\`
+            FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
             WHERE user_id = @username AND sub_category = @topic AND subject = @subject
           `;
           const [exists] = await bq.query({
@@ -216,7 +218,7 @@ async function updateAIWeaknesses(username, subject) {
           if (exists.length > 0) {
             // Lower their accuracy rate below 0.65 to register as weakness
             const updateQuery = `
-              UPDATE \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\`
+              UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
               SET correct_count = 2, total_count = 5, accuracy_rate = 0.40
               WHERE user_id = @username AND sub_category = @topic AND subject = @subject
             `;
@@ -227,7 +229,7 @@ async function updateAIWeaknesses(username, subject) {
           } else {
             // Insert baseline weak mastery
             const insertQuery = `
-              INSERT INTO \`chronos-stress-sandbox\`.\`chronos_users\`.\`user_topic_mastery\`
+              INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
                 (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
               VALUES
                 (@username, @topic, @subject, 2, 5, 0.40)
