@@ -135,7 +135,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId }
           answer: problemObj.answer,
           userAnswer: problemObj.userAnswer,
           isCorrect: problemObj.isCorrect,
-          userQuery
+          userQuery,
+          subject
         })
       });
 

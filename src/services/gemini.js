@@ -63,29 +63,40 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
         };
     }
 
-    const prompt = `
-    You are an expert examiner creating questions for high-stakes competitive olympiad exams.
-    Generate a single ${subject} problem with a difficulty level of ${difficultyLevel} out of 10.
-    
-    If the subject is "Math", calibrate the 1-10 difficulty scale exactly as follows:
+    let subjectContext = '';
+    const normSubject = String(subject).trim().toLowerCase();
+    if (normSubject === 'math') {
+        subjectContext = `
+    Calibrate the 1-10 difficulty scale exactly as follows:
     - 1: MATHCOUNTS school/chapter level
     - 5: AMC 12 question 20-ish level
     - 8: Average USAJMO problem level
     - 10: Hardest problems on the IMO
-    
-    If the subject is "Physics", calibrate the 1-10 difficulty scale exactly as follows:
+    `;
+    } else if (normSubject === 'physics') {
+        subjectContext = `
+    Calibrate the 1-10 difficulty scale exactly as follows:
     - 1: introductory level
     - 3: AP Physics C level
     - 5: F=ma level
     - 8: USAPhO level
     - 10: hardest problem on the IPhO
-    
-    If the subject is "Chemistry", calibrate the 1-10 difficulty scale exactly as follows:
+    `;
+    } else if (normSubject === 'chemistry') {
+        subjectContext = `
+    Calibrate the 1-10 difficulty scale exactly as follows:
     - 1: simple Honors/early AP chem
     - 3: harder problems on the ACS Local Exam
     - 5: harder problems on the USNCO Nationals
     - 10: hardest problem on the IChO
     For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid). Do NOT use introductory or verbose phrases like "represented by the SMILES string..." or "whose SMILES representation is...". Instead, display the SMILES directly and let it render the question inline. Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).
+    `;
+    }
+
+    const prompt = `
+    You are an expert examiner creating questions for high-stakes competitive olympiad exams.
+    Generate a single ${subject} problem with a difficulty level of ${difficultyLevel} out of 10.
+    ${subjectContext}
     
     The output must be pure JSON with the following schema:
     {
@@ -230,29 +241,40 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
         return mockProblems;
     }
 
-    const prompt = `
-    You are an expert examiner creating questions for high-stakes competitive olympiad exams.
-    Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
-    
-    If the subject is "Math", calibrate the 1-10 difficulty scale exactly as follows:
+    let subjectContext = '';
+    const normSubject = String(subject).trim().toLowerCase();
+    if (normSubject === 'math') {
+        subjectContext = `
+    Calibrate the 1-10 difficulty scale exactly as follows:
     - 1: MATHCOUNTS school/chapter level
     - 5: AMC 12 question 20-ish level
     - 8: Average USAJMO problem level
     - 10: Hardest problems on the IMO
-    
-    If the subject is "Physics", calibrate the 1-10 difficulty scale exactly as follows:
+    `;
+    } else if (normSubject === 'physics') {
+        subjectContext = `
+    Calibrate the 1-10 difficulty scale exactly as follows:
     - 1: introductory level
     - 3: AP Physics C level
     - 5: F=ma level
     - 8: USAPhO level
     - 10: hardest problem on the IPhO
-    
-    If the subject is "Chemistry", calibrate the 1-10 difficulty scale exactly as follows:
+    `;
+    } else if (normSubject === 'chemistry') {
+        subjectContext = `
+    Calibrate the 1-10 difficulty scale exactly as follows:
     - 1: simple Honors/early AP chem
     - 3: harder problems on the ACS Local Exam
     - 5: harder problems on the USNCO Nationals
     - 10: hardest problem on the IChO
     For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid). Do NOT use introductory or verbose phrases like "represented by the SMILES string..." or "whose SMILES representation is...". Instead, display the SMILES directly and let it render the question inline. Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).
+    `;
+    }
+
+    const prompt = `
+    You are an expert examiner creating questions for high-stakes competitive olympiad exams.
+    Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+    ${subjectContext}
     
     The output must be a pure JSON array containing exactly ${count} objects, with the following schema for each object:
     {

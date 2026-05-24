@@ -97,43 +97,80 @@ export default async function handler(req, res) {
     const weaknesses = rows[0]?.weaknesses || 'None (excellent performance across all topics)';
 
     // 2. Build the Gemini generation prompt
-    const prompt = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
-Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+    let subjectSpecificInstructions = '';
+    const normSubject = String(subject).trim().toLowerCase();
 
-Follow these strict Olympiad Design Philosophies across all subjects:
+    if (normSubject === 'math') {
+      subjectSpecificInstructions = `
+Follow these strict Olympiad Design Philosophies:
 
 1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
 - Do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview:
-  * For Chemistry: Avoid full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, or advanced spectroscopic methods like 2D-NMR.
-  * For Math: Avoid advanced measure theory, abstract algebra (Galois theory, ring theory), general topology, or complex analysis.
-  * For Physics: Avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics.
+  * Avoid advanced measure theory, abstract algebra (Galois theory, ring theory), general topology, or complex analysis.
 - DO increase difficulty by forcing the integration of multiple foundational concepts:
-  * For Chemistry: Pair a non-trivial thermodynamic cycle with an electrochemistry cell, or force a non-obvious stereochemical outcome via steric/electronic shielding in reaction prediction.
-  * For Math: Pair algebraic geometry (curves/conics) with modular arithmetic (finding integer points), or pair recursive sequence properties with combinatorics/pigeonhole principle, or use complex numbers to solve non-trivial coordinate geometry problems.
-  * For Physics: Pair a thermodynamic PV-cycle with a magnetic induction loop or a spring-mass oscillator, or combine electrostatics/Lorentz force with rotational dynamics, or analyze buoyant forces in a rotating/accelerating frame.
+  * Pair algebraic geometry (curves/conics) with modular arithmetic (finding integer points), or pair recursive sequence properties with combinatorics/pigeonhole principle, or use complex numbers to solve non-trivial coordinate geometry problems.
 - Incorporate subtle conceptual traps:
-  * For Chemistry: Design problems where standard shortcuts or rote formula-plugging yield tempting distractors, requiring exact tracking of assumptions (e.g., non-ideal gas behavior, temperature dependence of ΔH/ΔS, or structural rearrangements/hydride shifts).
-  * For Math: Design problems with subtle domain/range constraints, non-obvious degeneracy in geometric configurations, off-by-one counting errors in combinatorics, or division-by-zero/modulo-zero pitfalls in systems of equations.
-  * For Physics: Design problems involving non-inertial reference frames, non-ideal frictional transitions (static vs kinetic), non-obvious geometric constraints, or cases requiring integration of first principles instead of basic formulas (e.g., non-uniform mass density).
+  * Design problems with subtle domain/range constraints, non-obvious degeneracy in geometric configurations, off-by-one counting errors in combinatorics, or division-by-zero/modulo-zero pitfalls in systems of equations.
 
 2. Authentic Style & Tone Mimicry
 - Use the exact technical nomenclature, passive voice, and formal phrasing characteristic of official olympiads:
-  * For Chemistry: Mimic ACS Chemistry Olympiad (USNCO) exam phrasing.
-  * For Math: Mimic MAA Mathematics Olympiad (AMC 12, AIME, USAMO) exam phrasing (e.g. "Find the number of...", "Let S be the set of...", "Determine all functions f...").
-  * For Physics: Mimic AAPT Physics Olympiad (F=ma, USAPhO) exam phrasing.
+  * Mimic MAA Mathematics Olympiad (AMC 12, AIME, USAMO) exam phrasing (e.g. "Find the number of...", "Let S be the set of...", "Determine all functions f...").
 - Avoid conversational language, contemporary idioms, or explicit hints within the text of the questions.
 - Match the layout density and typographic conventions of genuine past papers. Use LaTeX strictly for all equations, formulas, physical units, and mathematical variables.
 
-If the subject is 'Math', calibrate the 1-10 difficulty scale exactly as follows:
+Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: MATHCOUNTS school/chapter level, 5: AMC 12 question 20-ish level, 8: Average USAJMO problem level, 10: Hardest problems on the IMO.
+`;
+    } else if (normSubject === 'physics') {
+      subjectSpecificInstructions = `
+Follow these strict Olympiad Design Philosophies:
 
-If the subject is 'Physics', calibrate the 1-10 difficulty scale exactly as follows:
+1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
+- Do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview:
+  * Avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics.
+- DO increase difficulty by forcing the integration of multiple foundational concepts:
+  * Pair a thermodynamic PV-cycle with a magnetic induction loop or a spring-mass oscillator, or combine electrostatics/Lorentz force with rotational dynamics, or analyze buoyant forces in a rotating/accelerating frame.
+- Incorporate subtle conceptual traps:
+  * Design problems involving non-inertial reference frames, non-ideal frictional transitions (static vs kinetic), non-obvious geometric constraints, or cases requiring integration of first principles instead of basic formulas (e.g., non-uniform mass density).
+
+2. Authentic Style & Tone Mimicry
+- Use the exact technical nomenclature, passive voice, and formal phrasing characteristic of official olympiads:
+  * Mimic AAPT Physics Olympiad (F=ma, USAPhO) exam phrasing.
+- Avoid conversational language, contemporary idioms, or explicit hints within the text of the questions.
+- Match the layout density and typographic conventions of genuine past papers. Use LaTeX strictly for all equations, formulas, physical units, and mathematical variables.
+
+Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: introductory level, 3: AP Physics C level, 5: F=ma level, 8: USAPhO level, 10: hardest problem on the IPhO.
+`;
+    } else if (normSubject === 'chemistry') {
+      subjectSpecificInstructions = `
+Follow these strict Olympiad Design Philosophies:
 
-If the subject is 'Chemistry', calibrate the 1-10 difficulty scale exactly as follows:
+1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
+- Do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview:
+  * Avoid full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, or advanced spectroscopic methods like 2D-NMR.
+- DO increase difficulty by forcing the integration of multiple foundational concepts:
+  * Pair a non-trivial thermodynamic cycle with an electrochemistry cell, or force a non-obvious stereochemical outcome via steric/electronic shielding in reaction prediction.
+- Incorporate subtle conceptual traps:
+  * Design problems where standard shortcuts or rote formula-plugging yield tempting distractors, requiring exact tracking of assumptions (e.g., non-ideal gas behavior, temperature dependence of ΔH/ΔS, or structural rearrangements/hydride shifts).
+
+2. Authentic Style & Tone Mimicry
+- Use the exact technical nomenclature, passive voice, and formal phrasing characteristic of official olympiads:
+  * Mimic ACS Chemistry Olympiad (USNCO) exam phrasing.
+- Avoid conversational language, contemporary idioms, or explicit hints within the text of the questions.
+- Match the layout density and typographic conventions of genuine past papers. Use LaTeX strictly for all equations, formulas, physical units, and mathematical variables.
+
+Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: simple Honors/early AP chem, 3: harder problems on the ACS Local Exam, 5: harder problems on the USNCO Nationals, 10: hardest problem on the IChO.
 
 For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid). Do NOT use introductory or verbose phrases like "represented by the SMILES string..." or "whose SMILES representation is...". Instead, display the SMILES directly and let it render the question inline. Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).
+`;
+    }
+
+    const prompt = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
+Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+
+${subjectSpecificInstructions}
 
 Additionally, focus on these weak concepts of the user: ${weaknesses}.
 

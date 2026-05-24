@@ -10,13 +10,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { question, answer, userAnswer, isCorrect, userQuery } = req.body;
+  const { question, answer, userAnswer, isCorrect, userQuery, subject } = req.body;
 
   if (!question || !answer) {
     return res.status(400).json({ error: 'Missing question or answer' });
   }
 
   try {
+    let subjectInstructions = 'Represent formulas in LaTeX.';
+    const normSubject = String(subject || '').trim().toLowerCase();
+    if (normSubject === 'chemistry') {
+      subjectInstructions = 'Represent organic molecules strictly using SMILES notation where appropriate (e.g., C(C)O for ethanol, CC(=O)O for acetic acid). Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).';
+    }
+
     const prompt = `You are a world-class tutor in science and mathematics.
 Analyze this exam question:
 Question: ${question}
@@ -26,7 +32,7 @@ User's Attempt Was: ${isCorrect ? 'Correct' : 'Incorrect'}
 
 The user is asking: ${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.'}
 
-Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct. Be concise but extremely helpful. For chemistry, represent molecules using LaTeX/SMILES as appropriate. Represent formulas in LaTeX. Do not include markdown headers or greetings.`;
+Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct. Be concise but extremely helpful. ${subjectInstructions} Do not include markdown headers or greetings.`;
 
     const response = await ai.models.generateContent({
       model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
