@@ -76,6 +76,32 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
 }
 
 export async function generateProblems(count, startingDifficulty, subject = "Math") {
+    // Attempt to call Vercel Serverless Function first in production or if VITE_USE_VERCEL_API is enabled
+    if (import.meta.env.PROD || import.meta.env.VITE_USE_VERCEL_API) {
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    count,
+                    startingDifficulty,
+                    subject,
+                    targetUserId: 'default_user'
+                }),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                return Array.isArray(data) ? data : [data];
+            } else {
+                console.warn(`Vercel API returned status ${response.status}. Falling back to direct Gemini client.`);
+            }
+        } catch (error) {
+            console.error("Failed to connect to Vercel API, falling back to direct Gemini client:", error);
+        }
+    }
+
     if (!ai) {
         // Fallback for missing API key to allow UI testing
         console.warn("Using fallback mock data due to missing API key.");
