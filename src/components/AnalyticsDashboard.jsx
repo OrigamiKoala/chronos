@@ -253,6 +253,16 @@ export function AnalyticsDashboard({ user, onBack }) {
     };
   }, [data, selectedSubjectFilter]);
 
+  const missedADay = useMemo(() => {
+    if (!data?.eloHistory?.length) return true;
+    const lastExam = data.eloHistory[data.eloHistory.length - 1];
+    const lastExamDateStr = lastExam.created_at?.value || lastExam.created_at;
+    if (!lastExamDateStr) return true;
+    const lastExamDate = new Date(lastExamDateStr);
+    if (isNaN(lastExamDate.getTime())) return true;
+    return (new Date() - lastExamDate) > 24 * 60 * 60 * 1000;
+  }, [data]);
+
   if (loading) {
     return (
       <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
@@ -273,16 +283,6 @@ export function AnalyticsDashboard({ user, onBack }) {
       </div>
     );
   }
-
-  const missedADay = useMemo(() => {
-    if (!data?.eloHistory?.length) return true;
-    const lastExam = data.eloHistory[data.eloHistory.length - 1];
-    const lastExamDateStr = lastExam.created_at?.value || lastExam.created_at;
-    if (!lastExamDateStr) return true;
-    const lastExamDate = new Date(lastExamDateStr);
-    if (isNaN(lastExamDate.getTime())) return true;
-    return (new Date() - lastExamDate) > 24 * 60 * 60 * 1000;
-  }, [data]);
 
   const summary = data?.summary || {};
 
