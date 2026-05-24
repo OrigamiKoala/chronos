@@ -62,7 +62,7 @@ FROM
     ),
     STRUCT(
       0.3 AS temperature,
-      2048 AS max_output_tokens,
+      8192 AS max_output_tokens,
       TRUE AS flatten_json_output
     )
   );`;
