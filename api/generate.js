@@ -109,7 +109,7 @@ If the subject is 'Physics', calibrate the 1-10 difficulty scale exactly as foll
 If the subject is 'Chemistry', calibrate the 1-10 difficulty scale exactly as follows:
 - 1: simple Honors/early AP chem, 3: harder problems on the ACS Local Exam, 5: harder problems on the USNCO Nationals, 10: hardest problem on the IChO.
 
-For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid), and represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).
+For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid). Do NOT use introductory or verbose phrases like "represented by the SMILES string..." or "whose SMILES representation is...". Instead, display the SMILES directly and let it render the question inline. Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).
 
 Additionally, focus on these weak concepts of the user: ${weaknesses}.
 
