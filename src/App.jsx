@@ -42,6 +42,11 @@ function App() {
 
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [autoLoginLoading, setAutoLoginLoading] = useState(() => {
+    const savedUser = typeof window !== 'undefined' ? localStorage.getItem('chronos_logged_user') : null;
+    const savedPass = typeof window !== 'undefined' ? localStorage.getItem('chronos_logged_password') : null;
+    return !!(savedUser && savedPass);
+  });
   const [loadingExamId, setLoadingExamId] = useState(null);
   const [currentExamId, setCurrentExamId] = useState(null);
 
@@ -68,6 +73,7 @@ function App() {
       })
       .then(res => {
         if (res.ok) return res.json();
+        throw new Error('Auto login failed response');
       })
       .then(data => {
         if (data && !data.status) {
@@ -83,8 +89,12 @@ function App() {
             Chemistry: data.user.chemistry_rating || 100
           });
         }
+        setAutoLoginLoading(false);
       })
-      .catch(err => console.error("Auto login failed:", err));
+      .catch(err => {
+        console.error("Auto login failed:", err);
+        setAutoLoginLoading(false);
+      });
     }
   }, []);
 
@@ -468,8 +478,21 @@ function App() {
               </div>
             </div>
           ) : (
-            <button className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => setShowLoginModal(true)}>
-              <LogIn size={16} /> Login
+            <button 
+              className="btn btn-primary" 
+              style={{ padding: '0.4rem 1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} 
+              onClick={() => !autoLoginLoading && setShowLoginModal(true)}
+              disabled={autoLoginLoading}
+            >
+              {autoLoginLoading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Logging in
+                </>
+              ) : (
+                <>
+                  <LogIn size={16} /> Login
+                </>
+              )}
             </button>
           )}
         </div>
