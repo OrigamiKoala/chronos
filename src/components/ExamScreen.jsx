@@ -22,7 +22,7 @@ export function ExamScreen({ config, onFinish }) {
     setLoading(true);
     setError(null);
     try {
-      const generated = await generateProblems(config.numQuestions, config.startingDifficulty, config.subject);
+      const generated = await generateProblems(config.numQuestions, config.startingDifficulty, config.subject, config.username || 'default_user');
       setProblems(generated);
       if (generated && generated.length > 0) {
         setCurrentDifficulty(generated[0].difficulty || config.startingDifficulty);

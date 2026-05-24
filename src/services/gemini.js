@@ -49,6 +49,7 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
     The output must be pure JSON with the following schema:
     {
         "id": "A unique string ID",
+        "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
         "question": "The text of the question. It should be challenging and clear.",
         "type": "multiple_choice" or "short_answer",
         "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
@@ -75,7 +76,7 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
     }
 }
 
-export async function generateProblems(count, startingDifficulty, subject = "Math") {
+export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user") {
     // Attempt to call Vercel Serverless Function first in production or if VITE_USE_VERCEL_API is enabled
     if (import.meta.env.PROD || import.meta.env.VITE_USE_VERCEL_API) {
         try {
@@ -88,7 +89,7 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
                     count,
                     startingDifficulty,
                     subject,
-                    targetUserId: 'default_user'
+                    targetUserId: username
                 }),
             });
             if (response.ok) {
@@ -147,6 +148,7 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
     The output must be a pure JSON array containing exactly ${count} objects, with the following schema for each object:
     {
         "id": "A unique string ID",
+        "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
         "question": "The text of the question. It should be challenging and clear.",
         "type": "multiple_choice" or "short_answer",
         "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
@@ -206,7 +208,7 @@ FROM
           "For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid), and represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\\\text{H}_2\\\\text{SO}_4$, $\\\\text{Fe}^{3+}$). ",
           "Additionally, focus on these weak concepts of the user: ", weaknesses, ". ",
           "The output must be a pure JSON array containing exactly ${count} objects, with the following schema for each object: ",
-          "{ 'id': 'A unique string ID', 'question': 'The text of the question. It should be challenging and clear.', 'type': 'multiple_choice' or 'short_answer', 'options': ['Option A', 'Option B', 'Option C', 'Option D'], 'answer': 'The exact correct answer string', 'difficulty': a number between 1 and 10 representing difficulty } ",
+          "{ 'id': 'A unique string ID', 'topic': 'The brief sub-category or topic tested (e.g. \\'Algebra\\', \\'Stoichiometry\\', \\'Mechanics\\')', 'question': 'The text of the question. It should be challenging and clear.', 'type': 'multiple_choice' or 'short_answer', 'options': ['Option A', 'Option B', 'Option C', 'Option D'], 'answer': 'The exact correct answer string', 'difficulty': a number between 1 and 10 representing difficulty } ",
           "Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON."
         ) AS prompt
       FROM user_profile
