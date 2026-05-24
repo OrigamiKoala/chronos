@@ -274,6 +274,16 @@ export function AnalyticsDashboard({ user, onBack }) {
     );
   }
 
+  const missedADay = useMemo(() => {
+    if (!data?.eloHistory?.length) return true;
+    const lastExam = data.eloHistory[data.eloHistory.length - 1];
+    const lastExamDateStr = lastExam.created_at?.value || lastExam.created_at;
+    if (!lastExamDateStr) return true;
+    const lastExamDate = new Date(lastExamDateStr);
+    if (isNaN(lastExamDate.getTime())) return true;
+    return (new Date() - lastExamDate) > 24 * 60 * 60 * 1000;
+  }, [data]);
+
   const summary = data?.summary || {};
 
   return (
@@ -308,7 +318,7 @@ export function AnalyticsDashboard({ user, onBack }) {
           <div>
             <span className="analytics-stat-label">Current Streak</span>
             <span className="analytics-stat-value" style={{ color: summary.streakType === 'correct' ? 'var(--success)' : 'var(--danger)' }}>
-              {summary.currentStreak || 0} {summary.streakType === 'correct' ? '🔥' : '❄️'}
+              {summary.currentStreak || 0} {summary.streakType === 'correct' ? '🔥' : (missedADay ? '❄️' : '')}
             </span>
           </div>
         </div>
