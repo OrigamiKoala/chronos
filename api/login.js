@@ -16,17 +16,33 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { username } = req.body;
+  const { username, password, recoveryQuestion, recoveryAnswer, isSettingRecovery } = req.body;
   if (!username || username.trim() === '') {
     return res.status(400).json({ error: 'Username is required' });
+  }
+  if (!password || password.trim() === '') {
+    return res.status(400).json({ error: 'Password is required' });
   }
 
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
+    // 0. Ensure recovery and password columns exist in users table
+    try {
+      const alterQuery = `
+        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`users\`
+        ADD COLUMN IF NOT EXISTS password STRING,
+        ADD COLUMN IF NOT EXISTS recovery_question STRING,
+        ADD COLUMN IF NOT EXISTS recovery_answer STRING
+      `;
+      await bq.query(alterQuery);
+    } catch (e) {
+      console.warn("Alter table error or already exists:", e);
+    }
+
     // 1. Check if user exists
     const checkQuery = `
-      SELECT user_id, math_rating, physics_rating, chemistry_rating 
+      SELECT user_id, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating 
       FROM \`${projectId}\`.\`chronos_users\`.\`users\`
       WHERE user_id = @username
     `;
@@ -38,48 +54,97 @@ export default async function handler(req, res) {
     let userData;
 
     if (existingUsers.length > 0) {
-      userData = existingUsers[0];
-    } else {
-      // 2. Register New User
-      const insertUserQuery = `
-        INSERT INTO \`${projectId}\`.\`chronos_users\`.\`users\` (user_id, created_at, math_rating, physics_rating, chemistry_rating)
-        VALUES (@username, CURRENT_TIMESTAMP(), 100, 100, 100)
-      `;
-      await bq.query({
-        query: insertUserQuery,
-        params: { username: sanitizedUser }
-      });
+      const dbUser = existingUsers[0];
 
-      // Insert baseline topic masteries
-      const topics = [
-        { topic: 'Algebra', subject: 'Math' },
-        { topic: 'Geometry', subject: 'Math' },
-        { topic: 'Calculus', subject: 'Math' },
-        { topic: 'Kinematics', subject: 'Physics' },
-        { topic: 'Thermodynamics', subject: 'Physics' },
-        { topic: 'Electromagnetism', subject: 'Physics' },
-        { topic: 'Stoichiometry', subject: 'Chemistry' },
-        { topic: 'Organic Chemistry', subject: 'Chemistry' },
-        { topic: 'Electrochemistry', subject: 'Chemistry' }
-      ];
-
-      for (const t of topics) {
-        const insertMastery = `
-          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
-          VALUES (@username, @topic, @subject, 3, 5, 0.60)
+      // Password logic:
+      if (!dbUser.password) {
+        // If an existing user doesn't have a password stored, whatever they put in the password container will become the new password
+        const updatePasswordQuery = `
+          UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+          SET password = @password
+          WHERE user_id = @username
         `;
         await bq.query({
-          query: insertMastery,
-          params: { username: sanitizedUser, topic: t.topic, subject: t.subject }
+          query: updatePasswordQuery,
+          params: { username: sanitizedUser, password }
         });
+        dbUser.password = password;
+      } else {
+        // Verify password
+        if (dbUser.password !== password) {
+          return res.status(401).json({ error: 'Incorrect password' });
+        }
       }
 
-      userData = {
-        user_id: sanitizedUser,
-        math_rating: 100,
-        physics_rating: 100,
-        chemistry_rating: 100
-      };
+      // Check if they need recovery question/answer setup
+      if (!dbUser.recovery_question || !dbUser.recovery_answer) {
+        if (isSettingRecovery && recoveryQuestion && recoveryAnswer) {
+          // Set recovery details
+          const updateRecoveryQuery = `
+            UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+            SET recovery_question = @recoveryQuestion, recovery_answer = @recoveryAnswer
+            WHERE user_id = @username
+          `;
+          await bq.query({
+            query: updateRecoveryQuery,
+            params: { username: sanitizedUser, recoveryQuestion, recoveryAnswer }
+          });
+          dbUser.recovery_question = recoveryQuestion;
+          dbUser.recovery_answer = recoveryAnswer;
+        } else {
+          // Prompt them to set a personal question/answer next time they login
+          return res.status(200).json({ status: 'recovery_setup_required', user_id: sanitizedUser });
+        }
+      }
+
+      userData = dbUser;
+    } else {
+      // User is new
+      if (isSettingRecovery && recoveryQuestion && recoveryAnswer) {
+        // 2. Register New User with Password and Recovery
+        const insertUserQuery = `
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`users\` (user_id, created_at, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating)
+          VALUES (@username, CURRENT_TIMESTAMP(), @password, @recoveryQuestion, @recoveryAnswer, 100, 100, 100)
+        `;
+        await bq.query({
+          query: insertUserQuery,
+          params: { username: sanitizedUser, password, recoveryQuestion, recoveryAnswer }
+        });
+
+        // Insert baseline topic masteries
+        const topics = [
+          { topic: 'Algebra', subject: 'Math' },
+          { topic: 'Geometry', subject: 'Math' },
+          { topic: 'Calculus', subject: 'Math' },
+          { topic: 'Kinematics', subject: 'Physics' },
+          { topic: 'Thermodynamics', subject: 'Physics' },
+          { topic: 'Electromagnetism', subject: 'Physics' },
+          { topic: 'Stoichiometry', subject: 'Chemistry' },
+          { topic: 'Organic Chemistry', subject: 'Chemistry' },
+          { topic: 'Electrochemistry', subject: 'Chemistry' }
+        ];
+
+        for (const t of topics) {
+          const insertMastery = `
+            INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+            VALUES (@username, @topic, @subject, 3, 5, 0.60)
+          `;
+          await bq.query({
+            query: insertMastery,
+            params: { username: sanitizedUser, topic: t.topic, subject: t.subject }
+          });
+        }
+
+        userData = {
+          user_id: sanitizedUser,
+          math_rating: 100,
+          physics_rating: 100,
+          chemistry_rating: 100
+        };
+      } else {
+        // Ask new user to set recovery question/answer
+        return res.status(200).json({ status: 'recovery_setup_required', user_id: sanitizedUser, isNew: true });
+      }
     }
 
     // 3. Fetch ALL past tests for ELO recalculation

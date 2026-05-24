@@ -25,6 +25,21 @@ function App() {
   const [selectedSubject, setSelectedSubject] = useState('Math');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginModalMode, setLoginModalMode] = useState('login'); // 'login', 'setup_recovery', 'forgot_username', 'forgot_verify'
+
+  // Setup Recovery State
+  const [recoveryQuestion, setRecoveryQuestion] = useState('');
+  const [recoveryAnswer, setRecoveryAnswer] = useState('');
+  const [recoverySetupUserId, setRecoverySetupUserId] = useState('');
+  const [recoverySetupIsNew, setRecoverySetupIsNew] = useState(false);
+
+  // Forgot Password State
+  const [resetQuestion, setResetQuestion] = useState('');
+  const [resetAnswer, setResetAnswer] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+
+  const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loadingExamId, setLoadingExamId] = useState(null);
   const [currentExamId, setCurrentExamId] = useState(null);
@@ -40,22 +55,21 @@ function App() {
     localStorage.setItem('mock_exam_ratings', JSON.stringify(ratings));
   }, [ratings]);
 
-
-
   // Auto-login on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('chronos_logged_user');
-    if (savedUser) {
+    const savedPass = localStorage.getItem('chronos_logged_password');
+    if (savedUser && savedPass) {
       fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: savedUser })
+        body: JSON.stringify({ username: savedUser, password: savedPass })
       })
       .then(res => {
         if (res.ok) return res.json();
       })
       .then(data => {
-        if (data) {
+        if (data && !data.status) {
           setUser(data.user);
           setStrengths(data.strengths);
           setWeaknesses(data.weaknesses);
@@ -75,35 +89,137 @@ function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!loginUsername.trim()) return;
+    setLoginError('');
+
+    const targetUser = loginModalMode === 'setup_recovery' ? recoverySetupUserId : loginUsername.trim();
+    if (!targetUser || !loginPassword) {
+      setLoginError('Username and password are required');
+      return;
+    }
+
     setLoginLoading(true);
     try {
+      const payload = {
+        username: targetUser,
+        password: loginPassword
+      };
+
+      if (loginModalMode === 'setup_recovery') {
+        if (!recoveryQuestion.trim() || !recoveryAnswer.trim()) {
+          setLoginError('Recovery question and answer are required');
+          setLoginLoading(false);
+          return;
+        }
+        payload.recoveryQuestion = recoveryQuestion.trim();
+        payload.recoveryAnswer = recoveryAnswer.trim();
+        payload.isSettingRecovery = true;
+      }
+
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginUsername.trim() })
+        body: JSON.stringify(payload)
       });
+
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        setStrengths(data.strengths);
-        setWeaknesses(data.weaknesses);
-        setDetailedAnalysis(data.detailedAnalysis || {});
-        setTopicBreakdowns(data.topicBreakdowns || {});
-        setHistory(data.history);
-        setRatings({
-          Math: data.user.math_rating || 100,
-          Physics: data.user.physics_rating || 100,
-          Chemistry: data.user.chemistry_rating || 100
-        });
-        localStorage.setItem('chronos_logged_user', data.user.user_id);
-        setShowLoginModal(false);
+        if (data.status === 'recovery_setup_required') {
+          setRecoverySetupUserId(data.user_id);
+          setRecoverySetupIsNew(!!data.isNew);
+          setLoginModalMode('setup_recovery');
+        } else {
+          setUser(data.user);
+          setStrengths(data.strengths);
+          setWeaknesses(data.weaknesses);
+          setDetailedAnalysis(data.detailedAnalysis || {});
+          setTopicBreakdowns(data.topicBreakdowns || {});
+          setHistory(data.history);
+          setRatings({
+            Math: data.user.math_rating || 100,
+            Physics: data.user.physics_rating || 100,
+            Chemistry: data.user.chemistry_rating || 100
+          });
+          localStorage.setItem('chronos_logged_user', data.user.user_id);
+          localStorage.setItem('chronos_logged_password', loginPassword);
+          setShowLoginModal(false);
+          // Clear modal fields
+          setLoginPassword('');
+          setRecoveryQuestion('');
+          setRecoveryAnswer('');
+        }
       } else {
-        alert("Failed to login/register. Please check backend connection.");
+        setLoginError(data.error || 'Failed to login. Please try again.');
       }
     } catch (err) {
       console.error(err);
-      alert("Login error. Check console.");
+      setLoginError('Login error. Check console/connection.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleForgotPasswordUsernameSubmit = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    if (!loginUsername.trim()) {
+      setLoginError('Please enter your username');
+      return;
+    }
+    setLoginLoading(true);
+    try {
+      const response = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: loginUsername.trim(), step: 1 })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setResetQuestion(data.recoveryQuestion);
+        setLoginModalMode('forgot_verify');
+      } else {
+        setLoginError(data.error || 'User not found or recovery not set.');
+      }
+    } catch (err) {
+      console.error(err);
+      setLoginError('Error verifying username.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    if (!resetAnswer.trim() || !resetNewPassword) {
+      setLoginError('Answer and new password are required');
+      return;
+    }
+    setLoginLoading(true);
+    try {
+      const response = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginUsername.trim(),
+          step: 2,
+          answer: resetAnswer.trim(),
+          newPassword: resetNewPassword
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert('Password successfully reset! You can now log in.');
+        setLoginPassword(resetNewPassword);
+        setResetAnswer('');
+        setResetNewPassword('');
+        setLoginModalMode('login');
+      } else {
+        setLoginError(data.error || 'Incorrect answer to recovery question.');
+      }
+    } catch (err) {
+      console.error(err);
+      setLoginError('Error resetting password.');
     } finally {
       setLoginLoading(false);
     }
@@ -119,6 +235,7 @@ function App() {
     setHistory([]);
     setRatings({ Math: 100, Physics: 100, Chemistry: 100 });
     localStorage.removeItem('chronos_logged_user');
+    localStorage.removeItem('chronos_logged_password');
   };
 
   const startExam = (config) => {
@@ -513,30 +630,163 @@ function App() {
 
       {/* Login Modal */}
       {showLoginModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', width: '90%', maxWidth: '400px', textAlign: 'center' }}>
-            <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-              <User size={24} /> Login / Register
-            </h3>
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <input
-                type="text"
-                placeholder="Enter Username"
-                className="input-field"
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-                disabled={loginLoading}
-                required
-                style={{ textAlign: 'center' }}
-              />
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowLoginModal(false)} disabled={loginLoading}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} disabled={loginLoading}>
-                  {loginLoading ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Submit
-                </button>
-              </div>
-            </form>
-            <p style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Entering a new username automatically registers it!</p>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', width: '90%', maxWidth: '420px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            
+            {loginModalMode === 'login' && (
+              <>
+                <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <User size={24} /> Login / Register
+                </h3>
+                {loginError && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{loginError}</p>}
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter Username"
+                    className="input-field"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    disabled={loginLoading}
+                    required
+                    style={{ textAlign: 'center' }}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Enter Password"
+                    className="input-field"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    disabled={loginLoading}
+                    required
+                    style={{ textAlign: 'center' }}
+                  />
+                  <button 
+                    type="button" 
+                    className="btn btn-link" 
+                    style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', alignSelf: 'flex-end', padding: 0, border: 'none', background: 'none', cursor: 'pointer', opacity: 0.8 }}
+                    onClick={() => {
+                      setLoginError('');
+                      setLoginModalMode('forgot_username');
+                    }}
+                  >
+                    Forgot Password?
+                  </button>
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+                    <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setShowLoginModal(false); setLoginError(''); setLoginPassword(''); }} disabled={loginLoading}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} disabled={loginLoading}>
+                      {loginLoading ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Submit
+                    </button>
+                  </div>
+                </form>
+                <p style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  New user? Choose a username/password, then complete the security setup on next step!
+                </p>
+              </>
+            )}
+
+            {loginModalMode === 'setup_recovery' && (
+              <>
+                <h3 className="text-gradient" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <User size={24} /> {recoverySetupIsNew ? 'New User Security' : 'Security Update'}
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: '1.4' }}>
+                  Please set a personal recovery question only you know the answer to. This is required to recover your account if you forget your password.
+                </p>
+                {loginError && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{loginError}</p>}
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter recovery question (e.g. My childhood pet's name)"
+                    className="input-field"
+                    value={recoveryQuestion}
+                    onChange={(e) => setRecoveryQuestion(e.target.value)}
+                    disabled={loginLoading}
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Enter answer"
+                    className="input-field"
+                    value={recoveryAnswer}
+                    onChange={(e) => setRecoveryAnswer(e.target.value)}
+                    disabled={loginLoading}
+                    required
+                  />
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+                    <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setLoginModalMode('login'); setLoginError(''); }} disabled={loginLoading}>Back</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} disabled={loginLoading}>
+                      {loginLoading ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Save & Login
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {loginModalMode === 'forgot_username' && (
+              <>
+                <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <User size={24} /> Recovery Verification
+                </h3>
+                {loginError && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{loginError}</p>}
+                <form onSubmit={handleForgotPasswordUsernameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter your Username"
+                    className="input-field"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    disabled={loginLoading}
+                    required
+                    style={{ textAlign: 'center' }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                    <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setLoginModalMode('login'); setLoginError(''); }} disabled={loginLoading}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} disabled={loginLoading}>
+                      Verify User
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {loginModalMode === 'forgot_verify' && (
+              <>
+                <h3 className="text-gradient" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <User size={24} /> Reset Password
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem', background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
+                  Question: <strong>{resetQuestion}</strong>
+                </p>
+                {loginError && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{loginError}</p>}
+                <form onSubmit={handleResetPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter your Answer"
+                    className="input-field"
+                    value={resetAnswer}
+                    onChange={(e) => setResetAnswer(e.target.value)}
+                    disabled={loginLoading}
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Enter New Password"
+                    className="input-field"
+                    value={resetNewPassword}
+                    onChange={(e) => setResetNewPassword(e.target.value)}
+                    disabled={loginLoading}
+                    required
+                  />
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+                    <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setLoginModalMode('login'); setLoginError(''); }} disabled={loginLoading}>Back</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} disabled={loginLoading}>
+                      Reset Password
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+
           </div>
         </div>
       )}
