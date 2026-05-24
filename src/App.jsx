@@ -150,7 +150,10 @@ function App() {
     const sumQuestionRatings = results.reduce((acc, r) => acc + getQuestionRating(subject, r.difficulty || 5), 0);
     const avgQuestionRating = sumQuestionRatings / totalQuestions;
 
-    const expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
+    let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
+    if (avgQuestionRating < currentRating) {
+      expectedScore = Math.max(expectedScore, 0.75);
+    }
     const subHistory = [...history].filter(h => h.subject === subject).reverse();
     let isChallenged = false;
     let consecutiveFailCount = 0;

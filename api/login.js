@@ -105,7 +105,10 @@ export default async function handler(req, res) {
       const score = h.accuracy;
       const avgQuestionRating = h.avg_time;
 
-      const expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
+      let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
+      if (avgQuestionRating < currentRating) {
+        expectedScore = Math.max(expectedScore, 0.75);
+      }
       
       if (score < 0.75) {
         subjectConsecutiveFailCount[sub]++;
