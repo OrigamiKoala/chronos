@@ -165,10 +165,20 @@ export function ExamScreen({ config, onFinish }) {
   const isHidden = config.stressMode === 'hidden' && !isLowTime;
   const isDynamicStress = config.stressMode === 'dynamic' && isLowTime;
 
+  const totalTime = config.timeLimitPerQuestion;
+  const percentage = Math.max(0, Math.min(100, (timeLeft / totalTime) * 100));
+
+  let progressColor = 'var(--success)';
+  if (percentage <= 25) {
+    progressColor = 'var(--danger)';
+  } else if (percentage <= 55) {
+    progressColor = 'var(--warning)';
+  }
+
   return (
     <div className="glass-panel animate-fade-in" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
       
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
             Question {currentQuestionIndex + 1} of {config.numQuestions}
@@ -194,6 +204,26 @@ export function ExamScreen({ config, onFinish }) {
           )}
         </div>
       </div>
+
+      {/* Timer Progress Bar */}
+      {!isHidden && (
+        <div style={{ 
+          height: '6px', 
+          background: 'rgba(255, 255, 255, 0.05)', 
+          borderRadius: '3px', 
+          overflow: 'hidden', 
+          marginBottom: '2rem',
+          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)'
+        }}>
+          <div style={{ 
+            height: '100%', 
+            width: `${percentage}%`, 
+            background: progressColor, 
+            transition: 'width 1s linear, background-color 0.5s ease',
+            boxShadow: `0 0 10px ${progressColor}`
+          }} />
+        </div>
+      )}
 
       <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
         <p>{problem.question}</p>
