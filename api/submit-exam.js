@@ -12,6 +12,8 @@ const bq = new BigQuery({
   },
 });
 
+const ELO_ALGORITHM_VERSION = 1;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -93,12 +95,12 @@ export default async function handler(req, res) {
 
     const updateRatingQuery = `
       UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
-      SET ${ratingColumn} = @newRating
+      SET ${ratingColumn} = @newRating, elo_version = @eloVersion
       WHERE user_id = @username
     `;
     await bq.query({
       query: updateRatingQuery,
-      params: { username: sanitizedUser, newRating }
+      params: { username: sanitizedUser, newRating, eloVersion: ELO_ALGORITHM_VERSION }
     });
 
     // 3. Update strengths/weaknesses (user_topic_mastery) and record wrong problems

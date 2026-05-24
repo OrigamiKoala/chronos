@@ -11,6 +11,8 @@ const bq = new BigQuery({
   },
 });
 
+const ELO_ALGORITHM_VERSION = 1;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -27,22 +29,20 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // 0. Ensure recovery and password columns exist in users table
-    try {
       const alterQuery = `
         ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`users\`
         ADD COLUMN IF NOT EXISTS password STRING,
         ADD COLUMN IF NOT EXISTS recovery_question STRING,
-        ADD COLUMN IF NOT EXISTS recovery_answer STRING
+        ADD COLUMN IF NOT EXISTS recovery_answer STRING,
+        ADD COLUMN IF NOT EXISTS elo_version INT64
       `;
       await bq.query(alterQuery);
     } catch (e) {
       console.warn("Alter table error or already exists:", e);
     }
 
-    // 1. Check if user exists
     const checkQuery = `
-      SELECT user_id, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating 
+      SELECT user_id, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating, elo_version 
       FROM \`${projectId}\`.\`chronos_users\`.\`users\`
       WHERE user_id = @username
     `;
@@ -101,14 +101,13 @@ export default async function handler(req, res) {
     } else {
       // User is new
       if (isSettingRecovery && recoveryQuestion && recoveryAnswer) {
-        // 2. Register New User with Password and Recovery
         const insertUserQuery = `
-          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`users\` (user_id, created_at, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating)
-          VALUES (@username, CURRENT_TIMESTAMP(), @password, @recoveryQuestion, @recoveryAnswer, 100, 100, 100)
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`users\` (user_id, created_at, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating, elo_version)
+          VALUES (@username, CURRENT_TIMESTAMP(), @password, @recoveryQuestion, @recoveryAnswer, 100, 100, 100, @eloVersion)
         `;
         await bq.query({
           query: insertUserQuery,
-          params: { username: sanitizedUser, password, recoveryQuestion, recoveryAnswer }
+          params: { username: sanitizedUser, password, recoveryQuestion, recoveryAnswer, eloVersion: ELO_ALGORITHM_VERSION }
         });
 
         // Insert baseline topic masteries
@@ -147,7 +146,10 @@ export default async function handler(req, res) {
       }
     }
 
-    // 3. Fetch ALL past tests for ELO recalculation
+    // 3. Fetch ALL past tests for ELO recalculation if ELO version is outdated
+    const currentEloVersion = userData.elo_version;
+    const needsRecalculation = currentEloVersion === null || currentEloVersion === undefined || currentEloVersion < ELO_ALGORITHM_VERSION;
+
     const allHistoryQuery = `
       SELECT exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at
       FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
@@ -159,82 +161,78 @@ export default async function handler(req, res) {
       params: { username: sanitizedUser }
     });
 
-    const subjectRatings = { Math: 100, Physics: 100, Chemistry: 100 };
-    const subjectChallenged = { Math: false, Physics: false, Chemistry: false };
-    const subjectConsecutiveFailCount = { Math: 0, Physics: 0, Chemistry: 0 };
-    const updatesToMake = [];
+    if (needsRecalculation) {
+      const subjectRatings = { Math: 100, Physics: 100, Chemistry: 100 };
+      const subjectChallenged = { Math: false, Physics: false, Chemistry: false };
+      const subjectConsecutiveFailCount = { Math: 0, Physics: 0, Chemistry: 0 };
+      const updatesToMake = [];
 
-    for (const h of allHistory) {
-      const sub = h.subject;
-      const currentRating = subjectRatings[sub] || 100;
-      const score = h.accuracy;
-      const avgQuestionRating = h.avg_time;
+      for (const h of allHistory) {
+        const sub = h.subject;
+        const currentRating = subjectRatings[sub] || 100;
+        const score = h.accuracy;
+        const avgQuestionRating = h.avg_time;
 
-      let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
-      if (avgQuestionRating < currentRating) {
-        expectedScore = Math.max(expectedScore, 0.75);
+        let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
+        if (avgQuestionRating < currentRating) {
+          expectedScore = Math.max(expectedScore, 0.75);
+        }
+        
+        if (score < 0.75) {
+          subjectConsecutiveFailCount[sub]++;
+        } else {
+          subjectConsecutiveFailCount[sub] = 0;
+        }
+
+        if (subjectConsecutiveFailCount[sub] >= 2) {
+          subjectChallenged[sub] = true;
+        }
+        
+        const K = subjectChallenged[sub] ? 32 : 250;
+        const ratingChange = Math.round(K * (score - expectedScore));
+        const newRating = Math.max(100, currentRating + ratingChange);
+
+        if (h.rating_change !== ratingChange || h.new_rating !== newRating) {
+          updatesToMake.push({
+            exam_id: h.exam_id,
+            rating_change: ratingChange,
+            new_rating: newRating
+          });
+          h.rating_change = ratingChange;
+          h.new_rating = newRating;
+        }
+
+        subjectRatings[sub] = newRating;
       }
-      
-      if (score < 0.75) {
-        subjectConsecutiveFailCount[sub]++;
-      } else {
-        subjectConsecutiveFailCount[sub] = 0;
-      }
 
-      if (subjectConsecutiveFailCount[sub] >= 2) {
-        subjectChallenged[sub] = true;
-      }
-      
-      const K = subjectChallenged[sub] ? 32 : 250;
-      const ratingChange = Math.round(K * (score - expectedScore));
-      const newRating = Math.max(100, currentRating + ratingChange);
-
-      if (h.rating_change !== ratingChange || h.new_rating !== newRating) {
-        updatesToMake.push({
-          exam_id: h.exam_id,
-          rating_change: ratingChange,
-          new_rating: newRating
+      if (updatesToMake.length > 0) {
+        const updatePromises = updatesToMake.map(update => {
+          const query = `
+            UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+            SET rating_change = @rating_change, new_rating = @new_rating
+            WHERE user_id = @username AND exam_id = @exam_id
+          `;
+          return bq.query({
+            query,
+            params: {
+              username: sanitizedUser,
+              exam_id: update.exam_id,
+              rating_change: update.rating_change,
+              new_rating: update.new_rating
+            }
+          });
         });
-        h.rating_change = ratingChange;
-        h.new_rating = newRating;
+        await Promise.all(updatePromises);
       }
 
-      subjectRatings[sub] = newRating;
-    }
+      // Update users table with final ratings and ELO version
+      const finalMath = subjectRatings.Math;
+      const finalPhys = subjectRatings.Physics;
+      const finalChem = subjectRatings.Chemistry;
 
-    if (updatesToMake.length > 0) {
-      const updatePromises = updatesToMake.map(update => {
-        const query = `
-          UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-          SET rating_change = @rating_change, new_rating = @new_rating
-          WHERE user_id = @username AND exam_id = @exam_id
-        `;
-        return bq.query({
-          query,
-          params: {
-            username: sanitizedUser,
-            exam_id: update.exam_id,
-            rating_change: update.rating_change,
-            new_rating: update.new_rating
-          }
-        });
-      });
-      await Promise.all(updatePromises);
-    }
-
-    // Update users table with final ratings if they changed
-    const finalMath = subjectRatings.Math;
-    const finalPhys = subjectRatings.Physics;
-    const finalChem = subjectRatings.Chemistry;
-
-    if (
-      userData.math_rating !== finalMath ||
-      userData.physics_rating !== finalPhys ||
-      userData.chemistry_rating !== finalChem
-    ) {
       const updateUsersQuery = `
         UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
-        SET math_rating = @finalMath, physics_rating = @finalPhys, chemistry_rating = @finalChem
+        SET math_rating = @finalMath, physics_rating = @finalPhys, chemistry_rating = @finalChem, elo_version = @eloVersion
         WHERE user_id = @username
       `;
       await bq.query({
@@ -243,12 +241,14 @@ export default async function handler(req, res) {
           username: sanitizedUser,
           finalMath,
           finalPhys,
-          finalChem
+          finalChem,
+          eloVersion: ELO_ALGORITHM_VERSION
         }
       });
       userData.math_rating = finalMath;
       userData.physics_rating = finalPhys;
       userData.chemistry_rating = finalChem;
+      userData.elo_version = ELO_ALGORITHM_VERSION;
     }
 
     const history = [...allHistory]
