@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 )
 
 SELECT
-  ml_generate_text_result AS ai_response
+  ml_generate_text_llm_result AS ai_response
 FROM
   ML.GENERATE_TEXT(
     MODEL \`chronos-stress-sandbox.chronos_users.gemini_flash_model\`,

@@ -190,7 +190,7 @@ export function generateBigQuerySQL(count, startingDifficulty, subject = "Math")
 )
 
 SELECT
-  ml_generate_text_result AS ai_response
+  ml_generate_text_llm_result AS ai_response
 FROM
   ML.GENERATE_TEXT(
     MODEL \`your_project.your_dataset.gemini_pro_model\`,
