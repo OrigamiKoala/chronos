@@ -175,11 +175,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // 4. Trigger asynchronous background update of user weaknesses using BigQuery AI remote model
-    updateAIWeaknesses(sanitizedUser, subject);
+    // 4. Trigger update of user weaknesses using direct Gemini model
+    await updateAIWeaknesses(sanitizedUser, subject);
 
-    // 5. Trigger asynchronous mistake analysis and save in BigQuery
-    analyzeMistakesAndSave(sanitizedUser, examId, subject, results);
+    // 5. Trigger mistake analysis and save in BigQuery using direct Gemini model
+    await analyzeMistakesAndSave(sanitizedUser, examId, subject, results);
 
     return res.status(200).json({ success: true });
 
@@ -215,60 +215,56 @@ async function updateAIWeaknesses(username, subject) {
     `;
     await bq.query(createBreakdownTableQuery);
 
-    // A. Count wrong problems for this user and subject to ensure there is data to analyze
-    const countQuery = `
-      SELECT COUNT(*) AS cnt 
+    // A. Fetch incorrect questions for this user and subject
+    const fetchWrongProblemsQuery = `
+      SELECT topic, question_text, user_answer, correct_answer
       FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
       WHERE user_id = @username AND subject = @subject
     `;
-    const [countRows] = await bq.query({
-      query: countQuery,
+    const [wrongProblems] = await bq.query({
+      query: fetchWrongProblemsQuery,
       params: { username, subject }
     });
     
-    const wrongCount = countRows[0]?.cnt || 0;
-    if (wrongCount === 0) return;
+    if (!wrongProblems || wrongProblems.length === 0) return;
 
-    // B. Run BigQuery AI ML.GENERATE_TEXT query to analyze incorrect questions and output weakness topics
-    const aiQuery = `
-      SELECT ml_generate_text_result AS analysis
-      FROM ML.GENERATE_TEXT(
-        MODEL \`${projectId}\`.\`chronos_users\`.\`gemini_flash_model\`,
-        (
-          SELECT CONCAT(
-            "Analyze these incorrect ", @subject, " exam questions attempted by user '", @username, "'. ",
-            "Provide a thorough diagnostic analysis of their strengths and weaknesses in this subject. ",
-            "Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. ",
-            "Note that if a broad topic (like 'Organic Synthesis' or 'Calculus') has areas of both success and failure, list it in BOTH strengths and weaknesses. ",
-            "For each identified topic, generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at. ",
-            "Return strictly a valid JSON object with the following schema:\n",
-            "{\n",
-            "  \\"strengths\\": [\\"Topic A\\", \\"Topic B\\"],\n",
-            "  \\"weaknesses\\": [\\"Topic B\\", \\"Topic C\\"],\n",
-            "  \\"detailed_analysis\\": \\"A detailed diagnosis...\\",\n",
-            "  \\"topic_breakdowns\\": [\n",
-            "    { \\"topic\\": \\"Topic B\\", \\"good_at\\": \\"What they do well...\\", \\"not_good_at\\": \\"What they struggle with...\\" }\n",
-            "  ]\n",
-            "}\n",
-            "Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.\n\n",
-            "Incorrect questions: ",
-            STRING_AGG(CONCAT("Topic: ", topic, " | Question: ", question_text, " | User Answer: ", COALESCE(user_answer, "None"), " | Correct Answer: ", correct_answer), " ; ")
-          ) AS prompt
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-          WHERE user_id = @username AND subject = @subject
-        ),
-        STRUCT(0.2 AS temperature)
-      )
-    `;
+    const wrongProblemsString = wrongProblems.map(p => 
+      `Topic: ${p.topic} | Question: ${p.question_text} | User Answer: ${p.user_answer || 'None'} | Correct Answer: ${p.correct_answer}`
+    ).join(' ; ');
 
-    const [aiRows] = await bq.query({
-      query: aiQuery,
-      params: { username, subject }
+    const prompt = `Analyze these incorrect ${subject} exam questions attempted by user '${username}'. 
+Provide a thorough diagnostic analysis of their strengths and weaknesses in this subject. 
+Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. 
+Note that if a broad topic (like 'Organic Synthesis' or 'Calculus') has areas of both success and failure, list it in BOTH strengths and weaknesses. 
+For each identified topic, generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at. 
+Return strictly a valid JSON object with the following schema:
+{
+  "strengths": ["Topic A", "Topic B"],
+  "weaknesses": ["Topic B", "Topic C"],
+  "detailed_analysis": "A detailed diagnosis...",
+  "topic_breakdowns": [
+    { "topic": "Topic B", "good_at": "What they do well...", "not_good_at": "What they struggle with..." }
+  ]
+}
+Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.
+
+Incorrect questions: ${wrongProblemsString}`;
+
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
     });
 
-    if (aiRows && aiRows.length > 0 && aiRows[0].analysis) {
-      const responseText = aiRows[0].analysis;
-      // Clean up markdown block if present
+    const response = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.2
+      }
+    });
+
+    if (response.text) {
+      const responseText = response.text;
       const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
       const responseObj = JSON.parse(cleanedText);
       const strengths = responseObj.strengths;
@@ -427,33 +423,37 @@ Timed Out: ${r.timeOut ? 'Yes' : 'No'}
 Provide a professional, diagnostic summary of their mistake patterns and concrete recommendations to avoid these mistakes in the future.
 Be direct, supportive, and pedagogical. Do not include markdown headers or greetings.`;
 
-    // Run BigQuery AI ML.GENERATE_TEXT and insert the result in a single persistent cloud query
-    const query = `
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+    });
+
+    const response = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+      contents: prompt,
+      config: {
+        temperature: 0.3
+      }
+    });
+
+    const mistakePatterns = response.text || '';
+
+    // Save results in BigQuery
+    const insertQuery = `
       INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
         (user_id, exam_id, subject, mistake_patterns, created_at)
-      SELECT 
-        @username AS user_id,
-        @examId AS exam_id,
-        @subject AS subject,
-        ml_generate_text_result AS mistake_patterns,
-        CURRENT_TIMESTAMP() AS created_at
-      FROM ML.GENERATE_TEXT(
-        MODEL \`${projectId}\`.\`chronos_users\`.\`gemini_flash_model\`,
-        (SELECT @prompt AS prompt),
-        STRUCT(0.3 AS temperature)
-      )
+      VALUES
+        (@username, @examId, @subject, @mistakePatterns, CURRENT_TIMESTAMP())
     `;
-
     await bq.query({
-      query,
+      query: insertQuery,
       params: {
         username,
         examId,
         subject,
-        prompt
+        mistakePatterns
       }
     });
   } catch (err) {
-    console.error('Error in BigQuery mistake analysis background job:', err);
+    console.error('Error in mistake analysis background job:', err);
   }
 }

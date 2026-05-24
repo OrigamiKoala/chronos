@@ -96,6 +96,7 @@ export default async function handler(req, res) {
 
     const subjectRatings = { Math: 100, Physics: 100, Chemistry: 100 };
     const subjectChallenged = { Math: false, Physics: false, Chemistry: false };
+    const subjectConsecutiveFailCount = { Math: 0, Physics: 0, Chemistry: 0 };
     const updatesToMake = [];
 
     for (const h of allHistory) {
@@ -107,10 +108,16 @@ export default async function handler(req, res) {
       const expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
       
       if (score < 0.75) {
+        subjectConsecutiveFailCount[sub]++;
+      } else {
+        subjectConsecutiveFailCount[sub] = 0;
+      }
+
+      if (subjectConsecutiveFailCount[sub] >= 2) {
         subjectChallenged[sub] = true;
       }
       
-      const K = (subjectChallenged[sub] || score < 0.75) ? 32 : 250;
+      const K = subjectChallenged[sub] ? 32 : 250;
       const ratingChange = Math.round(K * (score - expectedScore));
       const newRating = Math.max(100, currentRating + ratingChange);
 

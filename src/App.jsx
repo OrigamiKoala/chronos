@@ -151,8 +151,26 @@ function App() {
     const avgQuestionRating = sumQuestionRatings / totalQuestions;
 
     const expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
-    const isChallenged = history.some(h => h.subject === subject && h.accuracy < 0.75);
-    const K = (isChallenged || score < 0.75) ? 32 : 250;
+    const subHistory = [...history].filter(h => h.subject === subject).reverse();
+    let isChallenged = false;
+    let consecutiveFailCount = 0;
+    for (const h of subHistory) {
+      if (h.accuracy < 0.75) {
+        consecutiveFailCount++;
+      } else {
+        consecutiveFailCount = 0;
+      }
+      if (consecutiveFailCount >= 2) {
+        isChallenged = true;
+      }
+    }
+    if (score < 0.75) {
+      consecutiveFailCount++;
+    } else {
+      consecutiveFailCount = 0;
+    }
+    const hasBeenChallenged = isChallenged || consecutiveFailCount >= 2;
+    const K = hasBeenChallenged ? 32 : 250;
     const ratingChange = Math.round(K * (score - expectedScore));
     const newRating = Math.max(100, currentRating + ratingChange);
 
