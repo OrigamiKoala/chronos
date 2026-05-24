@@ -29,6 +29,8 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
+    // 0. Ensure recovery and password columns exist in users table
+    try {
       const alterQuery = `
         ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`users\`
         ADD COLUMN IF NOT EXISTS password STRING,

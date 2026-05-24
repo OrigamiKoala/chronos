@@ -333,11 +333,11 @@ function App() {
       })
       .then(res => {
         if (res.ok) {
-          // Re-fetch user data to update weaknesses and history
+          const password = localStorage.getItem('chronos_logged_password') || '';
           fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user.user_id })
+            body: JSON.stringify({ username: user.user_id, password })
           })
           .then(res2 => res2.json())
           .then(data => {
@@ -347,6 +347,11 @@ function App() {
             setDetailedAnalysis(data.detailedAnalysis || {});
             setTopicBreakdowns(data.topicBreakdowns || {});
             setHistory(data.history);
+            setRatings({
+              Math: data.user.math_rating || 100,
+              Physics: data.user.physics_rating || 100,
+              Chemistry: data.user.chemistry_rating || 100
+            });
           });
         }
       })
