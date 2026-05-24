@@ -97,7 +97,7 @@ export default async function handler(req, res) {
 
     // 4. Fetch mastery (strengths >= 70%, weaknesses < 65%)
     const masteryQuery = `
-      SELECT sub_category, subject, accuracy_rate
+      SELECT sub_category, subject, accuracy_rate, total_count
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
       WHERE user_id = @username
     `;
@@ -106,10 +106,10 @@ export default async function handler(req, res) {
       params: { username: sanitizedUser }
     });
 
-    const strengths = mastery.filter(m => m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
-    const weaknesses = mastery.filter(m => m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
+    const strengths = mastery.filter(m => m.total_count > 5 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
+    const weaknesses = mastery.filter(m => m.total_count > 5 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
 
-    // 5. Ensure user_weakness_analysis table exists and fetch detailed diagnostic paragraphs
+    // 5. Ensure user_weakness_analysis and user_topic_breakdown tables exist
     const createAnalysisTableQuery = `
       CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
         user_id STRING NOT NULL,
@@ -120,6 +120,19 @@ export default async function handler(req, res) {
     `;
     await bq.query(createAnalysisTableQuery);
 
+    const createBreakdownTableQuery = `
+      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
+        user_id STRING NOT NULL,
+        subject STRING NOT NULL,
+        topic STRING NOT NULL,
+        good_at STRING NOT NULL,
+        not_good_at STRING NOT NULL,
+        updated_at TIMESTAMP NOT NULL
+      )
+    `;
+    await bq.query(createBreakdownTableQuery);
+
+    // 6. Query analysis and topic breakdowns
     const analysisQuery = `
       SELECT subject, detailed_analysis
       FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
@@ -135,12 +148,31 @@ export default async function handler(req, res) {
       detailedAnalysis[a.subject] = a.detailed_analysis;
     }
 
+    const breakdownQuery = `
+      SELECT topic, good_at, not_good_at
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+      WHERE user_id = @username
+    `;
+    const [breakdowns] = await bq.query({
+      query: breakdownQuery,
+      params: { username: sanitizedUser }
+    });
+
+    const topicBreakdowns = {};
+    for (const b of breakdowns) {
+      topicBreakdowns[b.topic] = {
+        good_at: b.good_at,
+        not_good_at: b.not_good_at
+      };
+    }
+
     return res.status(200).json({
       user: userData,
       history,
       strengths,
       weaknesses,
-      detailedAnalysis
+      detailedAnalysis,
+      topicBreakdowns
     });
 
   } catch (err) {

@@ -166,6 +166,29 @@ export default async function handler(req, res) {
 // Background worker function to analyze wrong problems and update weaknesses
 async function updateAIWeaknesses(username, subject) {
   try {
+    // Ensure all tables exist
+    const createAnalysisTableQuery = `
+      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
+        user_id STRING NOT NULL,
+        subject STRING NOT NULL,
+        detailed_analysis STRING NOT NULL,
+        updated_at TIMESTAMP NOT NULL
+      )
+    `;
+    await bq.query(createAnalysisTableQuery);
+
+    const createBreakdownTableQuery = `
+      CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
+        user_id STRING NOT NULL,
+        subject STRING NOT NULL,
+        topic STRING NOT NULL,
+        good_at STRING NOT NULL,
+        not_good_at STRING NOT NULL,
+        updated_at TIMESTAMP NOT NULL
+      )
+    `;
+    await bq.query(createBreakdownTableQuery);
+
     // A. Count wrong problems for this user and subject to ensure there is data to analyze
     const countQuery = `
       SELECT COUNT(*) AS cnt 
@@ -188,11 +211,19 @@ async function updateAIWeaknesses(username, subject) {
         (
           SELECT CONCAT(
             "Analyze these incorrect ", @subject, " exam questions attempted by user '", @username, "'. ",
-            "First, list up to 5 highly specific topic sub-categories (e.g., 'SN2 Reaction Kinetics', 'Conservation of Angular Momentum', 'Implicit Differentiation with Trigonometric Functions') that the user is weak in. Be very precise about exactly what sub-concept they missed. ",
-            "Second, generate a detailed diagnostic response explaining exactly what the user is missing, where they are struggling, and what they need to master. ",
-            "Return strictly a valid JSON object with two fields:\n",
-            "1. \\"weaknesses\\": a JSON array of up to 5 strings, each being a highly specific weakness tag (maximum 4-5 words per tag).\n",
-            "2. \\"detailed_analysis\\": a string containing the detailed diagnostic explanation of what the user is missing.\n",
+            "Provide a thorough diagnostic analysis of their strengths and weaknesses in this subject. ",
+            "Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. ",
+            "Note that if a broad topic (like 'Organic Synthesis' or 'Calculus') has areas of both success and failure, list it in BOTH strengths and weaknesses. ",
+            "For each identified topic, generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at. ",
+            "Return strictly a valid JSON object with the following schema:\n",
+            "{\n",
+            "  \\"strengths\\": [\\"Topic A\\", \\"Topic B\\"],\n",
+            "  \\"weaknesses\\": [\\"Topic B\\", \\"Topic C\\"],\n",
+            "  \\"detailed_analysis\\": \\"A detailed diagnosis...\\",\n",
+            "  \\"topic_breakdowns\\": [\n",
+            "    { \\"topic\\": \\"Topic B\\", \\"good_at\\": \\"What they do well...\\", \\"not_good_at\\": \\"What they struggle with...\\" }\n",
+            "  ]\n",
+            "}\n",
             "Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.\n\n",
             "Incorrect questions: ",
             STRING_AGG(CONCAT("Topic: ", topic, " | Question: ", question_text, " | User Answer: ", COALESCE(user_answer, "None"), " | Correct Answer: ", correct_answer), " ; ")
@@ -214,9 +245,51 @@ async function updateAIWeaknesses(username, subject) {
       // Clean up markdown block if present
       const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
       const responseObj = JSON.parse(cleanedText);
+      const strengths = responseObj.strengths;
       const weaknesses = responseObj.weaknesses;
       const detailedAnalysis = responseObj.detailed_analysis;
+      const topicBreakdowns = responseObj.topic_breakdowns;
       
+      if (Array.isArray(strengths)) {
+        for (const topic of strengths) {
+          // Check if this mastery entry exists
+          const checkQuery = `
+            SELECT correct_count, total_count 
+            FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+            WHERE user_id = @username AND sub_category = @topic AND subject = @subject
+          `;
+          const [exists] = await bq.query({
+            query: checkQuery,
+            params: { username, topic, subject }
+          });
+
+          if (exists.length > 0) {
+            // Raise their accuracy rate to register as strength
+            const updateQuery = `
+              UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+              SET correct_count = 4, total_count = 6, accuracy_rate = 0.80
+              WHERE user_id = @username AND sub_category = @topic AND subject = @subject
+            `;
+            await bq.query({
+              query: updateQuery,
+              params: { username, topic, subject }
+            });
+          } else {
+            // Insert baseline strong mastery
+            const insertQuery = `
+              INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+                (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+              VALUES
+                (@username, @topic, @subject, 4, 6, 0.80)
+            `;
+            await bq.query({
+              query: insertQuery,
+              params: { username, topic, subject }
+            });
+          }
+        }
+      }
+
       if (Array.isArray(weaknesses)) {
         for (const topic of weaknesses) {
           // Check if this mastery entry exists
@@ -234,7 +307,7 @@ async function updateAIWeaknesses(username, subject) {
             // Lower their accuracy rate below 0.65 to register as weakness
             const updateQuery = `
               UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-              SET correct_count = 2, total_count = 5, accuracy_rate = 0.40
+              SET correct_count = 2, total_count = 6, accuracy_rate = 0.40
               WHERE user_id = @username AND sub_category = @topic AND subject = @subject
             `;
             await bq.query({
@@ -247,13 +320,32 @@ async function updateAIWeaknesses(username, subject) {
               INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
                 (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
               VALUES
-                (@username, @topic, @subject, 2, 5, 0.40)
+                (@username, @topic, @subject, 2, 6, 0.40)
             `;
             await bq.query({
               query: insertQuery,
               params: { username, topic, subject }
             });
           }
+        }
+      }
+
+      if (Array.isArray(topicBreakdowns)) {
+        for (const b of topicBreakdowns) {
+          const mergeBreakdownQuery = `
+            MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+            USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
+            ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
+            WHEN MATCHED THEN
+              UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
+            WHEN NOT MATCHED THEN
+              INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
+              VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())
+          `;
+          await bq.query({
+            query: mergeBreakdownQuery,
+            params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
+          });
         }
       }
 

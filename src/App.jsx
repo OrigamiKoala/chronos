@@ -18,6 +18,8 @@ function App() {
   const [strengths, setStrengths] = useState([]);
   const [weaknesses, setWeaknesses] = useState([]);
   const [detailedAnalysis, setDetailedAnalysis] = useState({});
+  const [topicBreakdowns, setTopicBreakdowns] = useState({});
+  const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
   const [history, setHistory] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('Math');
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -55,6 +57,7 @@ function App() {
           setStrengths(data.strengths);
           setWeaknesses(data.weaknesses);
           setDetailedAnalysis(data.detailedAnalysis || {});
+          setTopicBreakdowns(data.topicBreakdowns || {});
           setHistory(data.history);
           setRatings({
             Math: data.user.math_rating || 100,
@@ -83,6 +86,7 @@ function App() {
         setStrengths(data.strengths);
         setWeaknesses(data.weaknesses);
         setDetailedAnalysis(data.detailedAnalysis || {});
+        setTopicBreakdowns(data.topicBreakdowns || {});
         setHistory(data.history);
         setRatings({
           Math: data.user.math_rating || 100,
@@ -107,6 +111,8 @@ function App() {
     setStrengths([]);
     setWeaknesses([]);
     setDetailedAnalysis({});
+    setTopicBreakdowns({});
+    setSelectedTopicDetail(null);
     setHistory([]);
     setRatings({ Math: 100, Physics: 100, Chemistry: 100 });
     localStorage.removeItem('chronos_logged_user');
@@ -183,6 +189,7 @@ function App() {
             setStrengths(data.strengths);
             setWeaknesses(data.weaknesses);
             setDetailedAnalysis(data.detailedAnalysis || {});
+            setTopicBreakdowns(data.topicBreakdowns || {});
             setHistory(data.history);
           });
         }
@@ -255,9 +262,25 @@ function App() {
                   <div style={{ padding: '1rem', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
                     <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Strengths</h4>
                     {filteredStrengths.length > 0 ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                         {filteredStrengths.map((s, i) => (
-                          <span key={i} style={{ background: 'rgba(74, 222, 128, 0.1)', color: 'var(--success)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>{s}</span>
+                          <span 
+                            key={i} 
+                            style={{ 
+                              background: 'rgba(74, 222, 128, 0.1)', 
+                              color: 'var(--success)', 
+                              padding: '0.25rem 0.6rem', 
+                              borderRadius: '4px', 
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              border: selectedTopicDetail?.topic === s && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent',
+                              transition: 'all 0.2s ease',
+                              userSelect: 'none'
+                            }}
+                            onClick={() => setSelectedTopicDetail(prev => prev?.topic === s && prev?.type === 'strength' ? null : { topic: s, type: 'strength' })}
+                          >
+                            {s}
+                          </span>
                         ))}
                       </div>
                     ) : (
@@ -267,16 +290,72 @@ function App() {
                   <div style={{ padding: '1rem', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-sm)' }}>
                     <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Weaknesses</h4>
                     {filteredWeaknesses.length > 0 ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                         {filteredWeaknesses.map((w, i) => (
-                          <span key={i} style={{ background: 'rgba(248, 113, 113, 0.1)', color: 'var(--danger)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>{w}</span>
+                          <span 
+                            key={i} 
+                            style={{ 
+                              background: 'rgba(248, 113, 113, 0.1)', 
+                              color: 'var(--danger)', 
+                              padding: '0.25rem 0.6rem', 
+                              borderRadius: '4px', 
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              border: selectedTopicDetail?.topic === w && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent',
+                              transition: 'all 0.2s ease',
+                              userSelect: 'none'
+                            }}
+                            onClick={() => setSelectedTopicDetail(prev => prev?.topic === w && prev?.type === 'weakness' ? null : { topic: w, type: 'weakness' })}
+                          >
+                            {w}
+                          </span>
                         ))}
                       </div>
                     ) : (
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No weaknesses found yet!</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal weaknesses!</span>
                     )}
                   </div>
                 </div>
+
+                {selectedTopicDetail && (
+                  <div style={{ 
+                    marginBottom: '1.5rem', 
+                    padding: '1.25rem', 
+                    background: selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.03)' : 'rgba(248, 113, 113, 0.03)', 
+                    border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)'}`, 
+                    borderRadius: 'var(--radius-md)',
+                    animation: 'fade-in 0.3s ease'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>
+                        Topic Detail: <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
+                      </h4>
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }} 
+                        onClick={() => setSelectedTopicDetail(null)}
+                      >
+                        Close
+                      </button>
+                    </div>
+                    {topicBreakdowns[selectedTopicDetail.topic] ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                        <div>
+                          <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✓ What you are good at:</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].good_at}</span>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✗ What you are not good at:</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        No specific AI-breakdown stored yet for this topic. Complete more sessions to analyze details!
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {detailedAnalysis[selectedSubject] && (
                   <div style={{ 
