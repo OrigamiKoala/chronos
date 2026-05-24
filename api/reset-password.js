@@ -31,16 +31,10 @@ export default async function handler(req, res) {
       FROM \`${projectId}\`.\`chronos_users\`.\`users\`
       WHERE user_id = @username
     `;
-    // Forcing direct stream mapping bypasses anonymous table caching lookups
-    const stream = bq.createQueryStream({
+    const [existingUsers] = await bq.query({
       query: checkQuery,
-      params: { username: sanitizedUser },
-      location: 'US'
+      params: { username: sanitizedUser }
     });
-    const existingUsers = [];
-    for await (const row of stream) {
-      existingUsers.push(row);
-    }
 
     if (existingUsers.length === 0) {
       return res.status(404).json({ error: 'User not found' });

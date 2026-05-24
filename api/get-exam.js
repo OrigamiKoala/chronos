@@ -28,16 +28,10 @@ export default async function handler(req, res) {
       WHERE exam_id = @examId
       LIMIT 1
     `;
-    // Forcing direct stream mapping bypasses anonymous table caching lookups
-    const stream = bq.createQueryStream({
+    const [rows] = await bq.query({
       query,
-      params: { examId },
-      location: 'US'
+      params: { examId }
     });
-    const rows = [];
-    for await (const row of stream) {
-      rows.push(row);
-    }
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Exam results not found' });
@@ -54,16 +48,10 @@ export default async function handler(req, res) {
         WHERE exam_id = @examId
         LIMIT 1
       `;
-      // Forcing direct stream mapping bypasses anonymous table caching lookups
-      const streamMistakes = bq.createQueryStream({
+      const [mistakeRows] = await bq.query({
         query: mistakeQuery,
-        params: { examId },
-        location: 'US'
+        params: { examId }
       });
-      const mistakeRows = [];
-      for await (const row of streamMistakes) {
-        mistakeRows.push(row);
-      }
       if (mistakeRows.length > 0) {
         mistakePatterns = mistakeRows[0].mistake_patterns;
       }
@@ -80,16 +68,10 @@ export default async function handler(req, res) {
         WHERE exam_id = @examId
         ORDER BY question_index ASC
       `;
-      // Forcing direct stream mapping bypasses anonymous table caching lookups
-      const streamTags = bq.createQueryStream({
+      const [tagRows] = await bq.query({
         query: tagsQuery,
-        params: { examId },
-        location: 'US'
+        params: { examId }
       });
-      const tagRows = [];
-      for await (const row of streamTags) {
-        tagRows.push(row);
-      }
       savedTags = tagRows.map(r => ({ questionIndex: r.question_index, tag: r.tag }));
     } catch {
       // ignore if table doesn't exist

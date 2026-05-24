@@ -48,16 +48,10 @@ export default async function handler(req, res) {
       FROM \`${projectId}\`.\`chronos_users\`.\`users\`
       WHERE user_id = @username
     `;
-    // Forcing direct stream mapping bypasses anonymous table caching lookups
-    const stream = bq.createQueryStream({
+    const [existingUsers] = await bq.query({
       query: checkQuery,
-      params: { username: sanitizedUser },
-      location: 'US'
+      params: { username: sanitizedUser }
     });
-    const existingUsers = [];
-    for await (const row of stream) {
-      existingUsers.push(row);
-    }
 
     let userData;
 
@@ -164,16 +158,10 @@ export default async function handler(req, res) {
       WHERE user_id = @username
       ORDER BY created_at ASC
     `;
-    // Forcing direct stream mapping bypasses anonymous table caching lookups
-    const streamHistory = bq.createQueryStream({
+    const [allHistory] = await bq.query({
       query: allHistoryQuery,
-      params: { username: sanitizedUser },
-      location: 'US'
+      params: { username: sanitizedUser }
     });
-    const allHistory = [];
-    for await (const row of streamHistory) {
-      allHistory.push(row);
-    }
 
     if (needsRecalculation) {
       const subjectRatings = { Math: 100, Physics: 100, Chemistry: 100 };
@@ -275,16 +263,10 @@ export default async function handler(req, res) {
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
       WHERE user_id = @username
     `;
-    // Forcing direct stream mapping bypasses anonymous table caching lookups
-    const streamMastery = bq.createQueryStream({
+    const [mastery] = await bq.query({
       query: masteryQuery,
-      params: { username: sanitizedUser },
-      location: 'US'
+      params: { username: sanitizedUser }
     });
-    const mastery = [];
-    for await (const row of streamMastery) {
-      mastery.push(row);
-    }
 
     const strengths = mastery.filter(m => m.total_count > 5 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
     const weaknesses = mastery.filter(m => m.total_count > 5 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
@@ -318,16 +300,10 @@ export default async function handler(req, res) {
       FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
       WHERE user_id = @username
     `;
-    // Forcing direct stream mapping bypasses anonymous table caching lookups
-    const streamAnalyses = bq.createQueryStream({
+    const [analyses] = await bq.query({
       query: analysisQuery,
-      params: { username: sanitizedUser },
-      location: 'US'
+      params: { username: sanitizedUser }
     });
-    const analyses = [];
-    for await (const row of streamAnalyses) {
-      analyses.push(row);
-    }
 
     const detailedAnalysis = {};
     for (const a of analyses) {
@@ -339,16 +315,10 @@ export default async function handler(req, res) {
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
       WHERE user_id = @username
     `;
-    // Forcing direct stream mapping bypasses anonymous table caching lookups
-    const streamBreakdowns = bq.createQueryStream({
+    const [breakdowns] = await bq.query({
       query: breakdownQuery,
-      params: { username: sanitizedUser },
-      location: 'US'
+      params: { username: sanitizedUser }
     });
-    const breakdowns = [];
-    for await (const row of streamBreakdowns) {
-      breakdowns.push(row);
-    }
 
     const topicBreakdowns = {};
     for (const b of breakdowns) {
