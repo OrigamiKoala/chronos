@@ -59,7 +59,25 @@ export default async function handler(req, res) {
       // ignore if table doesn't exist or query fails
     }
 
-    return res.status(200).json({ results, mistakePatterns });
+    // Query saved tags if table exists
+    let savedTags = [];
+    try {
+      const tagsQuery = `
+        SELECT question_index, tag
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+        WHERE exam_id = @examId
+        ORDER BY question_index ASC
+      `;
+      const [tagRows] = await bq.query({
+        query: tagsQuery,
+        params: { examId }
+      });
+      savedTags = tagRows.map(r => ({ questionIndex: r.question_index, tag: r.tag }));
+    } catch {
+      // ignore if table doesn't exist
+    }
+
+    return res.status(200).json({ results, mistakePatterns, savedTags });
   } catch (err) {
     console.error('Get exam error:', err);
     return res.status(500).json({ error: err.message || 'Internal Server Error' });

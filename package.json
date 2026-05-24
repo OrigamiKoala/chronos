@@ -12,8 +12,10 @@
   "dependencies": {
     "@google-cloud/bigquery": "^7.9.0",
     "@google/genai": "^2.6.0",
+    "chart.js": "^4.5.1",
     "lucide-react": "^1.16.0",
     "react": "^19.2.6",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.6"
   },
   "devDependencies": {

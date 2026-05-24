@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { SetupScreen } from './components/SetupScreen';
 import { ExamScreen } from './components/ExamScreen';
 import { AnalyticsScreen } from './components/AnalyticsScreen';
-import { BrainCircuit, Award, LogIn, LogOut, User, Loader2 } from 'lucide-react';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { BrainCircuit, Award, LogIn, LogOut, User, Loader2, BarChart3 } from 'lucide-react';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('setup');
@@ -26,6 +27,7 @@ function App() {
   const [loginUsername, setLoginUsername] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loadingExamId, setLoadingExamId] = useState(null);
+  const [currentExamId, setCurrentExamId] = useState(null);
 
   const formatDate = (dateVal) => {
     if (!dateVal) return '';
@@ -180,6 +182,9 @@ function App() {
     setRatings(prev => ({ ...prev, [subject]: newRating }));
 
     // Send result to DB if logged in
+    const examIdStr = `${Date.now()}`;
+    setCurrentExamId(examIdStr);
+
     if (user) {
       fetch('/api/submit-exam', {
         method: 'POST',
@@ -187,7 +192,7 @@ function App() {
         body: JSON.stringify({
           username: user.user_id,
           subject,
-          examId: `${Date.now()}`,
+          examId: examIdStr,
           accuracy: score,
           avgTime: avgQuestionRating,
           ratingChange,
@@ -249,13 +254,15 @@ function App() {
       }
       const data = await res.json();
       setExamConfig({ subject: h.subject });
+      setCurrentExamId(h.exam_id);
       setExamResults({
         results: data.results,
         subject: h.subject,
         oldRating: h.new_rating - h.rating_change,
         newRating: h.new_rating,
         ratingChange: h.rating_change,
-        mistakePatterns: data.mistakePatterns
+        mistakePatterns: data.mistakePatterns,
+        savedTags: data.savedTags || []
       });
       setCurrentScreen('analytics');
     } catch (err) {
@@ -293,9 +300,16 @@ function App() {
         </div>
         <div>
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Welcome, <strong style={{ color: 'var(--accent-primary)' }}>{user.user_id}</strong></span>
-              <button className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={handleLogout}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button 
+                className={`btn ${currentScreen === 'dashboard' ? 'btn-primary' : 'btn-outline'}`} 
+                style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }} 
+                onClick={() => setCurrentScreen(currentScreen === 'dashboard' ? 'setup' : 'dashboard')}
+              >
+                <BarChart3 size={16} /> Analytics
+              </button>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Welcome, <strong style={{ color: 'var(--accent-primary)' }}>{user.user_id}</strong></span>
+              <button className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={handleLogout}>
                 <LogOut size={16} /> Logout
               </button>
             </div>
@@ -490,7 +504,10 @@ function App() {
           <ExamScreen config={examConfig} onFinish={finishExam} />
         )}
         {currentScreen === 'analytics' && examResults && (
-          <AnalyticsScreen results={examResults} onRestart={restart} />
+          <AnalyticsScreen results={examResults} onRestart={restart} user={user} examId={currentExamId} />
+        )}
+        {currentScreen === 'dashboard' && user && (
+          <AnalyticsDashboard user={user} onBack={restart} />
         )}
       </main>
 
