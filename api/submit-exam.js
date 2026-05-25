@@ -171,12 +171,12 @@ export default async function handler(req, res) {
     await Promise.all([...wrongInsertPromises, ...masteryPromises]);
 
     // 4. Trigger update of user weaknesses using direct Gemini model
-    await updateAIWeaknesses(sanitizedUser, subject);
+    const [freshAnalysis, freshMistakePatterns] = await Promise.all([
+      updateAIWeaknesses(sanitizedUser, subject),
+      analyzeMistakesAndSave(sanitizedUser, examIdStr || examId, subject, results)
+    ]);
 
-    // 5. Trigger mistake analysis and save in BigQuery using direct Gemini model
-    await analyzeMistakesAndSave(sanitizedUser, examId, subject, results);
-
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, detailedAnalysis: freshAnalysis, mistakePatterns: freshMistakePatterns });
 
   } catch (err) {
     console.error('Submit exam error:', err);
@@ -200,7 +200,7 @@ async function updateAIWeaknesses(username, subject) {
       params: { username, subject }
     });
     
-    if (!wrongProblems || wrongProblems.length === 0) return;
+    if (!wrongProblems || wrongProblems.length === 0) return null;
 
     const wrongProblemsString = wrongProblems.map(p => 
       `Topic: ${p.topic} | Question: ${p.question_text} | User Answer: ${p.user_answer || 'None'} | Correct Answer: ${p.correct_answer}`
@@ -337,6 +337,7 @@ Incorrect questions: ${wrongProblemsString}`;
         }
 
         await Promise.all(upsertPromises);
+        return detailedAnalysis || null;
       } else {
         // No strengths/weaknesses but may have analysis/breakdowns
         const miscPromises = [];
@@ -369,10 +370,13 @@ Incorrect questions: ${wrongProblemsString}`;
           }));
         }
         if (miscPromises.length > 0) await Promise.all(miscPromises);
+        return detailedAnalysis || null;
       }
     }
+    return null;
   } catch (err) {
     console.error('Background AI weaknesses update failed:', err);
+    return null;
   }
 }
 
@@ -426,7 +430,9 @@ Be direct, supportive, and pedagogical. Do not include markdown headers or greet
         mistakePatterns
       }
     });
+    return mistakePatterns;
   } catch (err) {
     console.error('Error in mistake analysis background job:', err);
+    return null;
   }
 }

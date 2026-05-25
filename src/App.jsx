@@ -673,6 +673,7 @@ function App() {
             strengths={strengths}
             weaknesses={weaknesses}
             detailedAnalysis={detailedAnalysis}
+            topicBreakdowns={topicBreakdowns}
             history={history}
             loadingExamId={loadingExamId}
             onReviewExam={reviewPastExam}
