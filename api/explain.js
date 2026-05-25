@@ -32,18 +32,31 @@ User's Attempt Was: ${isCorrect ? 'Correct' : 'Incorrect'}
 
 The user is asking: ${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.'}
 
-Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct. Be concise but extremely helpful. ${subjectInstructions} Do not include markdown headers or greetings.`;
+Tasks:
+1. Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct. ${subjectInstructions}
+2. Critically review the user's answer. If their attempt was marked 'Incorrect', determine if it is actually mathematically, chemically, or scientifically equivalent to the correct answer (for example: minor rounding differences, spelling variations, standard hyphen vs unicode minus sign, spacing or symbol differences, or alternative valid representations). If it is indeed equivalent and correct, set 'shouldRemarkCorrect' to true. Otherwise, set it to false.
+
+Return strictly a valid JSON object with the following schema:
+{
+  "explanation": "Clear, detailed step-by-step explanation (without markdown headers or greetings)",
+  "shouldRemarkCorrect": true or false
+}`;
 
     const response = await ai.models.generateContent({
       model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
       contents: prompt,
       config: {
+        responseMimeType: "application/json",
         temperature: 0.3,
-        thinkingConfig: { thinkingBudget: 1024 },
       },
     });
 
-    return res.status(200).json({ explanation: response.text });
+    try {
+      const parsed = JSON.parse(response.text);
+      return res.status(200).json(parsed);
+    } catch (parseErr) {
+      return res.status(200).json({ explanation: response.text, shouldRemarkCorrect: false });
+    }
   } catch (err) {
     console.error('Explanation error:', err);
     return res.status(500).json({ error: err.message || 'Internal Server Error' });

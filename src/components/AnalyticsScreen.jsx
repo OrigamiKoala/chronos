@@ -45,7 +45,14 @@ const getSubjectLevelName = (subject, rating) => {
 };
 
 export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, strengths = [], weaknesses = [], detailedAnalysis = {}, topicBreakdowns = {}, history = [], loadingExamId = null, onReviewExam = null, formatDate = (d) => d }) {
-  const { results, subject, oldRating, newRating, ratingChange } = resultsObj;
+  const [localResults, setLocalResults] = useState(() => resultsObj.results || []);
+
+  useEffect(() => {
+    setLocalResults(resultsObj.results || []);
+  }, [resultsObj]);
+
+  const { subject, oldRating, newRating, ratingChange } = resultsObj;
+  const results = localResults;
   const totalQuestions = results.length;
   const correctAnswers = results.filter(r => r.isCorrect).length;
   const accuracy = Math.round((correctAnswers / totalQuestions) * 100) || 0;
@@ -162,9 +169,34 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           ...prev[index],
           loading: false,
           text: data.explanation,
-          query: ''
+          query: '',
+          remarkedCorrect: data.shouldRemarkCorrect || false
         }
       }));
+
+      if (data.shouldRemarkCorrect) {
+        setLocalResults(prev => {
+          const next = [...prev];
+          if (next[index]) {
+            next[index] = { ...next[index], isCorrect: true };
+          }
+          return next;
+        });
+
+        if (user && examId) {
+          fetch('/api/remark-correct', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: user.username,
+              examId,
+              questionId: problemObj.id,
+              subject,
+              topic: problemObj.topic || 'General'
+            })
+          }).catch(err => console.error('Failed to update remark-correct in database:', err));
+        }
+      }
 
       setTimeout(() => {
         if (window.MathJax && window.MathJax.typesetPromise) {
@@ -623,6 +655,23 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                   </button>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {activeExplanations[i].remarkedCorrect && (
+                      <div style={{
+                        background: 'rgba(52, 211, 153, 0.08)',
+                        border: '1px solid var(--success)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '0.75rem 1rem',
+                        color: 'var(--success)',
+                        fontSize: '0.85rem',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        🎉 AI determined your answer was correct! This question has been remarked correct and analytics updated.
+                      </div>
+                    )}
+
                     {activeExplanations[i].text && (
                       <div style={{ 
                         background: 'var(--bg-tertiary)', 
