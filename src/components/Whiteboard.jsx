@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { RotateCcw, Trash2, Edit3, Eraser } from 'lucide-react';
 
-export const Whiteboard = forwardRef(({ height = 350 }, ref) => {
+export const Whiteboard = forwardRef(({ height = 1000 }, ref) => {
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -193,7 +193,8 @@ export const Whiteboard = forwardRef(({ height = 350 }, ref) => {
           borderRadius: 'var(--radius-md)', 
           background: 'rgba(10, 10, 12, 0.8)',
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)',
-          overflow: 'hidden',
+          maxHeight: '450px',
+          overflowY: 'auto',
           touchAction: 'none'
         }}
       >

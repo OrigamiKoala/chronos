@@ -625,39 +625,36 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       <div>
         <h3 style={{ marginBottom: '1.5rem' }}>Question Breakdown</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {results.map((r, i) => (
-            <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderLeft: `4px solid ${r.isCorrect ? 'var(--success)' : 'var(--danger)'}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>Question {i + 1} (Level {r.difficultyAtTime})</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: r.isCorrect ? 'var(--success)' : 'var(--danger)' }}>
-                  {r.timeSpent}s {r.isCorrect ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
-                </span>
-              </div>
-              <p style={{ marginBottom: '1rem' }}><ChemicalText text={r.question} theme="dark" /></p>
-
-              <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem', alignItems: 'center' }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Your Answer: </span>
-                  <span style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)' }}>
-                    {(() => {
-                      const ans = r.userAnswer;
-                      if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
-                        const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
-                        if (letterIdx !== -1 && r.options[letterIdx]) {
-                          const opt = r.options[letterIdx];
-                          return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" />;
-                        }
-                      }
-                      return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" />;
-                    })()}
+          {results.map((r, i) => {
+            const isPartial = r.score !== undefined && r.score > 0 && r.score < 1;
+            const statusColor = isPartial ? 'var(--warning)' : (r.isCorrect ? 'var(--success)' : 'var(--danger)');
+            return (
+              <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderLeft: `4px solid ${statusColor}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>Question {i + 1} (Level {r.difficultyAtTime})</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: statusColor }}>
+                    {r.timeSpent}s {isPartial ? (
+                      <>
+                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--warning)' }}>
+                          {Math.round(r.score * 100)}% Credit
+                        </span>
+                        <TriangleIcon size={18} color="var(--warning)" />
+                      </>
+                    ) : r.isCorrect ? (
+                      <CheckCircle2 size={18} />
+                    ) : (
+                      <XCircle size={18} />
+                    )}
                   </span>
                 </div>
-                {!r.isCorrect && (
+                <p style={{ marginBottom: '1rem' }}><ChemicalText text={r.question} theme="dark" /></p>
+
+                <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem', alignItems: 'center' }}>
                   <div>
-                    <span style={{ color: 'var(--text-muted)' }}>Correct Answer: </span>
-                    <span style={{ color: 'var(--success)' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Your Answer: </span>
+                    <span style={{ color: statusColor }}>
                       {(() => {
-                        const ans = r.answer;
+                        const ans = r.userAnswer;
                         if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
                           const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
                           if (letterIdx !== -1 && r.options[letterIdx]) {
@@ -669,8 +666,43 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                       })()}
                     </span>
                   </div>
+                  {!r.isCorrect && r.type !== 'free_response' && (
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Correct Answer: </span>
+                      <span style={{ color: 'var(--success)' }}>
+                        {(() => {
+                          const ans = r.answer;
+                          if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
+                            const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
+                            if (letterIdx !== -1 && r.options[letterIdx]) {
+                              const opt = r.options[letterIdx];
+                              return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" />;
+                            }
+                          }
+                          return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" />;
+                        })()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {r.feedback && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    background: 'rgba(255, 255, 255, 0.01)',
+                    border: `1px dashed ${statusColor}`,
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.875rem'
+                  }}>
+                    <div style={{ fontWeight: '600', color: statusColor, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <BrainCircuit size={16} /> Grading & Partial Credit Feedback:
+                    </div>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', whiteSpace: 'pre-line', lineHeight: '1.5' }}>
+                      {r.feedback}
+                    </p>
+                  </div>
                 )}
-              </div>
 
               {/* Tag buttons */}
               {user && examId && (
@@ -789,7 +821,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                 )}
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       </div>
 

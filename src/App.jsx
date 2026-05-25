@@ -49,6 +49,7 @@ function App() {
   });
   const [loadingExamId, setLoadingExamId] = useState(null);
   const [currentExamId, setCurrentExamId] = useState(null);
+  const [gradingLoading, setGradingLoading] = useState(false);
 
   const formatDate = (dateVal) => {
     if (!dateVal) return '';
@@ -335,9 +336,10 @@ function App() {
 
     setRatings(prev => ({ ...prev, [subject]: newRating }));
 
-    // Send result to DB if logged in
+    // Send result to DB
     const examIdStr = `${Date.now()}`;
     setCurrentExamId(examIdStr);
+    setGradingLoading(true);
 
     fetch('/api/submit-exam', {
       method: 'POST',
@@ -381,6 +383,14 @@ function App() {
         if (submitData.newRating !== undefined) {
           setRatings(prev => ({ ...prev, [subject]: submitData.newRating }));
         }
+      } else {
+        setExamResults({
+          results,
+          subject,
+          oldRating: currentRating,
+          newRating,
+          ratingChange
+        });
       }
 
       // Inject fresh diagnosis + mistake patterns into analytics immediately
@@ -419,19 +429,30 @@ function App() {
             Physics: data.user.physics_rating || 100,
             Chemistry: data.user.chemistry_rating || 100
           });
+          setCurrentScreen('analytics');
+          setGradingLoading(false);
+        })
+        .catch(() => {
+          setCurrentScreen('analytics');
+          setGradingLoading(false);
         });
+      } else {
+        setCurrentScreen('analytics');
+        setGradingLoading(false);
       }
     })
-    .catch(err => console.error("Error submitting exam:", err));
-
-    setExamResults({
-      results,
-      subject,
-      oldRating: currentRating,
-      newRating,
-      ratingChange
+    .catch(err => {
+      console.error("Error submitting exam:", err);
+      setExamResults({
+        results,
+        subject,
+        oldRating: currentRating,
+        newRating,
+        ratingChange
+      });
+      setCurrentScreen('analytics');
+      setGradingLoading(false);
     });
-    setCurrentScreen('analytics');
   };
 
   const reviewPastExam = async (h) => {
@@ -555,7 +576,15 @@ function App() {
       </header>
 
       <main className="animate-fade-in" style={{ padding: '2rem 1rem' }}>
-        {currentScreen === 'setup' && (
+        {gradingLoading ? (
+          <div className="glass-panel animate-fade-in" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '4rem auto' }}>
+            <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
+            <h3>AI Grading Your Exam...</h3>
+            <p style={{ color: 'var(--text-secondary)' }}>Critically deriving correct solutions, analyzing your step-by-step logic, and calculating partial credit.</p>
+          </div>
+        ) : (
+          <>
+            {currentScreen === 'setup' && (
           <div style={{ display: 'grid', gridTemplateColumns: user ? '1fr 1fr' : '1fr', gap: '2rem', maxWidth: user ? '1200px' : '600px', margin: '0 auto', alignItems: 'stretch' }}>
             <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} />
             {user && (
@@ -750,6 +779,8 @@ function App() {
             onReviewExam={reviewPastExam}
             formatDate={formatDate}
           />
+        )}
+          </>
         )}
       </main>
 

@@ -30,6 +30,7 @@ You are given this exam question:
 Question: ${question || 'Not specified'}
 
 Your goal is to transcribe/explain the user's handwritten work, calculations, steps, and final answer as shown in the image for this question.
+Ensure you describe the user's full step-by-step process, calculations, logic, scratch work, and final proof in extensive detail so that a grading/explanation bot can analyze precisely where the user made progress or where they went wrong.
 Even if their solution is mathematically, chemically, or scientifically wrong, transcribe exactly what they did and what their final answer is. Do NOT correct their mistakes; simply explain in words what is shown in the image.
 Represent formulas and equations in LaTeX.
 

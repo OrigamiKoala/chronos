@@ -191,6 +191,8 @@ For Chemistry questions, represent organic molecules strictly using SMILES notat
 
 ${subjectSpecificInstructions}
 
+For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
+
 The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
   "id": "A unique string ID",
