@@ -286,7 +286,7 @@ export function ExamScreen({ config, onFinish }) {
 
     const isLast = currentQuestionIndex + 1 >= config.numQuestions;
     if (isLast) {
-      handleFinishExam(null, updatedAnswers);
+      handleFinishExam(null, updatedAnswers, updatedSubmissions);
     } else {
       setCurrentQuestionIndex(prev => prev + 1);
     }
@@ -368,14 +368,14 @@ export function ExamScreen({ config, onFinish }) {
       setResults(updatedResults);
 
       if (isLast) {
-        handleFinishExam(updatedResults, updatedAnswers);
+        handleFinishExam(updatedResults, updatedAnswers, updatedSubmissions);
       } else {
         const nextIndex = currentQuestionIndex + 1;
         setCurrentQuestionIndex(nextIndex);
       }
     } else {
       if (isLast) {
-        handleFinishExam(null, updatedAnswers);
+        handleFinishExam(null, updatedAnswers, updatedSubmissions);
       } else {
         const nextIndex = currentQuestionIndex + 1;
         setCurrentQuestionIndex(nextIndex);
@@ -383,7 +383,7 @@ export function ExamScreen({ config, onFinish }) {
     }
   };
 
-  const handleFinishExam = (strictResults = null, overrideAnswers = null) => {
+  const handleFinishExam = (strictResults = null, overrideAnswers = null, overrideSubmissions = null) => {
     clearInterval(timerRef.current);
     
     let finalResults;
@@ -391,6 +391,7 @@ export function ExamScreen({ config, onFinish }) {
       finalResults = strictResults;
     } else {
       const activeAnswers = overrideAnswers || answers;
+      const activeSubmissions = overrideSubmissions || frqSubmissions;
       finalResults = problems.map((prob, idx) => {
         const userAnswer = activeAnswers[idx] || '';
         const timeSpent = isWholeTestMode 
@@ -410,7 +411,7 @@ export function ExamScreen({ config, onFinish }) {
           timeSpent: Math.max(0, timeSpent),
           timeOut: isTimeout,
           difficultyAtTime: prob.difficulty || config.startingDifficulty,
-          frqSubmission: frqSubmissions[idx] || null
+          frqSubmission: activeSubmissions[idx] || null
         };
       });
     }

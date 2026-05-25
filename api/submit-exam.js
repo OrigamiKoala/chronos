@@ -326,7 +326,15 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults)
     ]);
 
-    return res.status(200).json({ success: true, detailedAnalysis: freshAnalysis, mistakePatterns: freshMistakePatterns });
+    return res.status(200).json({ 
+      success: true, 
+      detailedAnalysis: freshAnalysis, 
+      mistakePatterns: freshMistakePatterns,
+      results: gradedResults,
+      accuracy: finalAccuracy,
+      ratingChange: finalRatingChange,
+      newRating: finalNewRating
+    });
 
   } catch (err) {
     console.error('Submit exam error:', err);

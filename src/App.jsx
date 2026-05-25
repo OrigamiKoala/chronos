@@ -339,48 +339,67 @@ function App() {
     const examIdStr = `${Date.now()}`;
     setCurrentExamId(examIdStr);
 
-    if (user) {
-      fetch('/api/submit-exam', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: user.user_id,
-          subject,
-          examId: examIdStr,
-          accuracy: score,
-          avgTime: avgQuestionRating,
-          ratingChange,
-          newRating,
-          results: results.map(r => ({
-            id: r.id,
-            topic: r.topic || 'General',
-            question: r.question,
-            type: r.type,
-            options: r.options,
-            answer: r.answer,
-            difficulty: r.difficulty,
-            userAnswer: r.userAnswer,
-            isCorrect: r.isCorrect,
-            timeSpent: r.timeSpent,
-            timeOut: r.timeOut,
-            difficultyAtTime: r.difficultyAtTime
-          }))
-        })
+    fetch('/api/submit-exam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: user?.user_id || 'default_user',
+        subject,
+        examId: examIdStr,
+        accuracy: score,
+        avgTime: avgQuestionRating,
+        ratingChange,
+        newRating,
+        results: results.map(r => ({
+          id: r.id,
+          topic: r.topic || 'General',
+          question: r.question,
+          type: r.type,
+          options: r.options,
+          answer: r.answer,
+          difficulty: r.difficulty,
+          userAnswer: r.userAnswer,
+          isCorrect: r.isCorrect,
+          timeSpent: r.timeSpent,
+          timeOut: r.timeOut,
+          difficultyAtTime: r.difficultyAtTime
+        }))
       })
-      .then(res => res.json())
-      .then(submitData => {
-        // Inject fresh diagnosis + mistake patterns into analytics immediately
-        if (submitData.detailedAnalysis || submitData.mistakePatterns) {
-          setDetailedAnalysis(prev => ({
-            ...prev,
-            [subject]: submitData.detailedAnalysis || prev[subject]
-          }));
+    })
+    .then(res => res.json())
+    .then(submitData => {
+      // Overwrite results, rating, and change with AI-graded values if present
+      if (submitData.results) {
+        setExamResults({
+          results: submitData.results,
+          subject,
+          oldRating: currentRating,
+          newRating: submitData.newRating ?? newRating,
+          ratingChange: submitData.ratingChange ?? ratingChange,
+          mistakePatterns: submitData.mistakePatterns
+        });
+        if (submitData.newRating !== undefined) {
+          setRatings(prev => ({ ...prev, [subject]: submitData.newRating }));
+        }
+      }
+
+      // Inject fresh diagnosis + mistake patterns into analytics immediately
+      if (submitData.detailedAnalysis || submitData.mistakePatterns) {
+        setDetailedAnalysis(prev => ({
+          ...prev,
+          [subject]: submitData.detailedAnalysis || prev[subject]
+        }));
+        
+        if (!submitData.results) {
           setExamResults(prev => prev ? {
             ...prev,
             mistakePatterns: submitData.mistakePatterns || prev.mistakePatterns
           } : prev);
         }
-        // Then re-login to refresh all state (history, strengths, weaknesses, etc.)
+      }
+      
+      // Then re-login to refresh all state (history, strengths, weaknesses, etc.) if logged in
+      if (user) {
         const password = localStorage.getItem('chronos_logged_password') || '';
         fetch('/api/login', {
           method: 'POST',
@@ -401,9 +420,9 @@ function App() {
             Chemistry: data.user.chemistry_rating || 100
           });
         });
-      })
-      .catch(err => console.error("Error submitting exam:", err));
-    }
+      }
+    })
+    .catch(err => console.error("Error submitting exam:", err));
 
     setExamResults({
       results,
