@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode } = req.body;
+  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode, examFormat } = req.body;
 
   if (!count || !startingDifficulty || !subject) {
     return res.status(400).json({ error: 'Missing required parameters: count, startingDifficulty, subject' });
@@ -167,18 +167,25 @@ For Chemistry questions, represent organic molecules strictly using SMILES notat
 `;
     }
 
-    const isFreeResponse = !!freeResponseMode;
-    const questionTypeDesc = isFreeResponse 
-      ? `"free_response"` 
-      : `"multiple_choice" or "short_answer"`;
-
-    const optionsDesc = isFreeResponse
-      ? ""
-      : `\n  "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice`;
-
-    const answerDesc = isFreeResponse
-      ? `"An empty string '' (to save tokens; the solution will be determined by the grading AI during evaluation)"`
-      : `"For multiple_choice, this MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index. For short_answer, this must be the exact correct numeric or short text answer string."`;
+    const format = examFormat || (freeResponseMode ? 'free_response' : 'mix');
+    
+    let typeSchemaDesc = '';
+    let optionsSchemaDesc = '';
+    let answerSchemaDesc = '';
+    
+    if (format === 'multiple_choice') {
+      typeSchemaDesc = `"multiple_choice"`;
+      optionsSchemaDesc = `\n  "options": ["Option A", "Option B", "Option C", "Option D"], // MUST be provided since type is multiple_choice`;
+      answerSchemaDesc = `"MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index."`;
+    } else if (format === 'free_response') {
+      typeSchemaDesc = `"free_response"`;
+      optionsSchemaDesc = "";
+      answerSchemaDesc = `"An empty string '' (to save tokens; the solution will be determined by the grading AI during evaluation)"`;
+    } else { // mix
+      typeSchemaDesc = `"multiple_choice", "short_answer", or "free_response"`;
+      optionsSchemaDesc = `\n  "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice`;
+      answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct numeric or short text string. For free_response, an empty string ''."`;
+    }
 
     const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
 
@@ -188,9 +195,9 @@ The output must be a pure JSON array containing exactly the requested number of 
 {
   "id": "A unique string ID",
   "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
-  "question": "The text of the question. It should be challenging, clear, and require multi-step working suitable for a free-response solution.",
-  "type": ${questionTypeDesc},${optionsDesc}
-  "answer": ${answerDesc},
+  "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format.",
+  "type": ${typeSchemaDesc},${optionsSchemaDesc}
+  "answer": ${answerSchemaDesc},
   "difficulty": a number between 1 and 10 representing difficulty
 }
 

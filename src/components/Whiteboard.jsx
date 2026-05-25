@@ -23,13 +23,15 @@ export const Whiteboard = forwardRef(({ height = 350 }, ref) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Ensure canvas styles are set first so getBoundingClientRect measures correctly
+    canvas.style.width = '100%';
+    canvas.style.height = `${height}px`;
+
     // Handle high DPI displays
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
-    canvas.style.width = '100%';
-    canvas.style.height = `${height}px`;
 
     const context = canvas.getContext('2d');
     context.scale(dpr, dpr);
@@ -201,7 +203,7 @@ export const Whiteboard = forwardRef(({ height = 350 }, ref) => {
           onPointerMove={draw}
           onPointerUp={stopDrawing}
           onPointerLeave={stopDrawing}
-          style={{ display: 'block', cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}
+          style={{ display: 'block', width: '100%', height: `${height}px`, cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}
         />
       </div>
 

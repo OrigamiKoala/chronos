@@ -104,7 +104,8 @@ export function ExamScreen({ config, onFinish }) {
             setLoading(false);
           }
         },
-        config.freeResponseMode
+        config.examFormat === 'free_response',
+        config.examFormat || 'mix'
       );
 
       if (generated && generated.length > 0) {
@@ -175,7 +176,7 @@ export function ExamScreen({ config, onFinish }) {
   }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft]);
 
   const handleTimeUp = () => {
-    if (config.freeResponseMode) {
+    if (problem && problem.type === 'free_response') {
       handleAutoTimeoutSubmit();
     } else if (config.stressMode === 'strict') {
       submitStrictAnswer(true);
@@ -187,7 +188,7 @@ export function ExamScreen({ config, onFinish }) {
     alert("Test time limit reached! Auto-submitting your exam.");
 
     let activeQuestionFinalVal = answers[currentQuestionIndex] || '';
-    if (config.freeResponseMode && !activeQuestionFinalVal) {
+    if (problems[currentQuestionIndex]?.type === 'free_response' && !activeQuestionFinalVal) {
       let imagePayload = null;
       if (whiteboardRef.current) {
         imagePayload = whiteboardRef.current.getDataURL();
@@ -224,11 +225,12 @@ export function ExamScreen({ config, onFinish }) {
         ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
         : config.timeLimitPerQuestion - questionTimesLeft[idx];
       const isTimeout = idx === currentQuestionIndex || !userAnswer;
+      const isCorrect = prob.type !== 'free_response' && !isTimeout && isAnswerCorrect(prob, userAnswer);
       
       return {
         ...prob,
         userAnswer: userAnswer || '[Time Out]',
-        isCorrect: false,
+        isCorrect,
         timeSpent: Math.max(0, timeSpent),
         timeOut: isTimeout,
         difficultyAtTime: prob.difficulty || config.startingDifficulty,
@@ -280,7 +282,7 @@ export function ExamScreen({ config, onFinish }) {
 
     const isLast = currentQuestionIndex + 1 >= config.numQuestions;
     if (isLast) {
-      handleFinishFRQExam();
+      handleFinishExam();
     } else {
       setCurrentQuestionIndex(prev => prev + 1);
     }
@@ -361,14 +363,14 @@ export function ExamScreen({ config, onFinish }) {
       setResults(updatedResults);
 
       if (isLast) {
-        handleFinishFRQExam(updatedResults);
+        handleFinishExam(updatedResults);
       } else {
         const nextIndex = currentQuestionIndex + 1;
         setCurrentQuestionIndex(nextIndex);
       }
     } else {
       if (isLast) {
-        handleFinishFRQExam();
+        handleFinishExam();
       } else {
         const nextIndex = currentQuestionIndex + 1;
         setCurrentQuestionIndex(nextIndex);
@@ -376,7 +378,7 @@ export function ExamScreen({ config, onFinish }) {
     }
   };
 
-  const handleFinishFRQExam = (strictResults = null) => {
+  const handleFinishExam = (strictResults = null) => {
     clearInterval(timerRef.current);
     
     let finalResults;
@@ -385,17 +387,24 @@ export function ExamScreen({ config, onFinish }) {
     } else {
       finalResults = problems.map((prob, idx) => {
         const userAnswer = answers[idx] || '';
-        const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[idx];
-        const isTimeout = questionTimesLeft[idx] <= 0;
+        const timeSpent = isWholeTestMode 
+          ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
+          : config.timeLimitPerQuestion - questionTimesLeft[idx];
+        const isTimeout = isWholeTestMode 
+          ? (totalTimeLeft <= 0)
+          : (questionTimesLeft[idx] <= 0);
+        const isCorrect = prob.type === 'free_response' 
+          ? false 
+          : (!isTimeout && isAnswerCorrect(prob, userAnswer));
         
         return {
           ...prob,
           userAnswer: isTimeout && !userAnswer ? '[Time Out]' : userAnswer,
-          isCorrect: false, // graded at the end
-          timeSpent,
+          isCorrect,
+          timeSpent: Math.max(0, timeSpent),
           timeOut: isTimeout,
           difficultyAtTime: prob.difficulty || config.startingDifficulty,
-          frqSubmission: frqSubmissions[idx]
+          frqSubmission: frqSubmissions[idx] || null
         };
       });
     }
@@ -450,28 +459,6 @@ export function ExamScreen({ config, onFinish }) {
         setCurrentDifficulty(nextDifficulty);
       }
     }
-  };
-
-  const handleFinishExam = () => {
-    clearInterval(timerRef.current);
-    
-    const finalResults = problems.map((prob, idx) => {
-      const userAnswer = answers[idx] || '';
-      const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[idx];
-      const isTimeout = questionTimesLeft[idx] <= 0;
-      const isCorrect = !isTimeout && isAnswerCorrect(prob, userAnswer);
-      
-      return {
-        ...prob,
-        userAnswer: isTimeout && !userAnswer ? '[Time Out]' : userAnswer,
-        isCorrect,
-        timeSpent,
-        timeOut: isTimeout,
-        difficultyAtTime: prob.difficulty || config.startingDifficulty
-      };
-    });
-    
-    onFinish(finalResults);
   };
 
   const handleAnswerSelect = (opt) => {
@@ -633,7 +620,7 @@ export function ExamScreen({ config, onFinish }) {
         </div>
       )}
 
-      {config.freeResponseMode ? (
+      {problem.type === 'free_response' ? (
         workSubmitted ? (
           <div>
             <div style={{ marginBottom: '2rem', textAlign: 'center' }}>

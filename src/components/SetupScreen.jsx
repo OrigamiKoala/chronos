@@ -39,7 +39,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       timeLimitPerQuestion: parsed?.timeLimitPerQuestion || 60,
       timeLimitWholeTest: parsed?.timeLimitWholeTest || 30,
       timeLimitStyle: parsed?.timeLimitStyle || 'per_question',
-      freeResponseMode: parsed?.freeResponseMode || false,
+      examFormat: parsed?.examFormat || 'mix',
     };
   });
 
@@ -107,13 +107,14 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         <div>
           <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Exam Format</label>
           <select 
-            name="freeResponseMode" 
-            value={config.freeResponseMode ? 'true' : 'false'} 
-            onChange={(e) => setConfig(prev => ({ ...prev, freeResponseMode: e.target.value === 'true' }))} 
+            name="examFormat" 
+            value={config.examFormat || 'mix'} 
+            onChange={(e) => setConfig(prev => ({ ...prev, examFormat: e.target.value }))} 
             className="input-field"
           >
-            <option value="false">Standard (Multiple Choice & Short Answer)</option>
-            <option value="true">Free Response (Whiteboard + AI Transcribe + AI Grade)</option>
+            <option value="multiple_choice">Multiple Choice</option>
+            <option value="free_response">Free Response</option>
+            <option value="mix">Mix</option>
           </select>
         </div>
 
