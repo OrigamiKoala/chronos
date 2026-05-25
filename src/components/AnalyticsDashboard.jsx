@@ -89,42 +89,59 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     const subjects = ['Math', 'Physics', 'Chemistry'];
     const filteredSubjects = selectedSubjectFilter === 'All' ? subjects : [selectedSubjectFilter];
 
-    // Build per-subject running ELO, then collapse to one point per calendar day
-    // (keep the last rating of each day)
-    const subjectElo = {};
-    for (const s of subjects) subjectElo[s] = [{ dateKey: 'start', label: 'Start', rating: 100 }];
-
-    for (const h of data.eloHistory) {
-      const rawDate = h.created_at?.value || h.created_at || '';
+    const getLocalDateKey = (rawDate) => {
+      if (!rawDate) return '';
       const d = new Date(rawDate);
-      const dateKey = isNaN(d.getTime()) ? rawDate : d.toISOString().slice(0, 10); // YYYY-MM-DD
-      const label = formatDate(h.created_at);
-      const arr = subjectElo[h.subject];
-      // If last entry is the same calendar day, overwrite it (keep final rating of that day)
-      if (arr.length > 0 && arr[arr.length - 1].dateKey === dateKey) {
-        arr[arr.length - 1] = { dateKey, label, rating: h.new_rating };
-      } else {
-        arr.push({ dateKey, label, rating: h.new_rating });
+      if (isNaN(d.getTime())) return String(rawDate);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    // Gather all unique date keys in chronological order
+    const uniqueDates = [];
+    const dateMap = {};
+    for (const h of data.eloHistory) {
+      const dateKey = getLocalDateKey(h.created_at?.value || h.created_at);
+      if (dateKey && !dateMap[dateKey]) {
+        dateMap[dateKey] = {
+          raw: h.created_at,
+          label: formatDate(h.created_at)
+        };
+        uniqueDates.push(dateKey);
       }
     }
 
-    const datasets = filteredSubjects.map(s => ({
-      label: s,
-      data: subjectElo[s].map(p => p.rating),
-      borderColor: CHART_COLORS[s].line,
-      backgroundColor: CHART_COLORS[s].bg,
-      fill: true,
-      tension: 0.35,
-      pointRadius: 3,
-      pointHoverRadius: 6
-    }));
+    const labels = ['Start', ...uniqueDates.map(dk => dateMap[dk].label)];
 
-    const maxLen = Math.max(...filteredSubjects.map(s => subjectElo[s].length));
-    const labels = Array.from({ length: maxLen }, (_, i) => {
-      for (const s of filteredSubjects) {
-        if (subjectElo[s][i]) return subjectElo[s][i].label;
+    const datasets = filteredSubjects.map(s => {
+      const subjectHistory = data.eloHistory.filter(h => h.subject === s);
+      const ratingByDate = {};
+      for (const h of subjectHistory) {
+        const dateKey = getLocalDateKey(h.created_at?.value || h.created_at);
+        ratingByDate[dateKey] = h.new_rating;
       }
-      return '';
+
+      const subjectData = [100];
+      let lastRating = 100;
+      for (const dk of uniqueDates) {
+        if (ratingByDate[dk] !== undefined) {
+          lastRating = ratingByDate[dk];
+        }
+        subjectData.push(lastRating);
+      }
+
+      return {
+        label: s,
+        data: subjectData,
+        borderColor: CHART_COLORS[s].line,
+        backgroundColor: CHART_COLORS[s].bg,
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+        pointHoverRadius: 6
+      };
     });
 
     return { labels, datasets };
