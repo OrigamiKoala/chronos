@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
   const { question, answer, userAnswer, isCorrect, userQuery, subject } = req.body;
 
-  if (!question || !answer) {
+  if (!question || answer === undefined || answer === null) {
     return res.status(400).json({ error: 'Missing question or answer' });
   }
 
