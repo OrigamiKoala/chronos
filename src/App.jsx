@@ -249,6 +249,32 @@ function App() {
     localStorage.removeItem('chronos_logged_password');
   };
 
+  const refreshUserData = () => {
+    if (!user) return;
+    const password = localStorage.getItem('chronos_logged_password') || '';
+    fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user.user_id, password })
+    })
+    .then(res => res.json())
+    .then(loginData => {
+      if (loginData.success) {
+        setUser(loginData.user);
+        setStrengths(loginData.strengths || []);
+        setWeaknesses(loginData.weaknesses || []);
+        setDetailedAnalysis(loginData.detailedAnalysis || {});
+        setTopicBreakdowns(loginData.topicBreakdowns || {});
+        setHistory(loginData.history || []);
+        setRatings({
+          Math: loginData.user.math_rating,
+          Physics: loginData.user.physics_rating,
+          Chemistry: loginData.user.chemistry_rating
+        });
+      }
+    }).catch(err => console.error("Failed to refresh user data:", err));
+  };
+
   const startExam = (config) => {
     setExamConfig({ ...config, username: user ? user.user_id : 'default_user' });
     setCurrentScreen('exam');
@@ -689,6 +715,7 @@ function App() {
             loadingExamId={loadingExamId}
             onReviewExam={reviewPastExam}
             formatDate={formatDate}
+            onRefreshData={refreshUserData}
           />
         )}
         {currentScreen === 'dashboard' && user && (

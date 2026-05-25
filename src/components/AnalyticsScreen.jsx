@@ -44,7 +44,7 @@ const getSubjectLevelName = (subject, rating) => {
   return 'Novice';
 };
 
-export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, strengths = [], weaknesses = [], detailedAnalysis = {}, topicBreakdowns = {}, history = [], loadingExamId = null, onReviewExam = null, formatDate = (d) => d }) {
+export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, strengths = [], weaknesses = [], detailedAnalysis = {}, topicBreakdowns = {}, history = [], loadingExamId = null, onReviewExam = null, formatDate = (d) => d, onRefreshData = null }) {
   const [localResults, setLocalResults] = useState(() => resultsObj.results || []);
   const [localNewRating, setLocalNewRating] = useState(() => resultsObj.newRating ?? resultsObj.new_rating);
   const [localRatingChange, setLocalRatingChange] = useState(() => resultsObj.ratingChange ?? resultsObj.rating_change);
@@ -209,6 +209,9 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             if (resData.newRatingVal !== undefined && resData.newRatingChange !== undefined) {
               setLocalNewRating(resData.newRatingVal);
               setLocalRatingChange(resData.newRatingChange);
+            }
+            if (onRefreshData) {
+              onRefreshData();
             }
           })
           .catch(err => console.error('Failed to update remark-correct in database:', err));
