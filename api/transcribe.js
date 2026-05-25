@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { image } = req.body;
+  const { image, question } = req.body;
 
   if (!image) {
     return res.status(400).json({ error: 'Missing image data' });
@@ -25,10 +25,15 @@ export default async function handler(req, res) {
       mimeType = mimeMatch[1];
     }
 
-    const prompt = `You are a transcription assistant. Your goal is to transcribe the user's handwritten work, drawings, or uploaded image of their academic solution.
-Turn their image into clear, detailed words explaining their process, calculations, steps, and final answer.
+    const prompt = `You are a transcription assistant.
+You are given this exam question:
+Question: ${question || 'Not specified'}
+
+Your goal is to transcribe/explain the user's handwritten work, calculations, steps, and final answer as shown in the image for this question.
 Even if their solution is mathematically, chemically, or scientifically wrong, transcribe exactly what they did and what their final answer is. Do NOT correct their mistakes; simply explain in words what is shown in the image.
-Represent formulas and equations in LaTeX. Keep the explanation clear and structured. No greetings or meta-commentary.`;
+Represent formulas and equations in LaTeX.
+
+STRICT RULE: ONLY output the user's response/work/process based on the image. Do NOT output any introductory text (e.g. "Based on the image...", "Here is the transcription...", "The drawing shows..."), meta-commentary, or references to the canvas/drawing itself. Just start directly with the transcription of their work.`;
 
     const response = await ai.models.generateContent({
       model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',

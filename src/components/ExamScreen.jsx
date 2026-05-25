@@ -200,7 +200,10 @@ export function ExamScreen({ config, onFinish }) {
           const res = await fetch('/api/transcribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: imagePayload })
+            body: JSON.stringify({ 
+              image: imagePayload,
+              question: problems[currentQuestionIndex]?.question
+            })
           });
           if (res.ok) {
             const data = await res.json();
@@ -261,7 +264,10 @@ export function ExamScreen({ config, onFinish }) {
         const res = await fetch('/api/transcribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imagePayload })
+          body: JSON.stringify({ 
+            image: imagePayload,
+            question: problems[currentQuestionIndex]?.question
+          })
         });
         if (res.ok) {
           const data = await res.json();
@@ -274,15 +280,13 @@ export function ExamScreen({ config, onFinish }) {
       }
     }
 
-    setAnswers(prev => {
-      const next = [...prev];
-      next[currentQuestionIndex] = finalValue;
-      return next;
-    });
+    const updatedAnswers = [...answers];
+    updatedAnswers[currentQuestionIndex] = finalValue;
+    setAnswers(updatedAnswers);
 
     const isLast = currentQuestionIndex + 1 >= config.numQuestions;
     if (isLast) {
-      handleFinishExam();
+      handleFinishExam(null, updatedAnswers);
     } else {
       setCurrentQuestionIndex(prev => prev + 1);
     }
@@ -318,7 +322,10 @@ export function ExamScreen({ config, onFinish }) {
         const res = await fetch('/api/transcribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imagePayload })
+          body: JSON.stringify({ 
+            image: imagePayload,
+            question: problem.question
+          })
         });
         if (res.ok) {
           const data = await res.json();
@@ -334,11 +341,9 @@ export function ExamScreen({ config, onFinish }) {
       }
     }
 
-    setAnswers(prev => {
-      const next = [...prev];
-      next[currentQuestionIndex] = finalValue;
-      return next;
-    });
+    const updatedAnswers = [...answers];
+    updatedAnswers[currentQuestionIndex] = finalValue;
+    setAnswers(updatedAnswers);
 
     const isLast = currentQuestionIndex + 1 >= config.numQuestions;
     
@@ -363,14 +368,14 @@ export function ExamScreen({ config, onFinish }) {
       setResults(updatedResults);
 
       if (isLast) {
-        handleFinishExam(updatedResults);
+        handleFinishExam(updatedResults, updatedAnswers);
       } else {
         const nextIndex = currentQuestionIndex + 1;
         setCurrentQuestionIndex(nextIndex);
       }
     } else {
       if (isLast) {
-        handleFinishExam();
+        handleFinishExam(null, updatedAnswers);
       } else {
         const nextIndex = currentQuestionIndex + 1;
         setCurrentQuestionIndex(nextIndex);
@@ -378,15 +383,16 @@ export function ExamScreen({ config, onFinish }) {
     }
   };
 
-  const handleFinishExam = (strictResults = null) => {
+  const handleFinishExam = (strictResults = null, overrideAnswers = null) => {
     clearInterval(timerRef.current);
     
     let finalResults;
     if (strictResults) {
       finalResults = strictResults;
     } else {
+      const activeAnswers = overrideAnswers || answers;
       finalResults = problems.map((prob, idx) => {
-        const userAnswer = answers[idx] || '';
+        const userAnswer = activeAnswers[idx] || '';
         const timeSpent = isWholeTestMode 
           ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
           : config.timeLimitPerQuestion - questionTimesLeft[idx];
