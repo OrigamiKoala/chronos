@@ -64,11 +64,12 @@ function formatDate(dateVal) {
   return isNaN(d.getTime()) ? '?' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export function AnalyticsDashboard({ user, onBack }) {
+export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = [], topicBreakdowns = {}, detailedAnalysis = {}, history = [], loadingExamId = null, onReviewExam = null, formatDate = (d) => d }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('All');
+  const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -372,6 +373,21 @@ export function AnalyticsDashboard({ user, onBack }) {
           )}
         </div>
 
+        {/* Subject Diagnosis */}
+        {(() => {
+          const subjects = selectedSubjectFilter === 'All' ? ['Math', 'Physics', 'Chemistry'] : [selectedSubjectFilter];
+          const entries = subjects.map(s => ({ subject: s, text: detailedAnalysis[s] })).filter(e => e.text);
+          if (!entries.length) return null;
+          return entries.map(({ subject, text }) => (
+            <div key={subject} className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2', padding: '1.5rem', background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 4px 20px -2px rgba(168,85,247,0.1)' }}>
+              <h4 className="analytics-chart-title" style={{ color: 'var(--accent-secondary)', marginBottom: '0.75rem' }}>
+                <Brain size={18} color="var(--accent-secondary)" /> {subject} Diagnosis
+              </h4>
+              <p style={{ fontSize: '0.875rem', lineHeight: '1.65', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'pre-line' }}>{text}</p>
+            </div>
+          ));
+        })()}
+
         {/* Silly vs Concept */}
         <div className="glass-panel analytics-chart-panel">
           <h4 className="analytics-chart-title">
@@ -470,6 +486,104 @@ export function AnalyticsDashboard({ user, onBack }) {
           )}
         </div>
       </div>
+
+      {/* Strengths & Weaknesses */}
+      {(() => {
+        const filteredS = selectedSubjectFilter === 'All' ? strengths : strengths.filter(s => s.subject === selectedSubjectFilter);
+        const filteredW = selectedSubjectFilter === 'All' ? weaknesses : weaknesses.filter(w => w.subject === selectedSubjectFilter);
+        if (filteredS.length === 0 && filteredW.length === 0) return null;
+        return (
+          <div className="glass-panel" style={{ marginTop: '2rem', padding: '1.5rem' }}>
+            <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
+              <Target size={18} color="var(--success)" /> Strengths &amp; Weaknesses
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: selectedTopicDetail ? '0.75rem' : 0 }}>
+              {filteredS.length > 0 && (
+                <div style={{ padding: '1rem', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 'var(--radius-md)' }}>
+                  <h5 style={{ color: 'var(--success)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Strengths</h5>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                    {filteredS.map((s, i) => (
+                      <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === s.topic && prev?.type === 'strength' ? null : { topic: s.topic, subject: s.subject, type: 'strength' })} style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--success)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === s.topic && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent', transition: 'all 0.2s' }}>
+                        {s.subject !== 'All' && selectedSubjectFilter === 'All' ? `${s.topic} (${s.subject})` : s.topic}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {filteredW.length > 0 && (
+                <div style={{ padding: '1rem', background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 'var(--radius-md)' }}>
+                  <h5 style={{ color: 'var(--danger)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Weaknesses</h5>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                    {filteredW.map((w, i) => (
+                      <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === w.topic && prev?.type === 'weakness' ? null : { topic: w.topic, subject: w.subject, type: 'weakness' })} style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--danger)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === w.topic && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent', transition: 'all 0.2s' }}>
+                        {w.subject !== 'All' && selectedSubjectFilter === 'All' ? `${w.topic} (${w.subject})` : w.topic}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            {selectedTopicDetail && (
+              <div style={{ marginTop: '0.75rem', padding: '1.25rem', background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)', border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: 'var(--radius-md)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                    Topic Detail: <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
+                    {selectedTopicDetail.subject && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.4rem' }}>({selectedTopicDetail.subject})</span>}
+                  </h4>
+                  <button className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }} onClick={() => setSelectedTopicDetail(null)}>Close</button>
+                </div>
+                {topicBreakdowns[selectedTopicDetail.topic] ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                    <div>
+                      <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✓ What you are good at:</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].good_at}</span>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✗ What you are not good at:</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No AI breakdown stored yet. Complete more sessions to build detail!</span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Past Exam History */}
+      {history.length > 0 && (
+        <div className="glass-panel" style={{ marginTop: '2rem', padding: '1.5rem' }}>
+          <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
+            <TrendingUp size={18} color="var(--accent-primary)" /> Past Exam History
+          </h4>
+          <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
+            {history.map((h, i) => (
+              <div
+                key={i}
+                className="history-row"
+                onClick={() => loadingExamId === null && onReviewExam && onReviewExam(h)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: onReviewExam ? 'pointer' : 'default', transition: 'all 0.2s ease' }}
+              >
+                <div>
+                  <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{formatDate(h.created_at)}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <span style={{ color: h.accuracy >= 0.70 ? 'var(--success)' : h.accuracy >= 0.40 ? 'var(--warning)' : 'var(--danger)' }}>{Math.round(h.accuracy * 100)}% Acc</span>
+                  <strong style={{ color: h.rating_change >= 0 ? 'var(--success)' : 'var(--danger)' }}>{h.rating_change >= 0 ? `+${h.rating_change}` : h.rating_change} ({h.new_rating})</strong>
+                  {onReviewExam && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-secondary)', textDecoration: 'underline', opacity: 0.8 }}>
+                      {loadingExamId === h.exam_id ? 'Loading...' : 'Review'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

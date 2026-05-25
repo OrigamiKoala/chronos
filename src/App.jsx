@@ -692,7 +692,18 @@ function App() {
           />
         )}
         {currentScreen === 'dashboard' && user && (
-          <AnalyticsDashboard user={user} onBack={restart} />
+          <AnalyticsDashboard
+            user={user}
+            onBack={restart}
+            strengths={strengths}
+            weaknesses={weaknesses}
+            topicBreakdowns={topicBreakdowns}
+            detailedAnalysis={detailedAnalysis}
+            history={history}
+            loadingExamId={loadingExamId}
+            onReviewExam={reviewPastExam}
+            formatDate={formatDate}
+          />
         )}
       </main>
 
