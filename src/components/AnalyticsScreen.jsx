@@ -46,12 +46,18 @@ const getSubjectLevelName = (subject, rating) => {
 
 export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, strengths = [], weaknesses = [], detailedAnalysis = {}, topicBreakdowns = {}, history = [], loadingExamId = null, onReviewExam = null, formatDate = (d) => d }) {
   const [localResults, setLocalResults] = useState(() => resultsObj.results || []);
+  const [localNewRating, setLocalNewRating] = useState(() => resultsObj.newRating ?? resultsObj.new_rating);
+  const [localRatingChange, setLocalRatingChange] = useState(() => resultsObj.ratingChange ?? resultsObj.rating_change);
 
   useEffect(() => {
     setLocalResults(resultsObj.results || []);
+    setLocalNewRating(resultsObj.newRating ?? resultsObj.new_rating);
+    setLocalRatingChange(resultsObj.ratingChange ?? resultsObj.rating_change);
   }, [resultsObj]);
 
-  const { subject, oldRating, newRating, ratingChange } = resultsObj;
+  const { subject, oldRating } = resultsObj;
+  const newRating = localNewRating;
+  const ratingChange = localRatingChange;
   const results = localResults;
   const totalQuestions = results.length;
   const correctAnswers = results.filter(r => r.isCorrect).length;
@@ -194,7 +200,18 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
               subject,
               topic: problemObj.topic || 'General'
             })
-          }).catch(err => console.error('Failed to update remark-correct in database:', err));
+          })
+          .then(res => {
+            if (res.ok) return res.json();
+            throw new Error('Failed to update ELO');
+          })
+          .then(resData => {
+            if (resData.newRatingVal !== undefined && resData.newRatingChange !== undefined) {
+              setLocalNewRating(resData.newRatingVal);
+              setLocalRatingChange(resData.newRatingChange);
+            }
+          })
+          .catch(err => console.error('Failed to update remark-correct in database:', err));
         }
       }
 
