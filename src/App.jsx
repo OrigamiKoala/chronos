@@ -16,13 +16,30 @@ function App() {
 
   // New Database & Login States
   const [user, setUser] = useState(null);
-  const [strengths, setStrengths] = useState([]);
-  const [weaknesses, setWeaknesses] = useState([]);
-  const [detailedAnalysis, setDetailedAnalysis] = useState({});
-  const [topicBreakdowns, setTopicBreakdowns] = useState({});
+  const [strengths, setStrengths] = useState(() => {
+    const saved = localStorage.getItem('chronos_guest_strengths');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [weaknesses, setWeaknesses] = useState(() => {
+    const saved = localStorage.getItem('chronos_guest_weaknesses');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [detailedAnalysis, setDetailedAnalysis] = useState(() => {
+    const saved = localStorage.getItem('chronos_guest_detailed_analysis');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [topicBreakdowns, setTopicBreakdowns] = useState(() => {
+    const saved = localStorage.getItem('chronos_guest_topic_breakdowns');
+    return saved ? JSON.parse(saved) : {};
+  });
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(() => {
+    const saved = localStorage.getItem('chronos_guest_history');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [selectedSubject, setSelectedSubject] = useState('Math');
+  const [showConversionPrompt, setShowConversionPrompt] = useState(false);
+  const [pendingConfig, setPendingConfig] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
@@ -239,13 +256,19 @@ function App() {
 
   const handleLogout = () => {
     setUser(null);
-    setStrengths([]);
-    setWeaknesses([]);
-    setDetailedAnalysis({});
-    setTopicBreakdowns({});
+    const guestHistory = localStorage.getItem('chronos_guest_history');
+    setHistory(guestHistory ? JSON.parse(guestHistory) : []);
+    const guestRatings = localStorage.getItem('mock_exam_ratings');
+    setRatings(guestRatings ? JSON.parse(guestRatings) : { Math: 100, Physics: 100, Chemistry: 100 });
+    const guestStrengths = localStorage.getItem('chronos_guest_strengths');
+    setStrengths(guestStrengths ? JSON.parse(guestStrengths) : []);
+    const guestWeaknesses = localStorage.getItem('chronos_guest_weaknesses');
+    setWeaknesses(guestWeaknesses ? JSON.parse(guestWeaknesses) : []);
+    const guestDetailedAnalysis = localStorage.getItem('chronos_guest_detailed_analysis');
+    setDetailedAnalysis(guestDetailedAnalysis ? JSON.parse(guestDetailedAnalysis) : {});
+    const guestTopicBreakdowns = localStorage.getItem('chronos_guest_topic_breakdowns');
+    setTopicBreakdowns(guestTopicBreakdowns ? JSON.parse(guestTopicBreakdowns) : {});
     setSelectedTopicDetail(null);
-    setHistory([]);
-    setRatings({ Math: 100, Physics: 100, Chemistry: 100 });
     localStorage.removeItem('chronos_logged_user');
     localStorage.removeItem('chronos_logged_password');
   };
@@ -277,8 +300,13 @@ function App() {
   };
 
   const startExam = (config) => {
-    setExamConfig({ ...config, username: user ? user.user_id : 'default_user' });
-    setCurrentScreen('exam');
+    if (!user) {
+      setPendingConfig(config);
+      setShowConversionPrompt(true);
+    } else {
+      setExamConfig({ ...config, username: user.user_id });
+      setCurrentScreen('exam');
+    }
   };
 
   const finishExam = (results) => {
@@ -437,6 +465,50 @@ function App() {
           setGradingLoading(false);
         });
       } else {
+        const guestHistoryItem = {
+          subject,
+          created_at: new Date().toISOString(),
+          accuracy: submitData.accuracy ?? score,
+          rating_change: submitData.ratingChange ?? ratingChange,
+          new_rating: submitData.newRating ?? newRating,
+          exam_id: examIdStr
+        };
+        const guestHistory = JSON.parse(localStorage.getItem('chronos_guest_history') || '[]');
+        const updatedHistory = [guestHistoryItem, ...guestHistory];
+        setHistory(updatedHistory);
+        localStorage.setItem('chronos_guest_history', JSON.stringify(updatedHistory));
+
+        if (submitData.results) {
+          const topicStats = {};
+          const localStrengths = [];
+          const localWeaknesses = [];
+          
+          for (const r of submitData.results) {
+            const topic = r.topic || 'General';
+            if (!topicStats[topic]) topicStats[topic] = { correct: 0, total: 0 };
+            topicStats[topic].total += 1;
+            if (r.isCorrect) topicStats[topic].correct += 1;
+          }
+          
+          for (const [topic, stats] of Object.entries(topicStats)) {
+            const acc = stats.correct / stats.total;
+            if (acc >= 0.7) {
+              localStrengths.push(topic);
+            } else if (acc < 0.6) {
+              localWeaknesses.push(topic);
+            }
+          }
+          
+          const guestStrengths = Array.from(new Set([...strengths.map(s => typeof s === 'object' ? s.topic : s), ...localStrengths])).map(topic => ({ subject, topic }));
+          const guestWeaknesses = Array.from(new Set([...weaknesses.map(w => typeof w === 'object' ? w.topic : w), ...localWeaknesses])).map(topic => ({ subject, topic }));
+          
+          setStrengths(guestStrengths);
+          setWeaknesses(guestWeaknesses);
+          
+          localStorage.setItem('chronos_guest_strengths', JSON.stringify(guestStrengths));
+          localStorage.setItem('chronos_guest_weaknesses', JSON.stringify(guestWeaknesses));
+        }
+
         setCurrentScreen('analytics');
         setGradingLoading(false);
       }
@@ -783,6 +855,46 @@ function App() {
           </>
         )}
       </main>
+
+      {/* Sign-In Conversion Warning Modal */}
+      {showConversionPrompt && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', width: '90%', maxWidth: '440px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <BrainCircuit size={40} color="var(--accent-primary)" style={{ margin: '0 auto 1rem' }} />
+            <h3 className="text-gradient" style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>Save Your Progress?</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '2rem' }}>
+              You are currently playing as a <strong>Guest</strong>. Sign in or register an account to save your exam history, ELO rankings, and get access to detailed AI weakness diagnostics across sessions!
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ width: '100%', padding: '0.75rem' }} 
+                onClick={() => {
+                  setShowConversionPrompt(false);
+                  setShowLoginModal(true);
+                }}
+              >
+                Sign In / Create Account
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-outline" 
+                style={{ width: '100%', padding: '0.75rem' }} 
+                onClick={() => {
+                  setShowConversionPrompt(false);
+                  if (pendingConfig) {
+                    setExamConfig({ ...pendingConfig, username: 'default_user' });
+                    setCurrentScreen('exam');
+                  }
+                }}
+              >
+                Continue as Guest
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Login Modal */}
       {showLoginModal && (

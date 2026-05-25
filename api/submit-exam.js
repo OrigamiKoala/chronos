@@ -12,8 +12,50 @@ const bq = new BigQuery({
   },
 });
 
-const ELO_ALGORITHM_VERSION = 1;
-let tablesEnsured = false;
+function normalizeAnswer(str) {
+  if (!str) return '';
+  return str
+    .replace(/\$\$([\s\S]*?)\$\$/g, '$1')   // strip $$...$$
+    .replace(/\$([\s\S]*?)\$/g, '$1')        // strip $...$
+    .replace(/\\(?:text|mathrm|mathbf|mathit|rm|bf)\{([^}]*)\}/g, '$1') // \text{X} -> X
+    .replace(/~/g, ' ')                      // LaTeX thin-space -> space
+    .replace(/\s+/g, ' ')                    // collapse whitespace
+    .trim()
+    .toLowerCase();
+}
+
+function evaluateKeywordExpression(expression, userAnswer) {
+  if (!expression) return false;
+  const normalizedAnswer = normalizeAnswer(userAnswer);
+  
+  // Support single quotes/double quotes and words, retaining parenthesis and logical operators
+  const tokens = expression.match(/'[^']+'|"[^"]+"|\(|\)|AND|OR|NOT|[a-zA-Z0-9_.-]+/gi) || [];
+  
+  const processedTokens = tokens.map(token => {
+    const upper = token.toUpperCase();
+    if (upper === 'AND') return '&&';
+    if (upper === 'OR') return '||';
+    if (upper === 'NOT') return '!';
+    if (token === '(' || token === ')') return token;
+    
+    const cleanTerm = token.replace(/^['"]|['"]$/g, '');
+    const normTerm = normalizeAnswer(cleanTerm);
+    const present = normalizedAnswer.includes(normTerm);
+    return present ? 'true' : 'false';
+  });
+  
+  const jsExpression = processedTokens.join(' ');
+  try {
+    const safeRegex = /^(?:true|false|&&|\|\||!|\(|\)|\s)+$/;
+    if (!safeRegex.test(jsExpression)) {
+      return false;
+    }
+    return !!(new Function(`return (${jsExpression})`)());
+  } catch (e) {
+    console.error("Failed to evaluate keyword expression:", jsExpression, e);
+    return false;
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -71,24 +113,63 @@ export default async function handler(req, res) {
       apiKey: process.env.GEMINI_API_KEY,
     });
 
-    // A. Grade all free-response questions in parallel first! Solve on-the-fly and award partial credit!
+    // A. Grade all questions in parallel! Solve on-the-fly and award partial credit!
     const gradedResults = await Promise.all(results.map(async (r) => {
+      if (r.type === 'short_answer') {
+        const correct = r.keywordExpression
+          ? evaluateKeywordExpression(r.keywordExpression, r.userAnswer)
+          : normalizeAnswer(r.userAnswer) === normalizeAnswer(r.answer);
+        return {
+          ...r,
+          isCorrect: correct,
+          score: correct ? 1.0 : 0.0
+        };
+      }
+
+      if (r.type === 'multiple_choice') {
+        const getOptionIndex = (val, opts) => {
+          const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(val).trim().toUpperCase());
+          if (letterIdx !== -1) return letterIdx;
+          return opts.findIndex(o => normalizeAnswer(o) === normalizeAnswer(val));
+        };
+        const correctIdx = getOptionIndex(r.answer, r.options || []);
+        const userIdx = getOptionIndex(r.userAnswer, r.options || []);
+        const correct = correctIdx !== -1 && correctIdx === userIdx;
+        return {
+          ...r,
+          isCorrect: correct,
+          score: correct ? 1.0 : 0.0
+        };
+      }
+
       if (r.type === 'free_response') {
         try {
-          const gradingPrompt = `You are a world-class grading examiner. You are grading a student's free-response solution for a competitive Olympiad-level exam.
+          const isImage = r.frqSubmission && (r.frqSubmission.type === 'whiteboard' || r.frqSubmission.type === 'image') && r.frqSubmission.value && r.frqSubmission.value.startsWith('data:image/');
+
+          let gradingPrompt = `You are a world-class grading examiner. You are grading a student's free-response solution for a competitive Olympiad-level exam.
 
 Question Details:
 Subject: ${subject}
 Topic: ${r.topic || 'General'}
 Question Text: ${r.question}
-Student's Explanation/Process/Answer: ${r.userAnswer || 'No answer submitted.'}
+`;
 
-Your tasks:
+          if (isImage) {
+            gradingPrompt += `\nThe student submitted their solution as a handwritten drawing or uploaded image of their scratch work/whiteboard.
+Analyze the image carefully to understand their step-by-step logic, calculation progress, and final proof.`;
+          } else {
+            const textAns = r.frqSubmission?.value || r.userAnswer || 'No answer submitted.';
+            gradingPrompt += `\nStudent's typed solution process:
+${textAns}`;
+          }
+
+          gradingPrompt += `\n\nYour tasks:
 1. Solve the question completely from scratch first to determine the correct step-by-step solution, the correct final answer, and establish a clear grading rubric.
 2. Critically evaluate the student's solution against the correct solution. Compare both their explanation/process and final answer.
 3. Award a partial credit score between 0.0 and 1.0 (where 1.0 is fully correct, 0.0 is completely wrong/timeout, and in-between represents partial credit based on correct logical steps shown). Give partial credit generously for valid logical steps, calculations, or methods, even if their final answer was incorrect.
 4. Set 'isCorrect' to true if the score is greater than or equal to 0.7 (conceptually correct / very good progress), otherwise set it to false.
 5. Provide clear, professional, pedagogical feedback explaining where they made mistakes and what they did well.
+${isImage ? `6. Provide an extensive transcription/summary of the user's handwritten work, calculations, logic, and final proof shown in the image in the 'transcription' field.` : ''}
 
 Return strictly a valid JSON object with the following schema:
 {
@@ -96,13 +177,31 @@ Return strictly a valid JSON object with the following schema:
   "correctAnswer": "The correct final answer",
   "score": 0.5,
   "isCorrect": true,
-  "feedback": "Detailed grading feedback"
+  "feedback": "Detailed grading feedback"${isImage ? `,\n  "transcription": "Extensive transcription of the user's work and proof in the image"` : ''}
 }
 Do NOT include markdown headers or backticks in the response. Return ONLY the raw JSON object.`;
 
+          const contents = [];
+          if (isImage) {
+            const parts = r.frqSubmission.value.split(',');
+            const base64Data = parts[1] || r.frqSubmission.value;
+            let mimeType = 'image/png';
+            const mimeMatch = parts[0].match(/data:(.*?);/);
+            if (mimeMatch) {
+              mimeType = mimeMatch[1];
+            }
+            contents.push({
+              inlineData: {
+                data: base64Data,
+                mimeType: mimeType
+              }
+            });
+          }
+          contents.push(gradingPrompt);
+
           const gradingResponse = await ai.models.generateContent({
             model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
-            contents: gradingPrompt,
+            contents: contents,
             config: {
               responseMimeType: "application/json",
               temperature: 0.2
@@ -116,7 +215,8 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
             score: Number(graded.score) || 0,
             feedback: graded.feedback,
             answer: graded.correctAnswer || r.answer || '',
-            solution: graded.correctSolution
+            solution: graded.correctSolution,
+            userAnswer: isImage ? (graded.transcription || r.userAnswer) : r.userAnswer
           };
         } catch (err) {
           console.error('Error grading FRQ question:', r.id, err);
@@ -217,124 +317,140 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       finalNewRating = Math.max(100, currentRating + finalRatingChange);
     }
 
-    // 1. Fire history insert, results insert, and rating update in parallel
-    let ratingColumn = 'math_rating';
-    if (subject === 'Physics') ratingColumn = 'physics_rating';
-    else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
+    const isGuest = sanitizedUser === 'default_user';
 
-    await Promise.all([
-      bq.query({
-        query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
-          (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at)
-          VALUES (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP())`,
-        params: { username: sanitizedUser, examId, subject, accuracy: finalAccuracy, avgTime, ratingChange: finalRatingChange, newRating: finalNewRating }
-      }),
-      bq.query({
-        query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-          (user_id, exam_id, results_json, created_at)
-          VALUES (@username, @examId, @resultsJson, CURRENT_TIMESTAMP())`,
-        params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(gradedResults) }
-      }),
-      bq.query({
-        query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
-          SET ${ratingColumn} = @newRating, elo_version = @eloVersion
-          WHERE user_id = @username`,
-        params: { username: sanitizedUser, newRating: finalNewRating, eloVersion: ELO_ALGORITHM_VERSION }
-      })
-    ]);
+    if (!isGuest) {
+      // 1. Fire history insert, results insert, and rating update in parallel
+      let ratingColumn = 'math_rating';
+      if (subject === 'Physics') ratingColumn = 'physics_rating';
+      else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
 
-    // 2. Record wrong problems + update topic mastery
-    const topicStats = {};
-    const wrongInsertPromises = [];
-    for (const r of gradedResults) {
-      const topic = r.topic || 'General';
-      if (!topicStats[topic]) {
-        topicStats[topic] = { correct: 0, total: 0 };
+      await Promise.all([
+        bq.query({
+          query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
+            (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at)
+            VALUES (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP())`,
+          params: { username: sanitizedUser, examId, subject, accuracy: finalAccuracy, avgTime, ratingChange: finalRatingChange, newRating: finalNewRating }
+        }),
+        bq.query({
+          query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+            (user_id, exam_id, results_json, created_at)
+            VALUES (@username, @examId, @resultsJson, CURRENT_TIMESTAMP())`,
+          params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(gradedResults) }
+        }),
+        bq.query({
+          query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+            SET ${ratingColumn} = @newRating, elo_version = @eloVersion
+            WHERE user_id = @username`,
+          params: { username: sanitizedUser, newRating: finalNewRating, eloVersion: ELO_ALGORITHM_VERSION }
+        })
+      ]);
+
+      // 2. Record wrong problems + update topic mastery
+      const topicStats = {};
+      const wrongInsertPromises = [];
+      for (const r of gradedResults) {
+        const topic = r.topic || 'General';
+        if (!topicStats[topic]) {
+          topicStats[topic] = { correct: 0, total: 0 };
+        }
+        topicStats[topic].total += 1;
+        if (r.isCorrect) {
+          topicStats[topic].correct += 1;
+        } else {
+          wrongInsertPromises.push(
+            bq.query({
+              query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+                (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at)
+                VALUES (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP())`,
+              params: {
+                username: sanitizedUser, examId,
+                questionId: r.id || String(Date.now()),
+                subject, topic,
+                questionText: r.question,
+                userAnswer: r.userAnswer || '',
+                correctAnswer: r.answer || ''
+              }
+            })
+          );
+        }
       }
-      topicStats[topic].total += 1;
-      if (r.isCorrect) {
-        topicStats[topic].correct += 1;
-      } else {
-        wrongInsertPromises.push(
-          bq.query({
-            query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-              (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at)
-              VALUES (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP())`,
-            params: {
-              username: sanitizedUser, examId,
-              questionId: r.id || String(Date.now()),
-              subject, topic,
-              questionText: r.question,
-              userAnswer: r.userAnswer || '',
-              correctAnswer: r.answer || ''
-            }
-          })
-        );
-      }
-    }
 
-    // Fetch all existing mastery rows for this user+subject in one query
-    const topicNames = Object.keys(topicStats);
-    let existingMasteryMap = {};
-    if (topicNames.length > 0) {
-      const [masteryRows] = await bq.query({
-        query: `SELECT sub_category, correct_count, total_count
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-          WHERE user_id = @username AND subject = @subject`,
-        params: { username: sanitizedUser, subject }
+      // Fetch all existing mastery rows for this user+subject in one query
+      const topicNames = Object.keys(topicStats);
+      let existingMasteryMap = {};
+      if (topicNames.length > 0) {
+        const [masteryRows] = await bq.query({
+          query: `SELECT sub_category, correct_count, total_count
+            FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+            WHERE user_id = @username AND subject = @subject`,
+          params: { username: sanitizedUser, subject }
+        });
+        for (const row of masteryRows) {
+          existingMasteryMap[row.sub_category] = row;
+        }
+      }
+
+      // Build mastery upsert promises
+      const masteryPromises = [];
+      for (const [topic, stats] of Object.entries(topicStats)) {
+        const existing = existingMasteryMap[topic];
+        if (existing) {
+          const nextCorrect = existing.correct_count + stats.correct;
+          const nextTotal = existing.total_count + stats.total;
+          const nextAccuracy = nextCorrect / nextTotal;
+          masteryPromises.push(
+            bq.query({
+              query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+                SET correct_count = @nextCorrect, total_count = @nextTotal, accuracy_rate = @nextAccuracy
+                WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
+              params: { username: sanitizedUser, topic, subject, nextCorrect, nextTotal, nextAccuracy }
+            })
+          );
+        } else {
+          const accuracyRate = stats.correct / stats.total;
+          masteryPromises.push(
+            bq.query({
+              query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` 
+                (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+                VALUES (@username, @topic, @subject, @correct, @total, @accuracyRate)`,
+              params: { username: sanitizedUser, topic, subject, correct: stats.correct, total: stats.total, accuracyRate }
+            })
+          );
+        }
+      }
+
+      // Fire wrong inserts + mastery upserts in parallel
+      await Promise.all([...wrongInsertPromises, ...masteryPromises]);
+
+      // 4. Trigger update of user weaknesses using direct Gemini model
+      const [freshAnalysis, freshMistakePatterns] = await Promise.all([
+        updateAIWeaknesses(sanitizedUser, subject),
+        analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults)
+      ]);
+
+      return res.status(200).json({ 
+        success: true, 
+        detailedAnalysis: freshAnalysis, 
+        mistakePatterns: freshMistakePatterns,
+        results: gradedResults,
+        accuracy: finalAccuracy,
+        ratingChange: finalRatingChange,
+        newRating: finalNewRating
       });
-      for (const row of masteryRows) {
-        existingMasteryMap[row.sub_category] = row;
-      }
+    } else {
+      // For Guest user: run mistake analysis via Gemini without BigQuery insert, return detailedAnalysis as null
+      const freshMistakePatterns = await analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults);
+      return res.status(200).json({ 
+        success: true, 
+        detailedAnalysis: null, 
+        mistakePatterns: freshMistakePatterns,
+        results: gradedResults,
+        accuracy: finalAccuracy,
+        ratingChange: finalRatingChange,
+        newRating: finalNewRating
+      });
     }
-
-    // Build mastery upsert promises
-    const masteryPromises = [];
-    for (const [topic, stats] of Object.entries(topicStats)) {
-      const existing = existingMasteryMap[topic];
-      if (existing) {
-        const nextCorrect = existing.correct_count + stats.correct;
-        const nextTotal = existing.total_count + stats.total;
-        const nextAccuracy = nextCorrect / nextTotal;
-        masteryPromises.push(
-          bq.query({
-            query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-              SET correct_count = @nextCorrect, total_count = @nextTotal, accuracy_rate = @nextAccuracy
-              WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
-            params: { username: sanitizedUser, topic, subject, nextCorrect, nextTotal, nextAccuracy }
-          })
-        );
-      } else {
-        const accuracyRate = stats.correct / stats.total;
-        masteryPromises.push(
-          bq.query({
-            query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` 
-              (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
-              VALUES (@username, @topic, @subject, @correct, @total, @accuracyRate)`,
-            params: { username: sanitizedUser, topic, subject, correct: stats.correct, total: stats.total, accuracyRate }
-          })
-        );
-      }
-    }
-
-    // Fire wrong inserts + mastery upserts in parallel
-    await Promise.all([...wrongInsertPromises, ...masteryPromises]);
-
-    // 4. Trigger update of user weaknesses using direct Gemini model
-    const [freshAnalysis, freshMistakePatterns] = await Promise.all([
-      updateAIWeaknesses(sanitizedUser, subject),
-      analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults)
-    ]);
-
-    return res.status(200).json({ 
-      success: true, 
-      detailedAnalysis: freshAnalysis, 
-      mistakePatterns: freshMistakePatterns,
-      results: gradedResults,
-      accuracy: finalAccuracy,
-      ratingChange: finalRatingChange,
-      newRating: finalNewRating
-    });
 
   } catch (err) {
     console.error('Submit exam error:', err);
@@ -573,21 +689,23 @@ Be direct, supportive, and pedagogical. Do not include markdown headers or greet
     const mistakePatterns = response.text || '';
 
     // Save results in BigQuery
-    const insertQuery = `
-      INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
-        (user_id, exam_id, subject, mistake_patterns, created_at)
-      VALUES
-        (@username, @examId, @subject, @mistakePatterns, CURRENT_TIMESTAMP())
-    `;
-    await bq.query({
-      query: insertQuery,
-      params: {
-        username,
-        examId,
-        subject,
-        mistakePatterns
-      }
-    });
+    if (username !== 'default_user') {
+      const insertQuery = `
+        INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+          (user_id, exam_id, subject, mistake_patterns, created_at)
+        VALUES
+          (@username, @examId, @subject, @mistakePatterns, CURRENT_TIMESTAMP())
+      `;
+      await bq.query({
+        query: insertQuery,
+        params: {
+          username,
+          examId,
+          subject,
+          mistakePatterns
+        }
+      });
+    }
     return mistakePatterns;
   } catch (err) {
     console.error('Error in mistake analysis background job:', err);

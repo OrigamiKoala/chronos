@@ -19,6 +19,39 @@ export function normalizeAnswer(str) {
     .toLowerCase();
 }
 
+export function evaluateKeywordExpression(expression, userAnswer) {
+  if (!expression) return false;
+  const normalizedAnswer = normalizeAnswer(userAnswer);
+  
+  // Support single quotes/double quotes and words, retaining parenthesis and logical operators
+  const tokens = expression.match(/'[^']+'|"[^"]+"|\(|\)|AND|OR|NOT|[a-zA-Z0-9_.-]+/gi) || [];
+  
+  const processedTokens = tokens.map(token => {
+    const upper = token.toUpperCase();
+    if (upper === 'AND') return '&&';
+    if (upper === 'OR') return '||';
+    if (upper === 'NOT') return '!';
+    if (token === '(' || token === ')') return token;
+    
+    const cleanTerm = token.replace(/^['"]|['"]$/g, '');
+    const normTerm = normalizeAnswer(cleanTerm);
+    const present = normalizedAnswer.includes(normTerm);
+    return present ? 'true' : 'false';
+  });
+  
+  const jsExpression = processedTokens.join(' ');
+  try {
+    const safeRegex = /^(?:true|false|&&|\|\||!|\(|\)|\s)+$/;
+    if (!safeRegex.test(jsExpression)) {
+      return false;
+    }
+    return !!(new Function(`return (${jsExpression})`)());
+  } catch (e) {
+    console.error("Failed to evaluate keyword expression:", jsExpression, e);
+    return false;
+  }
+}
+
 function isAnswerCorrect(prob, ans) {
   if (!ans) return false;
   if (prob.type === 'multiple_choice' && prob.options && Array.isArray(prob.options)) {
@@ -30,6 +63,9 @@ function isAnswerCorrect(prob, ans) {
     const correctIdx = getOptionIndex(prob.answer, prob.options);
     const userIdx = getOptionIndex(ans, prob.options);
     return correctIdx !== -1 && correctIdx === userIdx;
+  }
+  if (prob.type === 'short_answer' && prob.keywordExpression) {
+    return evaluateKeywordExpression(prob.keywordExpression, ans);
   }
   return normalizeAnswer(ans) === normalizeAnswer(prob.answer);
 }
@@ -188,35 +224,24 @@ export function ExamScreen({ config, onFinish }) {
     alert("Test time limit reached! Auto-submitting your exam.");
 
     let activeQuestionFinalVal = answers[currentQuestionIndex] || '';
-    if (problems[currentQuestionIndex]?.type === 'free_response' && !activeQuestionFinalVal) {
-      let imagePayload = null;
+    let imagePayload = null;
+    if (problems[currentQuestionIndex]?.type === 'free_response') {
       if (whiteboardRef.current) {
         imagePayload = whiteboardRef.current.getDataURL();
       }
-
       if (imagePayload) {
-        setTranscribing(true);
-        try {
-          const res = await fetch('/api/transcribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              image: imagePayload,
-              question: problems[currentQuestionIndex]?.question
-            })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            activeQuestionFinalVal = data.transcription || '[Time Out]';
-          }
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setTranscribing(false);
-        }
-      } else {
+        activeQuestionFinalVal = '[Drawing Submission]';
+      } else if (!activeQuestionFinalVal) {
         activeQuestionFinalVal = '[Time Out]';
       }
+    }
+
+    const updatedSubmissions = [...frqSubmissions];
+    if (problems[currentQuestionIndex]?.type === 'free_response') {
+      updatedSubmissions[currentQuestionIndex] = {
+        type: 'whiteboard',
+        value: imagePayload || activeQuestionFinalVal
+      };
     }
 
     const finalAnswers = [...answers];
@@ -237,18 +262,22 @@ export function ExamScreen({ config, onFinish }) {
         timeSpent: Math.max(0, timeSpent),
         timeOut: isTimeout,
         difficultyAtTime: prob.difficulty || config.startingDifficulty,
-        frqSubmission: frqSubmissions[idx]
+        frqSubmission: idx === currentQuestionIndex ? updatedSubmissions[currentQuestionIndex] : frqSubmissions[idx]
       };
     });
 
     onFinish(finalResults);
   };
 
-  const handleAutoTimeoutSubmit = async () => {
+  const handleAutoTimeoutSubmit = () => {
     let finalValue = '[Time Out]';
     let imagePayload = null;
     if (whiteboardRef.current) {
       imagePayload = whiteboardRef.current.getDataURL();
+    }
+
+    if (imagePayload) {
+      finalValue = '[Drawing Submission]';
     }
 
     const updatedSubmissions = [...frqSubmissions];
@@ -257,28 +286,6 @@ export function ExamScreen({ config, onFinish }) {
       value: imagePayload || '[Time Out]'
     };
     setFrqSubmissions(updatedSubmissions);
-
-    if (imagePayload) {
-      setTranscribing(true);
-      try {
-        const res = await fetch('/api/transcribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            image: imagePayload,
-            question: problems[currentQuestionIndex]?.question
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          finalValue = data.transcription || '[Time Out]';
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setTranscribing(false);
-      }
-    }
 
     const updatedAnswers = [...answers];
     updatedAnswers[currentQuestionIndex] = finalValue;
@@ -292,7 +299,7 @@ export function ExamScreen({ config, onFinish }) {
     }
   };
 
-  const handleConfirmFRQSubmit = async () => {
+  const handleConfirmFRQSubmit = () => {
     let finalValue = '';
     let imagePayload = null;
 
@@ -302,8 +309,10 @@ export function ExamScreen({ config, onFinish }) {
       } else {
         imagePayload = whiteboardPreview;
       }
+      finalValue = '[Drawing Submission]';
     } else if (submitType === 'image') {
       imagePayload = uploadedImage;
+      finalValue = '[Image Submission]';
     } else {
       finalValue = typedWork;
     }
@@ -315,31 +324,6 @@ export function ExamScreen({ config, onFinish }) {
       value: imagePayload || finalValue
     };
     setFrqSubmissions(updatedSubmissions);
-
-    if (imagePayload) {
-      setTranscribing(true);
-      try {
-        const res = await fetch('/api/transcribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            image: imagePayload,
-            question: problem.question
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          finalValue = data.transcription || '[Image transcription failed]';
-        } else {
-          finalValue = '[Image transcription API error]';
-        }
-      } catch (err) {
-        console.error(err);
-        finalValue = '[Image transcription network error]';
-      } finally {
-        setTranscribing(false);
-      }
-    }
 
     const updatedAnswers = [...answers];
     updatedAnswers[currentQuestionIndex] = finalValue;
@@ -546,27 +530,52 @@ export function ExamScreen({ config, onFinish }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {isWholeTestMode && (
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Clock size={14} /> Total Exam Left: <strong style={{ color: totalTimeLeft <= 60 ? 'var(--danger)' : 'var(--text-primary)' }}>{formatTime(totalTimeLeft)}</strong>
+            <div className="glass-panel" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.4rem 0.8rem',
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.9rem'
+            }}>
+              <Clock size={14} color="var(--accent-secondary)" />
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Exam:</span>
+              <strong style={{ color: totalTimeLeft <= 60 ? 'var(--danger)' : 'var(--text-primary)' }}>
+                {formatTime(totalTimeLeft)}
+              </strong>
             </div>
           )}
+          
           <div className={`
+            glass-panel
             ${isHidden ? 'hidden-timer' : ''} 
             ${isDynamicStress ? 'stress-pulse stress-glitch' : ''}
-          `} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', fontWeight: '600', color: isEditingLocked ? 'var(--danger)' : 'var(--text-primary)' }}>
+          `} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.4rem 0.8rem',
+            background: isEditingLocked ? 'var(--danger-glass)' : 'rgba(255, 255, 255, 0.02)',
+            border: `1px solid ${isEditingLocked ? 'var(--danger)' : 'rgba(255, 255, 255, 0.05)'}`,
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.9rem'
+          }}>
             {isHidden ? (
               <span style={{ color: 'var(--text-muted)' }}>Timer Hidden</span>
             ) : (
               <>
-                {isEditingLocked ? <AlertTriangle size={18} /> : <Clock size={18} />}
-                <span>
+                {isEditingLocked ? <AlertTriangle size={14} color="var(--danger)" /> : <Clock size={14} color="var(--accent-primary)" />}
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Question:</span>
+                <strong style={{ color: isEditingLocked ? 'var(--danger)' : 'var(--text-primary)' }}>
                   {isWholeTestMode 
-                    ? `Recommended: ${formatTime(activeTimeLeft)} ${isTimeOut ? '(Overrun)' : ''}`
+                    ? `${formatTime(activeTimeLeft)} ${isTimeOut ? '(Overrun)' : ''}`
                     : (isTimeOut ? 'Time Out' : formatTime(activeTimeLeft))
                   }
-                </span>
+                </strong>
               </>
             )}
           </div>

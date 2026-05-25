@@ -31,6 +31,13 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
   const [config, setConfig] = useState(() => {
     const saved = localStorage.getItem('chronos_exam_config');
     const parsed = saved ? JSON.parse(saved) : null;
+    let formatVal = parsed?.examFormat || ['multiple_choice', 'short_answer', 'free_response'];
+    if (typeof formatVal === 'string') {
+      if (formatVal === 'multiple_choice') formatVal = ['multiple_choice'];
+      else if (formatVal === 'short_answer') formatVal = ['short_answer'];
+      else if (formatVal === 'free_response') formatVal = ['free_response'];
+      else formatVal = ['multiple_choice', 'short_answer', 'free_response'];
+    }
     return {
       subject: parsed?.subject || 'Math',
       startingDifficulty: parsed?.startingDifficulty || 5,
@@ -39,7 +46,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       timeLimitPerQuestion: parsed?.timeLimitPerQuestion || 60,
       timeLimitWholeTest: parsed?.timeLimitWholeTest || 30,
       timeLimitStyle: parsed?.timeLimitStyle || 'per_question',
-      examFormat: parsed?.examFormat || 'mix',
+      examFormat: formatVal,
     };
   });
 
@@ -67,6 +74,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (config.examFormat.length === 0) return;
     onStart(config);
   };
 
@@ -105,17 +113,65 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Exam Format</label>
-          <select 
-            name="examFormat" 
-            value={config.examFormat || 'mix'} 
-            onChange={(e) => setConfig(prev => ({ ...prev, examFormat: e.target.value }))} 
-            className="input-field"
-          >
-            <option value="multiple_choice">Multiple Choice</option>
-            <option value="free_response">Free Response</option>
-            <option value="mix">Mix</option>
-          </select>
+          <label style={{ display: 'block', marginBottom: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Exam Format (Select one or more)</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={config.examFormat.includes('multiple_choice')} 
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setConfig(prev => {
+                    const formats = checked 
+                      ? [...prev.examFormat, 'multiple_choice'] 
+                      : prev.examFormat.filter(f => f !== 'multiple_choice');
+                    return { ...prev, examFormat: formats };
+                  });
+                }}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Multiple Choice</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={config.examFormat.includes('short_answer')} 
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setConfig(prev => {
+                    const formats = checked 
+                      ? [...prev.examFormat, 'short_answer'] 
+                      : prev.examFormat.filter(f => f !== 'short_answer');
+                    return { ...prev, examFormat: formats };
+                  });
+                }}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Short Answer</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={config.examFormat.includes('free_response')} 
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setConfig(prev => {
+                    const formats = checked 
+                      ? [...prev.examFormat, 'free_response'] 
+                      : prev.examFormat.filter(f => f !== 'free_response');
+                    return { ...prev, examFormat: formats };
+                  });
+                }}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Free Response</span>
+            </label>
+          </div>
+          {config.examFormat.length === 0 && (
+            <span style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: '0.35rem', display: 'block' }}>
+              ⚠️ You must select at least one format.
+            </span>
+          )}
         </div>
 
         {config.subject === 'Math' && (
