@@ -609,10 +609,10 @@ function App() {
 
 
 
-                <div>
-                  <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem', color: 'var(--text-primary)' }}>Past Exam History (Last 25)</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                  <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem', color: 'var(--text-primary)', flexShrink: 0 }}>Past Exam History (Last 25)</h4>
                   {history.length > 0 ? (
-                    <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
+                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
                       {history.map((h, i) => (
                         <div 
                           key={i} 
@@ -673,6 +673,10 @@ function App() {
             strengths={strengths}
             weaknesses={weaknesses}
             detailedAnalysis={detailedAnalysis}
+            history={history}
+            loadingExamId={loadingExamId}
+            onReviewExam={reviewPastExam}
+            formatDate={formatDate}
           />
         )}
         {currentScreen === 'dashboard' && user && (
