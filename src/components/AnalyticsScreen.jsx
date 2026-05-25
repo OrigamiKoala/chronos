@@ -81,7 +81,6 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   // Problem tagging state
   const [tags, setTags] = useState(() => {
     const initial = {};
-    // Pre-populate from saved tags if available
     if (resultsObj.savedTags) {
       for (const st of resultsObj.savedTags) {
         initial[st.questionIndex] = st.tag;
@@ -90,27 +89,14 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     return initial;
   });
   const [tagsSaving, setTagsSaving] = useState(false);
-  const [tagsSaved, setTagsSaved] = useState(false);
+  const [tagsSaved, setTagsSaved] = useState(true);
 
-  const handleTag = useCallback((index, tag) => {
-    setTags(prev => {
-      const current = prev[index];
-      // Toggle off if same tag
-      if (current === tag) {
-        const next = { ...prev };
-        delete next[index];
-        return next;
-      }
-      return { ...prev, [index]: tag };
-    });
-    setTagsSaved(false);
-  }, []);
-
-  const saveTags = async () => {
+  const autoSaveTags = async (updatedTags) => {
     if (!user || !examId) return;
     setTagsSaving(true);
+    setTagsSaved(false);
     try {
-      const tagEntries = Object.entries(tags).map(([idx, tag]) => ({
+      const tagEntries = Object.entries(updatedTags).map(([idx, tag]) => ({
         questionIndex: parseInt(idx),
         tag,
         isCorrect: results[parseInt(idx)]?.isCorrect || false,
@@ -126,13 +112,32 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           tags: tagEntries
         })
       });
+
       setTagsSaved(true);
+      if (onRefreshData) {
+        onRefreshData();
+      }
     } catch (err) {
-      console.error('Failed to save tags:', err);
+      console.error('Auto-save tags error:', err);
     } finally {
       setTagsSaving(false);
     }
   };
+
+  const handleTag = useCallback((index, tag) => {
+    setTags(prev => {
+      const current = prev[index];
+      let next;
+      if (current === tag) {
+        next = { ...prev };
+        delete next[index];
+      } else {
+        next = { ...prev, [index]: tag };
+      }
+      autoSaveTags(next);
+      return next;
+    });
+  }, [user, examId, results, onRefreshData]);
 
   const handleAskAI = async (index, problemObj, userQuery = '') => {
     setActiveExplanations(prev => ({
@@ -194,7 +199,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              username: user.username,
+              username: user.user_id,
               examId,
               questionId: problemObj.id,
               subject,
@@ -555,17 +560,27 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           marginBottom: '1.5rem' 
         }}>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Tag your problems</strong> — mark questions as <em>unsure</em>, <em>silly mistake</em>, or <em>concept problem</em> below, then save.
+            <strong style={{ color: 'var(--text-primary)' }}>Tag your problems</strong> — mark questions as <em>unsure</em>, <em>silly mistake</em>, or <em>concept problem</em> below (changes save automatically).
           </div>
-          <button
-            className={`btn ${tagsSaved ? 'btn-outline' : 'btn-primary'}`}
-            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}
-            onClick={saveTags}
-            disabled={tagsSaving || !hasAnyTags}
+          <div
+            className={`btn btn-outline`}
+            style={{ 
+              padding: '0.4rem 1rem', 
+              fontSize: '0.85rem', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.35rem', 
+              whiteSpace: 'nowrap', 
+              cursor: 'default', 
+              opacity: 0.85,
+              borderColor: tagsSaved ? 'var(--success)' : 'var(--accent-primary)',
+              color: tagsSaved ? 'var(--success)' : 'var(--text-primary)',
+              background: 'transparent'
+            }}
           >
-            {tagsSaving ? <Loader2 size={14} className="animate-spin" /> : tagsSaved ? <Check size={14} /> : <Save size={14} />}
-            {tagsSaved ? 'Saved' : 'Save Tags'}
-          </button>
+            {tagsSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            {tagsSaving ? 'Saving...' : 'All Saved'}
+          </div>
         </div>
       )}
 
