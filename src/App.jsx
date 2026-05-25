@@ -341,29 +341,40 @@ function App() {
           }))
         })
       })
-      .then(res => {
-        if (res.ok) {
-          const password = localStorage.getItem('chronos_logged_password') || '';
-          fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user.user_id, password })
-          })
-          .then(res2 => res2.json())
-          .then(data => {
-            setUser(data.user);
-            setStrengths(data.strengths);
-            setWeaknesses(data.weaknesses);
-            setDetailedAnalysis(data.detailedAnalysis || {});
-            setTopicBreakdowns(data.topicBreakdowns || {});
-            setHistory(data.history);
-            setRatings({
-              Math: data.user.math_rating || 100,
-              Physics: data.user.physics_rating || 100,
-              Chemistry: data.user.chemistry_rating || 100
-            });
-          });
+      .then(res => res.json())
+      .then(submitData => {
+        // Inject fresh diagnosis + mistake patterns into analytics immediately
+        if (submitData.detailedAnalysis || submitData.mistakePatterns) {
+          setDetailedAnalysis(prev => ({
+            ...prev,
+            [subject]: submitData.detailedAnalysis || prev[subject]
+          }));
+          setExamResults(prev => prev ? {
+            ...prev,
+            mistakePatterns: submitData.mistakePatterns || prev.mistakePatterns
+          } : prev);
         }
+        // Then re-login to refresh all state (history, strengths, weaknesses, etc.)
+        const password = localStorage.getItem('chronos_logged_password') || '';
+        fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user.user_id, password })
+        })
+        .then(res2 => res2.json())
+        .then(data => {
+          setUser(data.user);
+          setStrengths(data.strengths);
+          setWeaknesses(data.weaknesses);
+          setDetailedAnalysis(data.detailedAnalysis || {});
+          setTopicBreakdowns(data.topicBreakdowns || {});
+          setHistory(data.history);
+          setRatings({
+            Math: data.user.math_rating || 100,
+            Physics: data.user.physics_rating || 100,
+            Chemistry: data.user.chemistry_rating || 100
+          });
+        });
       })
       .catch(err => console.error("Error submitting exam:", err));
     }
