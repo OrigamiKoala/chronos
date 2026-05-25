@@ -26,8 +26,13 @@ export function isSmiles(word) {
     return false;
   }
 
-  // Check valid SMILES character set
-  const smilesCharsRegex = /^[A-Za-z0-9@+\-\[\]\(\)\\\/=#$.%]+$/;
+  // Reject if the token contains backslashes (likely LaTeX like \text{...})
+  if (word.includes('\\')) {
+    return false;
+  }
+
+  // Check valid SMILES character set (no backslash — "/" covers E/Z stereo)
+  const smilesCharsRegex = /^[A-Za-z0-9@+\-\[\]\(\)\/=#$.%]+$/;
   if (!smilesCharsRegex.test(word)) {
     return false;
   }
@@ -102,7 +107,9 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
         }
       });
 
-      SmilesDrawer.parse(smiles, (tree) => {
+      // Strip any stray backslashes (e.g. from LaTeX remnants) before parsing
+      const sanitized = smiles.replace(/\\/g, '/');
+      SmilesDrawer.parse(sanitized, (tree) => {
         drawer.draw(tree, svgRef.current, theme, false);
       }, (err) => {
         console.error('SMILES parse error:', err);
@@ -133,37 +140,51 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
 export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, defaultHeight = 130 }) {
   if (!text) return null;
 
-  // Let's split the text by whitespace to check each token
-  const tokens = text.split(/(\s+)/);
+  // Split by LaTeX blocks ($...$ or $$...$$) first to keep LaTeX segments intact.
+  // Using a regex to match either display math ($$...$$) or inline math ($...$)
+  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/g);
 
   return (
     <span style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
-      {tokens.map((token, index) => {
-        if (/^\s+$/.test(token)) {
-          return <span key={index}>{token}</span>;
+      {parts.map((part, partIndex) => {
+        // If this part is a LaTeX math block, render it directly as text so MathJax can process it
+        if (part.startsWith('$')) {
+          return <span key={partIndex}>{part}</span>;
         }
 
-        // Extract core word by removing leading/trailing punctuation/quotes
-        const match = token.match(/^([`'"\(\{\[<]*)(.*?)([`'"\)\}\]>.,;:!?-]*)$/);
-        if (!match) {
-          return <span key={index}>{token}</span>;
-        }
+        // For non-math text, split by whitespace to detect SMILES
+        const tokens = part.split(/(\s+)/);
+        return (
+          <span key={partIndex}>
+            {tokens.map((token, index) => {
+              if (/^\s+$/.test(token)) {
+                return <span key={index}>{token}</span>;
+              }
 
-        const prefix = match[1];
-        const coreWord = match[2];
-        const suffix = match[3];
+              // Extract core word by removing leading/trailing punctuation/quotes
+              const match = token.match(/^([`'"\(\{\[<]*)(.*?)([`'"\)\}\]>.,;:!?-]*)$/);
+              if (!match) {
+                return <span key={index}>{token}</span>;
+              }
 
-        if (isSmiles(coreWord)) {
-          return (
-            <span key={index} style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle' }}>
-              {prefix}
-              <SmilesRenderer smiles={coreWord} width={defaultWidth} height={defaultHeight} theme={theme} />
-              {suffix}
-            </span>
-          );
-        }
+              const prefix = match[1];
+              const coreWord = match[2];
+              const suffix = match[3];
 
-        return <span key={index}>{token}</span>;
+              if (isSmiles(coreWord)) {
+                return (
+                  <span key={index} style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle' }}>
+                    {prefix}
+                    <SmilesRenderer smiles={coreWord} width={defaultWidth} height={defaultHeight} theme={theme} />
+                    {suffix}
+                  </span>
+                );
+              }
+
+              return <span key={index}>{token}</span>;
+            })}
+          </span>
+        );
       })}
     </span>
   );
