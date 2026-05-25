@@ -4,6 +4,20 @@ import { generateProblems } from '../services/gemini';
 import { Loader2, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 
+// Normalize an answer string for comparison:
+// strips $...$ / $$...$$, \text{}, \mathrm{} etc., LaTeX ~, and collapses whitespace
+function normalizeAnswer(str) {
+  if (!str) return '';
+  return str
+    .replace(/\$\$([\s\S]*?)\$\$/g, '$1')   // strip $$...$$
+    .replace(/\$([\s\S]*?)\$/g, '$1')        // strip $...$
+    .replace(/\\(?:text|mathrm|mathbf|mathit|rm|bf)\{([^}]*)\}/g, '$1') // \text{X} -> X
+    .replace(/~/g, ' ')                      // LaTeX thin-space -> space
+    .replace(/\s+/g, ' ')                    // collapse whitespace
+    .trim()
+    .toLowerCase();
+}
+
 export function ExamScreen({ config, onFinish }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentDifficulty, setCurrentDifficulty] = useState(config.startingDifficulty);
@@ -102,7 +116,7 @@ export function ExamScreen({ config, onFinish }) {
     clearInterval(timerRef.current);
     const activeAnswer = answers[currentQuestionIndex] || '';
     const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[currentQuestionIndex];
-    const isCorrect = !isTimeout && activeAnswer.trim().toLowerCase() === problem.answer.trim().toLowerCase();
+    const isCorrect = !isTimeout && normalizeAnswer(activeAnswer) === normalizeAnswer(problem.answer);
 
     let nextDifficulty = currentDifficulty;
     if (isCorrect) {
@@ -147,7 +161,7 @@ export function ExamScreen({ config, onFinish }) {
       const userAnswer = answers[idx] || '';
       const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[idx];
       const isTimeout = questionTimesLeft[idx] <= 0;
-      const isCorrect = !isTimeout && userAnswer.trim().toLowerCase() === prob.answer.trim().toLowerCase();
+      const isCorrect = !isTimeout && normalizeAnswer(userAnswer) === normalizeAnswer(prob.answer);
       
       return {
         ...prob,

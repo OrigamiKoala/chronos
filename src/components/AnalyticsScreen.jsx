@@ -1,19 +1,22 @@
 /* eslint-disable */
 import { useState, useEffect, useCallback } from 'react';
-import { Bar } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 } from 'chart.js';
 import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle as TriangleIcon, BookOpen, Save, Check } from 'lucide-react';
 import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler);
 
 const getSubjectLevelName = (subject, rating) => {
   if (subject === 'Math') {
@@ -41,7 +44,7 @@ const getSubjectLevelName = (subject, rating) => {
   return 'Novice';
 };
 
-export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId }) {
+export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, strengths = [], weaknesses = [], detailedAnalysis = {} }) {
   const { results, subject, oldRating, newRating, ratingChange } = resultsObj;
   const totalQuestions = results.length;
   const correctAnswers = results.filter(r => r.isCorrect).length;
@@ -191,19 +194,69 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId }
     }
   }, [resultsObj]);
 
-  // Per-question efficiency bar chart
-  const perQuestionEfficiency = {
-    labels: results.map((_, i) => `Q${i + 1}`),
+  // Points-per-minute chart: bucket points earned into 1-minute windows
+  const ppmData = (() => {
+    // Build timeline: for each question, record the cumulative elapsed time at completion
+    // and whether it was correct
+    let cursor = 0;
+    const events = results.map(r => {
+      cursor += (r.timeSpent || 0);
+      return { endSec: cursor, points: r.isCorrect ? (r.difficulty || r.difficultyAtTime || 1) : 0 };
+    });
+
+    const totalSec = cursor;
+    const numMinutes = Math.max(Math.ceil(totalSec / 60), 1);
+
+    const labels = [];
+    const data = [];
+
+    for (let m = 1; m <= numMinutes; m++) {
+      const windowStart = (m - 1) * 60;
+      const windowEnd = m * 60;
+      // Sum fractional contributions from each question that overlaps this window
+      let pts = 0;
+      let prev = 0;
+      for (const ev of events) {
+        const qStart = prev;
+        const qEnd = ev.endSec;
+        const qDur = qEnd - qStart;
+        if (qDur > 0 && ev.points > 0) {
+          // Fraction of this question's duration that falls in [windowStart, windowEnd]
+          const overlapStart = Math.max(qStart, windowStart);
+          const overlapEnd = Math.min(qEnd, windowEnd);
+          if (overlapEnd > overlapStart) {
+            pts += ev.points * ((overlapEnd - overlapStart) / qDur);
+          }
+        }
+        prev = qEnd;
+      }
+      // ppm = points that fell in this 1-min window (already scaled to 1 full minute)
+      data.push(Math.round(pts * 100) / 100);
+      labels.push(`${m}m`);
+    }
+
+    return { labels, data };
+  })();
+
+  const ppmChartData = {
+    labels: ppmData.labels,
     datasets: [{
-      label: 'Points Earned',
-      data: results.map(r => r.isCorrect ? (r.difficulty || r.difficultyAtTime || 1) : 0),
-      backgroundColor: results.map(r => r.isCorrect ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.3)'),
-      borderColor: results.map(r => r.isCorrect ? '#10b981' : '#ef4444'),
-      borderWidth: 1,
-      borderRadius: 4,
-      barPercentage: 0.7
+      label: 'pts/min',
+      data: ppmData.data,
+      fill: true,
+      backgroundColor: 'rgba(99, 102, 241, 0.12)',
+      borderColor: '#6366f1',
+      borderWidth: 2,
+      pointBackgroundColor: ppmData.data.map(v => v > 0 ? '#a78bfa' : 'rgba(239,68,68,0.5)'),
+      pointRadius: 4,
+      tension: 0.35
     }]
   };
+
+  // Filter S/W to the current subject
+  const subjectStrengths = strengths.filter(s => s.subject === resultsObj.subject).map(s => s.topic);
+  const subjectWeaknesses = weaknesses.filter(w => w.subject === resultsObj.subject).map(w => w.topic);
+  const subjectDiagnosis = detailedAnalysis[resultsObj.subject];
 
   const hasAnyTags = Object.keys(tags).length > 0;
 
@@ -254,16 +307,16 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId }
         </div>
       </div>
 
-      {/* Point Efficiency Chart */}
+      {/* Points-per-Minute Chart */}
       <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-tertiary)', marginBottom: '2.5rem' }}>
         <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Activity size={18} color="var(--accent-primary)" /> Points Earned Per Question
+          <Activity size={18} color="var(--accent-primary)" /> Points Earned Per Minute
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '400', marginLeft: 'auto' }}>
-            {pointsEarned}/{totalPoints} pts in {Math.round(totalMinutes * 10) / 10} min
+            {pointsEarned}/{totalPoints} pts · {Math.round(totalMinutes * 10) / 10} min total
           </span>
         </h4>
-        <div style={{ height: '140px' }}>
-          <Bar data={perQuestionEfficiency} options={{
+        <div style={{ height: '150px' }}>
+          <Line data={ppmChartData} options={{
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -274,12 +327,20 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId }
                 bodyColor: '#a0a0b0',
                 borderColor: 'rgba(255,255,255,0.1)',
                 borderWidth: 1,
-                cornerRadius: 8
+                cornerRadius: 8,
+                callbacks: {
+                  label: ctx => `${ctx.parsed.y} pts/min`
+                }
               }
             },
             scales: {
               x: { ticks: { color: '#666677', font: { size: 10 } }, grid: { display: false } },
-              y: { ticks: { color: '#666677', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+              y: {
+                min: 0,
+                ticks: { color: '#666677', font: { size: 10 } },
+                grid: { color: 'rgba(255,255,255,0.04)' },
+                title: { display: true, text: 'pts/min', color: '#666677', font: { size: 9 } }
+              }
             }
           }} />
         </div>
@@ -301,6 +362,55 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId }
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Strengths & Weaknesses */}
+      {(subjectStrengths.length > 0 || subjectWeaknesses.length > 0) && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+          {subjectStrengths.length > 0 && (
+            <div style={{ padding: '1.25rem', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-md)' }}>
+              <h4 style={{ color: 'var(--success)', marginBottom: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <CheckCircle2 size={15} /> {subject} Strengths
+              </h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                {subjectStrengths.map((s, i) => (
+                  <span key={i} style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--success)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem' }}>{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {subjectWeaknesses.length > 0 && (
+            <div style={{ padding: '1.25rem', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-md)' }}>
+              <h4 style={{ color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <XCircle size={15} /> {subject} Weaknesses
+              </h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                {subjectWeaknesses.map((w, i) => (
+                  <span key={i} style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--danger)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem' }}>{w}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Detailed Diagnosis */}
+      {subjectDiagnosis && (
+        <div style={{
+          padding: '1.5rem',
+          background: 'rgba(168, 85, 247, 0.05)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid rgba(168, 85, 247, 0.2)',
+          marginBottom: '2.5rem',
+          boxShadow: '0 4px 20px -2px rgba(168, 85, 247, 0.1)'
+        }}>
+          <h3 style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', margin: 0 }}>
+            <BrainCircuit size={20} /> Detailed {subject} Diagnosis
+          </h3>
+          <p style={{ fontSize: '0.9rem', lineHeight: '1.65', color: 'var(--text-secondary)', marginTop: '0.75rem', marginBottom: 0, whiteSpace: 'pre-line' }}>
+            {subjectDiagnosis}
+          </p>
         </div>
       )}
 

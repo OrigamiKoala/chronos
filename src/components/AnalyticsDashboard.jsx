@@ -88,15 +88,23 @@ export function AnalyticsDashboard({ user, onBack }) {
     const subjects = ['Math', 'Physics', 'Chemistry'];
     const filteredSubjects = selectedSubjectFilter === 'All' ? subjects : [selectedSubjectFilter];
 
-    // Build per-subject running ELO
+    // Build per-subject running ELO, then collapse to one point per calendar day
+    // (keep the last rating of each day)
     const subjectElo = {};
-    for (const s of subjects) subjectElo[s] = [{ label: 'Start', rating: 100 }];
+    for (const s of subjects) subjectElo[s] = [{ dateKey: 'start', label: 'Start', rating: 100 }];
 
     for (const h of data.eloHistory) {
-      subjectElo[h.subject].push({
-        label: formatDate(h.created_at),
-        rating: h.new_rating
-      });
+      const rawDate = h.created_at?.value || h.created_at || '';
+      const d = new Date(rawDate);
+      const dateKey = isNaN(d.getTime()) ? rawDate : d.toISOString().slice(0, 10); // YYYY-MM-DD
+      const label = formatDate(h.created_at);
+      const arr = subjectElo[h.subject];
+      // If last entry is the same calendar day, overwrite it (keep final rating of that day)
+      if (arr.length > 0 && arr[arr.length - 1].dateKey === dateKey) {
+        arr[arr.length - 1] = { dateKey, label, rating: h.new_rating };
+      } else {
+        arr.push({ dateKey, label, rating: h.new_rating });
+      }
     }
 
     const datasets = filteredSubjects.map(s => ({
@@ -120,6 +128,7 @@ export function AnalyticsDashboard({ user, onBack }) {
 
     return { labels, datasets };
   }, [data, selectedSubjectFilter]);
+
 
   // Silly vs Concept points lost
   const tagChartData = useMemo(() => {

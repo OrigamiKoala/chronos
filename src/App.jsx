@@ -607,23 +607,7 @@ function App() {
                   </div>
                 )}
 
-                {detailedAnalysis[selectedSubject] && (
-                  <div style={{ 
-                    marginBottom: '2rem', 
-                    padding: '1.25rem', 
-                    background: 'rgba(168, 85, 247, 0.05)', 
-                    border: '1px solid rgba(168, 85, 247, 0.2)', 
-                    borderRadius: 'var(--radius-md)',
-                    boxShadow: '0 4px 20px -2px rgba(168, 85, 247, 0.1)'
-                  }}>
-                    <h4 style={{ color: 'var(--accent-secondary)', marginBottom: '0.75rem', fontSize: '1rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <BrainCircuit size={18} /> Detailed {selectedSubject} Diagnosis
-                    </h4>
-                    <p style={{ fontSize: '0.875rem', lineHeight: '1.6', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'pre-line' }}>
-                      {detailedAnalysis[selectedSubject]}
-                    </p>
-                  </div>
-                )}
+
 
                 <div>
                   <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem', color: 'var(--text-primary)' }}>Past Exam History (Last 25)</h4>
@@ -681,7 +665,15 @@ function App() {
           <ExamScreen config={examConfig} onFinish={finishExam} />
         )}
         {currentScreen === 'analytics' && examResults && (
-          <AnalyticsScreen results={examResults} onRestart={restart} user={user} examId={currentExamId} />
+          <AnalyticsScreen
+            results={examResults}
+            onRestart={restart}
+            user={user}
+            examId={currentExamId}
+            strengths={strengths}
+            weaknesses={weaknesses}
+            detailedAnalysis={detailedAnalysis}
+          />
         )}
         {currentScreen === 'dashboard' && user && (
           <AnalyticsDashboard user={user} onBack={restart} />
