@@ -93,34 +93,32 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
     `;
     }
 
-    const prompt = `
-    You are an expert examiner creating questions for high-stakes competitive olympiad exams.
-    Generate a single ${subject} problem with a difficulty level of ${difficultyLevel} out of 10.
-    ${subjectContext}
-    
-    The output must be pure JSON with the following schema:
-    {
-        "id": "A unique string ID",
-        "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
-        "question": "The text of the question. It should be challenging and clear.",
-        "type": "multiple_choice" or "short_answer",
-        "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
-        "answer": "The exact correct answer string",
-        "difficulty": ${difficultyLevel}
-    }
-    Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.
-    `;
+    const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
+
+${subjectContext}
+
+The output must be pure JSON with the following schema:
+{
+    "id": "A unique string ID",
+    "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
+    "question": "The text of the question. It should be challenging and clear.",
+    "type": "multiple_choice" or "short_answer",
+    "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
+    "answer": "For multiple_choice, this MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index. For short_answer, this must be the exact correct numeric or short text answer string.",
+    "difficulty": a number representing difficulty
+}
+Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
+
+    const prompt = `Generate a single ${subject} problem with a difficulty level of ${difficultyLevel} out of 10.`;
 
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-3.5-flash',
             contents: prompt,
             config: {
+                systemInstruction,
                 responseMimeType: "application/json",
                 temperature: 0.7,
-                thinkingConfig: {
-                    thinkingBudget: 1024
-                }
             }
         });
 
@@ -271,34 +269,32 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
     `;
     }
 
-    const prompt = `
-    You are an expert examiner creating questions for high-stakes competitive olympiad exams.
-    Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
-    ${subjectContext}
-    
-    The output must be a pure JSON array containing exactly ${count} objects, with the following schema for each object:
-    {
-        "id": "A unique string ID",
-        "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
-        "question": "The text of the question. It should be challenging and clear.",
-        "type": "multiple_choice" or "short_answer",
-        "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
-        "answer": "The exact correct answer string",
-        "difficulty": a number between 1 and 10 representing difficulty
-    }
-    Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.
-    `;
+    const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
+
+${subjectContext}
+
+The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
+{
+    "id": "A unique string ID",
+    "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
+    "question": "The text of the question. It should be challenging and clear.",
+    "type": "multiple_choice" or "short_answer",
+    "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
+    "answer": "For multiple_choice, this MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index. For short_answer, this must be the exact correct numeric or short text answer string.",
+    "difficulty": a number between 1 and 10 representing difficulty
+}
+Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
+
+    const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.`;
 
     try {
         const stream = await ai.models.generateContentStream({
             model: 'gemini-3.5-flash',
             contents: prompt,
             config: {
+                systemInstruction,
                 responseMimeType: "application/json",
                 temperature: 0.7,
-                thinkingConfig: {
-                    thinkingBudget: 1024
-                }
             }
         });
 

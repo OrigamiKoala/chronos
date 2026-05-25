@@ -37,6 +37,17 @@ export function isSmiles(word) {
     return false;
   }
 
+  // Must only contain allowed organic/aromatic letters outside of square brackets
+  const outsideBrackets = word.replace(/\[[^\]]*\]/g, "");
+  const remainingAfterOrganic = outsideBrackets
+    .replace(/cl/gi, "")
+    .replace(/br/gi, "")
+    .replace(/[chonspfib]/gi, "");
+
+  if (/[a-z]/i.test(remainingAfterOrganic)) {
+    return false;
+  }
+
   // If it has branching, ring numbers, double/triple bonds, charge, brackets, or stereochemistry indicators:
   const hasSmiIndicators = /[\(\)=\[\]#@+\-\\\/]/.test(word) || /[0-9]/.test(word);
   if (hasSmiIndicators) {

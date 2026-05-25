@@ -131,12 +131,18 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       }
     }));
 
+    let questionToSend = problemObj.question;
+    if (problemObj.type === 'multiple_choice' && problemObj.options && Array.isArray(problemObj.options)) {
+      const optsList = problemObj.options.map((opt, i) => `${['A', 'B', 'C', 'D'][i]}. ${opt}`).join('\n');
+      questionToSend = `${problemObj.question}\n\nOptions:\n${optsList}`;
+    }
+
     try {
       const response = await fetch('/api/explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: problemObj.question,
+          question: questionToSend,
           answer: problemObj.answer,
           userAnswer: problemObj.userAnswer,
           isCorrect: problemObj.isCorrect,
@@ -528,14 +534,42 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Your Answer: </span>
                   <span style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)' }}>
-                    {isSmiles(r.userAnswer) ? <SmilesRenderer smiles={r.userAnswer} width={70} height={70} theme="dark" /> : <ChemicalText text={r.userAnswer} theme="dark" />}
+                    {(() => {
+                      if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
+                        const idx = ['A', 'B', 'C', 'D'].indexOf(String(r.userAnswer).trim().toUpperCase());
+                        if (idx !== -1 && r.options[idx]) {
+                          const opt = r.options[idx];
+                          return (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', verticalAlign: 'middle' }}>
+                              <strong>{r.userAnswer}.</strong>
+                              {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
+                            </span>
+                          );
+                        }
+                      }
+                      return isSmiles(r.userAnswer) ? <SmilesRenderer smiles={r.userAnswer} width={70} height={70} theme="dark" /> : <ChemicalText text={r.userAnswer} theme="dark" />;
+                    })()}
                   </span>
                 </div>
                 {!r.isCorrect && (
                   <div>
                     <span style={{ color: 'var(--text-muted)' }}>Correct Answer: </span>
                     <span style={{ color: 'var(--success)' }}>
-                      {isSmiles(r.answer) ? <SmilesRenderer smiles={r.answer} width={70} height={70} theme="dark" /> : <ChemicalText text={r.answer} theme="dark" />}
+                      {(() => {
+                        if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
+                          const idx = ['A', 'B', 'C', 'D'].indexOf(String(r.answer).trim().toUpperCase());
+                          if (idx !== -1 && r.options[idx]) {
+                            const opt = r.options[idx];
+                            return (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', verticalAlign: 'middle' }}>
+                                <strong>{r.answer}.</strong>
+                                {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
+                              </span>
+                            );
+                          }
+                        }
+                        return isSmiles(r.answer) ? <SmilesRenderer smiles={r.answer} width={70} height={70} theme="dark" /> : <ChemicalText text={r.answer} theme="dark" />;
+                      })()}
                     </span>
                   </div>
                 )}

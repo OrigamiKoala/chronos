@@ -167,25 +167,26 @@ For Chemistry questions, represent organic molecules strictly using SMILES notat
 `;
     }
 
-    const prompt = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
-Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+    const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
 
 ${subjectSpecificInstructions}
 
-Additionally, focus on these weak concepts of the user: ${weaknesses}.
-
-The output must be a pure JSON array containing exactly ${count} objects, with the following schema for each object:
+The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
   "id": "A unique string ID",
   "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
   "question": "The text of the question. It should be challenging and clear.",
   "type": "multiple_choice" or "short_answer",
-  "options": ["Option A", "Option B", "Option C", "Option D"],
-  "answer": "The exact correct answer string",
+  "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
+  "answer": "For multiple_choice, this MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index. For short_answer, this must be the exact correct numeric or short text answer string.",
   "difficulty": a number between 1 and 10 representing difficulty
 }
 
 Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
+
+    const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+
+Additionally, focus on these weak concepts of the user: ${weaknesses}.`;
 
     // 3. Set SSE headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
@@ -198,9 +199,9 @@ Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
       model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
       contents: prompt,
       config: {
+        systemInstruction,
         responseMimeType: "application/json",
         temperature: 0.3,
-        thinkingConfig: { thinkingBudget: 1024 },
       },
     });
 

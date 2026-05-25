@@ -296,26 +296,33 @@ export function ExamScreen({ config, onFinish }) {
 
       {problem.type === 'multiple_choice' && problem.options && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-          {problem.options.map((opt, i) => (
-            <button 
-              key={i} 
-              className={`btn btn-outline ${activeAnswer === opt ? 'selected' : ''}`}
-              style={{ 
-                justifyContent: 'flex-start', 
-                background: activeAnswer === opt ? 'var(--bg-tertiary)' : 'transparent', 
-                borderColor: activeAnswer === opt ? 'var(--accent-primary)' : '',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                minHeight: '48px',
-                padding: '0.5rem 1rem'
-              }}
-              onClick={() => handleAnswerSelect(opt)}
-              disabled={isTimeOut}
-            >
-              {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
-            </button>
-          ))}
+          {problem.options.map((opt, i) => {
+            const letter = ['A', 'B', 'C', 'D'][i];
+            const isSelected = activeAnswer === letter || activeAnswer === opt;
+            return (
+              <button 
+                key={i} 
+                className={`btn btn-outline ${isSelected ? 'selected' : ''}`}
+                style={{ 
+                  justifyContent: 'flex-start', 
+                  background: isSelected ? 'var(--bg-tertiary)' : 'transparent', 
+                  borderColor: isSelected ? 'var(--accent-primary)' : '',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  minHeight: '48px',
+                  padding: '0.5rem 1rem'
+                }}
+                onClick={() => handleAnswerSelect(letter)}
+                disabled={isTimeOut}
+              >
+                <span style={{ fontWeight: '700', marginRight: '0.5rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                  {letter}.
+                </span>
+                {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
+              </button>
+            );
+          })}
         </div>
       )}
 
