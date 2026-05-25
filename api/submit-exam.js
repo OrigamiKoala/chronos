@@ -67,6 +67,156 @@ export default async function handler(req, res) {
       tablesEnsured = true;
     }
 
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+    });
+
+    // A. Grade all free-response questions in parallel first! Solve on-the-fly and award partial credit!
+    const gradedResults = await Promise.all(results.map(async (r) => {
+      if (r.type === 'free_response') {
+        try {
+          const gradingPrompt = `You are a world-class grading examiner. You are grading a student's free-response solution for a competitive Olympiad-level exam.
+
+Question Details:
+Subject: ${subject}
+Topic: ${r.topic || 'General'}
+Question Text: ${r.question}
+Student's Explanation/Process/Answer: ${r.userAnswer || 'No answer submitted.'}
+
+Your tasks:
+1. Solve the question completely from scratch first to determine the correct step-by-step solution, the correct final answer, and establish a clear grading rubric.
+2. Critically evaluate the student's solution against the correct solution. Compare both their explanation/process and final answer.
+3. Award a partial credit score between 0.0 and 1.0 (where 1.0 is fully correct, 0.0 is completely wrong/timeout, and in-between represents partial credit based on correct logical steps shown). Give partial credit generously for valid logical steps, calculations, or methods, even if their final answer was incorrect.
+4. Set 'isCorrect' to true if the score is greater than or equal to 0.7 (conceptually correct / very good progress), otherwise set it to false.
+5. Provide clear, professional, pedagogical feedback explaining where they made mistakes and what they did well.
+
+Return strictly a valid JSON object with the following schema:
+{
+  "correctSolution": "Your fully derived step-by-step correct solution",
+  "correctAnswer": "The correct final answer",
+  "score": 0.5,
+  "isCorrect": true,
+  "feedback": "Detailed grading feedback"
+}
+Do NOT include markdown headers or backticks in the response. Return ONLY the raw JSON object.`;
+
+          const gradingResponse = await ai.models.generateContent({
+            model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+            contents: gradingPrompt,
+            config: {
+              responseMimeType: "application/json",
+              temperature: 0.2
+            }
+          });
+
+          const graded = JSON.parse(gradingResponse.text);
+          return {
+            ...r,
+            isCorrect: !!graded.isCorrect,
+            score: Number(graded.score) || 0,
+            feedback: graded.feedback,
+            answer: graded.correctAnswer || r.answer || '',
+            solution: graded.correctSolution
+          };
+        } catch (err) {
+          console.error('Error grading FRQ question:', r.id, err);
+          return {
+            ...r,
+            isCorrect: false,
+            score: 0,
+            feedback: 'Grading failed due to an error.',
+          };
+        }
+      }
+      return r;
+    }));
+
+    // B. Recompute ELO if there are free_response questions to accurately reflect AI grading & partial credits!
+    let finalAccuracy = accuracy;
+    let finalRatingChange = ratingChange;
+    let finalNewRating = newRating;
+
+    const hasFRQ = gradedResults.some(r => r.type === 'free_response');
+    if (hasFRQ) {
+      const totalQuestions = gradedResults.length;
+      const totalScore = gradedResults.reduce((acc, r) => acc + (r.score !== undefined ? r.score : (r.isCorrect ? 1 : 0)), 0);
+      finalAccuracy = totalScore / totalQuestions;
+
+      let ratingColumn = 'math_rating';
+      if (subject === 'Physics') ratingColumn = 'physics_rating';
+      else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
+
+      let currentRating = 100;
+      try {
+        const [userRows] = await bq.query({
+          query: `SELECT ${ratingColumn} FROM \`${projectId}\`.\`chronos_users\`.\`users\` WHERE user_id = @username`,
+          params: { username: sanitizedUser }
+        });
+        if (userRows && userRows.length > 0) {
+          currentRating = userRows[0][ratingColumn] || 100;
+        }
+      } catch (e) {
+        console.error('Failed to fetch user rating for recalculation:', e);
+      }
+
+      const getQuestionRating = (sub, diff) => {
+        const d = Math.max(1, Math.min(10, diff));
+        if (sub === 'Math') {
+          const mathMap = { 1: 500, 2: 600, 3: 800, 4: 900, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
+          return mathMap[Math.round(d)] || 1000;
+        } else if (sub === 'Chemistry') {
+          const chemMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
+          return chemMap[Math.round(d)] || 1000;
+        } else if (sub === 'Physics') {
+          const physMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1300, 7: 1600, 8: 2000, 9: 2500, 10: 3000 };
+          return physMap[Math.round(d)] || 1000;
+        }
+        return 100;
+      };
+
+      const sumQuestionRatings = gradedResults.reduce((acc, r) => acc + getQuestionRating(subject, r.difficulty || 5), 0);
+      const avgQuestionRating = sumQuestionRatings / totalQuestions;
+
+      let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
+      if (avgQuestionRating < currentRating) {
+        expectedScore = Math.max(expectedScore, 0.75);
+      }
+
+      let isChallenged = false;
+      try {
+        const [historyRows] = await bq.query({
+          query: `SELECT accuracy FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
+            WHERE user_id = @username AND subject = @subject ORDER BY created_at DESC LIMIT 5`,
+          params: { username: sanitizedUser, subject }
+        });
+        let consecutiveFailCount = 0;
+        for (const h of historyRows) {
+          if (h.accuracy < 0.75) {
+            consecutiveFailCount++;
+          } else {
+            consecutiveFailCount = 0;
+          }
+          if (consecutiveFailCount >= 2) {
+            isChallenged = true;
+          }
+        }
+        if (finalAccuracy < 0.75) {
+          consecutiveFailCount++;
+        } else {
+          consecutiveFailCount = 0;
+        }
+        if (consecutiveFailCount >= 2) {
+          isChallenged = true;
+        }
+      } catch (e) {
+        console.error('Failed to fetch history for challenge check:', e);
+      }
+
+      const K = isChallenged ? 32 : 250;
+      finalRatingChange = Math.round(K * (finalAccuracy - expectedScore));
+      finalNewRating = Math.max(100, currentRating + finalRatingChange);
+    }
+
     // 1. Fire history insert, results insert, and rating update in parallel
     let ratingColumn = 'math_rating';
     if (subject === 'Physics') ratingColumn = 'physics_rating';
@@ -77,26 +227,26 @@ export default async function handler(req, res) {
         query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
           (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at)
           VALUES (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP())`,
-        params: { username: sanitizedUser, examId, subject, accuracy, avgTime, ratingChange, newRating }
+        params: { username: sanitizedUser, examId, subject, accuracy: finalAccuracy, avgTime, ratingChange: finalRatingChange, newRating: finalNewRating }
       }),
       bq.query({
         query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
           (user_id, exam_id, results_json, created_at)
           VALUES (@username, @examId, @resultsJson, CURRENT_TIMESTAMP())`,
-        params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(results) }
+        params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(gradedResults) }
       }),
       bq.query({
         query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
           SET ${ratingColumn} = @newRating, elo_version = @eloVersion
           WHERE user_id = @username`,
-        params: { username: sanitizedUser, newRating, eloVersion: ELO_ALGORITHM_VERSION }
+        params: { username: sanitizedUser, newRating: finalNewRating, eloVersion: ELO_ALGORITHM_VERSION }
       })
     ]);
 
     // 2. Record wrong problems + update topic mastery
     const topicStats = {};
     const wrongInsertPromises = [];
-    for (const r of results) {
+    for (const r of gradedResults) {
       const topic = r.topic || 'General';
       if (!topicStats[topic]) {
         topicStats[topic] = { correct: 0, total: 0 };
@@ -173,7 +323,7 @@ export default async function handler(req, res) {
     // 4. Trigger update of user weaknesses using direct Gemini model
     const [freshAnalysis, freshMistakePatterns] = await Promise.all([
       updateAIWeaknesses(sanitizedUser, subject),
-      analyzeMistakesAndSave(sanitizedUser, examIdStr || examId, subject, results)
+      analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults)
     ]);
 
     return res.status(200).json({ success: true, detailedAnalysis: freshAnalysis, mistakePatterns: freshMistakePatterns });

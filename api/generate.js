@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { count, startingDifficulty, subject, targetUserId = 'default_user' } = req.body;
+  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode } = req.body;
 
   if (!count || !startingDifficulty || !subject) {
     return res.status(400).json({ error: 'Missing required parameters: count, startingDifficulty, subject' });
@@ -167,6 +167,19 @@ For Chemistry questions, represent organic molecules strictly using SMILES notat
 `;
     }
 
+    const isFreeResponse = !!freeResponseMode;
+    const questionTypeDesc = isFreeResponse 
+      ? `"free_response"` 
+      : `"multiple_choice" or "short_answer"`;
+
+    const optionsDesc = isFreeResponse
+      ? ""
+      : `\n  "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice`;
+
+    const answerDesc = isFreeResponse
+      ? `"An empty string '' (to save tokens; the solution will be determined by the grading AI during evaluation)"`
+      : `"For multiple_choice, this MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index. For short_answer, this must be the exact correct numeric or short text answer string."`;
+
     const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
 
 ${subjectSpecificInstructions}
@@ -175,10 +188,9 @@ The output must be a pure JSON array containing exactly the requested number of 
 {
   "id": "A unique string ID",
   "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
-  "question": "The text of the question. It should be challenging and clear.",
-  "type": "multiple_choice" or "short_answer",
-  "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
-  "answer": "For multiple_choice, this MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index. For short_answer, this must be the exact correct numeric or short text answer string.",
+  "question": "The text of the question. It should be challenging, clear, and require multi-step working suitable for a free-response solution.",
+  "type": ${questionTypeDesc},${optionsDesc}
+  "answer": ${answerDesc},
   "difficulty": a number between 1 and 10 representing difficulty
 }
 

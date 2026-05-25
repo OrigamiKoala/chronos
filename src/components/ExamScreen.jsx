@@ -1,8 +1,9 @@
 /* eslint-disable */
 import { useState, useEffect, useRef } from 'react';
 import { generateProblems } from '../services/gemini';
-import { Loader2, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Loader2, Clock, AlertTriangle, ArrowRight, Upload, Type, Image as ImageIcon, ArrowLeft } from 'lucide-react';
 import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
+import { Whiteboard } from './Whiteboard';
 
 // Normalize an answer string for comparison:
 // strips $...$ / $$...$$, \text{}, \mathrm{} etc., LaTeX ~, and collapses whitespace
@@ -34,12 +35,18 @@ function isAnswerCorrect(prob, ans) {
 }
 
 export function ExamScreen({ config, onFinish }) {
+  const isWholeTestMode = config.timeLimitStyle === 'whole_test';
+  const recommendedQuestionTime = isWholeTestMode 
+    ? Math.floor((config.timeLimitWholeTest * 60) / config.numQuestions) 
+    : config.timeLimitPerQuestion;
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentDifficulty, setCurrentDifficulty] = useState(config.startingDifficulty);
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [totalTimeLeft, setTotalTimeLeft] = useState(() => config.timeLimitWholeTest * 60);
   const [questionTimesLeft, setQuestionTimesLeft] = useState(() => 
-    Array(config.numQuestions).fill(config.timeLimitPerQuestion)
+    Array(config.numQuestions).fill(isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion)
   );
   const [answers, setAnswers] = useState(() => 
     Array(config.numQuestions).fill('')
@@ -47,7 +54,30 @@ export function ExamScreen({ config, onFinish }) {
   const [results, setResults] = useState([]);
   const [error, setError] = useState(null);
 
+  // New Free Response States
+  const [workSubmitted, setWorkSubmitted] = useState(false);
+  const [submitType, setSubmitType] = useState('whiteboard'); // 'whiteboard', 'image', 'text'
+  const [typedWork, setTypedWork] = useState('');
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const [whiteboardPreview, setWhiteboardPreview] = useState('');
+  const [transcribing, setTranscribing] = useState(false);
+  const [frqSubmissions, setFrqSubmissions] = useState(() => 
+    Array(config.numQuestions).fill(null)
+  );
+
   const timerRef = useRef(null);
+  const whiteboardRef = useRef(null);
+
+  useEffect(() => {
+    // Reset question-specific submission states on navigation
+    setWorkSubmitted(false);
+    setSubmitType('whiteboard');
+    setTypedWork('');
+    setUploadedImage(null);
+    setUploadedFileName('');
+    setWhiteboardPreview('');
+  }, [currentQuestionIndex]);
 
   const problem = problems[currentQuestionIndex];
 
@@ -73,7 +103,8 @@ export function ExamScreen({ config, onFinish }) {
             setCurrentDifficulty(question.difficulty || config.startingDifficulty);
             setLoading(false);
           }
-        }
+        },
+        config.freeResponseMode
       );
 
       if (generated && generated.length > 0) {
@@ -98,33 +129,285 @@ export function ExamScreen({ config, onFinish }) {
   }, [loading, currentQuestionIndex, problem]);
 
   useEffect(() => {
-    if (loading || !problem) return;
+    if (loading || !problem || workSubmitted) return;
+
+    if (isWholeTestMode && totalTimeLeft <= 0) {
+      handleGlobalTimeUp();
+      return;
+    }
 
     const timeForThisQuestion = questionTimesLeft[currentQuestionIndex];
-    if (timeForThisQuestion <= 0) return;
+    if (!isWholeTestMode && timeForThisQuestion <= 0) return;
 
     timerRef.current = setInterval(() => {
-      setQuestionTimesLeft((prev) => {
-        const next = [...prev];
+      if (isWholeTestMode) {
+        setTotalTimeLeft((prevTotal) => {
+          if (prevTotal <= 1) {
+            clearInterval(timerRef.current);
+            handleGlobalTimeUp();
+            return 0;
+          }
+          return prevTotal - 1;
+        });
+      }
+
+      setQuestionTimesLeft((prevTimes) => {
+        const next = [...prevTimes];
         const currentVal = next[currentQuestionIndex];
-        if (currentVal <= 1) {
-          clearInterval(timerRef.current);
-          handleTimeUp();
-          next[currentQuestionIndex] = 0;
+        if (isWholeTestMode) {
+          if (currentVal > 0) {
+            next[currentQuestionIndex] = currentVal - 1;
+          }
         } else {
-          next[currentQuestionIndex] = currentVal - 1;
+          if (currentVal <= 1) {
+            clearInterval(timerRef.current);
+            handleTimeUp();
+            next[currentQuestionIndex] = 0;
+          } else {
+            next[currentQuestionIndex] = currentVal - 1;
+          }
         }
         return next;
       });
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [loading, currentQuestionIndex, problem]);
+  }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft]);
 
   const handleTimeUp = () => {
-    if (config.stressMode === 'strict') {
+    if (config.freeResponseMode) {
+      handleAutoTimeoutSubmit();
+    } else if (config.stressMode === 'strict') {
       submitStrictAnswer(true);
     }
+  };
+
+  const handleGlobalTimeUp = async () => {
+    clearInterval(timerRef.current);
+    alert("Test time limit reached! Auto-submitting your exam.");
+
+    let activeQuestionFinalVal = answers[currentQuestionIndex] || '';
+    if (config.freeResponseMode && !activeQuestionFinalVal) {
+      let imagePayload = null;
+      if (whiteboardRef.current) {
+        imagePayload = whiteboardRef.current.getDataURL();
+      }
+
+      if (imagePayload) {
+        setTranscribing(true);
+        try {
+          const res = await fetch('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: imagePayload })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            activeQuestionFinalVal = data.transcription || '[Time Out]';
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setTranscribing(false);
+        }
+      } else {
+        activeQuestionFinalVal = '[Time Out]';
+      }
+    }
+
+    const finalAnswers = [...answers];
+    finalAnswers[currentQuestionIndex] = activeQuestionFinalVal || '[Time Out]';
+
+    const finalResults = problems.map((prob, idx) => {
+      const userAnswer = finalAnswers[idx] || '';
+      const timeSpent = isWholeTestMode 
+        ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
+        : config.timeLimitPerQuestion - questionTimesLeft[idx];
+      const isTimeout = idx === currentQuestionIndex || !userAnswer;
+      
+      return {
+        ...prob,
+        userAnswer: userAnswer || '[Time Out]',
+        isCorrect: false,
+        timeSpent: Math.max(0, timeSpent),
+        timeOut: isTimeout,
+        difficultyAtTime: prob.difficulty || config.startingDifficulty,
+        frqSubmission: frqSubmissions[idx]
+      };
+    });
+
+    onFinish(finalResults);
+  };
+
+  const handleAutoTimeoutSubmit = async () => {
+    let finalValue = '[Time Out]';
+    let imagePayload = null;
+    if (whiteboardRef.current) {
+      imagePayload = whiteboardRef.current.getDataURL();
+    }
+
+    const updatedSubmissions = [...frqSubmissions];
+    updatedSubmissions[currentQuestionIndex] = {
+      type: 'whiteboard',
+      value: imagePayload || '[Time Out]'
+    };
+    setFrqSubmissions(updatedSubmissions);
+
+    if (imagePayload) {
+      setTranscribing(true);
+      try {
+        const res = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imagePayload })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          finalValue = data.transcription || '[Time Out]';
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setTranscribing(false);
+      }
+    }
+
+    setAnswers(prev => {
+      const next = [...prev];
+      next[currentQuestionIndex] = finalValue;
+      return next;
+    });
+
+    const isLast = currentQuestionIndex + 1 >= config.numQuestions;
+    if (isLast) {
+      handleFinishFRQExam();
+    } else {
+      setCurrentQuestionIndex(prev => prev + 1);
+    }
+  };
+
+  const handleConfirmFRQSubmit = async () => {
+    let finalValue = '';
+    let imagePayload = null;
+
+    if (submitType === 'whiteboard') {
+      if (whiteboardRef.current) {
+        imagePayload = whiteboardRef.current.getDataURL() || whiteboardPreview;
+      } else {
+        imagePayload = whiteboardPreview;
+      }
+    } else if (submitType === 'image') {
+      imagePayload = uploadedImage;
+    } else {
+      finalValue = typedWork;
+    }
+
+    // Save metadata
+    const updatedSubmissions = [...frqSubmissions];
+    updatedSubmissions[currentQuestionIndex] = {
+      type: submitType,
+      value: imagePayload || finalValue
+    };
+    setFrqSubmissions(updatedSubmissions);
+
+    if (imagePayload) {
+      setTranscribing(true);
+      try {
+        const res = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imagePayload })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          finalValue = data.transcription || '[Image transcription failed]';
+        } else {
+          finalValue = '[Image transcription API error]';
+        }
+      } catch (err) {
+        console.error(err);
+        finalValue = '[Image transcription network error]';
+      } finally {
+        setTranscribing(false);
+      }
+    }
+
+    setAnswers(prev => {
+      const next = [...prev];
+      next[currentQuestionIndex] = finalValue;
+      return next;
+    });
+
+    const isLast = currentQuestionIndex + 1 >= config.numQuestions;
+    
+    if (config.stressMode === 'strict') {
+      clearInterval(timerRef.current);
+      const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[currentQuestionIndex];
+      
+      const questionResult = {
+        ...problem,
+        userAnswer: finalValue,
+        isCorrect: false, // graded at the end
+        timeSpent,
+        timeOut: false,
+        difficultyAtTime: problem.difficulty || currentDifficulty,
+        frqSubmission: {
+          type: submitType,
+          value: imagePayload || finalValue
+        }
+      };
+
+      const updatedResults = [...results, questionResult];
+      setResults(updatedResults);
+
+      if (isLast) {
+        handleFinishFRQExam(updatedResults);
+      } else {
+        const nextIndex = currentQuestionIndex + 1;
+        setCurrentQuestionIndex(nextIndex);
+      }
+    } else {
+      if (isLast) {
+        handleFinishFRQExam();
+      } else {
+        const nextIndex = currentQuestionIndex + 1;
+        setCurrentQuestionIndex(nextIndex);
+      }
+    }
+  };
+
+  const handleFinishFRQExam = (strictResults = null) => {
+    clearInterval(timerRef.current);
+    
+    let finalResults;
+    if (strictResults) {
+      finalResults = strictResults;
+    } else {
+      finalResults = problems.map((prob, idx) => {
+        const userAnswer = answers[idx] || '';
+        const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[idx];
+        const isTimeout = questionTimesLeft[idx] <= 0;
+        
+        return {
+          ...prob,
+          userAnswer: isTimeout && !userAnswer ? '[Time Out]' : userAnswer,
+          isCorrect: false, // graded at the end
+          timeSpent,
+          timeOut: isTimeout,
+          difficultyAtTime: prob.difficulty || config.startingDifficulty,
+          frqSubmission: frqSubmissions[idx]
+        };
+      });
+    }
+    
+    onFinish(finalResults);
+  };
+
+  const handleReadyToSubmit = () => {
+    if (whiteboardRef.current) {
+      setWhiteboardPreview(whiteboardRef.current.getDataURL());
+    }
+    setWorkSubmitted(true);
   };
 
   const submitStrictAnswer = (isTimeout = false) => {
@@ -210,6 +493,16 @@ export function ExamScreen({ config, onFinish }) {
     );
   }
 
+  if (transcribing) {
+    return (
+      <div className="glass-panel animate-fade-in" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+        <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
+        <h3>AI Transcribing Your Work...</h3>
+        <p style={{ color: 'var(--text-secondary)' }}>Translating your drawings/uploaded work into textual explanations.</p>
+      </div>
+    );
+  }
+
   if (!problem) {
     return (
       <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
@@ -220,13 +513,13 @@ export function ExamScreen({ config, onFinish }) {
     );
   }
 
-  const activeTimeLeft = questionTimesLeft[currentQuestionIndex] ?? config.timeLimitPerQuestion;
+  const activeTimeLeft = questionTimesLeft[currentQuestionIndex] ?? (isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion);
   const isTimeOut = activeTimeLeft <= 0;
   const isLowTime = activeTimeLeft <= 10;
   const isHidden = config.stressMode === 'hidden' && !isLowTime;
   const isDynamicStress = config.stressMode === 'dynamic' && isLowTime;
 
-  const totalTime = config.timeLimitPerQuestion;
+  const totalTime = isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion;
   const percentage = Math.max(0, Math.min(100, (activeTimeLeft / totalTime) * 100));
 
   let progressColor = 'var(--success)';
@@ -237,6 +530,12 @@ export function ExamScreen({ config, onFinish }) {
   }
 
   const activeAnswer = answers[currentQuestionIndex] || '';
+  const isEditingLocked = isWholeTestMode ? (totalTimeLeft <= 0) : isTimeOut;
+
+  const formatTime = (seconds) => {
+    if (seconds <= 0) return '0:00';
+    return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="glass-panel animate-fade-in" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
@@ -253,18 +552,30 @@ export function ExamScreen({ config, onFinish }) {
           </div>
         </div>
 
-        <div className={`
-          ${isHidden ? 'hidden-timer' : ''} 
-          ${isDynamicStress ? 'stress-pulse stress-glitch' : ''}
-        `} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: '600', color: isLowTime ? 'var(--danger)' : 'var(--text-primary)' }}>
-          {isHidden ? (
-            <span style={{ color: 'var(--text-muted)' }}>Timer Hidden</span>
-          ) : (
-            <>
-              {isLowTime ? <AlertTriangle size={24} /> : <Clock size={24} />}
-              {isTimeOut ? 'Time Out' : `${Math.floor(activeTimeLeft / 60)}:${(activeTimeLeft % 60).toString().padStart(2, '0')}`}
-            </>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+          {isWholeTestMode && (
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Clock size={14} /> Total Exam Left: <strong style={{ color: totalTimeLeft <= 60 ? 'var(--danger)' : 'var(--text-primary)' }}>{formatTime(totalTimeLeft)}</strong>
+            </div>
           )}
+          <div className={`
+            ${isHidden ? 'hidden-timer' : ''} 
+            ${isDynamicStress ? 'stress-pulse stress-glitch' : ''}
+          `} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', fontWeight: '600', color: isEditingLocked ? 'var(--danger)' : 'var(--text-primary)' }}>
+            {isHidden ? (
+              <span style={{ color: 'var(--text-muted)' }}>Timer Hidden</span>
+            ) : (
+              <>
+                {isEditingLocked ? <AlertTriangle size={18} /> : <Clock size={18} />}
+                <span>
+                  {isWholeTestMode 
+                    ? `Recommended: ${formatTime(activeTimeLeft)} ${isTimeOut ? '(Overrun)' : ''}`
+                    : (isTimeOut ? 'Time Out' : formatTime(activeTimeLeft))
+                  }
+                </span>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -288,7 +599,7 @@ export function ExamScreen({ config, onFinish }) {
         </div>
       )}
 
-      {isTimeOut && (
+      {isEditingLocked && (
         <div style={{ 
           background: 'var(--danger-glass)', 
           border: '1px solid var(--danger)', 
@@ -301,107 +612,272 @@ export function ExamScreen({ config, onFinish }) {
           alignItems: 'center',
           gap: '0.5rem'
         }}>
-          <AlertTriangle size={18} /> Time limit reached for this question. Edits are locked.
+          <AlertTriangle size={18} /> Time limit reached. Edits are locked.
         </div>
       )}
 
-      <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
-        <p><ChemicalText text={problem.question} theme="dark" /></p>
-      </div>
+      {!isEditingLocked && isTimeOut && isWholeTestMode && (
+        <div style={{ 
+          background: 'rgba(245, 158, 11, 0.1)', 
+          border: '1px solid var(--warning)', 
+          borderRadius: 'var(--radius-sm)', 
+          padding: '0.75rem 1rem', 
+          marginBottom: '1.5rem', 
+          color: 'var(--warning)', 
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <AlertTriangle size={18} /> Recommended question time limit exceeded. You can still modify and submit your work.
+        </div>
+      )}
 
-      {problem.type === 'multiple_choice' && problem.options && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-          {problem.options.map((opt, i) => {
-            const letter = ['A', 'B', 'C', 'D'][i];
-            const isSelected = activeAnswer === opt;
-            return (
-              <button 
-                key={i} 
-                className={`btn btn-outline ${isSelected ? 'selected' : ''}`}
-                style={{ 
-                  justifyContent: 'flex-start', 
-                  background: isSelected ? 'var(--bg-tertiary)' : 'transparent', 
-                  borderColor: isSelected ? 'var(--accent-primary)' : '',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  minHeight: '48px',
-                  padding: '0.5rem 1rem'
-                }}
-                onClick={() => handleAnswerSelect(opt)}
-                disabled={isTimeOut}
+      {config.freeResponseMode ? (
+        workSubmitted ? (
+          <div>
+            <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+              <h3 className="text-gradient" style={{ marginBottom: '0.5rem' }}>Select Submission Method</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Confirm how you would like to submit your solution for Question {currentQuestionIndex + 1}.</p>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '2rem' }}>
+              <button
+                className={`btn ${submitType === 'whiteboard' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ flexDirection: 'column', padding: '1rem 0.5rem', height: 'auto', gap: '0.5rem' }}
+                onClick={() => setSubmitType('whiteboard')}
               >
-                <span style={{ fontWeight: '700', marginRight: '0.5rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
-                  {letter}.
-                </span>
-                {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
+                <ImageIcon size={24} />
+                <span style={{ fontSize: '0.9rem' }}>Submit Whiteboard</span>
               </button>
-            );
-          })}
-        </div>
+              <button
+                className={`btn ${submitType === 'image' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ flexDirection: 'column', padding: '1rem 0.5rem', height: 'auto', gap: '0.5rem' }}
+                onClick={() => setSubmitType('image')}
+              >
+                <Upload size={24} />
+                <span style={{ fontSize: '0.9rem' }}>Upload Image</span>
+              </button>
+              <button
+                className={`btn ${submitType === 'text' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ flexDirection: 'column', padding: '1rem 0.5rem', height: 'auto', gap: '0.5rem' }}
+                onClick={() => setSubmitType('text')}
+              >
+                <Type size={24} />
+                <span style={{ fontSize: '0.9rem' }}>Type It Out</span>
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: '1.5rem', marginBottom: '2rem' }}>
+              {submitType === 'whiteboard' && (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>Your whiteboard drawing preview:</p>
+                  {whiteboardPreview ? (
+                    <img 
+                      src={whiteboardPreview} 
+                      alt="Whiteboard Preview" 
+                      style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }} 
+                    />
+                  ) : (
+                    <p style={{ color: 'var(--text-muted)' }}>No drawing detected.</p>
+                  )}
+                </div>
+              )}
+
+              {submitType === 'image' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ border: '2px dashed var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: '2rem', textAlign: 'center', cursor: 'pointer', position: 'relative' }}>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setUploadedFileName(file.name);
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setUploadedImage(event.target.result);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <Upload size={32} style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', margin: '0 auto' }} />
+                    <p style={{ fontSize: '0.9rem' }}>{uploadedFileName || "Click or drag file to upload work image"}</p>
+                  </div>
+                  {uploadedImage && (
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Image Preview:</p>
+                      <img 
+                        src={uploadedImage} 
+                        alt="Uploaded Preview" 
+                        style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }} 
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {submitType === 'text' && (
+                <div>
+                  <textarea
+                    placeholder="Type your equations, solution process, explanation, and final answer here..."
+                    className="input-field"
+                    style={{ width: '100%', height: '150px', resize: 'vertical' }}
+                    value={typedWork}
+                    onChange={(e) => setTypedWork(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button 
+                className="btn btn-outline" 
+                onClick={() => setWorkSubmitted(false)}
+              >
+                <ArrowLeft size={18} /> Edit Drawing
+              </button>
+              
+              <button 
+                className="btn btn-primary" 
+                onClick={handleConfirmFRQSubmit}
+                disabled={
+                  isEditingLocked ||
+                  (submitType === 'image' && !uploadedImage) ||
+                  (submitType === 'text' && !typedWork.trim())
+                }
+              >
+                Confirm & Submit <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
+              <p><ChemicalText text={problem.question} theme="dark" /></p>
+            </div>
+
+            <div style={{ marginBottom: '2rem' }}>
+              <span style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Show Your Process / Explanation:</span>
+              <Whiteboard ref={whiteboardRef} />
+            </div>
+
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} 
+              onClick={handleReadyToSubmit}
+              disabled={isEditingLocked}
+            >
+              Ready to submit
+            </button>
+          </div>
+        )
+      ) : (
+        <>
+          <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
+            <p><ChemicalText text={problem.question} theme="dark" /></p>
+          </div>
+
+          {problem.type === 'multiple_choice' && problem.options && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
+              {problem.options.map((opt, i) => {
+                const letter = ['A', 'B', 'C', 'D'][i];
+                const isSelected = activeAnswer === opt;
+                return (
+                  <button 
+                    key={i} 
+                    className={`btn btn-outline ${isSelected ? 'selected' : ''}`}
+                    style={{ 
+                      justifyContent: 'flex-start', 
+                      background: isSelected ? 'var(--bg-tertiary)' : 'transparent', 
+                      borderColor: isSelected ? 'var(--accent-primary)' : '',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      minHeight: '48px',
+                      padding: '0.5rem 1rem'
+                    }}
+                    onClick={() => handleAnswerSelect(opt)}
+                    disabled={isEditingLocked}
+                  >
+                    <span style={{ fontWeight: '700', marginRight: '0.5rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                      {letter}.
+                    </span>
+                    {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {problem.type === 'short_answer' && (
+            <div style={{ marginBottom: '2rem' }}>
+              <input 
+                type="text" 
+                placeholder="Type your answer here..." 
+                className="input-field" 
+                value={activeAnswer}
+                onChange={(e) => handleAnswerSelect(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && activeAnswer.trim() && (config.stressMode === 'strict' ? submitStrictAnswer() : handleFinishExam())}
+                disabled={isEditingLocked}
+              />
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {config.stressMode !== 'strict' && (
+              <button 
+                className="btn btn-outline" 
+                disabled={currentQuestionIndex === 0}
+                onClick={() => {
+                  clearInterval(timerRef.current);
+                  setCurrentQuestionIndex(prev => prev - 1);
+                }}
+              >
+                Previous
+              </button>
+            )}
+            
+            <div style={{ flex: 1 }} />
+
+            {config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
+              <button 
+                className="btn btn-outline" 
+                style={{ marginRight: '0.75rem' }}
+                onClick={() => {
+                  clearInterval(timerRef.current);
+                  setCurrentQuestionIndex(prev => prev + 1);
+                }}
+              >
+                Next
+              </button>
+            )}
+
+            <button 
+              className="btn btn-primary" 
+              disabled={config.stressMode === 'strict' && !activeAnswer.trim()}
+              onClick={() => {
+                if (config.stressMode === 'strict') {
+                  submitStrictAnswer();
+                } else {
+                  handleFinishExam();
+                }
+              }}
+            >
+              {config.stressMode === 'strict' 
+                ? (currentQuestionIndex + 1 === config.numQuestions ? 'Finish Exam' : 'Next Question')
+                : 'Finish Exam'
+              } 
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        </>
       )}
-
-      {problem.type === 'short_answer' && (
-        <div style={{ marginBottom: '2rem' }}>
-          <input 
-            type="text" 
-            placeholder="Type your answer here..." 
-            className="input-field" 
-            value={activeAnswer}
-            onChange={(e) => handleAnswerSelect(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && activeAnswer.trim() && (config.stressMode === 'strict' ? submitStrictAnswer() : handleFinishExam())}
-            disabled={isTimeOut}
-          />
-        </div>
-      )}
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {config.stressMode !== 'strict' && (
-          <button 
-            className="btn btn-outline" 
-            disabled={currentQuestionIndex === 0}
-            onClick={() => {
-              clearInterval(timerRef.current);
-              setCurrentQuestionIndex(prev => prev - 1);
-            }}
-          >
-            Previous
-          </button>
-        )}
-        
-        <div style={{ flex: 1 }} />
-
-        {config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
-          <button 
-            className="btn btn-outline" 
-            style={{ marginRight: '0.75rem' }}
-            onClick={() => {
-              clearInterval(timerRef.current);
-              setCurrentQuestionIndex(prev => prev + 1);
-            }}
-          >
-            Next
-          </button>
-        )}
-
-        <button 
-          className="btn btn-primary" 
-          disabled={config.stressMode === 'strict' && !activeAnswer.trim()}
-          onClick={() => {
-            if (config.stressMode === 'strict') {
-              submitStrictAnswer();
-            } else {
-              handleFinishExam();
-            }
-          }}
-        >
-          {config.stressMode === 'strict' 
-            ? (currentQuestionIndex + 1 === config.numQuestions ? 'Finish Exam' : 'Next Question')
-            : 'Finish Exam'
-          } 
-          <ArrowRight size={18} />
-        </button>
-      </div>
       
       {/* Progress Bar */}
       <div style={{ marginTop: '2rem', height: '4px', background: 'var(--bg-tertiary)', borderRadius: '2px', overflow: 'hidden' }}>

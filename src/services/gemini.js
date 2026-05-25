@@ -182,7 +182,7 @@ async function readSSEStream(response, onQuestion) {
  *                                for each question the moment it fully arrives.
  * @returns {Promise<Array>} Resolves with the complete array of question objects.
  */
-export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null) {
+export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false) {
     // Attempt to call Vercel Serverless Function first in production or if VITE_USE_VERCEL_API is enabled
     if (import.meta.env.PROD || import.meta.env.VITE_USE_VERCEL_API) {
         try {
@@ -195,7 +195,8 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
                     count,
                     startingDifficulty,
                     subject,
-                    targetUserId: username
+                    targetUserId: username,
+                    freeResponseMode
                 }),
             });
 
@@ -226,14 +227,24 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
         const mockProblems = [];
         for (let i = 0; i < count; i++) {
             const diff = Math.min(10, Math.max(1, startingDifficulty + (i % 2 === 0 ? 1 : -1) * Math.floor(i / 2)));
-            mockProblems.push({
-                id: `${Date.now()}-${i}`,
-                question: `Mock ${subject} Problem ${i + 1} (Difficulty: ${diff}): What is ${i + 1} + ${diff}?`,
-                type: i % 2 === 0 ? "multiple_choice" : "short_answer",
-                options: i % 2 === 0 ? [`${i + 1 + diff}`, `${i + 2 + diff}`, `${i + 3 + diff}`, `${i + 4 + diff}`] : undefined,
-                answer: `${i + 1 + diff}`,
-                difficulty: diff
-            });
+            if (freeResponseMode) {
+                mockProblems.push({
+                    id: `${Date.now()}-${i}`,
+                    question: `Mock ${subject} FRQ Problem ${i + 1} (Difficulty: ${diff}): Explain and solve for $x$ in the equation $${diff}x + ${i + 1} = ${diff * 2 + i + 1}$.`,
+                    type: "free_response",
+                    answer: `Subtract ${i + 1} from both sides to get $${diff}x = ${diff * 2}$. Then divide by $${diff}$ to get $x = 2$.`,
+                    difficulty: diff
+                });
+            } else {
+                mockProblems.push({
+                    id: `${Date.now()}-${i}`,
+                    question: `Mock ${subject} Problem ${i + 1} (Difficulty: ${diff}): What is ${i + 1} + ${diff}?`,
+                    type: i % 2 === 0 ? "multiple_choice" : "short_answer",
+                    options: i % 2 === 0 ? [`${i + 1 + diff}`, `${i + 2 + diff}`, `${i + 3 + diff}`, `${i + 4 + diff}`] : undefined,
+                    answer: `${i + 1 + diff}`,
+                    difficulty: diff
+                });
+            }
         }
         if (onQuestion) mockProblems.forEach((q, i) => onQuestion(q, i));
         return mockProblems;
@@ -269,6 +280,19 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
     `;
     }
 
+    const isFreeResponse = !!freeResponseMode;
+    const questionTypeDesc = isFreeResponse 
+      ? `"free_response"` 
+      : `"multiple_choice" or "short_answer"`;
+
+    const optionsDesc = isFreeResponse
+      ? ""
+      : `\n    "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice`;
+
+    const answerDesc = isFreeResponse
+      ? `"An empty string '' (to save tokens; the solution will be determined by the grading AI during evaluation)"`
+      : `"For multiple_choice, this MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index. For short_answer, this must be the exact correct numeric or short text answer string."`;
+
     const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
 
 ${subjectContext}
@@ -277,10 +301,9 @@ The output must be a pure JSON array containing exactly the requested number of 
 {
     "id": "A unique string ID",
     "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
-    "question": "The text of the question. It should be challenging and clear.",
-    "type": "multiple_choice" or "short_answer",
-    "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
-    "answer": "For multiple_choice, this MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index. For short_answer, this must be the exact correct numeric or short text answer string.",
+    "question": "The text of the question. It should be challenging, clear, and require multi-step working suitable for a free-response solution.",
+    "type": ${questionTypeDesc},${optionsDesc}
+    "answer": ${answerDesc},
     "difficulty": a number between 1 and 10 representing difficulty
 }
 Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;

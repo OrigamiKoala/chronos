@@ -30,12 +30,16 @@ const getSubjectLevelName = (subject, rating) => {
 export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chemistry: 100 }, onSubjectChange }) {
   const [config, setConfig] = useState(() => {
     const saved = localStorage.getItem('chronos_exam_config');
-    return saved ? JSON.parse(saved) : {
-      subject: 'Math',
-      startingDifficulty: 5,
-      numQuestions: 5,
-      stressMode: 'dynamic', // 'none', 'hidden', 'strict', 'dynamic'
-      timeLimitPerQuestion: 60, // seconds
+    const parsed = saved ? JSON.parse(saved) : null;
+    return {
+      subject: parsed?.subject || 'Math',
+      startingDifficulty: parsed?.startingDifficulty || 5,
+      numQuestions: parsed?.numQuestions || 5,
+      stressMode: parsed?.stressMode || 'dynamic',
+      timeLimitPerQuestion: parsed?.timeLimitPerQuestion || 60,
+      timeLimitWholeTest: parsed?.timeLimitWholeTest || 30,
+      timeLimitStyle: parsed?.timeLimitStyle || 'per_question',
+      freeResponseMode: parsed?.freeResponseMode || false,
     };
   });
 
@@ -100,6 +104,19 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           </div>
         </div>
 
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Exam Format</label>
+          <select 
+            name="freeResponseMode" 
+            value={config.freeResponseMode ? 'true' : 'false'} 
+            onChange={(e) => setConfig(prev => ({ ...prev, freeResponseMode: e.target.value === 'true' }))} 
+            className="input-field"
+          >
+            <option value="false">Standard (Multiple Choice & Short Answer)</option>
+            <option value="true">Free Response (Whiteboard + AI Transcribe + AI Grade)</option>
+          </select>
+        </div>
+
         {config.subject === 'Math' && (
           <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
             <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Math Difficulty Scale Reference:</span>
@@ -153,12 +170,29 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             </select>
           </div>
 
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-              <Timer size={16} /> Time Per Question (Seconds)
-            </label>
-            <input type="number" name="timeLimitPerQuestion" min="10" max="300" value={config.timeLimitPerQuestion} onChange={handleChange} className="input-field" />
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Time Limit Style</label>
+            <select name="timeLimitStyle" value={config.timeLimitStyle} onChange={handleChange} className="input-field">
+              <option value="per_question">Time Limit Per Question</option>
+              <option value="whole_test">Time Limit For Whole Test</option>
+            </select>
           </div>
+
+          {config.timeLimitStyle === 'whole_test' ? (
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                <Timer size={16} /> Total Test Time (Minutes)
+              </label>
+              <input type="number" name="timeLimitWholeTest" min="1" max="180" value={config.timeLimitWholeTest} onChange={handleChange} className="input-field" />
+            </div>
+          ) : (
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                <Timer size={16} /> Time Per Question (Seconds)
+              </label>
+              <input type="number" name="timeLimitPerQuestion" min="10" max="300" value={config.timeLimitPerQuestion} onChange={handleChange} className="input-field" />
+            </div>
+          )}
         </div>
 
         <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }}>
