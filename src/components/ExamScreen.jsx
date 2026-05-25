@@ -6,7 +6,7 @@ import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 
 // Normalize an answer string for comparison:
 // strips $...$ / $$...$$, \text{}, \mathrm{} etc., LaTeX ~, and collapses whitespace
-function normalizeAnswer(str) {
+export function normalizeAnswer(str) {
   if (!str) return '';
   return str
     .replace(/\$\$([\s\S]*?)\$\$/g, '$1')   // strip $$...$$
@@ -16,6 +16,21 @@ function normalizeAnswer(str) {
     .replace(/\s+/g, ' ')                    // collapse whitespace
     .trim()
     .toLowerCase();
+}
+
+function isAnswerCorrect(prob, ans) {
+  if (!ans) return false;
+  if (prob.type === 'multiple_choice' && prob.options && Array.isArray(prob.options)) {
+    const getOptionIndex = (val, opts) => {
+      const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(val).trim().toUpperCase());
+      if (letterIdx !== -1) return letterIdx;
+      return opts.findIndex(o => normalizeAnswer(o) === normalizeAnswer(val));
+    };
+    const correctIdx = getOptionIndex(prob.answer, prob.options);
+    const userIdx = getOptionIndex(ans, prob.options);
+    return correctIdx !== -1 && correctIdx === userIdx;
+  }
+  return normalizeAnswer(ans) === normalizeAnswer(prob.answer);
 }
 
 export function ExamScreen({ config, onFinish }) {
@@ -116,7 +131,7 @@ export function ExamScreen({ config, onFinish }) {
     clearInterval(timerRef.current);
     const activeAnswer = answers[currentQuestionIndex] || '';
     const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[currentQuestionIndex];
-    const isCorrect = !isTimeout && normalizeAnswer(activeAnswer) === normalizeAnswer(problem.answer);
+    const isCorrect = !isTimeout && isAnswerCorrect(problem, activeAnswer);
 
     let nextDifficulty = currentDifficulty;
     if (isCorrect) {
@@ -161,7 +176,7 @@ export function ExamScreen({ config, onFinish }) {
       const userAnswer = answers[idx] || '';
       const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[idx];
       const isTimeout = questionTimesLeft[idx] <= 0;
-      const isCorrect = !isTimeout && normalizeAnswer(userAnswer) === normalizeAnswer(prob.answer);
+      const isCorrect = !isTimeout && isAnswerCorrect(prob, userAnswer);
       
       return {
         ...prob,
@@ -298,7 +313,7 @@ export function ExamScreen({ config, onFinish }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
           {problem.options.map((opt, i) => {
             const letter = ['A', 'B', 'C', 'D'][i];
-            const isSelected = activeAnswer === letter || activeAnswer === opt;
+            const isSelected = activeAnswer === opt;
             return (
               <button 
                 key={i} 
@@ -313,7 +328,7 @@ export function ExamScreen({ config, onFinish }) {
                   minHeight: '48px',
                   padding: '0.5rem 1rem'
                 }}
-                onClick={() => handleAnswerSelect(letter)}
+                onClick={() => handleAnswerSelect(opt)}
                 disabled={isTimeOut}
               >
                 <span style={{ fontWeight: '700', marginRight: '0.5rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>

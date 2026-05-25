@@ -15,6 +15,7 @@ import {
 } from 'chart.js';
 import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle as TriangleIcon, BookOpen, Save, Check } from 'lucide-react';
 import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
+import { normalizeAnswer } from './ExamScreen';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler);
 
@@ -75,7 +76,21 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   // Panic Points
   const panicPoints = results.filter(r => !r.isCorrect && r.timeSpent > (avgTime * 1.5));
 
-  const [activeExplanations, setActiveExplanations] = useState({});
+  const [activeExplanations, setActiveExplanations] = useState(() => {
+    const initial = {};
+    const list = resultsObj.results || [];
+    list.forEach((r, i) => {
+      if (r.aiExplanation) {
+        initial[i] = {
+          loading: false,
+          text: r.aiExplanation,
+          query: '',
+          remarkedCorrect: false
+        };
+      }
+    });
+    return initial;
+  });
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
 
   // Problem tagging state
@@ -185,16 +200,20 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         }
       }));
 
-      if (data.shouldRemarkCorrect) {
-        setLocalResults(prev => {
-          const next = [...prev];
-          if (next[index]) {
-            next[index] = { ...next[index], isCorrect: true };
-          }
-          return next;
-        });
+      setLocalResults(prev => {
+        const next = [...prev];
+        if (next[index]) {
+          next[index] = { 
+            ...next[index], 
+            aiExplanation: data.explanation,
+            isCorrect: data.shouldRemarkCorrect ? true : next[index].isCorrect
+          };
+        }
+        return next;
+      });
 
-        if (user && examId) {
+      if (user && examId) {
+        if (data.shouldRemarkCorrect) {
           fetch('/api/remark-correct', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -203,7 +222,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
               examId,
               questionId: problemObj.id,
               subject,
-              topic: problemObj.topic || 'General'
+              topic: problemObj.topic || 'General',
+              explanation: data.explanation
             })
           })
           .then(res => {
@@ -220,6 +240,24 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             }
           })
           .catch(err => console.error('Failed to update remark-correct in database:', err));
+        } else {
+          // Just save explanation
+          fetch('/api/save-explanation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: user.user_id,
+              examId,
+              questionId: problemObj.id,
+              explanation: data.explanation
+            })
+          })
+          .then(res => {
+            if (res.ok && onRefreshData) {
+              onRefreshData();
+            }
+          })
+          .catch(err => console.error('Failed to save explanation in database:', err));
         }
       }
 
@@ -602,19 +640,15 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                   <span style={{ color: 'var(--text-muted)' }}>Your Answer: </span>
                   <span style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)' }}>
                     {(() => {
+                      const ans = r.userAnswer;
                       if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
-                        const idx = ['A', 'B', 'C', 'D'].indexOf(String(r.userAnswer).trim().toUpperCase());
-                        if (idx !== -1 && r.options[idx]) {
-                          const opt = r.options[idx];
-                          return (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', verticalAlign: 'middle' }}>
-                              <strong>{r.userAnswer}.</strong>
-                              {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
-                            </span>
-                          );
+                        const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
+                        if (letterIdx !== -1 && r.options[letterIdx]) {
+                          const opt = r.options[letterIdx];
+                          return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" />;
                         }
                       }
-                      return isSmiles(r.userAnswer) ? <SmilesRenderer smiles={r.userAnswer} width={70} height={70} theme="dark" /> : <ChemicalText text={r.userAnswer} theme="dark" />;
+                      return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" />;
                     })()}
                   </span>
                 </div>
@@ -623,19 +657,15 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                     <span style={{ color: 'var(--text-muted)' }}>Correct Answer: </span>
                     <span style={{ color: 'var(--success)' }}>
                       {(() => {
+                        const ans = r.answer;
                         if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
-                          const idx = ['A', 'B', 'C', 'D'].indexOf(String(r.answer).trim().toUpperCase());
-                          if (idx !== -1 && r.options[idx]) {
-                            const opt = r.options[idx];
-                            return (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', verticalAlign: 'middle' }}>
-                                <strong>{r.answer}.</strong>
-                                {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
-                              </span>
-                            );
+                          const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
+                          if (letterIdx !== -1 && r.options[letterIdx]) {
+                            const opt = r.options[letterIdx];
+                            return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" />;
                           }
                         }
-                        return isSmiles(r.answer) ? <SmilesRenderer smiles={r.answer} width={70} height={70} theme="dark" /> : <ChemicalText text={r.answer} theme="dark" />;
+                        return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" />;
                       })()}
                     </span>
                   </div>

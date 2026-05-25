@@ -55,10 +55,10 @@ export default async function handler(req, res) {
     let questionFound = false;
     for (const r of results) {
       if (r.id === questionId) {
-        if (r.isCorrect) {
-          return res.status(200).json({ success: true, message: 'Already marked correct' });
-        }
         r.isCorrect = true;
+        if (req.body.explanation) {
+          r.aiExplanation = req.body.explanation;
+        }
         questionFound = true;
         break;
       }
