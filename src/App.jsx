@@ -76,8 +76,10 @@ function App() {
   };
 
   useEffect(() => {
-    localStorage.setItem('mock_exam_ratings', JSON.stringify(ratings));
-  }, [ratings]);
+    if (!user) {
+      localStorage.setItem('mock_exam_ratings', JSON.stringify(ratings));
+    }
+  }, [ratings, user]);
 
   // Auto-login on mount
   useEffect(() => {
@@ -171,6 +173,12 @@ function App() {
           });
           localStorage.setItem('chronos_logged_user', data.user.user_id);
           localStorage.setItem('chronos_logged_password', loginPassword);
+          localStorage.removeItem('chronos_guest_history');
+          localStorage.removeItem('chronos_guest_strengths');
+          localStorage.removeItem('chronos_guest_weaknesses');
+          localStorage.removeItem('chronos_guest_detailed_analysis');
+          localStorage.removeItem('chronos_guest_topic_breakdowns');
+          localStorage.removeItem('mock_exam_ratings');
           setShowLoginModal(false);
           // Clear modal fields
           setLoginPassword('');
