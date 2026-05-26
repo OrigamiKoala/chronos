@@ -3,6 +3,7 @@ import { BigQuery } from '@google-cloud/bigquery';
 import { GoogleGenAI } from '@google/genai';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
+const ELO_ALGORITHM_VERSION = 2;
 
 const bq = new BigQuery({
   projectId: projectId,
@@ -313,7 +314,8 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       }
 
       const K = isChallenged ? 32 : 250;
-      finalRatingChange = Math.round(K * (finalAccuracy - expectedScore));
+      const questionMultiplier = Math.sqrt(totalQuestions / 5);
+      finalRatingChange = Math.round(K * questionMultiplier * (finalAccuracy - expectedScore));
       finalNewRating = Math.max(100, currentRating + finalRatingChange);
     }
 

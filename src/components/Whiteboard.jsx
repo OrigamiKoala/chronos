@@ -195,7 +195,12 @@ export const Whiteboard = forwardRef(({ height = 1000 }, ref) => {
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)',
           maxHeight: '450px',
           overflowY: 'auto',
-          touchAction: 'none'
+          touchAction: 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          KhtmlUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none'
         }}
       >
         <canvas
@@ -204,7 +209,17 @@ export const Whiteboard = forwardRef(({ height = 1000 }, ref) => {
           onPointerMove={draw}
           onPointerUp={stopDrawing}
           onPointerLeave={stopDrawing}
-          style={{ display: 'block', width: '100%', height: `${height}px`, cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            height: `${height}px`,
+            cursor: tool === 'eraser' ? 'cell' : 'crosshair',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            KhtmlUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none'
+          }}
         />
       </div>
 

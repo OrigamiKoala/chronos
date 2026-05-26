@@ -77,6 +77,7 @@ export default async function handler(req, res) {
     const oldRating = hist.new_rating - hist.rating_change;
     const avgQuestionRating = hist.avg_time;
     const score = correctCount / totalCount;
+    const questionMultiplier = Math.sqrt(totalCount / 5);
 
     let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - oldRating) / 400));
     if (avgQuestionRating < oldRating) {
@@ -85,14 +86,14 @@ export default async function handler(req, res) {
 
     // Solve for original K factor (either 32 or 250)
     const originalScore = (correctCount - 1) / totalCount;
-    const diff32 = Math.round(32 * (originalScore - expectedScore));
-    const diff250 = Math.round(250 * (originalScore - expectedScore));
+    const diff32 = Math.round(32 * questionMultiplier * (originalScore - expectedScore));
+    const diff250 = Math.round(250 * questionMultiplier * (originalScore - expectedScore));
     let K = 250;
     if (Math.abs(diff32 - hist.rating_change) < Math.abs(diff250 - hist.rating_change)) {
       K = 32;
     }
 
-    const newRatingChange = Math.round(K * (score - expectedScore));
+    const newRatingChange = Math.round(K * questionMultiplier * (score - expectedScore));
     const newRatingVal = Math.max(100, oldRating + newRatingChange);
     const ratingDiff = newRatingVal - hist.new_rating;
 

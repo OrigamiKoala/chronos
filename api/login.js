@@ -11,7 +11,7 @@ const bq = new BigQuery({
   },
 });
 
-const ELO_ALGORITHM_VERSION = 1;
+const ELO_ALGORITHM_VERSION = 2;
 let schemaEnsured = false;
 
 export default async function handler(req, res) {
@@ -157,10 +157,13 @@ export default async function handler(req, res) {
     const needsRecalculation = currentEloVersion === null || currentEloVersion === undefined || currentEloVersion < ELO_ALGORITHM_VERSION;
 
     const allHistoryQuery = `
-      SELECT exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-      WHERE user_id = @username
-      ORDER BY created_at ASC
+      SELECT h.exam_id, h.subject, h.accuracy, h.avg_time, h.rating_change, h.new_rating, h.created_at,
+             r.results_json
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
+      LEFT JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
+      ON h.exam_id = r.exam_id AND h.user_id = r.user_id
+      WHERE h.user_id = @username
+      ORDER BY h.created_at ASC
     `;
     const masteryQuery = `
       SELECT sub_category, subject, accuracy_rate, total_count
@@ -202,6 +205,19 @@ export default async function handler(req, res) {
         const score = h.accuracy;
         const avgQuestionRating = h.avg_time;
 
+        let totalQuestions = 5;
+        if (h.results_json) {
+          try {
+            const resArray = JSON.parse(h.results_json);
+            if (Array.isArray(resArray)) {
+              totalQuestions = resArray.length;
+            }
+          } catch (e) {
+            console.error('Failed to parse results_json in login recalculation:', e);
+          }
+        }
+        const questionMultiplier = Math.sqrt(totalQuestions / 5);
+
         let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
         if (avgQuestionRating < currentRating) {
           expectedScore = Math.max(expectedScore, 0.75);
@@ -218,7 +234,7 @@ export default async function handler(req, res) {
         }
         
         const K = subjectChallenged[sub] ? 32 : 250;
-        const ratingChange = Math.round(K * (score - expectedScore));
+        const ratingChange = Math.round(K * questionMultiplier * (score - expectedScore));
         const newRating = Math.max(100, currentRating + ratingChange);
 
         if (h.rating_change !== ratingChange || h.new_rating !== newRating) {
