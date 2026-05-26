@@ -97,11 +97,14 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
 
 ${subjectContext}
 
+All questions generated MUST adhere to this critical design directive:
+- TRICKY BUT SOLVABLE: The question must be intentionally tricky, presenting sophisticated conceptual traps or subtle edge cases that penalize rote formula-plugging. Do NOT use obscure, highly specialized research-level details or graduate-level knowledge outside the competitive high school/introductory college syllabus. Problems must be completely solvable and scientifically rigorous if the user deeply understands core principles. Craft distractor options (for multiple_choice) to precisely match the results of common conceptual mistakes.
+
 The output must be pure JSON with the following schema:
 {
     "id": "A unique string ID",
     "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
-    "question": "The text of the question. It should be challenging and clear.",
+    "question": "The text of the question. It should be challenging, clear, and feature clever conceptual traps.",
     "type": "multiple_choice" or "short_answer",
     "options": ["Option A", "Option B", "Option C", "Option D"], // Provide ONLY if type is multiple_choice
     "answer": "For multiple_choice, this MUST be exactly 'A', 'B', 'C', or 'D' corresponding to the correct option index. For short_answer, this must be the exact correct numeric or short text answer string.",
@@ -109,7 +112,7 @@ The output must be pure JSON with the following schema:
 }
 Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
 
-    const prompt = `Generate a single ${subject} problem with a difficulty level of ${difficultyLevel} out of 10.`;
+    const prompt = `Generate a single tricky ${subject} problem with a difficulty level of ${difficultyLevel} out of 10. The question must feature a clever conceptual trap but remain completely solvable using standard core Olympiad syllabus knowledge. Do NOT use obscure research-level details.`;
 
     try {
         const response = await ai.models.generateContent({
@@ -314,6 +317,13 @@ ${subjectContext}
 
 For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 
+All questions generated MUST adhere to these critical design directives:
+1. QUESTION STYLE & TRICKINESS: Do NOT make every single question a trap question; instead, provide a mix of standard and tricky questions:
+   - For difficulty levels 1 to 4: Standard, straightforward conceptual or algorithmic questions must be used.
+   - For difficulty levels 5 to 10: Questions can either be tricky (presenting sophisticated conceptual traps or subtle edge cases that penalize rote formula-plugging) OR they can be standard, non-trick questions that are highly difficult and challenging in their own right (demanding deep logic, multi-step reasoning, or integration of multiple foundational concepts).
+   - Under no circumstances should any question require obscure, highly specialized research-level details or graduate-level knowledge outside the core competitive high school / introductory college syllabus. Problems must be completely solvable and scientifically/mathematically rigorous if the student deeply understands core principles. For multiple_choice questions involving traps, craft the distractor options to precisely match the results of common conceptual mistakes.
+2. BALANCED TOPIC DIVERSITY: The exam must cover a wide, diverse range of standard topics/subjects within the chosen field (e.g., for Chemistry, include thermodynamics, kinetics, stoichiometry, organic synthesis, coordination chemistry, etc.). Do NOT let any single topic dominate the entire exam. Distribute the questions evenly across a broad variety of core topics/subjects in the syllabus.
+
 The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
     "id": "A unique string ID",
@@ -325,7 +335,10 @@ The output must be a pure JSON array containing exactly the requested number of 
 }
 Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
 
-    const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.`;
+    const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+Follow these strict rules:
+1. Question Style: Provide a balanced mix of standard and tricky questions. Standard questions should only be generated for difficulty levels 1-4. For difficulty levels 5-10, make questions either tricky with conceptual traps, or standard but highly difficult in their own right. Do NOT use obscure, highly specialized research-level details.
+2. The exam must span a wide, diverse range of standard topics in ${subject}. Do NOT let any single topic dominate the entire exam. Distribute the questions across a broad variety of core topics in the standard syllabus.`;
 
     try {
         const stream = await ai.models.generateContentStream({

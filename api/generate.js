@@ -190,6 +190,13 @@ ${subjectSpecificInstructions}
 
 For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 
+All questions generated MUST adhere to these critical design directives:
+1. QUESTION STYLE & TRICKINESS: Do NOT make every single question a trap question; instead, provide a mix of standard and tricky questions:
+   - For difficulty levels 1 to 4: Standard, straightforward conceptual or algorithmic questions must be used.
+   - For difficulty levels 5 to 10: Questions can either be tricky (presenting sophisticated conceptual traps or subtle edge cases that penalize rote formula-plugging) OR they can be standard, non-trick questions that are highly difficult and challenging in their own right (demanding deep logic, multi-step reasoning, or integration of multiple foundational concepts).
+   - Under no circumstances should any question require obscure, highly specialized research-level details or graduate-level knowledge outside the core competitive high school / introductory college syllabus. Problems must be completely solvable and scientifically/mathematically rigorous if the student deeply understands core principles. For multiple_choice questions involving traps, craft the distractor options to precisely match the results of common conceptual mistakes.
+2. BALANCED TOPIC DIVERSITY & WEAKNESS WEIGHTING: The exam must cover a wide range of standard core subjects/topics within the chosen field. If a user's weak concepts are provided, allocate a minority of the questions (~30%, e.g., 1 out of 3, or 2 out of 5) to target those weaknesses, and dedicate the remaining majority (~70%) to a diverse selection of other core topics in the subject's standard syllabus, ensuring that no single topic (like electrochemistry) dominates the exam. If weaknesses are "None", distribute questions evenly across all core topics.
+
 The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
   "id": "A unique string ID",
@@ -204,7 +211,11 @@ Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
 
     const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
 
-Additionally, focus on these weak concepts of the user: ${weaknesses}.`;
+The user's identified weak concepts are: ${weaknesses}.
+Follow these strict rules:
+1. Question Style: Provide a balanced mix of standard and tricky questions. Standard questions should only be generated for difficulty levels 1-4. For difficulty levels 5-10, make questions either tricky with conceptual traps, or standard but highly difficult in their own right. Do NOT use obscure, highly specialized research-level details.
+2. The exam must span a wide, diverse range of standard topics in ${subject}. Do NOT let any single topic dominate the entire exam.
+3. Dedicated Distribution: Target the user's weak concepts (${weaknesses}) for approximately 30% of the questions. The remaining 70% of the questions MUST cover other diverse, standard subjects/topics in the ${subject} syllabus (e.g. for Chemistry, include thermodynamics, kinetics, stoichiometry, organic synthesis, coordination chemistry, etc.). If the weak concepts listed are "None", distribute all questions evenly across all main topics.`;
 
     // 3. Set SSE headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
