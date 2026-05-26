@@ -586,7 +586,7 @@ function App() {
           onClick={restart}
         >
           <BrainCircuit size={32} color="var(--accent-primary)" />
-          Chronos Bot
+          Chronos
         </div>
         <div>
           {user ? (
@@ -665,7 +665,7 @@ function App() {
         ) : (
           <>
             {currentScreen === 'setup' && (
-          <div style={{ display: 'grid', gridTemplateColumns: user ? '1fr 1fr' : '1fr', gap: '2rem', maxWidth: user ? '1200px' : '600px', margin: '0 auto', alignItems: 'stretch' }}>
+          <div className={`setup-grid ${user ? 'two-cols' : ''}`}>
             <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} />
             {user && (
               <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
