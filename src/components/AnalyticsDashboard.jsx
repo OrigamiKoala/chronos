@@ -292,7 +292,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
   if (loading) {
     return (
-      <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+      <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Loader2 className="animate-spin" size={48} style={{ margin: '0 auto 1rem', color: 'var(--accent-primary)' }} />
         <h3>Loading Analytics...</h3>
         <p style={{ color: 'var(--text-secondary)' }}>Crunching your performance data</p>
@@ -302,7 +302,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
   if (error) {
     return (
-      <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+      <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <p style={{ color: 'var(--danger)' }}>{error}</p>
         <button className="btn btn-primary" onClick={onBack} style={{ marginTop: '1rem' }}>
           <ArrowLeft size={16} /> Go Back
@@ -396,7 +396,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
           const entries = subjects.map(s => ({ subject: s, text: detailedAnalysis[s] })).filter(e => e.text);
           if (!entries.length) return null;
           return entries.map(({ subject, text }) => (
-            <div key={subject} className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2', padding: '1.5rem', background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 4px 20px -2px rgba(168,85,247,0.1)' }}>
+            <div key={subject} className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2', padding: 'var(--card-padding)', background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 4px 20px -2px rgba(168,85,247,0.1)' }}>
               <h4 className="analytics-chart-title" style={{ color: 'var(--accent-secondary)', marginBottom: '0.75rem' }}>
                 <Brain size={18} color="var(--accent-secondary)" /> {subject} Diagnosis
               </h4>
@@ -510,13 +510,13 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         const filteredW = selectedSubjectFilter === 'All' ? weaknesses : weaknesses.filter(w => w.subject === selectedSubjectFilter);
         if (filteredS.length === 0 && filteredW.length === 0) return null;
         return (
-          <div className="glass-panel" style={{ marginTop: '2rem', padding: '1.5rem' }}>
+          <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>
             <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
               <Target size={18} color="var(--success)" /> Strengths &amp; Weaknesses
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: selectedTopicDetail ? '0.75rem' : 0 }}>
               {filteredS.length > 0 && (
-                <div style={{ padding: '1rem', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 'var(--radius-md)' }}>
                   <h5 style={{ color: 'var(--success)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Strengths</h5>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                     {filteredS.map((s, i) => (
@@ -528,7 +528,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 </div>
               )}
               {filteredW.length > 0 && (
-                <div style={{ padding: '1rem', background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 'var(--radius-md)' }}>
                   <h5 style={{ color: 'var(--danger)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Weaknesses</h5>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                     {filteredW.map((w, i) => (
@@ -541,7 +541,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
               )}
             </div>
             {selectedTopicDetail && (
-              <div style={{ marginTop: '0.75rem', padding: '1.25rem', background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)', border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: 'var(--radius-md)' }}>
+              <div style={{ marginTop: '0.75rem', padding: 'var(--card-padding-sm)', background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)', border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: 'var(--radius-md)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                     Topic Detail: <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
@@ -571,7 +571,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
       {/* Past Exam History */}
       {history.length > 0 && (
-        <div className="glass-panel" style={{ marginTop: '2rem', padding: '1.5rem' }}>
+        <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>
           <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
             <TrendingUp size={18} color="var(--accent-primary)" /> Past Exam History
           </h4>
@@ -581,7 +581,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 key={i}
                 className="history-row"
                 onClick={() => loadingExamId === null && onReviewExam && onReviewExam(h)}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: onReviewExam ? 'pointer' : 'default', transition: 'all 0.2s ease' }}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)', padding: 'var(--card-padding-sm)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: onReviewExam ? 'pointer' : 'default', transition: 'all 0.2s ease' }}
               >
                 <div>
                   <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>

@@ -462,7 +462,7 @@ export function ExamScreen({ config, onFinish }) {
 
   if (loading) {
     return (
-      <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+      <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
         <h3>Generating Problems...</h3>
         <p style={{ color: 'var(--text-secondary)' }}>Preparing exam with {config.numQuestions} questions</p>
@@ -473,7 +473,7 @@ export function ExamScreen({ config, onFinish }) {
 
   if (transcribing) {
     return (
-      <div className="glass-panel animate-fade-in" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+      <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
         <h3>AI Transcribing Your Work...</h3>
         <p style={{ color: 'var(--text-secondary)' }}>Translating your drawings/uploaded work into textual explanations.</p>
@@ -483,7 +483,7 @@ export function ExamScreen({ config, onFinish }) {
 
   if (!problem) {
     return (
-      <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+      <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
         <h3>Loading next question...</h3>
         <p style={{ color: 'var(--text-secondary)' }}>Streaming question {currentQuestionIndex + 1} of {config.numQuestions}</p>
@@ -516,7 +516,7 @@ export function ExamScreen({ config, onFinish }) {
   };
 
   return (
-    <div className="glass-panel animate-fade-in" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
+    <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', maxWidth: '800px', margin: '0 auto' }}>
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
@@ -607,7 +607,7 @@ export function ExamScreen({ config, onFinish }) {
           background: 'var(--danger-glass)', 
           border: '1px solid var(--danger)', 
           borderRadius: 'var(--radius-sm)', 
-          padding: '0.75rem 1rem', 
+          padding: 'var(--input-padding)', 
           marginBottom: '1.5rem', 
           color: 'var(--danger)', 
           fontSize: '0.9rem',
@@ -624,7 +624,7 @@ export function ExamScreen({ config, onFinish }) {
           background: 'rgba(245, 158, 11, 0.1)', 
           border: '1px solid var(--warning)', 
           borderRadius: 'var(--radius-sm)', 
-          padding: '0.75rem 1rem', 
+          padding: 'var(--input-padding)', 
           marginBottom: '1.5rem', 
           color: 'var(--warning)', 
           fontSize: '0.9rem',
@@ -673,7 +673,7 @@ export function ExamScreen({ config, onFinish }) {
             </div>
 
             {/* Tab Content */}
-            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: '1.5rem', marginBottom: '2rem' }}>
+            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: 'var(--card-padding)', marginBottom: '2rem' }}>
               {submitType === 'whiteboard' && (
                 <div style={{ textAlign: 'center' }}>
                   <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>Your whiteboard drawing preview:</p>
@@ -691,7 +691,7 @@ export function ExamScreen({ config, onFinish }) {
 
               {submitType === 'image' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ border: '2px dashed var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: '2rem', textAlign: 'center', cursor: 'pointer', position: 'relative' }}>
+                  <div style={{ border: '2px dashed var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: 'var(--panel-padding)', textAlign: 'center', cursor: 'pointer', position: 'relative' }}>
                     <input 
                       type="file" 
                       accept="image/*" 

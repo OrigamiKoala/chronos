@@ -216,7 +216,7 @@ export const Whiteboard = forwardRef(({ height = 1000 }, ref) => {
           justifyContent: 'space-between', 
           alignItems: 'center', 
           gap: '1rem',
-          padding: '0.75rem 1rem', 
+          padding: 'var(--input-padding)', 
           background: 'var(--bg-tertiary)', 
           border: '1px solid var(--bg-glass-border)', 
           borderRadius: 'var(--radius-md)' 

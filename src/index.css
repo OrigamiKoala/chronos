@@ -41,6 +41,17 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.3s ease;
   --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Responsive Paddings */
+  --app-padding: 2rem;
+  --panel-padding: 2rem;
+  --panel-padding-lg: 4rem;
+  --card-padding: 1.5rem;
+  --card-padding-sm: 1rem;
+  --header-padding: 1rem 2rem;
+  --main-padding: 2rem 1rem;
+  --btn-padding: 0.75rem 1.5rem;
+  --input-padding: 0.75rem 1rem;
 }
 
 * {
@@ -95,7 +106,7 @@ input, select, textarea {
 .app-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: var(--app-padding);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -116,7 +127,7 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  padding: var(--btn-padding);
   border-radius: var(--radius-md);
   font-size: 1rem;
   font-weight: 500;
@@ -202,7 +213,7 @@ input, select, textarea {
   background: var(--bg-secondary);
   border: 1px solid var(--bg-glass-border);
   border-radius: var(--radius-md);
-  padding: 0.75rem 1rem;
+  padding: var(--input-padding);
   color: var(--text-primary);
   font-size: 1rem;
 }
@@ -336,6 +347,17 @@ input, select, textarea {
 }
 
 @media (max-width: 768px) {
+  :root {
+    --app-padding: 0.75rem;
+    --panel-padding: 1rem;
+    --panel-padding-lg: 1.5rem;
+    --card-padding: 1rem;
+    --card-padding-sm: 0.75rem;
+    --header-padding: 0.75rem 1rem;
+    --main-padding: 1rem 0.5rem;
+    --btn-padding: 0.5rem 1rem;
+    --input-padding: 0.5rem 0.75rem;
+  }
   .analytics-grid {
     grid-template-columns: 1fr;
   }

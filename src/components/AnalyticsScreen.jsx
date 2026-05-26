@@ -363,7 +363,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const hasAnyTags = Object.keys(tags).length > 0;
 
   return (
-    <div className="glass-panel animate-fade-in" style={{ padding: '2rem', maxWidth: '850px', margin: '0 auto' }}>
+    <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', maxWidth: '850px', margin: '0 auto' }}>
 
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
         <h2 className="text-gradient" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Session Complete</h2>
@@ -372,7 +372,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
 
-        <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
+        <div className="glass-panel" style={{ padding: 'var(--card-padding-sm)', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
           <Activity size={28} color="var(--accent-primary)" style={{ margin: '0 auto 0.75rem' }} />
           <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.85rem' }}>Accuracy</h4>
           <span style={{ fontSize: '1.75rem', fontWeight: '700', color: accuracy > 70 ? 'var(--success)' : accuracy > 40 ? 'var(--warning)' : 'var(--danger)' }}>
@@ -380,7 +380,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           </span>
         </div>
 
-        <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
+        <div className="glass-panel" style={{ padding: 'var(--card-padding-sm)', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
           <TrendingUp size={28} color={ratingChange >= 0 ? 'var(--success)' : 'var(--danger)'} style={{ margin: '0 auto 0.75rem' }} />
           <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.85rem' }}>Rating</h4>
           <span style={{ fontSize: '1.75rem', fontWeight: '700', color: ratingChange >= 0 ? 'var(--success)' : 'var(--danger)' }}>
@@ -391,7 +391,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           </span>
         </div>
 
-        <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
+        <div className="glass-panel" style={{ padding: 'var(--card-padding-sm)', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
           <Award size={28} color="var(--accent-secondary)" style={{ margin: '0 auto 0.75rem' }} />
           <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.85rem' }}>Efficiency</h4>
           <span style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>
@@ -400,7 +400,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           </span>
         </div>
 
-        <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
+        <div className="glass-panel" style={{ padding: 'var(--card-padding-sm)', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
           <Award size={28} color="var(--accent-secondary)" style={{ margin: '0 auto 0.75rem' }} />
           <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.85rem' }}>{subject} Level</h4>
           <span style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-primary)' }}>
@@ -410,7 +410,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       </div>
 
       {/* Points-per-Minute Chart */}
-      <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--bg-tertiary)', marginBottom: '2.5rem' }}>
+      <div className="glass-panel" style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', marginBottom: '2.5rem' }}>
         <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Activity size={18} color="var(--accent-primary)" /> Points Earned Per Minute
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '400', marginLeft: 'auto' }}>
@@ -449,7 +449,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       </div>
 
       {panicPoints.length > 0 && (
-        <div style={{ padding: '1.5rem', background: 'var(--danger-glass)', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger)', marginBottom: '2.5rem' }}>
+        <div style={{ padding: 'var(--card-padding)', background: 'var(--danger-glass)', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger)', marginBottom: '2.5rem' }}>
           <h3 style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <Activity size={20} /> Panic Points Detected
           </h3>
@@ -458,7 +458,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           </p>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {panicPoints.map((p, i) => (
-              <li key={i} style={{ background: 'var(--bg-primary)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem' }}>
+              <li key={i} style={{ background: 'var(--bg-primary)', padding: 'var(--card-padding-sm)', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem' }}>
                 <strong>Q:</strong> <ChemicalText text={p.question} theme="dark" /> <br />
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Time Spent: {p.timeSpent}s (Avg: {avgTime}s)</span>
               </li>
@@ -472,7 +472,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: selectedTopicDetail ? '0.75rem' : 0 }}>
             {subjectStrengths.length > 0 && (
-              <div style={{ padding: '1.25rem', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-md)' }}>
                 <h4 style={{ color: 'var(--success)', marginBottom: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <CheckCircle2 size={15} /> {subject} Strengths
                 </h4>
@@ -493,7 +493,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
               </div>
             )}
             {subjectWeaknesses.length > 0 && (
-              <div style={{ padding: '1.25rem', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-md)' }}>
                 <h4 style={{ color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <XCircle size={15} /> {subject} Weaknesses
                 </h4>
@@ -518,7 +518,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           {selectedTopicDetail && (
             <div style={{
               marginTop: '0.75rem',
-              padding: '1.25rem',
+              padding: 'var(--card-padding-sm)',
               background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)',
               border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`,
               borderRadius: 'var(--radius-md)'
@@ -551,7 +551,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       {/* Detailed Diagnosis */}
       {subjectDiagnosis && (
         <div style={{
-          padding: '1.5rem',
+          padding: 'var(--card-padding)',
           background: 'rgba(168, 85, 247, 0.05)',
           borderRadius: 'var(--radius-md)',
           border: '1px solid rgba(168, 85, 247, 0.2)',
@@ -569,7 +569,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
 
       {resultsObj.mistakePatterns && (
         <div style={{ 
-          padding: '1.5rem', 
+          padding: 'var(--card-padding)', 
           background: 'rgba(168, 85, 247, 0.05)', 
           borderRadius: 'var(--radius-md)', 
           border: '1px solid rgba(168, 85, 247, 0.2)', 
@@ -591,7 +591,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
-          padding: '1rem 1.25rem', 
+          padding: 'var(--card-padding-sm)', 
           background: 'rgba(99, 102, 241, 0.05)', 
           border: '1px solid rgba(99, 102, 241, 0.15)', 
           borderRadius: 'var(--radius-md)', 
@@ -629,7 +629,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             const isPartial = r.score !== undefined && r.score > 0 && r.score < 1;
             const statusColor = isPartial ? 'var(--warning)' : (r.isCorrect ? 'var(--success)' : 'var(--danger)');
             return (
-              <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderLeft: `4px solid ${statusColor}` }}>
+              <div key={i} className="glass-panel" style={{ padding: 'var(--card-padding)', borderLeft: `4px solid ${statusColor}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>Question {i + 1} (Level {r.difficultyAtTime})</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: statusColor }}>
@@ -689,7 +689,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                 {r.feedback && (
                   <div style={{
                     marginTop: '1rem',
-                    padding: '1rem',
+                    padding: 'var(--card-padding-sm)',
                     background: 'rgba(255, 255, 255, 0.01)',
                     border: `1px dashed ${statusColor}`,
                     borderRadius: 'var(--radius-sm)',
@@ -802,7 +802,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                         type="text" 
                         placeholder="Ask a follow-up or custom question..." 
                         className="input-field" 
-                        style={{ flex: 1, padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                        style={{ flex: 1, padding: 'var(--input-padding)', fontSize: '0.85rem' }}
                         value={activeExplanations[i].query || ''}
                         onChange={(e) => updateExplanationQuery(i, e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && activeExplanations[i].query?.trim() && handleAskAI(i, r, activeExplanations[i].query)}
@@ -840,7 +840,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                 onClick={() => loadingExamId === null && onReviewExam && onReviewExam(h)}
                 style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  background: 'var(--bg-tertiary)', padding: '0.75rem',
+                  background: 'var(--bg-tertiary)', padding: 'var(--card-padding-sm)',
                   borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)',
                   fontSize: '0.85rem', cursor: onReviewExam ? 'pointer' : 'default',
                   transition: 'all 0.2s ease'

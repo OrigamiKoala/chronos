@@ -579,7 +579,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem' }}>
+      <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--header-padding)' }}>
         <div 
           className="logo text-gradient" 
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
@@ -655,9 +655,9 @@ function App() {
         </div>
       </header>
 
-      <main className="animate-fade-in" style={{ padding: '2rem 1rem' }}>
+      <main className="animate-fade-in" style={{ padding: 'var(--main-padding)' }}>
         {gradingLoading ? (
-          <div className="glass-panel animate-fade-in" style={{ padding: '4rem', textAlign: 'center', maxWidth: '600px', margin: '4rem auto' }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '4rem auto' }}>
             <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
             <h3>AI Grading Your Exam...</h3>
             <p style={{ color: 'var(--text-secondary)' }}>Critically deriving correct solutions, analyzing your step-by-step logic, and calculating partial credit.</p>
@@ -668,13 +668,13 @@ function App() {
           <div style={{ display: 'grid', gridTemplateColumns: user ? '1fr 1fr' : '1fr', gap: '2rem', maxWidth: user ? '1200px' : '600px', margin: '0 auto', alignItems: 'stretch' }}>
             <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} />
             {user && (
-              <div className="glass-panel animate-fade-in" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+              <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
                 <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Award size={24} /> {user.user_id}'s {selectedSubject} Analytics Dashboard
                 </h3>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <div style={{ padding: '1rem', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
                     <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Strengths</h4>
                     {filteredStrengths.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
@@ -702,7 +702,7 @@ function App() {
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal strengths!</span>
                     )}
                   </div>
-                  <div style={{ padding: '1rem', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-sm)' }}>
                     <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Weaknesses</h4>
                     {filteredWeaknesses.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
@@ -735,7 +735,7 @@ function App() {
                 {selectedTopicDetail && (
                   <div style={{ 
                     marginBottom: '1.5rem', 
-                    padding: '1.25rem', 
+                    padding: 'var(--card-padding-sm)', 
                     background: selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.03)' : 'rgba(248, 113, 113, 0.03)', 
                     border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)'}`, 
                     borderRadius: 'var(--radius-md)',
@@ -867,7 +867,7 @@ function App() {
       {/* Sign-In Conversion Warning Modal */}
       {showConversionPrompt && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', width: '90%', maxWidth: '440px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '440px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <BrainCircuit size={40} color="var(--accent-primary)" style={{ margin: '0 auto 1rem' }} />
             <h3 className="text-gradient" style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>Save Your Progress?</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '2rem' }}>
@@ -907,7 +907,7 @@ function App() {
       {/* Login Modal */}
       {showLoginModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: '2.5rem', width: '90%', maxWidth: '420px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '420px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
             
             {loginModalMode === 'login' && (
               <>
