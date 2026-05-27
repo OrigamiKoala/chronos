@@ -291,7 +291,7 @@ function App() {
     })
     .then(res => res.json())
     .then(loginData => {
-      if (loginData.success) {
+      if (loginData && !loginData.status) {
         setUser(loginData.user);
         setStrengths(loginData.strengths || []);
         setWeaknesses(loginData.weaknesses || []);
@@ -454,6 +454,7 @@ function App() {
         })
         .then(res2 => res2.json())
         .then(data => {
+          // Instantly populate the latest state in case background refresh lags
           setUser(data.user);
           setStrengths(data.strengths);
           setWeaknesses(data.weaknesses);
@@ -468,7 +469,8 @@ function App() {
           setCurrentScreen('analytics');
           setGradingLoading(false);
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error("Failed to fetch fresh user data post-submit:", err);
           setCurrentScreen('analytics');
           setGradingLoading(false);
         });
