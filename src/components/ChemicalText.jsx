@@ -1,5 +1,10 @@
 import { useEffect, useRef } from 'react';
 import SmilesDrawer from 'smiles-drawer';
+import { Editor } from 'ketcher-react';
+import { StandaloneStructServiceProvider } from 'ketcher-standalone';
+import 'ketcher-react/dist/index.css';
+
+const structServiceProvider = new StandaloneStructServiceProvider();
 
 // Helper to determine if a token is a SMILES string
 export function isSmiles(word) {
@@ -149,6 +154,60 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
   );
 }
 
+export function isReactionSmiles(word) {
+  if (!word || typeof word !== 'string') return false;
+  if (!word.includes('>')) return false;
+  
+  // A reaction SMILES should have at least some SMILES-like characters or structures
+  const parts = word.split('>');
+  const hasSmilesPart = parts.some(part => {
+    if (!part) return false;
+    return part.split('.').some(comp => isSmiles(comp));
+  });
+  return hasSmilesPart;
+}
+
+export function ReactionRenderer({ reaction, theme = 'dark', width = 600, height = 320 }) {
+  if (!reaction) return null;
+  
+  const handleInit = (ketcherInstance) => {
+    try {
+      // Set read-only view mode
+      ketcherInstance.editor.options({ viewOnlyMode: true });
+      // Load the reaction SMILES string
+      ketcherInstance.setMolecule(reaction);
+    } catch (e) {
+      console.error('Ketcher reaction render error:', e);
+    }
+  };
+
+  return (
+    <div style={{ 
+      width: `${width}px`, 
+      height: `${height}px`, 
+      border: '1px solid rgba(255, 255, 255, 0.08)', 
+      borderRadius: '12px',
+      overflow: 'hidden',
+      margin: '12px 0',
+      display: 'inline-block',
+      background: 'rgba(26, 26, 33, 0.95)',
+      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+    }}>
+      <Editor
+        staticResourcesUrl=""
+        structServiceProvider={structServiceProvider}
+        onInit={handleInit}
+        hiddenControls={[
+          'open', 'save', 'clear', 'undo', 'redo', 
+          'cut', 'copy', 'paste', 'settings', 'help', 
+          'about', 'layout', 'clean', 'arom', 'dearom', 
+          'calculators', 'check', 'server', 'fullscreen'
+        ]}
+      />
+    </div>
+  );
+}
+
 export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, defaultHeight = 130 }) {
   if (!text) return null;
 
@@ -164,7 +223,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
           return <span key={partIndex}>{part}</span>;
         }
 
-        // For non-math text, split by whitespace to detect SMILES
+        // For non-math text, split by whitespace to detect SMILES/Reactions
         const tokens = part.split(/(\s+)/);
         return (
           <span key={partIndex}>
@@ -182,6 +241,16 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
               const prefix = match[1];
               const coreWord = match[2];
               const suffix = match[3];
+
+              if (isReactionSmiles(coreWord)) {
+                return (
+                  <span key={index} style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle' }}>
+                    {prefix}
+                    <ReactionRenderer reaction={coreWord} width={defaultWidth} height={defaultHeight} theme={theme} />
+                    {suffix}
+                  </span>
+                );
+              }
 
               if (isSmiles(coreWord)) {
                 return (
