@@ -377,6 +377,21 @@ function App() {
     setCurrentExamId(examIdStr);
     setGradingLoading(true);
 
+    // Instantly log the exam locally the moment it is submitted so stats & history are updated immediately
+    const immediateHistoryItem = {
+      subject,
+      created_at: new Date().toISOString(),
+      accuracy: score,
+      rating_change: ratingChange,
+      new_rating: newRating,
+      exam_id: examIdStr
+    };
+    setHistory(prev => [immediateHistoryItem, ...prev]);
+    if (!user) {
+      const guestHistory = JSON.parse(localStorage.getItem('chronos_guest_history') || '[]');
+      localStorage.setItem('chronos_guest_history', JSON.stringify([immediateHistoryItem, ...guestHistory]));
+    }
+
     fetch('/api/submit-exam', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -475,18 +490,18 @@ function App() {
           setGradingLoading(false);
         });
       } else {
-        const guestHistoryItem = {
-          subject,
-          created_at: new Date().toISOString(),
-          accuracy: submitData.accuracy ?? score,
-          rating_change: submitData.ratingChange ?? ratingChange,
-          new_rating: submitData.newRating ?? newRating,
-          exam_id: examIdStr
-        };
-        const guestHistory = JSON.parse(localStorage.getItem('chronos_guest_history') || '[]');
-        const updatedHistory = [guestHistoryItem, ...guestHistory];
-        setHistory(updatedHistory);
-        localStorage.setItem('chronos_guest_history', JSON.stringify(updatedHistory));
+        // Guest history item is already pre-logged immediately before fetch. Let's just update the stored ratings if the AI modified it
+        if (submitData.ratingChange !== undefined || submitData.newRating !== undefined) {
+          const guestHistory = JSON.parse(localStorage.getItem('chronos_guest_history') || '[]');
+          const target = guestHistory.find(h => h.exam_id === examIdStr);
+          if (target) {
+            target.accuracy = submitData.accuracy ?? target.accuracy;
+            target.rating_change = submitData.ratingChange ?? target.rating_change;
+            target.new_rating = submitData.newRating ?? target.new_rating;
+            localStorage.setItem('chronos_guest_history', JSON.stringify(guestHistory));
+            setHistory(guestHistory);
+          }
+        }
 
         if (submitData.results) {
           const topicStats = {};
