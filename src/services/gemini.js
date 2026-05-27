@@ -72,6 +72,8 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
     - 5: AMC 12 question 20-ish level
     - 8: Average USAJMO problem level
     - 10: Hardest problems on the IMO
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid advanced measure theory, abstract algebra like Galois theory/ring theory, general topology, or complex analysis).
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid advanced measure theory, abstract algebra like Galois theory/ring theory, general topology, or complex analysis).
     `;
     } else if (normSubject === 'physics') {
         subjectContext = `
@@ -81,6 +83,8 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
     - 5: F=ma level
     - 8: USAPhO level
     - 10: hardest problem on the IPhO
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics).
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics).
     `;
     } else if (normSubject === 'chemistry') {
         subjectContext = `
@@ -89,7 +93,9 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
     - 3: harder problems on the ACS Local Exam
     - 5: harder problems on the USNCO Nationals
     - 10: hardest problem on the IChO
-    For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid). Do NOT use introductory or verbose phrases like "represented by the SMILES string..." or "whose SMILES representation is...". Instead, display the SMILES directly and let it render the question inline. For organic chemical reactions, do NOT use LaTeX under any circumstances; instead, represent organic reactions strictly using Ketcher (by EPAM) / Reaction SMILES syntax notation in the form of Reactants>Reagents>Products or Reactants>>Products (e.g., C(C)O.CC(=O)O>[H+]>CC(=O)OCC.O for esterification). Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid overpotential calculations involving the Tafel equation, Maxwell's relations, full molecular orbital symmetry point groups, or advanced spectroscopic methods like 2D-NMR).
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid overpotential calculations involving the Tafel equation, Maxwell's relations, full molecular orbital symmetry point groups, or advanced spectroscopic methods like 2D-NMR).
+    For Chemistry questions, represent ALL molecular structures (organic AND inorganic) strictly using SMILES notation so they render as structural diagrams. Use bracket notation for inorganic species with explicit hydrogens or charges (e.g., [OH2] for water, [NH3] for ammonia, [OH-] for hydroxide, [NH4+] for ammonium, OS(=O)(=O)O for sulfuric acid, [Na+].[Cl-] for NaCl, CC(=O)O for acetic acid). Do NOT use introductory phrases like "represented by the SMILES string..."; display the SMILES directly inline. For chemical reactions (organic or inorganic), represent strictly using Reaction SMILES syntax in the form Reactants>Reagents>Products or Reactants>>Products (e.g., C(C)O.CC(=O)O>[H+]>CC(=O)OCC.O for esterification). Use LaTeX ONLY for mathematical equations, equilibrium expressions, physical units, and variables (e.g., $\\Delta G^\\circ$, $E^\\circ$, $K_{\\text{sp}}$) — never for molecular structures.
     `;
     }
 
@@ -273,6 +279,8 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
     - 5: AMC 12 question 20-ish level
     - 8: Average USAJMO problem level
     - 10: Hardest problems on the IMO
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid advanced measure theory, abstract algebra like Galois theory/ring theory, general topology, or complex analysis).
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid advanced measure theory, abstract algebra like Galois theory/ring theory, general topology, or complex analysis).
     `;
     } else if (normSubject === 'physics') {
         subjectContext = `
@@ -282,6 +290,8 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
     - 5: F=ma level
     - 8: USAPhO level
     - 10: hardest problem on the IPhO
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics).
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics).
     `;
     } else if (normSubject === 'chemistry') {
         subjectContext = `
@@ -290,7 +300,9 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
     - 3: harder problems on the ACS Local Exam
     - 5: harder problems on the USNCO Nationals
     - 10: hardest problem on the IChO
-    For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid). Do NOT use introductory or verbose phrases like "represented by the SMILES string..." or "whose SMILES representation is...". Instead, display the SMILES directly and let it render the question inline. For organic chemical reactions, do NOT use LaTeX under any circumstances; instead, represent organic reactions strictly using Ketcher (by EPAM) / Reaction SMILES syntax notation in the form of Reactants>Reagents>Products or Reactants>>Products (e.g., C(C)O.CC(=O)O>[H+]>CC(=O)OCC.O for esterification). Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid overpotential calculations involving the Tafel equation, Maxwell's relations, full molecular orbital symmetry point groups, or advanced spectroscopic methods like 2D-NMR).
+    Syllabus Boundaries: Do NOT introduce advanced topics outside the high-school/national olympiad purview (e.g., avoid overpotential calculations involving the Tafel equation, Maxwell's relations, full molecular orbital symmetry point groups, or advanced spectroscopic methods like 2D-NMR).
+    For Chemistry questions, represent ALL molecular structures (organic AND inorganic) strictly using SMILES notation so they render as structural diagrams. Use bracket notation for inorganic species with explicit hydrogens or charges (e.g., [OH2] for water, [NH3] for ammonia, [OH-] for hydroxide, [NH4+] for ammonium, OS(=O)(=O)O for sulfuric acid, [Na+].[Cl-] for NaCl, CC(=O)O for acetic acid). Do NOT use introductory phrases like "represented by the SMILES string..."; display the SMILES directly inline. For chemical reactions (organic or inorganic), represent strictly using Reaction SMILES syntax in the form Reactants>Reagents>Products or Reactants>>Products (e.g., C(C)O.CC(=O)O>[H+]>CC(=O)OCC.O for esterification). Use LaTeX ONLY for mathematical equations, equilibrium expressions, physical units, and variables (e.g., $\\Delta G^\\circ$, $E^\\circ$, $K_{\\text{sp}}$) — never for molecular structures.
     `;
     }
 

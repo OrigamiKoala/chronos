@@ -1,16 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { createRoot } from 'react-dom/client';
 import SmilesDrawer from 'smiles-drawer';
-import { Editor } from 'ketcher-react';
-import { StandaloneStructServiceProvider } from 'ketcher-standalone';
-import 'ketcher-react/dist/index.css';
-
-const structServiceProvider = new StandaloneStructServiceProvider();
 
 // Helper to determine if a token is a SMILES string
 export function isSmiles(word) {
   if (!word || word.length < 2) return false;
-  if (/[Hh]/.test(word)) return false;
+  // Reject H-containing words ONLY when they lack SMILES structural markers (brackets, parens, bonds).
+  // This allows inorganic SMILES like [OH2], [NH3], [NH4+], OS(=O)(=O)O while
+  // still rejecting plain English words like "the", "have", "he".
+  if (/[Hh]/.test(word) && !/[\[\]\(\)=#]/.test(word)) return false;
 
   const englishWords = new Set([
     'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'by', 'is', 'are', 'was', 'were', 'be', 'been',
@@ -74,6 +71,38 @@ export function isSmiles(word) {
   return false;
 }
 
+/** Shared dark/light theme config for SmilesDrawer */
+const smilesThemes = {
+  dark: {
+    PRIMARY: '#ffffff',
+    BACKGROUND: 'transparent',
+    ACCENT: '#a78bfa',
+    C: '#ffffff',
+    O: '#f87171',
+    N: '#60a5fa',
+    F: '#34d399',
+    CL: '#34d399',
+    BR: '#f59e0b',
+    I: '#ec4899',
+    S: '#fbbf24',
+    P: '#8b5cf6'
+  },
+  light: {
+    PRIMARY: '#1e293b',
+    BACKGROUND: 'transparent',
+    ACCENT: '#6366f1',
+    C: '#1e293b',
+    O: '#ef4444',
+    N: '#3b82f6',
+    F: '#10b981',
+    CL: '#10b981',
+    BR: '#d97706',
+    I: '#db2777',
+    S: '#f59e0b',
+    P: '#6366f1'
+  }
+};
+
 export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dark' }) {
   const svgRef = useRef(null);
 
@@ -93,36 +122,7 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
         fontSizeLarge: 11,
         fontSizeSmall: 8,
         padding: 8,
-        themes: {
-          dark: {
-            PRIMARY: '#ffffff',
-            BACKGROUND: 'transparent',
-            ACCENT: '#a78bfa',
-            C: '#ffffff',
-            O: '#f87171',
-            N: '#60a5fa',
-            F: '#34d399',
-            CL: '#34d399',
-            BR: '#f59e0b',
-            I: '#ec4899',
-            S: '#fbbf24',
-            P: '#8b5cf6'
-          },
-          light: {
-            PRIMARY: '#1e293b',
-            BACKGROUND: 'transparent',
-            ACCENT: '#6366f1',
-            C: '#1e293b',
-            O: '#ef4444',
-            N: '#3b82f6',
-            F: '#10b981',
-            CL: '#10b981',
-            BR: '#d97706',
-            I: '#db2777',
-            S: '#f59e0b',
-            P: '#6366f1'
-          }
-        }
+        themes: smilesThemes
       });
 
       // Strip any stray backslashes (e.g. from LaTeX remnants) before parsing
@@ -168,73 +168,98 @@ export function isReactionSmiles(word) {
   return hasSmilesPart;
 }
 
-export function ReactionRenderer({ reaction, theme = 'dark', width = 600, height = 320 }) {
-  const containerRef = useRef(null);
-  
+/**
+ * ReactionRenderer — uses smiles-drawer's built-in ReactionDrawer to render
+ * reaction SMILES as a pure SVG diagram (reactants → arrow → products).
+ * No Ketcher editor, no toolbar, just the rendered structure.
+ */
+export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height = 200 }) {
+  const svgRef = useRef(null);
+
   useEffect(() => {
-    if (!containerRef.current || !reaction) return;
-    
-    // Clear container contents
-    containerRef.current.innerHTML = '';
-    
-    const mountEl = document.createElement('div');
-    mountEl.style.width = '100%';
-    mountEl.style.height = '100%';
-    containerRef.current.appendChild(mountEl);
-    
-    const root = createRoot(mountEl);
-    
-    const handleInit = (ketcherInstance) => {
-      try {
-        ketcherInstance.editor.options({ viewOnlyMode: true });
-        ketcherInstance.setMolecule(reaction);
-      } catch (e) {
-        console.error('Ketcher reaction render error:', e);
-      }
-    };
-    
-    root.render(
-      <Editor
-        staticResourcesUrl=""
-        structServiceProvider={structServiceProvider}
-        onInit={handleInit}
-        hiddenControls={[
-          'open', 'save', 'clear', 'undo', 'redo', 
-          'cut', 'copy', 'paste', 'settings', 'help', 
-          'about', 'layout', 'clean', 'arom', 'dearom', 
-          'calculators', 'check', 'server', 'fullscreen'
-        ]}
-      />
-    );
-    
-    return () => {
-      setTimeout(() => {
-        try {
-          root.unmount();
-        } catch (e) { /* ignore */ }
-      }, 0);
-    };
-  }, [reaction]);
+    if (!svgRef.current || !reaction) return;
+
+    try {
+      // Clear any previous content
+      svgRef.current.innerHTML = '';
+
+      const molOpts = {
+        width: 200,
+        height: 200,
+        bondThickness: 1.8,
+        bondLength: 15,
+        fontSizeLarge: 11,
+        fontSizeSmall: 8,
+        padding: 8,
+        themes: smilesThemes
+      };
+
+      const reactionOpts = {
+        scale: 1.0,
+        spacing: 12,
+        arrow: {
+          length: 60,
+          headSize: 6,
+          thickness: 1.2,
+          margin: 3,
+        },
+        plus: {
+          size: 9,
+          thickness: 1.2,
+        },
+      };
+
+      const reactionDrawer = new SmilesDrawer.ReactionDrawer(reactionOpts, molOpts);
+
+      SmilesDrawer.parseReaction(reaction, (rxn) => {
+        reactionDrawer.draw(rxn, svgRef.current, theme);
+      }, (err) => {
+        console.error('Reaction SMILES parse error:', err);
+        // Fall back to plain text display
+        if (svgRef.current) {
+          svgRef.current.innerHTML = '';
+        }
+      });
+    } catch (error) {
+      console.error('Error drawing reaction:', error);
+    }
+  }, [reaction, theme]);
 
   return (
-    <div 
-      ref={containerRef}
-      style={{ 
-        width: `${width}px`, 
-        height: `${height}px`, 
-        border: '1px solid rgba(255, 255, 255, 0.08)', 
-        borderRadius: '12px',
-        overflow: 'hidden',
-        margin: '12px 0',
-        display: 'inline-block',
-        background: 'rgba(26, 26, 33, 0.95)',
-        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
-      }}
-    />
+    <span style={{
+      display: 'inline-block',
+      background: 'rgba(255, 255, 255, 0.03)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: '12px',
+      padding: '8px 12px',
+      margin: '8px 0',
+      verticalAlign: 'middle',
+      overflow: 'auto',
+      maxWidth: '100%',
+      boxShadow: '0 4px 10px -2px rgba(0,0,0,0.15)'
+    }}>
+      <svg
+        ref={svgRef}
+        style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
+      />
+    </span>
   );
 }
 
 export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, defaultHeight = 130 }) {
+  const containerRef = useRef(null);
+
+  // Trigger MathJax typesetting after render so LaTeX like $\text{H}_2\text{SO}_4$ renders
+  useEffect(() => {
+    if (!containerRef.current || !text) return;
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      // Typeset only this container to avoid re-processing the entire document
+      window.MathJax.typesetPromise([containerRef.current]).catch((err) => {
+        console.error('MathJax typeset error:', err);
+      });
+    }
+  }, [text]);
+
   if (!text) return null;
 
   // Split by LaTeX blocks ($...$ or $$...$$) first to keep LaTeX segments intact.
@@ -242,7 +267,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
   const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/g);
 
   return (
-    <span style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
+    <span ref={containerRef} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
       {parts.map((part, partIndex) => {
         // If this part is a LaTeX math block, render it directly as text so MathJax can process it
         if (part.startsWith('$')) {

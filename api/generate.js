@@ -148,11 +148,12 @@ Follow these strict Olympiad Design Philosophies:
 
 1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
 - Do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview:
-  * Avoid full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, or advanced spectroscopic methods like 2D-NMR.
+  * Avoid full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, advanced spectroscopic methods like 2D-NMR, overpotential calculations involving the Tafel equation, or Maxwell's relations.
 - DO increase difficulty by forcing the integration of multiple foundational concepts:
   * Pair a non-trivial thermodynamic cycle with an electrochemistry cell, or force a non-obvious stereochemical outcome via steric/electronic shielding in reaction prediction.
 - Incorporate subtle conceptual traps:
   * Design problems where standard shortcuts or rote formula-plugging yield tempting distractors, requiring exact tracking of assumptions (e.g., non-ideal gas behavior, temperature dependence of ΔH/ΔS, or structural rearrangements/hydride shifts).
+- Mix conceptual qualitative questions with computational questions.
 
 2. Authentic Style & Tone Mimicry
 - Use the exact technical nomenclature, passive voice, and formal phrasing characteristic of official olympiads:
@@ -163,7 +164,7 @@ Follow these strict Olympiad Design Philosophies:
 Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: simple Honors/early AP chem, 3: harder problems on the ACS Local Exam, 5: harder problems on the USNCO Nationals, 10: hardest problem on the IChO.
 
-For Chemistry questions, represent organic molecules strictly using SMILES notation (e.g., C(C)O for ethanol, CC(=O)O for acetic acid). Do NOT use introductory or verbose phrases like "represented by the SMILES string..." or "whose SMILES representation is...". Instead, display the SMILES directly and let it render the question inline. For organic chemical reactions, do NOT use LaTeX under any circumstances; instead, represent organic reactions strictly using Ketcher (by EPAM) / Reaction SMILES syntax notation in the form of Reactants>Reagents>Products or Reactants>>Products (e.g., C(C)O.CC(=O)O>[H+]>CC(=O)OCC.O for esterification). Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).
+For Chemistry questions, represent ALL molecular structures (organic AND inorganic) strictly using SMILES notation so they render as structural diagrams. Use bracket notation for inorganic species with explicit hydrogens or charges (e.g., [OH2] for water, [NH3] for ammonia, [OH-] for hydroxide, [NH4+] for ammonium, OS(=O)(=O)O for sulfuric acid, [Na+].[Cl-] for NaCl, CC(=O)O for acetic acid). Do NOT use introductory phrases like "represented by the SMILES string..."; display the SMILES directly inline. For chemical reactions (organic or inorganic), represent strictly using Reaction SMILES syntax in the form Reactants>Reagents>Products or Reactants>>Products (e.g., C(C)O.CC(=O)O>[H+]>CC(=O)OCC.O for esterification). Use LaTeX ONLY for mathematical equations, equilibrium expressions, physical units, and variables (e.g., $\\Delta G^\\circ$, $E^\\circ$, $K_{\\text{sp}}$) — never for molecular structures.
 `;
     }
 
