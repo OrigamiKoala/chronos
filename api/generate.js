@@ -126,8 +126,8 @@ Calibrate the 1-10 difficulty scale exactly as follows:
 Follow these strict Olympiad Design Philosophies:
 
 1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
-- Do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview:
-  * Avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics.
+- For difficulty levels < 8, do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview (e.g., avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics).
+- For difficulty levels >= 8, you MAY introduce advanced outside, college, or graduate-level topics, BUT you must use a first-principles approach. You must assume the user knows absolutely nothing about the topic and define all non-standard concepts, equations, and phenomena from scratch within the problem text itself.
 - DO increase difficulty by forcing the integration of multiple foundational concepts:
   * Pair a thermodynamic PV-cycle with a magnetic induction loop or a spring-mass oscillator, or combine electrostatics/Lorentz force with rotational dynamics, or analyze buoyant forces in a rotating/accelerating frame.
 - Incorporate subtle conceptual traps:
@@ -147,8 +147,8 @@ Calibrate the 1-10 difficulty scale exactly as follows:
 Follow these strict Olympiad Design Philosophies:
 
 1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
-- Do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview:
-  * Avoid full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, advanced spectroscopic methods like 2D-NMR, overpotential calculations involving the Tafel equation, or Maxwell's relations.
+- For difficulty levels < 8, do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview (e.g., avoid full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, advanced spectroscopic methods like 2D-NMR, overpotential calculations involving the Tafel equation, or Maxwell's relations).
+- For difficulty levels >= 8, you MAY introduce advanced outside, college, or graduate-level topics, BUT you must use a first-principles approach. You must assume the user knows absolutely nothing about the topic and define all non-standard concepts, equations, and phenomena from scratch within the problem text itself.
 - DO increase difficulty by forcing the integration of multiple foundational concepts:
   * Pair a non-trivial thermodynamic cycle with an electrochemistry cell, or force a non-obvious stereochemical outcome via steric/electronic shielding in reaction prediction.
 - Incorporate subtle conceptual traps:
@@ -195,7 +195,7 @@ All questions generated MUST adhere to these critical design directives:
 1. QUESTION STYLE & TRICKINESS: Do NOT make every single question a trap question; instead, provide a mix of standard and tricky questions:
    - For difficulty levels 1 to 4: Standard, straightforward conceptual or algorithmic questions must be used.
    - For difficulty levels 5 to 10: Questions can either be tricky (presenting sophisticated conceptual traps or subtle edge cases that penalize rote formula-plugging) OR they can be standard, non-trick questions that are highly difficult and challenging in their own right (demanding deep logic, multi-step reasoning, or integration of multiple foundational concepts).
-   - Under no circumstances should any question require obscure, highly specialized research-level details, graduate-level knowledge, or any college-level content. All questions must be strictly competitive high school level or below. Problems must be completely solvable and scientifically/mathematically rigorous if the student deeply understands core principles. For multiple_choice questions involving traps, craft the distractor options to precisely match the results of common conceptual mistakes.
+   - Under no circumstances should any question require obscure, highly specialized research-level details. Unless explicitly permitted in the syllabus boundaries above, all questions must be strictly competitive high school level or below. Problems must be completely solvable and scientifically/mathematically rigorous if the student deeply understands core principles. For multiple_choice questions involving traps, craft the distractor options to precisely match the results of common conceptual mistakes.
 2. BALANCED TOPIC DIVERSITY & WEAKNESS WEIGHTING: The exam must cover a wide, extremely diverse range of standard core subjects/topics within the chosen field. For example:
       - In Chemistry: You must select from stoichiometry, descriptive, states of matter, thermodynamics, kinetics, equilibrium, oxidation-reduction, atomic structure/periodicity, bonding/molecular structure, and organic/biochemistry.
       - In Physics: You must select from kinematics, forces, momentum, systems of particles, rotational kinematics, rotational dynamics, angular momentum, energy, fluid statics, gravitation, fluid dynamics, oscillations, waves, thermodynamics, electricity, and magnetism.
