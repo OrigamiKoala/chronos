@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { useState, useEffect, useRef } from 'react';
 import { generateProblems } from '../services/gemini';
-import { Loader2, Clock, AlertTriangle, ArrowRight, Upload, Type, Image as ImageIcon, ArrowLeft } from 'lucide-react';
+import { Loader2, Clock, AlertTriangle, ArrowRight, Upload, Type, Image as ImageIcon, ArrowLeft, Pause, Play } from 'lucide-react';
 import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 import { Whiteboard } from './Whiteboard';
 
@@ -80,6 +80,7 @@ export function ExamScreen({ config, onFinish }) {
   const [currentDifficulty, setCurrentDifficulty] = useState(config.startingDifficulty);
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
   const [totalTimeLeft, setTotalTimeLeft] = useState(() => config.timeLimitWholeTest * 60);
   const [questionTimesLeft, setQuestionTimesLeft] = useState(() => 
     Array(config.numQuestions).fill(isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion)
@@ -166,7 +167,7 @@ export function ExamScreen({ config, onFinish }) {
   }, [loading, currentQuestionIndex, problem]);
 
   useEffect(() => {
-    if (loading || !problem || workSubmitted) return;
+    if (loading || !problem || workSubmitted || isPaused) return;
 
     if (isWholeTestMode && totalTimeLeft <= 0) {
       handleGlobalTimeUp();
@@ -209,7 +210,7 @@ export function ExamScreen({ config, onFinish }) {
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft]);
+  }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft, isPaused]);
 
   const handleTimeUp = () => {
     if (problem && problem.type === 'free_response') {
@@ -481,6 +482,50 @@ export function ExamScreen({ config, onFinish }) {
     );
   }
 
+  if (isPaused) {
+    return (
+      <div className="glass-panel animate-fade-in" style={{ 
+        padding: 'var(--panel-padding-lg)', 
+        textAlign: 'center', 
+        maxWidth: '600px', 
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '300px',
+        gap: '1.5rem'
+      }}>
+        <div style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)'
+        }}>
+          <Pause size={32} style={{ color: 'var(--accent-primary)' }} />
+        </div>
+        <div>
+          <h2 className="text-gradient" style={{ marginBottom: '0.5rem', fontSize: '1.8rem' }}>Test Paused</h2>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto' }}>
+            The exam timers have been suspended and the test content is hidden. Click below to resume your test.
+          </p>
+        </div>
+        <button 
+          className="btn btn-primary" 
+          onClick={() => setIsPaused(false)}
+          style={{ padding: '0.75rem 2rem', fontSize: '1.1rem', marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}
+        >
+          <Play size={18} /> Resume Test
+        </button>
+      </div>
+    );
+  }
+
   if (!problem) {
     return (
       <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
@@ -531,6 +576,22 @@ export function ExamScreen({ config, onFinish }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={() => setIsPaused(true)}
+            className="btn btn-outline"
+            style={{
+              padding: '0.4rem 0.8rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontSize: '0.9rem',
+              borderColor: 'rgba(255, 255, 255, 0.15)',
+              background: 'rgba(255, 255, 255, 0.02)'
+            }}
+          >
+            <Pause size={14} /> Pause
+          </button>
+
           {isWholeTestMode && (
             <div className="glass-panel" style={{
               display: 'flex',
