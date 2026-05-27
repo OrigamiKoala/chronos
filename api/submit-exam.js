@@ -4,6 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const ELO_ALGORITHM_VERSION = 3;
+let tablesEnsured = false;
 
 const bq = new BigQuery({
   projectId: projectId,
