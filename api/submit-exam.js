@@ -111,11 +111,10 @@ export default async function handler(req, res) {
       tablesEnsured = true;
     }
 
-    const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    });
-
     // A. Grade all questions in parallel! Solve on-the-fly and award partial credit!
+    const hasFRQ = results.some(r => r.type === 'free_response');
+    const ai = hasFRQ ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
+
     const gradedResults = await Promise.all(results.map(async (r) => {
       if (r.type === 'short_answer') {
         const correct = r.keywordExpression
@@ -238,7 +237,6 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
     let finalRatingChange = ratingChange;
     let finalNewRating = newRating;
 
-    const hasFRQ = gradedResults.some(r => r.type === 'free_response');
     if (hasFRQ) {
       const totalQuestions = gradedResults.length;
       const totalScore = gradedResults.reduce((acc, r) => acc + (r.score !== undefined ? r.score : (r.isCorrect ? 1 : 0)), 0);
