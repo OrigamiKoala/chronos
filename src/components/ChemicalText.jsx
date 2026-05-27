@@ -4,6 +4,7 @@ import SmilesDrawer from 'smiles-drawer';
 // Helper to determine if a token is a SMILES string
 export function isSmiles(word) {
   if (!word || word.length < 2) return false;
+  if (/[Hh]/.test(word)) return false;
 
   const englishWords = new Set([
     'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'by', 'is', 'are', 'was', 'were', 'be', 'been',

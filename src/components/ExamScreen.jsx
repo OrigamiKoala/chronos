@@ -872,7 +872,7 @@ export function ExamScreen({ config, onFinish }) {
                     <span style={{ fontWeight: '700', marginRight: '0.5rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
                       {letter}.
                     </span>
-                    {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" /> : <ChemicalText text={opt} theme="dark" />}
+                    {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" /> : <ChemicalText text={opt} theme="dark" defaultWidth={90} defaultHeight={90} />}
                   </button>
                 );
               })}
