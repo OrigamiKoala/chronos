@@ -3,7 +3,7 @@ import { BigQuery } from '@google-cloud/bigquery';
 import { GoogleGenAI } from '@google/genai';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
-const ELO_ALGORITHM_VERSION = 2;
+const ELO_ALGORITHM_VERSION = 3;
 
 const bq = new BigQuery({
   projectId: projectId,

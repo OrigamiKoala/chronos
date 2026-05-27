@@ -64,7 +64,7 @@ function formatDate(dateVal) {
   return isNaN(d.getTime()) ? '?' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = [], topicBreakdowns = {}, detailedAnalysis = {}, history = [], loadingExamId = null, onReviewExam = null, formatDate = (d) => d }) {
+export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = [], topicBreakdowns = {}, detailedAnalysis = {}, history = [], loadingExamId = null, onReviewExam = null }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -89,52 +89,32 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     const subjects = ['Math', 'Physics', 'Chemistry'];
     const filteredSubjects = selectedSubjectFilter === 'All' ? subjects : [selectedSubjectFilter];
 
-    const getLocalDateKey = (rawDate) => {
-      if (!rawDate) return '';
-      const d = new Date(rawDate);
-      if (isNaN(d.getTime())) return String(rawDate);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
+    // To graph ELO vs time effectively, we want to map every ELO change to its exact timestamp
+    // Sorting history chronologically (asc) to build progression
+    const sortedHistory = [...data.eloHistory].sort((a, b) => {
+      const da = new Date(a.created_at?.value || a.created_at);
+      const db = new Date(b.created_at?.value || b.created_at);
+      return da - db;
+    });
 
-    // Gather all unique date keys in chronological order
-    const uniqueDates = [];
-    const dateMap = {};
-    for (const h of data.eloHistory) {
-      const dateKey = getLocalDateKey(h.created_at?.value || h.created_at);
-      if (dateKey && !dateMap[dateKey]) {
-        dateMap[dateKey] = {
-          raw: h.created_at,
-          label: formatDate(h.created_at)
-        };
-        uniqueDates.push(dateKey);
-      }
-    }
-
-    const labels = ['Start', ...uniqueDates.map(dk => dateMap[dk].label)];
-
+    // Create a chronological baseline. If a subject has no exams yet, it remains 100.
+    // We map each point to its exact time/date to see the ELO vs time progression accurately.
     const datasets = filteredSubjects.map(s => {
-      const subjectHistory = data.eloHistory.filter(h => h.subject === s);
-      const ratingByDate = {};
-      for (const h of subjectHistory) {
-        const dateKey = getLocalDateKey(h.created_at?.value || h.created_at);
-        ratingByDate[dateKey] = h.new_rating;
-      }
-
-      const subjectData = [100];
+      const subjectHistory = sortedHistory.filter(h => h.subject === s);
+      
+      // Starting point: (100) before any exam
+      const points = [{ x: 'Start', y: 100 }];
+      
       let lastRating = 100;
-      for (const dk of uniqueDates) {
-        if (ratingByDate[dk] !== undefined) {
-          lastRating = ratingByDate[dk];
-        }
-        subjectData.push(lastRating);
+      for (const h of subjectHistory) {
+        lastRating = h.new_rating;
+        const dateStr = formatDate(h.created_at?.value || h.created_at);
+        points.push({ x: dateStr, y: lastRating });
       }
 
       return {
         label: s,
-        data: subjectData,
+        data: points.map(p => p.y),
         borderColor: CHART_COLORS[s].line,
         backgroundColor: CHART_COLORS[s].bg,
         fill: true,
@@ -144,7 +124,48 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       };
     });
 
-    return { labels, datasets };
+    // Generate labels that correspond to all the changes in chronological order
+    // To align datasets on the same X-axis, let's find the max steps or align them using step labels
+    // If filtering a single subject, X-axis labels are precisely that subject's exam dates.
+    // If 'All', we can align them by sequential steps/dates or use the union of all dates,
+    // or simply display sequential attempts with the actual date label.
+    // A clean approach is to use the sequential index of exams as labels, showing their actual dates,
+    // or map the union of all timestamps. Let's do union of all timestamps to align them properly.
+    const timeline = [];
+    const subjectState = {};
+    subjects.forEach(s => {
+      subjectState[s] = 100;
+    });
+
+    // Initialize with Start
+    timeline.push({ label: 'Start', ratings: { ...subjectState } });
+
+    for (const h of sortedHistory) {
+      const sub = h.subject;
+      subjectState[sub] = h.new_rating;
+      const dateStr = formatDate(h.created_at?.value || h.created_at);
+      
+      timeline.push({
+        label: dateStr,
+        ratings: { ...subjectState }
+      });
+    }
+
+    const labels = timeline.map(t => t.label);
+    const finalDatasets = filteredSubjects.map(s => {
+      return {
+        label: s,
+        data: timeline.map(t => t.ratings[s]),
+        borderColor: CHART_COLORS[s].line,
+        backgroundColor: CHART_COLORS[s].bg,
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+        pointHoverRadius: 6
+      };
+    });
+
+    return { labels, datasets: finalDatasets };
   }, [data, selectedSubjectFilter]);
 
 

@@ -11,7 +11,7 @@ const bq = new BigQuery({
   },
 });
 
-const ELO_ALGORITHM_VERSION = 2;
+const ELO_ALGORITHM_VERSION = 3;
 let schemaEnsured = false;
 
 export default async function handler(req, res) {
@@ -203,20 +203,37 @@ export default async function handler(req, res) {
         const sub = h.subject;
         const currentRating = subjectRatings[sub] || 100;
         const score = h.accuracy;
-        const avgQuestionRating = h.avg_time;
 
         let totalQuestions = 5;
+        let sumQuestionRatings = 0;
         if (h.results_json) {
           try {
             const resArray = JSON.parse(h.results_json);
             if (Array.isArray(resArray)) {
               totalQuestions = resArray.length;
+              const getQuestionRating = (subject, diff) => {
+                const d = Math.max(1, Math.min(10, diff));
+                if (subject === 'Math') {
+                  const mathMap = { 1: 500, 2: 600, 3: 800, 4: 900, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
+                  return mathMap[Math.round(d)] || 1000;
+                } else if (subject === 'Chemistry') {
+                  const chemMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
+                  return chemMap[Math.round(d)] || 1000;
+                } else if (subject === 'Physics') {
+                  const physMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1300, 7: 1600, 8: 2000, 9: 2500, 10: 3000 };
+                  return physMap[Math.round(d)] || 1000;
+                }
+                return 100;
+              };
+              sumQuestionRatings = resArray.reduce((acc, r) => acc + getQuestionRating(sub, r.difficulty || 5), 0);
             }
           } catch (e) {
             console.error('Failed to parse results_json in login recalculation:', e);
           }
         }
+        
         const questionMultiplier = Math.sqrt(totalQuestions / 5);
+        const avgQuestionRating = sumQuestionRatings > 0 ? (sumQuestionRatings / totalQuestions) : 1000;
 
         let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
         if (avgQuestionRating < currentRating) {
