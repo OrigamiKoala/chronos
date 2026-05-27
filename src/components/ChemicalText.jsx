@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
 import SmilesDrawer from 'smiles-drawer';
 import { Editor } from 'ketcher-react';
 import { StandaloneStructServiceProvider } from 'ketcher-standalone';
@@ -168,31 +169,31 @@ export function isReactionSmiles(word) {
 }
 
 export function ReactionRenderer({ reaction, theme = 'dark', width = 600, height = 320 }) {
-  if (!reaction) return null;
+  const containerRef = useRef(null);
   
-  const handleInit = (ketcherInstance) => {
-    try {
-      // Set read-only view mode
-      ketcherInstance.editor.options({ viewOnlyMode: true });
-      // Load the reaction SMILES string
-      ketcherInstance.setMolecule(reaction);
-    } catch (e) {
-      console.error('Ketcher reaction render error:', e);
-    }
-  };
-
-  return (
-    <div style={{ 
-      width: `${width}px`, 
-      height: `${height}px`, 
-      border: '1px solid rgba(255, 255, 255, 0.08)', 
-      borderRadius: '12px',
-      overflow: 'hidden',
-      margin: '12px 0',
-      display: 'inline-block',
-      background: 'rgba(26, 26, 33, 0.95)',
-      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
-    }}>
+  useEffect(() => {
+    if (!containerRef.current || !reaction) return;
+    
+    // Clear container contents
+    containerRef.current.innerHTML = '';
+    
+    const mountEl = document.createElement('div');
+    mountEl.style.width = '100%';
+    mountEl.style.height = '100%';
+    containerRef.current.appendChild(mountEl);
+    
+    const root = createRoot(mountEl);
+    
+    const handleInit = (ketcherInstance) => {
+      try {
+        ketcherInstance.editor.options({ viewOnlyMode: true });
+        ketcherInstance.setMolecule(reaction);
+      } catch (e) {
+        console.error('Ketcher reaction render error:', e);
+      }
+    };
+    
+    root.render(
       <Editor
         staticResourcesUrl=""
         structServiceProvider={structServiceProvider}
@@ -204,7 +205,32 @@ export function ReactionRenderer({ reaction, theme = 'dark', width = 600, height
           'calculators', 'check', 'server', 'fullscreen'
         ]}
       />
-    </div>
+    );
+    
+    return () => {
+      setTimeout(() => {
+        try {
+          root.unmount();
+        } catch (e) { /* ignore */ }
+      }, 0);
+    };
+  }, [reaction]);
+
+  return (
+    <div 
+      ref={containerRef}
+      style={{ 
+        width: `${width}px`, 
+        height: `${height}px`, 
+        border: '1px solid rgba(255, 255, 255, 0.08)', 
+        borderRadius: '12px',
+        overflow: 'hidden',
+        margin: '12px 0',
+        display: 'inline-block',
+        background: 'rgba(26, 26, 33, 0.95)',
+        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+      }}
+    />
   );
 }
 
