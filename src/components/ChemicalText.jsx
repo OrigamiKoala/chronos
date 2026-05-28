@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import SmilesDrawer from 'smiles-drawer';
 
 // Helper to determine if a token is a SMILES string
