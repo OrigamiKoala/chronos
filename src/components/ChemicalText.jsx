@@ -111,10 +111,7 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
     if (!svgRef.current || !smiles) return;
 
     try {
-      // Clear previous drawing
       svgRef.current.innerHTML = '';
-
-      // Initialize the SvgDrawer with custom theme options
       const drawer = new SmilesDrawer.SvgDrawer({
         width,
         height,
@@ -122,21 +119,18 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
         bondLength: 15,
         fontSizeLarge: 11,
         fontSizeSmall: 8,
-        padding: 8,
+        padding: 0,
         themes: smilesThemes
       });
 
-      // Strip any stray backslashes (e.g. from LaTeX remnants) before parsing
       const sanitized = smiles.replace(/\\/g, '/');
       SmilesDrawer.parse(sanitized, (tree) => {
         setHasError(false);
         drawer.draw(tree, svgRef.current, theme, false);
       }, (err) => {
-        console.error('SMILES parse error:', err);
         setHasError(true);
       });
     } catch (error) {
-      console.error('Error drawing SMILES:', error);
       setHasError(true);
     }
   }, [smiles, width, height, theme]);
@@ -150,15 +144,10 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
       display: 'inline-flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      background: 'rgba(255, 255, 255, 0.03)',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
-      borderRadius: '8px',
-      padding: '4px',
       verticalAlign: 'middle',
-      margin: '4px 6px',
-      boxShadow: '0 4px 10px -2px rgba(0,0,0,0.15)'
+      margin: '0 4px'
     }}>
-      <svg ref={svgRef} width={width} height={height} style={{ maxWidth: '100%', height: 'auto' }} />
+      <svg ref={svgRef} data-smiles={smiles} />
     </span>
   );
 }
@@ -189,7 +178,6 @@ export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height
     if (!svgRef.current || !reaction) return;
 
     try {
-      // Clear any previous content
       svgRef.current.innerHTML = '';
 
       const molOpts = {
@@ -199,7 +187,7 @@ export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height
         bondLength: 15,
         fontSizeLarge: 11,
         fontSizeSmall: 8,
-        padding: 8,
+        padding: 0,
         themes: smilesThemes
       };
 
@@ -224,11 +212,9 @@ export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height
         setHasError(false);
         reactionDrawer.draw(rxn, svgRef.current, theme);
       }, (err) => {
-        console.error('Reaction SMILES parse error:', err);
         setHasError(true);
       });
     } catch (error) {
-      console.error('Error drawing reaction:', error);
       setHasError(true);
     }
   }, [reaction, theme]);
@@ -240,15 +226,9 @@ export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height
   return (
     <span style={{
       display: 'inline-block',
-      background: 'rgba(255, 255, 255, 0.03)',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
-      borderRadius: '12px',
-      padding: '8px 12px',
-      margin: '8px 0',
       verticalAlign: 'middle',
-      overflow: 'auto',
-      maxWidth: '100%',
-      boxShadow: '0 4px 10px -2px rgba(0,0,0,0.15)'
+      margin: '0 4px',
+      overflow: 'visible'
     }}>
       <svg
         ref={svgRef}
@@ -306,22 +286,28 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
               const suffix = match[3];
 
               if (isReactionSmiles(coreWord)) {
+                const cleanPrefix = prefix.replace(/`/g, '');
+                const cleanSuffix = suffix.replace(/`/g, '');
                 return (
-                  <span key={index} style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle' }}>
-                    {prefix}
+                  <React.Fragment key={index}>
+                    {cleanPrefix}
                     <ReactionRenderer reaction={coreWord} width={defaultWidth} height={defaultHeight} theme={theme} />
-                    {suffix}
-                  </span>
+                    {cleanSuffix}
+                    {isLast(index) ? '' : ' '}
+                  </React.Fragment>
                 );
               }
 
               if (isSmiles(coreWord)) {
+                const cleanPrefix = prefix.replace(/`/g, '');
+                const cleanSuffix = suffix.replace(/`/g, '');
                 return (
-                  <span key={index} style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle' }}>
-                    {prefix}
+                  <React.Fragment key={index}>
+                    {cleanPrefix}
                     <SmilesRenderer smiles={coreWord} width={defaultWidth} height={defaultHeight} theme={theme} />
-                    {suffix}
-                  </span>
+                    {cleanSuffix}
+                    {isLast(index) ? '' : ' '}
+                  </React.Fragment>
                 );
               }
 
