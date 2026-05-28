@@ -127,7 +127,7 @@ Follow these strict Olympiad Design Philosophies:
 
 1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
 - For difficulty levels < 8, do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview (e.g., avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics).
-- For difficulty levels >= 8, you MAY introduce advanced outside, college, or graduate-level topics, BUT you must use a first-principles approach. You must assume the user knows absolutely nothing about the topic and define all non-standard concepts, equations, and phenomena from scratch within the problem text itself.
+- For difficulty levels >= 8, you MAY introduce advanced outside, college, or graduate-level topics. IMPORTANT: Do NOT hyper-fixate on the specific examples mentioned in the < 8 rule (do NOT just repeatedly generate problems about those specific examples). You MUST heavily randomize your choice of advanced topics across all subfields. When you do introduce an advanced topic, you must use a first-principles approach, You must assume the user knows absolutely nothing about the topic and define all non-standard concepts, equations, and phenomena from scratch within the problem text itself.
 - DO increase difficulty by forcing the integration of multiple foundational concepts:
   * Pair a thermodynamic PV-cycle with a magnetic induction loop or a spring-mass oscillator, or combine electrostatics/Lorentz force with rotational dynamics, or analyze buoyant forces in a rotating/accelerating frame.
 - Incorporate subtle conceptual traps:
@@ -147,13 +147,14 @@ Calibrate the 1-10 difficulty scale exactly as follows:
 Follow these strict Olympiad Design Philosophies:
 
 1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
-- For difficulty levels < 8, do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview (e.g., avoid full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, advanced spectroscopic methods like 2D-NMR, overpotential calculations involving the Tafel equation, Ligand Field Stabilization Energies, coordination complexes energy calculations, or Maxwell's relations).
-- For difficulty levels >= 8, you MAY introduce advanced outside, college, or graduate-level topics, BUT you must use a first-principles approach. You must assume the user knows absolutely nothing about the topic and define all non-standard concepts, equations, and phenomena from scratch within the problem text itself.
-- DO increase difficulty by forcing the integration of multiple foundational concepts:
-  * Pair a non-trivial thermodynamic cycle with an electrochemistry cell, or force a non-obvious stereochemical outcome via steric/electronic shielding in reaction prediction.
-- Incorporate subtle conceptual traps:
-  * Design problems where standard shortcuts or rote formula-plugging yield tempting distractors, requiring exact tracking of assumptions (e.g., non-ideal gas behavior, temperature dependence of ΔH/ΔS, or structural rearrangements/hydride shifts).
-- Mix conceptual qualitative questions with computational questions.
+- For USNCO (< 8): Do NOT introduce advanced graduate topics outside the USNCO purview (e.g., full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, or advanced spectroscopic methods like 2D-NMR).
+- DO increase difficulty by forcing the integration of multiple foundational concepts (e.g., pairing a non-trivial thermodynamic cycle with an electrochemistry cell, or forcing a non-obvious stereochemical outcome via steric/electronic shielding in reaction prediction).
+- Incorporate subtle conceptual traps: design problems where standard shortcuts or rote formula-plugging yield tempting distractors, requiring exact tracking of assumptions (e.g., non-ideal behavior, temperature dependence of ΔH, or structural rearrangements).
+
+For IChO (>= 8):
+- Strict Originality & Concept-First Design: Questions must be entirely novel, leveraging uncommon molecular architectures, obscure inorganic frameworks, or elegant biophysical mechanisms. Banish mechanical, plug-and-chug calculations. Every problem must pivot on a subtle conceptual bottleneck or structural "trick" that rewards profound first-principles understanding over rote memorization.
+- The "First-Principles" Guardrail: You may introduce highly advanced or modern chemical phenomena (e.g., non-adiabatic transitions, explicit quantum mechanical operators, or complex coordination topology). However, you must provide self-contained, axiomatic background information within the problem preamble. A brilliant student must be capable of reasoning the correct path using only standard Olympiad prerequisites (thermodynamics, kinetics, advanced organic mechanisms, quantum basics) combined with the provided context. Avoid requiring niche, un-hinted graduate research knowledge.
+- Elevated Difficulty Profile: The exam must be systematically harder and more time-consuming than historical IChO papers. Achieve this by increasing the density of coupled multi-step pathways, requiring non-trivial algebraic or differential manipulations, and utilizing highly symmetric or counter-intuitive stereochemical transformations.
 
 2. Authentic Style & Tone Mimicry
 - Use the exact technical nomenclature, passive voice, and formal phrasing characteristic of official olympiads:
