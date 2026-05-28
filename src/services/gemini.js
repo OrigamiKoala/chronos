@@ -98,31 +98,32 @@ export async function generateProblem(difficultyLevel, subject = "Math") {
         subjectContext = `
 Follow these strict Olympiad Design Philosophies:
 
-Generate Chemistry Olympiad problems at difficulty level [1-10], adhering strictly to the following Design Philosophies:
+Generate [Number] Chemistry Olympiad problems at difficulty level [1-10], adhering strictly to the following Design Philosophies:
 
-1. Tone & "Invisible Traps" (No Handholding)
-- Mimic the exact technical nomenclature, passive voice, and neutral phrasing of official ACS (USNCO) exams.
-- NEVER include explicit warnings, hints, or instructions on how to solve the problem (e.g., "Do not assume...", "Account for...", "Do not rely on the simplified Henderson-Hasselbalch equation").
-- If a problem is designed to test a failed approximation (e.g., non-ideal behavior, autoionization of water, competing equilibria), present the scenario neutrally. The failed approximation must yield a mathematical result that perfectly matches one of the incorrect distractor options.
+1. Novelty & "Invisible Traps" (Subtle Conceptual Bottlenecks)
+- Banish stock, predictable questions that can be solved by memory or template-matching. 
+- Every problem must center on a non-obvious conceptual trick, a hidden limiting factor, or a subtle breakdown of a standard textbook assumption.
+- The question text must remain entirely neutral. NEVER include hints, warnings, or clarifying instructions (e.g., "Do not assume...", "Account for...", "Do not rely on..."). 
+- Incorporate a deceptive path: design the problem so that the most common rote formula shortcut yields an exact numerical value or structural choice that perfectly matches one of the incorrect distractor options.
 
 2. Difficulty-Dependent Syllabus Boundaries
 - IF DIFFICULTY < 8 (USNCO National Level):
-  - Strictly maintain the USNCO scope.
-  - EXCLUDE the introduction of named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g., Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
+  - Maintain the USNCO scope but test to maximum depth.
+  - EXCLUDE named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g., Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
   - EXCLUDE advanced stereochemical control and transition-state geometry (e.g., Bürgi-Dunitz trajectories, advanced diastereoselectivity, stereospecific enolate alkylations).
   - EXCLUDE advanced coordination chemistry (e.g., Crystal Field Theory, $t_{2g}$/$e_g$ orbital splitting, high-spin/low-spin complexes, Jahn-Teller effects). Confine coordination questions to basic nomenclature, coordination number, and oxidation states.
   - EXCLUDE all calculus-based derivations or principles.
   - EXCLUDE advanced spectroscopy (e.g., 2D-NMR).
-  - Increase difficulty via depth: force the integration of multiple foundational concepts and conceptual traps without exceeding the standard algebraic syllabus.
+  - Increase difficulty by coupling unexpected systems (e.g., matching a non-trivial stoichiometry with an electrochemical change that alters concentration ratios, or an organic reaction where a common functional group exhibits atypical reactivity due to adjacent electronic effects).
 - IF DIFFICULTY >= 8 (IChO Level):
-  - Pivot to strictly original, concept-first designs leveraging advanced chemical phenomena.
-  - The "First-Principles" Guardrail: You MUST introduce advanced, extra-syllabus topics using self-contained, axiomatic background information within the problem preamble. A student must be able to deduce the correct path using standard prerequisites combined with the provided context.
+  - Pivot to completely original, concept-first designs leveraging advanced chemical phenomena.
+  - The "First-Principles" Guardrail: Introduce advanced, extra-syllabus topics using self-contained, axiomatic background information within the problem preamble. A student must be able to deduce the correct path using standard prerequisites combined with the provided context.
 
 3. Structural Representation (SMILES Rules)
-- Use LaTeX strictly for math, equations, stoichiometry, physical units, and simple empirical formulas in prose (e.g., $\text{H}_2\text{O}$, $\Delta G^\circ$, $\text{[Co(H}_2\text{O)}_6\text{]}^{2+} + 4\text{Cl}^- \rightleftharpoons \text{[CoCl}_4\text{]}^{2-} + 6\text{H}_2\text{O}$).
-- ONLY use SMILES notation for organic molecules or when a 2D structural diagram is explicitly required. Represent organic chemical reactions using Reaction SMILES syntax (e.g., C(C)O.CC(=O)O>[H+]>CC(=O)OCC.O).
-- Display SMILES directly inline (e.g. \`CC(=O)O\`) without introductory phrases like "represented by the SMILES string". Use bracket notation for inorganic species with explicit charges (e.g. [NH4+]).
-- NEVER use SMILES for simple inline prose like "a liquid like O".
+- NEVER replace simple chemical names or basic empirical formulas in standard prose with SMILES (e.g., do not write "a liquid like O" for water; use $\text{H}_2\text{O}$).
+- ONLY use SMILES notation (or Reaction SMILES) for complex organic molecules, coordination complexes, or standalone reaction schemes where a 2D structural diagram is explicitly required.
+- When required, display SMILES directly inline without introductory phrases like "represented by the SMILES string...", ensuring it does not disrupt the grammatical flow of the text.
+- Use LaTeX strictly for all mathematical equations, equilibrium expressions, simple empirical chemical formulas in prose, physical units, and variables (e.g., $\Delta G^\circ$, $E^\circ$, $K_{\text{sp}}$, $1.0 \times 10^{-3} \text{ M}$).
 
 Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: simple Honors/early AP chem, 3: harder problems on the ACS Local Exam, 5: harder problems on the USNCO Nationals, 10: hardest problem on the IChO.
@@ -335,31 +336,32 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
         subjectContext = `
 Follow these strict Olympiad Design Philosophies:
 
-Generate Chemistry Olympiad problems at difficulty level [1-10], adhering strictly to the following Design Philosophies:
+Generate [Number] Chemistry Olympiad problems at difficulty level [1-10], adhering strictly to the following Design Philosophies:
 
-1. Tone & "Invisible Traps" (No Handholding)
-- Mimic the exact technical nomenclature, passive voice, and neutral phrasing of official ACS (USNCO) exams.
-- NEVER include explicit warnings, hints, or instructions on how to solve the problem (e.g., "Do not assume...", "Account for...", "Do not rely on the simplified Henderson-Hasselbalch equation").
-- If a problem is designed to test a failed approximation (e.g., non-ideal behavior, autoionization of water, competing equilibria), present the scenario neutrally. The failed approximation must yield a mathematical result that perfectly matches one of the incorrect distractor options.
+1. Novelty & "Invisible Traps" (Subtle Conceptual Bottlenecks)
+- Banish stock, predictable questions that can be solved by memory or template-matching. 
+- Every problem must center on a non-obvious conceptual trick, a hidden limiting factor, or a subtle breakdown of a standard textbook assumption.
+- The question text must remain entirely neutral. NEVER include hints, warnings, or clarifying instructions (e.g., "Do not assume...", "Account for...", "Do not rely on..."). 
+- Incorporate a deceptive path: design the problem so that the most common rote formula shortcut yields an exact numerical value or structural choice that perfectly matches one of the incorrect distractor options.
 
 2. Difficulty-Dependent Syllabus Boundaries
 - IF DIFFICULTY < 8 (USNCO National Level):
-  - Strictly maintain the USNCO scope.
-  - EXCLUDE the introduction of named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g., Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
+  - Maintain the USNCO scope but test to maximum depth.
+  - EXCLUDE named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g., Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
   - EXCLUDE advanced stereochemical control and transition-state geometry (e.g., Bürgi-Dunitz trajectories, advanced diastereoselectivity, stereospecific enolate alkylations).
   - EXCLUDE advanced coordination chemistry (e.g., Crystal Field Theory, $t_{2g}$/$e_g$ orbital splitting, high-spin/low-spin complexes, Jahn-Teller effects). Confine coordination questions to basic nomenclature, coordination number, and oxidation states.
   - EXCLUDE all calculus-based derivations or principles.
   - EXCLUDE advanced spectroscopy (e.g., 2D-NMR).
-  - Increase difficulty via depth: force the integration of multiple foundational concepts and conceptual traps without exceeding the standard algebraic syllabus.
+  - Increase difficulty by coupling unexpected systems (e.g., matching a non-trivial stoichiometry with an electrochemical change that alters concentration ratios, or an organic reaction where a common functional group exhibits atypical reactivity due to adjacent electronic effects).
 - IF DIFFICULTY >= 8 (IChO Level):
-  - Pivot to strictly original, concept-first designs leveraging advanced chemical phenomena.
-  - The "First-Principles" Guardrail: You MUST introduce advanced, extra-syllabus topics using self-contained, axiomatic background information within the problem preamble. A student must be able to deduce the correct path using standard prerequisites combined with the provided context.
+  - Pivot to completely original, concept-first designs leveraging advanced chemical phenomena.
+  - The "First-Principles" Guardrail: Introduce advanced, extra-syllabus topics using self-contained, axiomatic background information within the problem preamble. A student must be able to deduce the correct path using standard prerequisites combined with the provided context.
 
 3. Structural Representation (SMILES Rules)
-- Use LaTeX strictly for math, equations, stoichiometry, physical units, and simple empirical formulas in prose (e.g., $\text{H}_2\text{O}$, $\Delta G^\circ$, $\text{[Co(H}_2\text{O)}_6\text{]}^{2+} + 4\text{Cl}^- \rightleftharpoons \text{[CoCl}_4\text{]}^{2-} + 6\text{H}_2\text{O}$).
-- ONLY use SMILES notation for organic molecules or when a 2D structural diagram is explicitly required. Represent organic chemical reactions using Reaction SMILES syntax (e.g., C(C)O.CC(=O)O>[H+]>CC(=O)OCC.O).
-- Display SMILES directly inline (e.g. \`CC(=O)O\`) without introductory phrases like "represented by the SMILES string". Use bracket notation for inorganic species with explicit charges (e.g. [NH4+]).
-- NEVER use SMILES for simple inline prose like "a liquid like O".
+- NEVER replace simple chemical names or basic empirical formulas in standard prose with SMILES (e.g., do not write "a liquid like O" for water; use $\text{H}_2\text{O}$).
+- ONLY use SMILES notation (or Reaction SMILES) for complex organic molecules, coordination complexes, or standalone reaction schemes where a 2D structural diagram is explicitly required.
+- When required, display SMILES directly inline without introductory phrases like "represented by the SMILES string...", ensuring it does not disrupt the grammatical flow of the text.
+- Use LaTeX strictly for all mathematical equations, equilibrium expressions, simple empirical chemical formulas in prose, physical units, and variables (e.g., $\Delta G^\circ$, $E^\circ$, $K_{\text{sp}}$, $1.0 \times 10^{-3} \text{ M}$).
 
 Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: simple Honors/early AP chem, 3: harder problems on the ACS Local Exam, 5: harder problems on the USNCO Nationals, 10: hardest problem on the IChO.

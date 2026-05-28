@@ -1,4 +1,5 @@
-const fs = require('fs');
+import fs from 'fs';
+import process from 'process';
 
 const apiContent = fs.readFileSync('api/generate.js', 'utf8');
 const match = apiContent.match(/if \(normSubject === 'chemistry'\) \{\s+subjectSpecificInstructions = `([\s\S]*?)`;/);
