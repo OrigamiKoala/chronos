@@ -147,7 +147,7 @@ Calibrate the 1-10 difficulty scale exactly as follows:
 Follow these strict Olympiad Design Philosophies:
 
 1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
-- For difficulty levels < 8, do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview (e.g., avoid full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, advanced spectroscopic methods like 2D-NMR, overpotential calculations involving the Tafel equation, or Maxwell's relations).
+- For difficulty levels < 8, do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview (e.g., avoid full molecular orbital symmetry point groups, complex computational quantum mechanics derivations, advanced spectroscopic methods like 2D-NMR, overpotential calculations involving the Tafel equation, Ligand Field Stabilization Energies, coordination complexes energy calculations, or Maxwell's relations).
 - For difficulty levels >= 8, you MAY introduce advanced outside, college, or graduate-level topics, BUT you must use a first-principles approach. You must assume the user knows absolutely nothing about the topic and define all non-standard concepts, equations, and phenomena from scratch within the problem text itself.
 - DO increase difficulty by forcing the integration of multiple foundational concepts:
   * Pair a non-trivial thermodynamic cycle with an electrochemistry cell, or force a non-obvious stereochemical outcome via steric/electronic shielding in reaction prediction.

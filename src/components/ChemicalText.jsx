@@ -105,6 +105,7 @@ const smilesThemes = {
 
 export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dark' }) {
   const svgRef = useRef(null);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (!svgRef.current || !smiles) return;
@@ -128,14 +129,21 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
       // Strip any stray backslashes (e.g. from LaTeX remnants) before parsing
       const sanitized = smiles.replace(/\\/g, '/');
       SmilesDrawer.parse(sanitized, (tree) => {
+        setHasError(false);
         drawer.draw(tree, svgRef.current, theme, false);
       }, (err) => {
         console.error('SMILES parse error:', err);
+        setHasError(true);
       });
     } catch (error) {
       console.error('Error drawing SMILES:', error);
+      setHasError(true);
     }
   }, [smiles, width, height, theme]);
+
+  if (hasError) {
+    return <span>{smiles}</span>;
+  }
 
   return (
     <span style={{ 
@@ -175,6 +183,7 @@ export function isReactionSmiles(word) {
  */
 export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height = 200 }) {
   const svgRef = useRef(null);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (!svgRef.current || !reaction) return;
@@ -212,18 +221,21 @@ export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height
       const reactionDrawer = new SmilesDrawer.ReactionDrawer(reactionOpts, molOpts);
 
       SmilesDrawer.parseReaction(reaction, (rxn) => {
+        setHasError(false);
         reactionDrawer.draw(rxn, svgRef.current, theme);
       }, (err) => {
         console.error('Reaction SMILES parse error:', err);
-        // Fall back to plain text display
-        if (svgRef.current) {
-          svgRef.current.innerHTML = '';
-        }
+        setHasError(true);
       });
     } catch (error) {
       console.error('Error drawing reaction:', error);
+      setHasError(true);
     }
   }, [reaction, theme]);
+
+  if (hasError) {
+    return <span>{reaction}</span>;
+  }
 
   return (
     <span style={{
