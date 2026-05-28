@@ -211,6 +211,7 @@ All questions generated MUST adhere to these critical design directives:
       - In Physics: You must select from kinematics, forces, momentum, systems of particles, rotational kinematics, rotational dynamics, angular momentum, energy, fluid statics, gravitation, fluid dynamics, oscillations, waves, thermodynamics, electricity, and magnetism.
       - In Math: You must select from algebra, geometry, counting/probability, number theory.
    If a user's weak concepts are provided, allocate a minority of the questions (~30%, e.g., 1 out of 3, or 2 out of 5) to target those weaknesses, and dedicate the remaining majority (~70%) to a diverse selection of other core topics in the subject's standard syllabus, ensuring that no single topic (like electrochemistry) dominates the exam. If weaknesses are "None", distribute questions evenly across all core topics.
+3. OPTIONS FORMATTING (LaTeX Delimiters): For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Simple, purely qualitative text options that do not contain mathematical or chemical terms must NOT be wrapped in LaTeX.
 
 The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
