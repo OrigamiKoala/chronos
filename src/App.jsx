@@ -411,6 +411,7 @@ function App() {
           options: r.options,
           answer: r.answer,
           difficulty: r.difficulty,
+          detailedSolution: r.detailedSolution,
           userAnswer: r.userAnswer,
           isCorrect: r.isCorrect,
           timeSpent: r.timeSpent,

@@ -220,7 +220,8 @@ The output must be a pure JSON array containing exactly the requested number of 
   "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format.",
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
   "answer": ${answerSchemaDesc},
-  "difficulty": a number between 1 and 10 representing difficulty
+  "difficulty": a number between 1 and 10 representing difficulty,
+  "detailedSolution": "A thorough, detailed step-by-step solution to the question"
 }
 
 Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
@@ -231,7 +232,8 @@ The user's identified weak concepts are: ${weaknesses}.
 Follow these strict rules:
 1. Question Style: Provide a balanced mix of standard and tricky questions. Standard questions should only be generated for difficulty levels 1-4. For difficulty levels 5-10, make questions either tricky with conceptual traps, or standard but highly difficult in their own right. Do NOT use obscure, highly specialized research-level details.
 2. The exam must span a wide, diverse range of standard topics in ${subject}. Do NOT let any single topic dominate the entire exam.
-3. Dedicated Distribution: Target the user's weak concepts (${weaknesses}) for approximately 30% of the questions. The remaining 70% of the questions MUST cover other diverse, standard subjects/topics in the ${subject} syllabus (e.g. for Chemistry, you MUST actively generate questions on other topics such as periodic trends, kinetics, thermodynamics, organic synthesis, chemical equilibrium, coordination chemistry, atomic structure, etc. instead of just stoichiometry and electrochemistry). If the weak concepts listed are "None", distribute all questions evenly across all main topics.`;
+3. Dedicated Distribution: Target the user's weak concepts (${weaknesses}) for approximately 30% of the questions. The remaining 70% of the questions MUST cover other diverse, standard subjects/topics in the ${subject} syllabus (e.g. for Chemistry, you MUST actively generate questions on other topics such as periodic trends, kinetics, thermodynamics, organic synthesis, chemical equilibrium, coordination chemistry, atomic structure, etc. instead of just stoichiometry and electrochemistry). If the weak concepts listed are "None", distribute all questions evenly across all main topics.
+4. Detailed Solutions: For every question generated, you MUST provide a thorough, detailed step-by-step correct solution and proof in the "detailedSolution" field.`;
 
     // 3. Set SSE headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');

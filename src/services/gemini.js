@@ -289,14 +289,16 @@ The output must be a pure JSON array containing exactly the requested number of 
     "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format.",
     "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
     "answer": ${answerSchemaDesc},
-    "difficulty": a number between 1 and 10 representing difficulty
+    "difficulty": a number between 1 and 10 representing difficulty,
+    "detailedSolution": "A thorough, detailed step-by-step solution to the question"
 }
 Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
 
     const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
 Follow these strict rules:
 1. Question Style: Provide a balanced mix of standard and tricky questions. Standard questions should only be generated for difficulty levels 1-4. For difficulty levels 5-10, make questions either tricky with conceptual traps, or standard but highly difficult in their own right. Do NOT use obscure, highly specialized research-level details.
-2. The exam must span a wide, diverse range of standard topics in ${subject}. Do NOT let any single topic dominate the entire exam. Distribute the questions across a broad variety of core topics in the standard syllabus.`;
+2. The exam must span a wide, diverse range of standard topics in ${subject}. Do NOT let any single topic dominate the entire exam. Distribute the questions across a broad variety of core topics in the standard syllabus.
+3. Detailed Solutions: For every question generated, you MUST provide a thorough, detailed step-by-step correct solution and proof in the "detailedSolution" field.`;
 
     try {
         const stream = await ai.models.generateContentStream({

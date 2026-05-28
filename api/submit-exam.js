@@ -155,6 +155,10 @@ Topic: ${r.topic || 'General'}
 Question Text: ${r.question}
 `;
 
+          if (r.detailedSolution) {
+            gradingPrompt += `\nDetailed Correct Solution (for your reference): ${r.detailedSolution}\n`;
+          }
+
           if (isImage) {
             gradingPrompt += `\nThe student submitted their solution as a handwritten drawing or uploaded image of their scratch work/whiteboard.
 Analyze the image carefully to understand their step-by-step logic, calculation progress, and final proof.`;
@@ -201,7 +205,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           contents.push(gradingPrompt);
 
           const gradingResponse = await ai.models.generateContent({
-            model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+            model: 'gemini-3.1-flash-lite',
             contents: contents,
             config: {
               responseMimeType: "application/json",
