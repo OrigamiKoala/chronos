@@ -1,12 +1,14 @@
 # 🧠 Chronos Bot: Olympiad Prep & Stress Sandbox
 
-**Chronos Bot** is a next-generation, premium AI-powered test-preparation sandbox designed for high-stakes science and mathematics competitive olympiads (Math, Physics, Chemistry). By simulating realistic stress factors (hidden timers, strict limits, dynamic visual acceleration) alongside real-time ELO difficulty scaling and deep automated diagnostic feedback loops, Chronos Bot trains mental endurance alongside academic mastery.
+**Chronos Bot** is a next-generation, AI-powered test-preparation sandbox designed for high-stakes science and mathematics competitive olympiads (Math, Physics, Chemistry). By simulating realistic stress factors alongside real-time ELO difficulty scaling and deep automated diagnostic feedback loops, Chronos Bot trains mental endurance alongside academic problem-solving skills.
+
+Vibe coded by Carl Liu (c) 2026
 
 ---
 
 ## 🚀 Key Features
 
-* **Real-time SSE Question Streaming**: Streams challenging olympiad problems immediately using `@google/genai` SSE streams, generating and rendering questions on the fly while subsequent problems continue parsing in the background.
+* **Real-time SSE Question Streaming**: Uses Gemini to generate olympiad problems on the fly.
 * **Simulated Stress Modes**:
   * **None**: A relaxed, standard timer.
   * **Hidden Clock**: Hides the timer entirely, only flashing an alarm in the final 10 seconds.
