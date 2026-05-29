@@ -206,11 +206,83 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           const gradingResponse = await executeWithRetry('gemini-3.1-flash-lite', (ai) => ai.models.generateContent({
             model: 'gemini-3.1-flash-lite',
             contents: contents,
+            safety_settings: [
+              {
+                category: 'HARM_CATEGORY_HATE_SPEECH',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              },
+              {
+                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              },
+              {
+                category: 'HARM_CATEGORY_HARASSMENT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              },
+              {
+                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              }
+            ],
+            safetySettings: [
+              {
+                category: 'HARM_CATEGORY_HATE_SPEECH',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              },
+              {
+                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              },
+              {
+                category: 'HARM_CATEGORY_HARASSMENT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              },
+              {
+                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              }
+            ],
             config: {
               responseMimeType: "application/json",
-              temperature: 0.2
+              temperature: 0.2,
+              safety_settings: [
+                {
+                  category: 'HARM_CATEGORY_HATE_SPEECH',
+                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+                },
+                {
+                  category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+                },
+                {
+                  category: 'HARM_CATEGORY_HARASSMENT',
+                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+                },
+                {
+                  category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+                }
+              ],
+              safetySettings: [
+                {
+                  category: 'HARM_CATEGORY_HATE_SPEECH',
+                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+                },
+                {
+                  category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+                },
+                {
+                  category: 'HARM_CATEGORY_HARASSMENT',
+                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+                },
+                {
+                  category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+                }
+              ]
             }
-          }));
+          }), req);
 
           const graded = JSON.parse(gradingResponse.text);
           return {
@@ -265,14 +337,14 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       const getQuestionRating = (sub, diff) => {
         const d = Math.max(1, Math.min(10, diff));
         if (sub === 'Math') {
-          const mathMap = { 1: 500, 2: 600, 3: 800, 4: 900, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
-          return mathMap[Math.round(d)] || 1000;
+          const mathMap = new Map([[1, 500], [2, 600], [3, 800], [4, 900], [5, 1000], [6, 1250], [7, 1500], [8, 2000], [9, 2500], [10, 3000]]);
+          return mathMap.get(Math.round(d)) || 1000;
         } else if (sub === 'Chemistry') {
-          const chemMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
-          return chemMap[Math.round(d)] || 1000;
+          const chemMap = new Map([[1, 100], [2, 300], [3, 500], [4, 750], [5, 1000], [6, 1250], [7, 1500], [8, 2000], [9, 2500], [10, 3000]]);
+          return chemMap.get(Math.round(d)) || 1000;
         } else if (sub === 'Physics') {
-          const physMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1300, 7: 1600, 8: 2000, 9: 2500, 10: 3000 };
-          return physMap[Math.round(d)] || 1000;
+          const physMap = new Map([[1, 100], [2, 300], [3, 500], [4, 750], [5, 1000], [6, 1300], [7, 1600], [8, 2000], [9, 2500], [10, 3000]]);
+          return physMap.get(Math.round(d)) || 1000;
         }
         return 100;
       };
@@ -382,7 +454,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
 
       // Fetch all existing mastery rows for this user+subject in one query
       const topicNames = Object.keys(topicStats);
-      let existingMasteryMap = {};
+      const existingMasteryMap = new Map();
       if (topicNames.length > 0) {
         const [masteryRows] = await bq.query({
           query: `SELECT sub_category, correct_count, total_count
@@ -391,14 +463,14 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           params: { username: sanitizedUser, subject }
         });
         for (const row of masteryRows) {
-          existingMasteryMap[row.sub_category] = row;
+          existingMasteryMap.set(row.sub_category, row);
         }
       }
 
       // Build mastery upsert promises
       const masteryPromises = [];
       for (const [topic, stats] of Object.entries(topicStats)) {
-        const existing = existingMasteryMap[topic];
+        const existing = existingMasteryMap.get(topic);
         if (existing) {
           const nextCorrect = existing.correct_count + stats.correct;
           const nextTotal = existing.total_count + stats.total;
@@ -429,8 +501,8 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
 
       // 4. Trigger update of user weaknesses using direct Gemini model
       const [freshAnalysis, freshMistakePatterns] = await Promise.all([
-        updateAIWeaknesses(sanitizedUser, subject),
-        analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults)
+        updateAIWeaknesses(sanitizedUser, subject, req),
+        analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req)
       ]);
 
       return res.status(200).json({ 
@@ -444,7 +516,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       });
     } else {
       // For Guest user: run mistake analysis via Gemini without BigQuery insert, return detailedAnalysis as null
-      const freshMistakePatterns = await analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults);
+      const freshMistakePatterns = await analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req);
       return res.status(200).json({ 
         success: true, 
         detailedAnalysis: null, 
@@ -463,7 +535,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
 }
 
 // Background worker function to analyze wrong problems and update weaknesses
-async function updateAIWeaknesses(username, subject) {
+async function updateAIWeaknesses(username, subject, req) {
   try {
     // Tables already ensured in cold-start block
 
@@ -506,11 +578,83 @@ Incorrect questions: ${wrongProblemsString}`;
     const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
       model: modelId,
       contents: prompt,
+      safety_settings: [
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        }
+      ],
+      safetySettings: [
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        }
+      ],
       config: {
         responseMimeType: "application/json",
-        temperature: 0.2
+        temperature: 0.2,
+        safety_settings: [
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          }
+        ],
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          }
+        ]
       }
-    }));
+    }), req);
 
     if (response.text) {
       const responseText = response.text;
@@ -524,7 +668,7 @@ Incorrect questions: ${wrongProblemsString}`;
       if (Array.isArray(strengths) || Array.isArray(weaknesses)) {
         // Fetch all existing mastery rows in one query
         const allTopics = [...new Set([...(strengths || []), ...(weaknesses || [])])];
-        let masteryMap = {};
+        const masteryMap = new Map();
         if (allTopics.length > 0) {
           const [rows] = await bq.query({
             query: `SELECT sub_category, correct_count, total_count
@@ -533,7 +677,7 @@ Incorrect questions: ${wrongProblemsString}`;
             params: { username, subject }
           });
           for (const row of rows) {
-            masteryMap[row.sub_category] = row;
+            masteryMap.set(row.sub_category, row);
           }
         }
 
@@ -541,7 +685,7 @@ Incorrect questions: ${wrongProblemsString}`;
 
         if (Array.isArray(strengths)) {
           for (const topic of strengths) {
-            if (masteryMap[topic]) {
+            if (masteryMap.has(topic)) {
               upsertPromises.push(bq.query({
                 query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
                   SET correct_count = 4, total_count = 6, accuracy_rate = 0.80
@@ -561,7 +705,7 @@ Incorrect questions: ${wrongProblemsString}`;
 
         if (Array.isArray(weaknesses)) {
           for (const topic of weaknesses) {
-            if (masteryMap[topic]) {
+            if (masteryMap.has(topic)) {
               upsertPromises.push(bq.query({
                 query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
                   SET correct_count = 2, total_count = 6, accuracy_rate = 0.40
@@ -655,7 +799,7 @@ Incorrect questions: ${wrongProblemsString}`;
   }
 }
 
-async function analyzeMistakesAndSave(username, examId, subject, results) {
+async function analyzeMistakesAndSave(username, examId, subject, results, req) {
   try {
     // Table already ensured in cold-start block
 
@@ -679,10 +823,82 @@ Be direct, supportive, and pedagogical. Do not include markdown headers or greet
     const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
       model: modelId,
       contents: prompt,
+      safety_settings: [
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        }
+      ],
+      safetySettings: [
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        }
+      ],
       config: {
-        temperature: 0.3
+        temperature: 0.3,
+        safety_settings: [
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          }
+        ],
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          }
+        ]
       }
-    }));
+    }), req);
 
     const mistakePatterns = response.text || '';
 

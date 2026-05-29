@@ -247,7 +247,7 @@ Follow these strict rules:
         responseMimeType: "application/json",
         temperature: 0.3,
       },
-    }));
+    }), req);
 
     let accumulated = '';
     let questionsSent = 0;

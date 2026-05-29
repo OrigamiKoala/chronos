@@ -119,7 +119,7 @@ STRICT RULE: ONLY output the user's response/work/process based on the image. Do
           }
         ]
       }
-    }));
+    }), req);
 
     const transcription = response.text || '';
     return res.status(200).json({ transcription });
