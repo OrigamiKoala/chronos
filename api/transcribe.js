@@ -1,9 +1,5 @@
 /* eslint-disable */
-import { GoogleGenAI } from '@google/genai';
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+import { executeWithRetry } from './_gemini.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -36,8 +32,9 @@ Represent formulas and equations in LaTeX.
 
 STRICT RULE: ONLY output the user's response/work/process based on the image. Do NOT output any introductory text (e.g. "Based on the image...", "Here is the transcription...", "The drawing shows..."), meta-commentary, or references to the canvas/drawing itself. Just start directly with the transcription of their work.`;
 
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
+      model: modelId,
       contents: [
         {
           inlineData: {
@@ -47,10 +44,82 @@ STRICT RULE: ONLY output the user's response/work/process based on the image. Do
         },
         prompt
       ],
+      safety_settings: [
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        }
+      ],
+      safetySettings: [
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        }
+      ],
       config: {
-        temperature: 0.3
+        temperature: 0.3,
+        safety_settings: [
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          }
+        ],
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          }
+        ]
       }
-    });
+    }));
 
     const transcription = response.text || '';
     return res.status(200).json({ transcription });

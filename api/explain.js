@@ -1,9 +1,5 @@
 /* eslint-disable */
-import { GoogleGenAI } from '@google/genai';
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+import { executeWithRetry } from './_gemini.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -42,14 +38,15 @@ Return strictly a valid JSON object with the following schema:
   "shouldRemarkCorrect": true or false
 }`;
 
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
+      model: modelId,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
         temperature: 0.3,
       },
-    });
+    }));
 
     try {
       const parsed = JSON.parse(response.text);

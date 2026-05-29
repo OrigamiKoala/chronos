@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
-import { GoogleGenAI } from '@google/genai';
+import { executeWithRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const ELO_ALGORITHM_VERSION = 3;
@@ -113,7 +113,6 @@ export default async function handler(req, res) {
 
     // A. Grade all questions in parallel! Solve on-the-fly and award partial credit!
     const hasFRQ = results.some(r => r.type === 'free_response');
-    const ai = hasFRQ ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
 
     const gradedResults = await Promise.all(results.map(async (r) => {
       if (r.type === 'short_answer') {
@@ -204,14 +203,14 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           }
           contents.push(gradingPrompt);
 
-          const gradingResponse = await ai.models.generateContent({
+          const gradingResponse = await executeWithRetry('gemini-3.1-flash-lite', (ai) => ai.models.generateContent({
             model: 'gemini-3.1-flash-lite',
             contents: contents,
             config: {
               responseMimeType: "application/json",
               temperature: 0.2
             }
-          });
+          }));
 
           const graded = JSON.parse(gradingResponse.text);
           return {
@@ -503,18 +502,15 @@ Do NOT include markdown formatting, backticks, or any conversational text. Retur
 
 Incorrect questions: ${wrongProblemsString}`;
 
-    const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    });
-
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
+      model: modelId,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
         temperature: 0.2
       }
-    });
+    }));
 
     if (response.text) {
       const responseText = response.text;
@@ -679,17 +675,14 @@ Timed Out: ${r.timeOut ? 'Yes' : 'No'}
 Provide a professional, diagnostic summary of their mistake patterns and concrete recommendations to avoid these mistakes in the future.
 Be direct, supportive, and pedagogical. Do not include markdown headers or greetings.`;
 
-    const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    });
-
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
+      model: modelId,
       contents: prompt,
       config: {
         temperature: 0.3
       }
-    });
+    }));
 
     const mistakePatterns = response.text || '';
 

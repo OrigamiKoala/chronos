@@ -1,13 +1,66 @@
 import { GoogleGenAI } from '@google/genai';
 
-const apiKey = import.meta.env.GEMINI_API_KEY;
+const rateLimitRegistry = new Map();
 
-let ai;
-if (apiKey) {
-    ai = new GoogleGenAI({ apiKey });
-} else {
-    console.warn("GEMINI_API_KEY is not set. Problem generation will fail unless set.");
+function isKeyRateLimited(modelId, apiKey) {
+  const today = new Date().toDateString();
+  return rateLimitRegistry.get(`${modelId}:${apiKey}`) === today;
 }
+
+function markKeyRateLimited(modelId, apiKey) {
+  const today = new Date().toDateString();
+  rateLimitRegistry.set(`${modelId}:${apiKey}`, today);
+  console.warn(`[API Rotation] Key marked rate-limited for model ${modelId} today.`);
+}
+
+async function executeWithRetry(modelId, apiCallFn) {
+  const primaryKey = import.meta.env.GEMINI_API_KEY;
+  const backupKey = import.meta.env.GEMINI_API_KEY_2;
+
+  if (!primaryKey && !backupKey) {
+    throw new Error('GEMINI_API_KEY and GEMINI_API_KEY_2 are missing');
+  }
+
+  let lastError;
+
+  if (primaryKey && !isKeyRateLimited(modelId, primaryKey)) {
+    try {
+      const aiClient = new GoogleGenAI({ apiKey: primaryKey });
+      return await apiCallFn(aiClient);
+    } catch (err) {
+      lastError = err;
+      const status = err.status || err.statusCode || (err.message && err.message.includes('429') ? 429 : null);
+      if (status === 429) {
+        console.warn(`[429] Rate limit hit for ${modelId} on primary key.`);
+        markKeyRateLimited(modelId, primaryKey);
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  if (backupKey) {
+    if (isKeyRateLimited(modelId, backupKey)) {
+      throw new Error(`Both primary and backup keys are rate limited for ${modelId}`);
+    }
+    try {
+      console.warn(`[API Rotation] Trying ${modelId} with backup key.`);
+      const aiClient = new GoogleGenAI({ apiKey: backupKey });
+      return await apiCallFn(aiClient);
+    } catch (err) {
+      const status = err.status || err.statusCode || (err.message && err.message.includes('429') ? 429 : null);
+      if (status === 429) {
+        console.warn(`[429] Rate limit hit for ${modelId} on backup key.`);
+        markKeyRateLimited(modelId, backupKey);
+      }
+      throw err;
+    }
+  }
+
+  throw lastError || new Error('No API key available or all rate limited');
+}
+
+const hasKeys = !!(import.meta.env.GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY_2);
 
 function extractCompleteObjects(jsonStr) {
   const objects = [];
@@ -17,7 +70,7 @@ function extractCompleteObjects(jsonStr) {
   let objStart = -1;
 
   for (let i = 0; i < jsonStr.length; i++) {
-    const ch = jsonStr[i];
+    const ch = jsonStr.charAt(i);
 
     if (escape) {
       escape = false;
@@ -145,7 +198,7 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
         }
     }
 
-    if (!ai) {
+    if (!hasKeys) {
         // Fallback for missing API key to allow UI testing
         console.warn("Using fallback mock data due to missing API key.");
         const mockProblems = [];
@@ -301,7 +354,7 @@ Follow these strict rules:
 3. Detailed Solutions: For every question generated, you MUST provide a thorough, detailed step-by-step correct solution and proof in the "detailedSolution" field.`;
 
     try {
-        const stream = await ai.models.generateContentStream({
+        const stream = await executeWithRetry('gemini-3.5-flash', (aiClient) => aiClient.models.generateContentStream({
             model: 'gemini-3.5-flash',
             contents: prompt,
             config: {
@@ -309,7 +362,7 @@ Follow these strict rules:
                 responseMimeType: "application/json",
                 temperature: 0.7,
             }
-        });
+        }));
 
         let accumulated = '';
         let questionsSent = 0;

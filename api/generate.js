@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
-import { GoogleGenAI } from '@google/genai';
+import { executeWithRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -12,9 +12,6 @@ const bq = new BigQuery({
   },
 });
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
 
 /**
  * Parse complete JSON objects from a partially streamed JSON array string.
@@ -241,16 +238,16 @@ Follow these strict rules:
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
-    // 4. Stream from Gemini and emit each complete question object as an SSE event
-    const stream = await ai.models.generateContentStream({
-      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const stream = await executeWithRetry(modelId, (ai) => ai.models.generateContentStream({
+      model: modelId,
       contents: prompt,
       config: {
         systemInstruction,
         responseMimeType: "application/json",
         temperature: 0.3,
       },
-    });
+    }));
 
     let accumulated = '';
     let questionsSent = 0;
