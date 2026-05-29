@@ -14,53 +14,46 @@ function markKeyRateLimited(modelId, apiKey) {
 }
 
 async function executeWithRetry(modelId, apiCallFn) {
-  const primaryKey = import.meta.env.GEMINI_API_KEY;
-  const backupKey = import.meta.env.GEMINI_API_KEY_2;
+  const keys = [
+    import.meta.env.GEMINI_API_KEY,
+    import.meta.env.GEMINI_API_KEY_2,
+    import.meta.env.GEMINI_API_KEY_3
+  ].filter(Boolean);
 
-  if (!primaryKey && !backupKey) {
-    throw new Error('GEMINI_API_KEY and GEMINI_API_KEY_2 are missing');
+  if (keys.length === 0) {
+    throw new Error('GEMINI_API_KEY, GEMINI_API_KEY_2, and GEMINI_API_KEY_3 are missing');
   }
 
   let lastError;
 
-  if (primaryKey && !isKeyRateLimited(modelId, primaryKey)) {
+  for (let i = 0; i < keys.length; i++) {
+    const apiKey = keys.at(i);
+    if (isKeyRateLimited(modelId, apiKey)) {
+      continue;
+    }
+
     try {
-      const aiClient = new GoogleGenAI({ apiKey: primaryKey });
+      if (i > 0) {
+        console.warn(`[API Rotation] Trying ${modelId} with backup key ${i + 1}.`);
+      }
+      const aiClient = new GoogleGenAI({ apiKey });
       return await apiCallFn(aiClient);
     } catch (err) {
       lastError = err;
       const status = err.status || err.statusCode || (err.message && err.message.includes('429') ? 429 : null);
       if (status === 429) {
-        console.warn(`[429] Rate limit hit for ${modelId} on primary key.`);
-        markKeyRateLimited(modelId, primaryKey);
+        console.warn(`[429] Rate limit hit for ${modelId} on key ${i + 1}.`);
+        markKeyRateLimited(modelId, apiKey);
       } else {
         throw err;
       }
     }
   }
 
-  if (backupKey) {
-    if (isKeyRateLimited(modelId, backupKey)) {
-      throw new Error(`Both primary and backup keys are rate limited for ${modelId}`);
-    }
-    try {
-      console.warn(`[API Rotation] Trying ${modelId} with backup key.`);
-      const aiClient = new GoogleGenAI({ apiKey: backupKey });
-      return await apiCallFn(aiClient);
-    } catch (err) {
-      const status = err.status || err.statusCode || (err.message && err.message.includes('429') ? 429 : null);
-      if (status === 429) {
-        console.warn(`[429] Rate limit hit for ${modelId} on backup key.`);
-        markKeyRateLimited(modelId, backupKey);
-      }
-      throw err;
-    }
-  }
-
-  throw lastError || new Error('No API key available or all rate limited');
+  throw lastError || new Error('All API keys are rate limited');
 }
 
-const hasKeys = !!(import.meta.env.GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY_2);
+const hasKeys = !!(import.meta.env.GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY_2 || import.meta.env.GEMINI_API_KEY_3);
 
 function extractCompleteObjects(jsonStr) {
   const objects = [];
