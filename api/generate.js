@@ -154,11 +154,12 @@ Generate [Number] Chemistry Olympiad problems at difficulty level [1-10], adheri
 2. Difficulty-Dependent Syllabus Boundaries
 - IF DIFFICULTY < 8 (USNCO National Level):
   - Maintain the USNCO scope but test to maximum depth.
-  - EXCLUDE named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g., Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
+  - EXCLUDE named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g. Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
   - EXCLUDE advanced stereochemical control and transition-state geometry (e.g., Bürgi-Dunitz trajectories, advanced diastereoselectivity, stereospecific enolate alkylations).
   - EXCLUDE advanced coordination chemistry (e.g., Crystal Field Theory, $t_{2g}$/$e_g$ orbital splitting, high-spin/low-spin complexes, Jahn-Teller effects). Confine coordination questions to basic nomenclature, coordination number, and oxidation states.
   - EXCLUDE all calculus-based derivations or principles.
   - EXCLUDE advanced spectroscopy (e.g., 2D-NMR).
+  - EXCLUDE college-level content (e.g. current density, Tafel equation).
   - Increase difficulty by coupling unexpected systems (e.g., matching a non-trivial stoichiometry with an electrochemical change that alters concentration ratios, or an organic reaction where a common functional group exhibits atypical reactivity due to adjacent electronic effects).
 - IF DIFFICULTY >= 8 (IChO Level):
   - Pivot to completely original, concept-first designs leveraging advanced chemical phenomena.
