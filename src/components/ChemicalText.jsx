@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import SmilesDrawer from 'smiles-drawer';
 
 // Helper to determine if a token is a SMILES string
@@ -268,6 +268,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
         // For non-math text, split by whitespace to detect SMILES/Reactions
         const tokens = part.split(/(\s+)/);
+        const isLast = (idx) => idx === tokens.length - 1;
         return (
           <span key={partIndex}>
             {tokens.map((token, index) => {
