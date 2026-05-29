@@ -28,7 +28,7 @@ function extractCompleteObjects(jsonStr) {
   let objStart = -1;
 
   for (let i = 0; i < jsonStr.length; i++) {
-    const ch = jsonStr[i];
+    const ch = jsonStr.charAt(i);
 
     if (escape) {
       escape = false;
