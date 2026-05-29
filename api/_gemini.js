@@ -17,11 +17,14 @@ export async function executeWithRetry(modelId, apiCallFn, req) {
   const keys = [
     process.env.GEMINI_API_KEY,
     process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3
+    process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY_4,
+    process.env.GEMINI_API_KEY_5,
+    process.env.GEMINI_API_KEY_6
   ].filter(Boolean);
 
   if (keys.length === 0) {
-    throw new Error('GEMINI_API_KEY, GEMINI_API_KEY_2, and GEMINI_API_KEY_3 are missing');
+    throw new Error('GEMINI_API_KEYs are missing');
   }
 
   // Parse gemini_key_index from cookie
