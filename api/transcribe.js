@@ -32,7 +32,7 @@ Represent formulas and equations in LaTeX.
 
 STRICT RULE: ONLY output the user's response/work/process based on the image. Do NOT output any introductory text (e.g. "Based on the image...", "Here is the transcription...", "The drawing shows..."), meta-commentary, or references to the canvas/drawing itself. Just start directly with the transcription of their work.`;
 
-    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const modelId = 'gemini-3.1-flash-lite';
     const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
       model: modelId,
       contents: [
