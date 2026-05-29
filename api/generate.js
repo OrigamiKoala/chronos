@@ -245,7 +245,6 @@ Follow these strict rules:
       config: {
         systemInstruction,
         responseMimeType: "application/json",
-        temperature: 0.3,
       },
     }), req);
 
