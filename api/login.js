@@ -212,16 +212,49 @@ export default async function handler(req, res) {
             if (Array.isArray(resArray)) {
               totalQuestions = resArray.length;
               const getQuestionRating = (subject, diff) => {
-                const d = Math.max(1, Math.min(10, diff));
+                const d = Math.round(Math.max(1, Math.min(10, diff)));
                 if (subject === 'Math') {
-                  const mathMap = { 1: 500, 2: 600, 3: 800, 4: 900, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
-                  return mathMap[Math.round(d)] || 1000;
+                  switch (d) {
+                    case 1: return 500;
+                    case 2: return 600;
+                    case 3: return 800;
+                    case 4: return 900;
+                    case 5: return 1000;
+                    case 6: return 1250;
+                    case 7: return 1500;
+                    case 8: return 2000;
+                    case 9: return 2500;
+                    case 10: return 3000;
+                    default: return 1000;
+                  }
                 } else if (subject === 'Chemistry') {
-                  const chemMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
-                  return chemMap[Math.round(d)] || 1000;
+                  switch (d) {
+                    case 1: return 100;
+                    case 2: return 300;
+                    case 3: return 500;
+                    case 4: return 750;
+                    case 5: return 1000;
+                    case 6: return 1250;
+                    case 7: return 1500;
+                    case 8: return 2000;
+                    case 9: return 2500;
+                    case 10: return 3000;
+                    default: return 1000;
+                  }
                 } else if (subject === 'Physics') {
-                  const physMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1300, 7: 1600, 8: 2000, 9: 2500, 10: 3000 };
-                  return physMap[Math.round(d)] || 1000;
+                  switch (d) {
+                    case 1: return 100;
+                    case 2: return 300;
+                    case 3: return 500;
+                    case 4: return 750;
+                    case 5: return 1000;
+                    case 6: return 1300;
+                    case 7: return 1600;
+                    case 8: return 2000;
+                    case 9: return 2500;
+                    case 10: return 3000;
+                    default: return 1000;
+                  }
                 }
                 return 100;
               };
@@ -322,15 +355,21 @@ export default async function handler(req, res) {
 
     const detailedAnalysis = {};
     for (const a of analyses) {
-      detailedAnalysis[a.subject] = a.detailed_analysis;
+      const subject = a.subject;
+      if (typeof subject === 'string' && subject !== '__proto__' && subject !== 'constructor' && subject !== 'prototype') {
+        detailedAnalysis[subject] = a.detailed_analysis;
+      }
     }
 
     const topicBreakdowns = {};
     for (const b of breakdowns) {
-      topicBreakdowns[b.topic] = {
-        good_at: b.good_at,
-        not_good_at: b.not_good_at
-      };
+      const topic = b.topic;
+      if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
+        topicBreakdowns[topic] = {
+          good_at: b.good_at,
+          not_good_at: b.not_good_at
+        };
+      }
     }
 
     return res.status(200).json({

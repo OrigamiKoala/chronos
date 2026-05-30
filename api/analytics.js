@@ -133,16 +133,21 @@ export default async function handler(req, res) {
     const subjectCounts = {};
     const subjectAccuracies = {};
     for (const h of eloHistory) {
-      subjectCounts[h.subject] = (subjectCounts[h.subject] || 0) + 1;
-      if (!subjectAccuracies[h.subject]) subjectAccuracies[h.subject] = [];
-      subjectAccuracies[h.subject].push(h.accuracy);
+      const subject = h.subject;
+      if (typeof subject === 'string' && subject !== '__proto__' && subject !== 'constructor' && subject !== 'prototype') {
+        subjectCounts[subject] = (subjectCounts[subject] || 0) + 1;
+        if (!subjectAccuracies[subject]) subjectAccuracies[subject] = [];
+        subjectAccuracies[subject].push(h.accuracy);
+      }
     }
 
     // Current streak
     let currentStreak = 0;
     let streakType = null;
     for (let i = eloHistory.length - 1; i >= 0; i--) {
-      const passed = eloHistory[i].accuracy >= 0.75;
+      const historyItem = eloHistory.at(i);
+      if (!historyItem) break;
+      const passed = historyItem.accuracy >= 0.75;
       if (streakType === null) {
         streakType = passed ? 'correct' : 'incorrect';
         currentStreak = 1;

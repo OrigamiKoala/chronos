@@ -102,8 +102,8 @@ export default async function handler(req, res) {
 Follow these strict Olympiad Design Philosophies:
 
 1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
-- Do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview:
-  * Avoid advanced measure theory, abstract algebra (Galois theory, ring theory), general topology, or complex analysis.
+- Restrict topics strictly to the competitive high-school/national olympiad purview:
+  * Focus on algebra, combinatorics, geometry, and number theory.
 - DO increase difficulty by forcing the integration of multiple foundational concepts:
   * Pair algebraic geometry (curves/conics) with modular arithmetic (finding integer points), or pair recursive sequence properties with combinatorics/pigeonhole principle, or use complex numbers to solve non-trivial coordinate geometry problems.
 - Incorporate subtle conceptual traps:
@@ -112,7 +112,7 @@ Follow these strict Olympiad Design Philosophies:
 2. Authentic Style & Tone Mimicry
 - Use the exact technical nomenclature, passive voice, and formal phrasing characteristic of official olympiads:
   * Mimic MAA Mathematics Olympiad (AMC 12, AIME, USAMO) exam phrasing (e.g. "Find the number of...", "Let S be the set of...", "Determine all functions f...").
-- Avoid conversational language, contemporary idioms, or explicit hints within the text of the questions.
+- Ensure a formal, objective, and neutral tone, keeping the question texts direct and free of conversational framing or explicit hints.
 - Match the layout density and typographic conventions of genuine past papers. Use LaTeX strictly for all equations, formulas, physical units, and mathematical variables.
 
 Calibrate the 1-10 difficulty scale exactly as follows:
@@ -123,8 +123,8 @@ Calibrate the 1-10 difficulty scale exactly as follows:
 Follow these strict Olympiad Design Philosophies:
 
 1. Syllabus Boundaries (Difficulty via Depth, Not Scope)
-- For difficulty levels < 8, do NOT introduce advanced graduate-level/specialized undergraduate topics outside the high-school/national olympiad purview (e.g., avoid general relativity, quantum field theory, particle physics standard model, or advanced Hamiltonian/Lagrangian mechanics).
-- For difficulty levels >= 8, you MAY introduce advanced outside, college, or graduate-level topics. IMPORTANT: Do NOT hyper-fixate on the specific examples mentioned in the < 8 rule (do NOT just repeatedly generate problems about those specific examples). You MUST heavily randomize your choice of advanced topics across all subfields. When you do introduce an advanced topic, you must use a first-principles approach, You must assume the user knows absolutely nothing about the topic and define all non-standard concepts, equations, and phenomena from scratch within the problem text itself.
+- For difficulty levels < 8, restrict topics strictly to the high-school/national olympiad physics purview (e.g., classical mechanics, electromagnetism, thermodynamics, fluid dynamics, waves, and optics).
+- For difficulty levels >= 8, you MAY introduce advanced outside, college, or graduate-level topics. IMPORTANT: Ensure a highly diverse, balanced, and heavily randomized selection of advanced topics across all subfields. When you do introduce an advanced topic, you must use a first-principles approach, You must assume the user knows absolutely nothing about the topic and define all non-standard concepts, equations, and phenomena from scratch within the problem text itself.
 - DO increase difficulty by forcing the integration of multiple foundational concepts:
   * Pair a thermodynamic PV-cycle with a magnetic induction loop or a spring-mass oscillator, or combine electrostatics/Lorentz force with rotational dynamics, or analyze buoyant forces in a rotating/accelerating frame.
 - Incorporate subtle conceptual traps:
@@ -133,7 +133,7 @@ Follow these strict Olympiad Design Philosophies:
 2. Authentic Style & Tone Mimicry
 - Use the exact technical nomenclature, passive voice, and formal phrasing characteristic of official olympiads:
   * Mimic AAPT Physics Olympiad (F=ma, USAPhO) exam phrasing.
-- Avoid conversational language, contemporary idioms, or explicit hints within the text of the questions.
+- Ensure a formal, objective, and neutral tone, keeping the question texts direct and free of conversational framing or explicit hints.
 - Match the layout density and typographic conventions of genuine past papers. Use LaTeX strictly for all equations, formulas, physical units, and mathematical variables.
 
 Calibrate the 1-10 difficulty scale exactly as follows:
@@ -146,30 +146,67 @@ Follow these strict Olympiad Design Philosophies:
 Generate [Number] Chemistry Olympiad problems at difficulty level [1-10], adhering strictly to the following Design Philosophies:
 
 1. Novelty & "Invisible Traps" (Subtle Conceptual Bottlenecks)
-- Banish stock, predictable questions that can be solved by memory or template-matching. 
+- Create highly original and unique questions that require active derivation and first-principles reasoning over memory or template-matching.
 - Every problem must center on a non-obvious conceptual trick, a hidden limiting factor, or a subtle breakdown of a standard textbook assumption.
-- The question text must remain entirely neutral. NEVER include hints, warnings, or clarifying instructions (e.g., "Do not assume...", "Account for...", "Do not rely on..."). 
+- Ensure the question text remains entirely neutral and strictly objective, presenting the facts and parameters without any hints, warnings, or clarifying instructions.
 - Incorporate a deceptive path: design the problem so that the most common rote formula shortcut yields an exact numerical value or structural choice that perfectly matches one of the incorrect distractor options.
 
-2. Difficulty-Dependent Syllabus Boundaries
+2. Advanced Design & Difficulty Criteria
+- Conceptual Integration (Multi-Topic Coupling): Standard questions isolate a single topic (e.g., a simple acid-base titration). High-quality difficult questions require the simultaneous application of disparate chemical principles. (e.g., coupling a coordination chemistry equilibrium ($K_f$) with a solubility product ($K_{sp}$) and an electrochemical cell ($E^{\circ}$), requiring the user to determine free ligand concentration via Nernst equation manipulation).
+- Multi-Step Logical Cascades: The problem cannot be solved in a single algebraic or conceptual step. It requires a clear execution pathway where the output of one step forms the input of the next, often without explicit prompting on the intermediate variables (e.g., advanced organic synthesis/structure elucidation: deducing a molecular structure from elemental analysis (empirical formula) -> mass spectrometry fragments -> IR functional groups -> regioselective multi-step mechanistic outcomes, such as ozonolysis followed by an intramolecular aldol condensation).
+- Discrimination of Subtle Chemical Nuances: Distinguishes top-tier students by testing exceptions grounded in fundamental principles rather than rote memorization. Focuses on electronic structures, periodic trends, and thermodynamic vs. kinetic control (e.g., predicting the major product of an electrophilic aromatic substitution where steric hindrance and electronic activation conflict, or identifying anomalies in molecular orbital configurations, such as $B_2$ vs $O_2$ paramagnetism and bond orders).
+- Mathematical and Algorithmic Rigor: Eliminates standard simplifying assumptions (e.g., the $x$-is-small approximation in weak acid ionization). Requires setting up and solving higher-order algebraic equations or systems of simultaneous equations derived from mass and charge balances (e.g., calculating the exact pH of a polyprotic acid solution where $K_{a2}$ is non-negligible or the solution is sufficiently dilute that water autoionization ($K_w$) must be factored into the charge balance equation: $[H^+] = [OH^-] + [A^-] + 2[A^{2-}]$).
+- Novel Context and Data Interpretation: Presents familiar chemical principles within an unfamiliar framework (e.g., bioinorganic active sites, industrial catalytic cycles, or cutting-edge materials chemistry like Metal-Organic Frameworks). Requires the student to extract relevant thermodynamic, kinetic, or structural variables from raw data tables or graphical representations (e.g., phase diagrams with unexpected polymorphs).
+
+3. Difficulty-Dependent Syllabus Boundaries
 - IF DIFFICULTY < 8 (USNCO National Level):
   - Maintain the USNCO scope but test to maximum depth.
-  - EXCLUDE named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g. Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
-  - EXCLUDE advanced stereochemical control and transition-state geometry (e.g., Bürgi-Dunitz trajectories, advanced diastereoselectivity, stereospecific enolate alkylations).
-  - EXCLUDE advanced coordination chemistry (e.g., Crystal Field Theory, $t_{2g}$/$e_g$ orbital splitting, high-spin/low-spin complexes, Jahn-Teller effects). Confine coordination questions to basic nomenclature, coordination number, and oxidation states.
-  - EXCLUDE all calculus-based derivations or principles.
-  - EXCLUDE advanced spectroscopy (e.g., 2D-NMR).
-  - EXCLUDE college-level content (e.g. current density, Tafel equation).
+  - Limit standard physical chemistry content to standard AP/USNCO curricula, keeping rules and equations within the standard scope.
+  - Keep stereochemistry within standard general organic chemistry basics, avoiding advanced transition-state geometry or stereospecific control trajectories.
+  - Confine coordination questions strictly to basic nomenclature, coordination number, and oxidation states.
+  - Limit all derivations and principles to non-calculus based mathematics.
+  - Focus spectroscopy questions on standard 1D-NMR and basic IR/UV-Vis.
+  - Confine the conceptual level to competitive high school chemistry (e.g., excluding Tafel equation, advanced quantum mechanics, etc.).
   - Increase difficulty by coupling unexpected systems (e.g., matching a non-trivial stoichiometry with an electrochemical change that alters concentration ratios, or an organic reaction where a common functional group exhibits atypical reactivity due to adjacent electronic effects).
 - IF DIFFICULTY >= 8 (IChO Level):
   - Pivot to completely original, concept-first designs leveraging advanced chemical phenomena.
   - The "First-Principles" Guardrail: Introduce advanced, extra-syllabus topics using self-contained, axiomatic background information within the problem preamble. A student must be able to deduce the correct path using standard prerequisites combined with the provided context.
 
-3. Structural Representation (SMILES Rules)
-- NEVER replace simple chemical names or basic empirical formulas in standard prose with SMILES (e.g., do not write "a liquid like O" for water; use $\text{H}_2\text{O}$).
-- ONLY use SMILES notation (or Reaction SMILES) for complex organic molecules, coordination complexes, or standalone reaction schemes where a 2D structural diagram is explicitly required.
-- When required, display SMILES directly inline without introductory phrases like "represented by the SMILES string...", ensuring it does not disrupt the grammatical flow of the text.
+4. Structural Representation (SMILES Rules)
+- Represent simple chemical names and basic empirical formulas in standard prose using their standard IUPAC/common names or formulas (e.g., write water as $\text{H}_2\text{O}$ or name it directly).
+- Limit SMILES notation (or Reaction SMILES) strictly to complex organic molecules, coordination complexes, or standalone reaction schemes where a 2D structural diagram is explicitly required.
+- Display SMILES directly inline when needed, integrating them naturally into the sentence structure without introductory phrases.
 - Use LaTeX strictly for all mathematical equations, equilibrium expressions, simple empirical chemical formulas in prose, physical units, and variables (e.g., $\Delta G^\circ$, $E^\circ$, $K_{\text{sp}}$, $1.0 \times 10^{-3} \text{ M}$).
+
+5. Exemplar Chemistry Olympiad Questions
+Below are high-quality, concept-rich, and rigorous exemplar chemistry questions demonstrating the expected style, formatting, and depth:
+
+Question Example 1:
+{
+  "qtype": "conceptual",
+  "topic": "Analytical Chemistry & Iodometry",
+  "answer": "(A)",
+  "question": "A weighed sample of a copper-nickel alloy is dissolved in a known volume of nitric acid. Which method is most suitable for determining the mass percent of copper in the alloy?\\n\\n(A) Treatment of an aliquot of the solution with excess iodide, followed by titration of the iodine produced with sodium thiosulfate.\\n(B) Measurement of the absorbance of the solution at a wavelength of light at which both $\\\\ce{Cu^{2+}}$ and $\\\\ce{Ni^{2+}}$ absorb, and comparison with the absorbances of known standards of the two ions.\\n(C) Addition of excess sodium hydroxide to the solution, isolation of the metal hydroxides by filtration, and measurement of the mass of the precipitate.\\n(D) Bubbling hydrogen gas through the solution and measuring the mass of the metal that precipitates from the solution.",
+  "detailedSolution": "Dissolving a copper-nickel alloy in nitric acid produces $\\\\ce{Cu^{2+}}$ and $\\\\ce{Ni^{2+}}$ ions.\\n\\n1. In method (A), adding excess iodide ($\\\\ce{I^-}$) selectively reduces $\\\\ce{Cu^{2+}}$ to insoluble copper(I) iodide ($\\\\ce{CuI}$), producing triiodide/iodine ($\\\\ce{I_3^-}$ / $\\\\ce{I_2}$):\\n$$2\\\\ce{Cu^{2+}} + 4\\\\ce{I^-} \\\\rightarrow 2\\\\ce{CuI(s)} + \\\\ce{I_2}$$\\n\\\\ce{Ni^{2+}}$ does not oxidize iodide. Titrating the liberated iodine with sodium thiosulfate ($\\\\ce{S_2O_3^{2-}}$) allows for highly selective and accurate quantification of copper:\\n$$\\\\ce{I_2} + 2\\\\ce{S_2O_3^{2-}} \\\\rightarrow 2\\\\ce{I^-} + \\\\ce{S_4O_6^{2-}}$$\\nThis iodometric titration is extremely selective for copper over nickel, making (A) the correct and most suitable method.\\n\\n2. Method (B) is unsuitable because both ions absorb light at the chosen wavelength, making direct comparison difficult without a multi-wavelength deconvolution method.\\n3. Method (C) precipitates both metal hydroxides ($\\\\ce{Cu(OH)_2}$ and $\\\\ce{Ni(OH)_2}$), so their masses cannot be separated simply by weighing the precipitate.\\n4. Method (D) cannot selectively precipitate copper in a strongly oxidizing nitric acid environment, nor is it a standard analytical procedure."
+}
+
+Question Example 2:
+{
+  "qtype": "conceptual",
+  "topic": "Chemical Bonding & Bond Order",
+  "answer": "(B)",
+  "question": "Which species has the longest carbon-oxygen bond?\\n\\n(A) $\\\\ce{HCO2^-}$\\n(B) $\\\\ce{CO3^{2-}}$\\n(C) $\\\\ce{CO2}$\\n(D) $\\\\ce{COS}$",
+  "detailedSolution": "The length of a carbon-oxygen bond is inversely proportional to its bond order. Let's determine the carbon-oxygen bond orders in each species:\\n\\n1. For $\\\\ce{HCO2^-}$ (formate ion), the carbon has one double bond and one single bond to oxygen, which are delocalized by resonance. The average $\\\\ce{C-O}$ bond order is:\\n$$\\\\text{Bond Order} = \\\\frac{1 + 2}{2} = 1.5$$\\n\\n2. For $\\\\ce{CO3^{2-}}$ (carbonate ion), the carbon is bonded to three oxygen atoms with one double bond and two single bonds in resonance. The average $\\\\ce{C-O}$ bond order is:\\n$$\\\\text{Bond Order} = \\\\frac{1 + 1 + 2}{3} = 1.33$$\\n\\n3. For $\\\\ce{CO2}$ (carbon dioxide), the Lewis structure is $\\\\ce{O=C=O}$, which has two discrete $\\\\ce{C-O}$ double bonds. The bond order is $2.0$.\\n\\n4. For $\\\\ce{COS}$ (carbonyl sulfide), the Lewis structure is $\\\\ce{O=C=S}$, containing a $\\\\ce{C-O}$ double bond. The bond order is $2.0$.\\n\\nComparing the average bond orders, the carbonate ion ($\\\\ce{CO3^{2-}}$) has the lowest average bond order ($1.33$) and therefore the longest carbon-oxygen bond, making (B) the correct choice."
+}
+
+Question Example 3:
+{
+  "qtype": "conceptual",
+  "topic": "Organic Structure & Resonance Delocalization",
+  "answer": "(D)",
+  "question": "Which is the best description of the arrangement of the atoms in space in the protonated urea ion, $\\\\ce{H5CN2O^+}$?\\n\\n(A) SMILES: [[SMILES: NC(=O)[NH3+]]]\\n(B) SMILES: [[SMILES: NC(=O)[NH3+]]]\\n(C) SMILES: [[SMILES: N=C(O)N]]]\\n(D) SMILES: [[SMILES: NC(O)=[NH2+]]]",
+  "detailedSolution": "Protonation of urea, $\\\\ce{(NH2)2C=O}$, occurs preferentially on the oxygen atom rather than the nitrogen atom.\\n\\n1. Protonation on the oxygen atom gives the cation $\\\\ce{[(NH2)2C=OH]^+}$. The positive charge in this cation is highly stabilized via resonance delocalization over both electronegative nitrogen atoms:\\n$$\\\\ce{H2N-C(OH)=NH2^+} \\\\leftrightarrow \\\\ce{H2N^+=C(OH)-NH2} \\\\leftrightarrow \\\\ce{H2N-C(O^+H)-NH2}$$\\nThis delocalization gives both $\\\\ce{C-N}$ bonds substantial double-bond character and makes the three heavy atoms (N, C, N) and O lie in the same plane.\\n\\n2. Protonation on nitrogen, yielding $\\\\ce{H2N-C(=O)-NH3^+}$, lacks this resonance stabilization because the positive charge on nitrogen cannot be delocalized since nitrogen has no lone pairs to participate in conjugation.\\n\\n3. The SMILES string representing oxygen protonation (specifically showing one resonance contributor with a $\\\\ce{C=N}$ double bond) is [[SMILES: NC(O)=[NH2+]]], which is option (D)."
+}
 
 Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: simple Honors/early AP chem, 3: harder problems on the ACS Local Exam, 5: harder problems on the USNCO Nationals, 10: hardest problem on the IChO.
@@ -200,16 +237,16 @@ ${subjectSpecificInstructions}
 For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 
 All questions generated MUST adhere to these critical design directives:
-1. QUESTION STYLE & TRICKINESS: Do NOT make every single question a trap question; instead, provide a mix of standard and tricky questions:
+1. QUESTION STYLE & TRICKINESS: Provide a balanced and diverse mix of standard and tricky questions:
    - For difficulty levels 1 to 4: Standard, straightforward conceptual or algorithmic questions must be used.
    - For difficulty levels 5 to 10: Questions can either be tricky (presenting sophisticated conceptual traps or subtle edge cases that penalize rote formula-plugging) OR they can be standard, non-trick questions that are highly difficult and challenging in their own right (demanding deep logic, multi-step reasoning, or integration of multiple foundational concepts).
-   - Under no circumstances should any question require obscure, highly specialized research-level details. Unless explicitly permitted in the syllabus boundaries above, all questions must be strictly competitive high school level or below. Problems must be completely solvable and scientifically/mathematically rigorous if the student deeply understands core principles. For multiple_choice questions involving traps, craft the distractor options to precisely match the results of common conceptual mistakes.
+   - Ensure all questions are solvable based strictly on competitive high school level concepts or below, maintaining complete scientific and mathematical rigor while remaining accessible from core principles. For multiple_choice questions involving traps, craft the distractor options to precisely match the results of common conceptual mistakes.
 2. BALANCED TOPIC DIVERSITY & WEAKNESS WEIGHTING: The exam must cover a wide, extremely diverse range of standard core subjects/topics within the chosen field. For example:
       - In Chemistry: You must select from stoichiometry, descriptive, states of matter, thermodynamics, kinetics, equilibrium, oxidation-reduction, atomic structure/periodicity, bonding/molecular structure, and organic/biochemistry.
       - In Physics: You must select from kinematics, forces, momentum, systems of particles, rotational kinematics, rotational dynamics, angular momentum, energy, fluid statics, gravitation, fluid dynamics, oscillations, waves, thermodynamics, electricity, and magnetism.
       - In Math: You must select from algebra, geometry, counting/probability, number theory.
-   If a user's weak concepts are provided, allocate a minority of the questions (~30%, e.g., 1 out of 3, or 2 out of 5) to target those weaknesses, and dedicate the remaining majority (~70%) to a diverse selection of other core topics in the subject's standard syllabus, ensuring that no single topic (like electrochemistry) dominates the exam. If weaknesses are "None", distribute questions evenly across all core topics.
-3. OPTIONS FORMATTING (LaTeX Delimiters): For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Simple, purely qualitative text options that do not contain mathematical or chemical terms must NOT be wrapped in LaTeX.
+   If a user's weak concepts are provided, allocate a minority of the questions (~30%, e.g., 1 out of 3, or 2 out of 5) to target those weaknesses, and dedicate the remaining majority (~70%) to a diverse selection of other core topics in the subject's standard syllabus, ensuring a balanced distribution of topics across the exam. If weaknesses are "None", distribute questions evenly across all core topics.
+3. OPTIONS FORMATTING (LaTeX Delimiters): For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Keep simple, purely qualitative text options that do not contain mathematical or chemical terms in plain, un-delimited text format.
 
 The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
@@ -222,15 +259,15 @@ The output must be a pure JSON array containing exactly the requested number of 
   "detailedSolution": "A thorough, detailed step-by-step solution to the question"
 }
 
-Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
+Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.`;
 
     const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
 
 The user's identified weak concepts are: ${weaknesses}.
 Follow these strict rules:
-1. Question Style: Provide a balanced mix of standard and tricky questions. Standard questions should only be generated for difficulty levels 1-4. For difficulty levels 5-10, make questions either tricky with conceptual traps, or standard but highly difficult in their own right. Do NOT use obscure, highly specialized research-level details.
-2. The exam must span a wide, diverse range of standard topics in ${subject}. Do NOT let any single topic dominate the entire exam.
-3. Dedicated Distribution: Target the user's weak concepts (${weaknesses}) for approximately 30% of the questions. The remaining 70% of the questions MUST cover other diverse, standard subjects/topics in the ${subject} syllabus (e.g. for Chemistry, you MUST actively generate questions on other topics such as periodic trends, kinetics, thermodynamics, organic synthesis, chemical equilibrium, coordination chemistry, atomic structure, etc. instead of just stoichiometry and electrochemistry). If the weak concepts listed are "None", distribute all questions evenly across all main topics.
+1. Question Style: Provide a balanced mix of standard and tricky questions. Standard questions should only be generated for difficulty levels 1-4. For difficulty levels 5-10, make questions either tricky with conceptual traps, or standard but highly difficult in their own right. Focus strictly on standard and competitive syllabus topics suitable for high school Olympiad exams.
+2. The exam must span a wide, diverse range of standard topics in ${subject}. Distribute questions evenly and broadly across a diverse range of standard topics in the standard syllabus.
+3. Dedicated Distribution: Target the user's weak concepts (${weaknesses}) for approximately 30% of the questions. Dedicate the remaining 70% of the questions to actively cover other diverse, standard subjects/topics in the ${subject} syllabus (e.g. for Chemistry, you MUST actively generate questions on other topics such as periodic trends, kinetics, thermodynamics, organic synthesis, chemical equilibrium, coordination chemistry, atomic structure, etc. instead of just stoichiometry and electrochemistry). If the weak concepts listed are "None", distribute all questions evenly across all main topics.
 4. Detailed Solutions: For every question generated, you MUST provide a thorough, detailed step-by-step correct solution and proof in the "detailedSolution" field.`;
 
     // 3. Set SSE headers for streaming
@@ -239,13 +276,36 @@ Follow these strict rules:
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
+    const safetySettings = [
+      {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+      },
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+      },
+      {
+        category: 'HARM_CATEGORY_HARASSMENT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+      },
+      {
+        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+      }
+    ];
+
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
     const stream = await executeWithRetry(modelId, (ai) => ai.models.generateContentStream({
       model: modelId,
       contents: prompt,
+      safety_settings: safetySettings,
+      safetySettings: safetySettings,
       config: {
         systemInstruction,
         responseMimeType: "application/json",
+        safety_settings: safetySettings,
+        safetySettings: safetySettings,
       },
     }), req);
 
