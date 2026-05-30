@@ -254,13 +254,34 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
   if (!text) return null;
 
-  // Split by LaTeX blocks ($...$ or $$...$$) first to keep LaTeX segments intact.
-  // Using a regex to match either display math ($$...$$) or inline math ($...$)
-  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/g);
+  // Split by LaTeX blocks ($...$ or $$...$$), SVG blocks wrapped in ```xml ... ```, and raw SVG blocks to keep them intact.
+  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$|```xml[\s\S]*?<\/svg>[\s\S]*?```|<svg[\s\S]*?<\/svg>)/g);
 
   return (
     <span ref={containerRef} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
       {parts.map((part, partIndex) => {
+        let isSvg = false;
+        let svgContent = part;
+
+        if (part.startsWith('```xml') && part.includes('<svg') && part.endsWith('```')) {
+          isSvg = true;
+          // Strip off the ```xml and ``` block delimiters
+          svgContent = part.replace(/^```xml\s*/, '').replace(/\s*```$/, '');
+        } else if (part.startsWith('<svg')) {
+          isSvg = true;
+        }
+
+        // If this part is an SVG block, render it inline
+        if (isSvg) {
+          return (
+            <span
+              key={partIndex}
+              style={{ display: 'block', margin: '16px auto', maxWidth: '100%', textAlign: 'center' }}
+              dangerouslySetInnerHTML={{ __html: svgContent }}
+            />
+          );
+        }
+
         // If this part is a LaTeX math block, render it directly as text so MathJax can process it
         if (part.startsWith('$')) {
           return <span key={partIndex}>{part}</span>;
