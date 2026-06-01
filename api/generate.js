@@ -141,6 +141,9 @@ Calibrate the 1-10 difficulty scale exactly as follows:
 `;
     } else if (normSubject === 'chemistry') {
       subjectSpecificInstructions = `
+
+Role: You are a professional chemistry olympiad question writer for high school olympiad-level tests such as the USNCO. You want to write tricky chemistry problems that challenges students in their understanding of chemistry concepts, rather than their breadth of knowledge.
+
 Follow these strict Olympiad Design Philosophies:
 
 Generate [Number] Chemistry Olympiad problems at difficulty level [1-10], adhering strictly to the following Design Philosophies:
@@ -308,6 +311,80 @@ IChO Question Example 9:
   "difficulty": 8,
   "detailedSolution": "a. At the endpoint, the excess $\\\\ce{Al^{3+}}$ ions undergo hydrolysis, generating hydronium ions that lower the pH and turn the methyl red indicator from yellow to pink:\\n$$\\\\ce{[Al(H2O)6]^{3+} + H2O <=> [Al(OH)(H2O)5]^{2+} + H3O^+}$$\\nThe addition of solid $\\\\ce{NaCl}$ shifts the complexation equilibrium forward by precipitating cryolite ($\\\\ce{Na3AlF6}$), which is only slightly soluble in water:\\n$$\\\\ce{6 F^- + Al^{3+} + 3Na^+ <=> Na3AlF6(s)}$$\\nThe common ion effect of $\\\\ce{Na^+}$ dramatically decreases the solubility of cryolite, driving the complexation to completion and increasing the sharpness of the endpoint.\\n\\nb. The hydrolysis of aluminum(III) is an endothermic process. Heating the solution to $70-80\\\\ ^\\circ\\\\text{C}$ shifts the hydrolysis equilibrium rightwards, producing more hydronium ions per excess unit of $\\\\ce{Al^{3+}}$ at the equivalence point, which increases the pH drop and endpoint sharpness.\\n\\nc. In the back-titration of calcium:\\n1. Fluoride precipitates calcium ions quantitatively:\\n$$\\\\ce{Ca^{2+} + 2F^- -> CaF2(s)}$$\\n2. The excess, unreacted fluoride is titrated with aluminum chloride:\\n$$\\\\ce{6 F^- + Al^{3+} + 3Na^+ -> Na3AlF6(s)}$$\\n\\nLet\\'s calculate the moles of species:\\n- Total moles of $\\\\ce{NaF}$ added:\\n$$n(\\\\ce{F^-})_{\\\\text{total}} = \\\\frac{0.500\\\\text{ g}}{41.99\\\\text{ g mol}^{-1}} = 0.01191\\\\text{ mol}$$\\n- Moles of $\\\\ce{Al^{3+}}$ added at titration endpoint:\\n$$n(\\\\ce{Al^{3+}}) = 10.25 \\\\times 10^{-3}\\\\text{ dm}^3 \\\\times 0.1000\\\\text{ mol dm}^{-3} = 0.001025\\\\text{ mol}$$\\n- Moles of fluoride reacting with aluminum:\\n$$n(\\\\ce{F^-})_{\\\\text{complexed}} = 6 \\\\times n(\\\\ce{Al^{3+}}) = 6 \\\\times 0.001025 = 0.006150\\\\text{ mol}$$\\n- Moles of fluoride precipitated by calcium:\\n$$n(\\\\ce{F^-})_{\\\\text{precipitated}} = 0.01191 - 0.006150 = 0.00576\\\\text{ mol}$$\\n- Moles of calcium in the sample:\\n$$n(\\\\ce{Ca^{2+}}) = \\\\frac{1}{2} n(\\\\ce{F^-})_{\\\\text{precipitated}} = \\\\frac{0.00576}{2} = 0.00288\\\\text{ mol}$$\\n- Mass of calcium in the sample:\\n$$m(\\\\ce{Ca}) = 0.00288\\\\text{ mol} \\\\times 40.08\\\\text{ g mol}^{-1} \\\\approx 0.115\\\\text{ g}$$\\n\\nd. Deducing silicic acid content:\\n1. Silicic acid reacts with fluoride in the presence of acid to form hexafluorosilicate:\\n$$\\\\ce{Si(OH)4 + 6 F^- + 4 H^+ -> SiF6^{2-} + 4 H2O}$$\\n2. The unreacted hydrochloric acid is back-titrated with sodium hydroxide:\\n$$\\\\ce{H^+ + OH^- -> H2O}$$\\n\\nLet\\'s calculate the moles of species:\\n- Total moles of $\\\\ce{HCl}$ added:\\n$$n(\\\\ce{H^+})_{\\\\text{total}} = 10.00 \\\\times 10^{-3}\\\\text{ dm}^3 \\\\times 0.0994\\\\text{ mol dm}^{-3} = 0.000994\\\\text{ mol}$$\\n- Moles of $\\\\ce{NaOH}$ titrated at endpoint:\\n$$n(\\\\ce{OH^-}) = 5.50 \\\\times 10^{-3}\\\\text{ dm}^3 \\\\times 0.1000\\\\text{ mol dm}^{-3} = 0.000550\\\\text{ mol}$$\\n- Moles of acid consumed by the silicic acid reaction:\\n$$n(\\\\ce{H^+})_{\\\\text{consumed}} = 0.000994 - 0.000550 = 0.000444\\\\text{ mol}$$\\n- Stoichiometrically, $4$ moles of $\\\\ce{H^+}$ react per mole of $\\\\ce{Si(OH)4}$:\\n$$n(\\\\ce{Si(OH)4}) = \\\\frac{1}{4} n(\\\\ce{H^+})_{\\\\text{consumed}} = \\\\frac{0.000444}{4} = 0.000111\\\\text{ mol} = 1.11 \\\\times 10^{-4}\\\\text{ mol}$$\\n\\nFor the pre-titration neutralization, phenol red ($pK_a = 8.0$) is the ideal indicator. Silicic acid is an extremely weak acid ($pK_{a1} \\\\approx 9.9$), meaning it remains fully protonated as $\\\\ce{Si(OH)4}$ and un-ionized at pH 7-8. Neutralizing with phenol red ensures that all strong acids/bases are neutralized without deprotonating or initiating reaction with the weak silicic acid prior to fluoride addition."
 }
+
+Examples of bad questions - what you SHOULD NOT DO:
+
+[
+{
+"id": "viol_1",
+"topic": "Electrochemistry",
+"question": "For a hydrogen evolution reaction occurring on a platinum electrode in 1.0 M HCl at 298 K, if the exchange current density $j_0 = 10^{-3} \text{ A cm}^{-2}$ and the transfer coefficient $\alpha = 0.5$, calculate the overpotential $\eta$ required to drive a current density of $j = 0.1 \text{ A cm}^{-2}$ using the Tafel equation. Provide the value in Volts.",
+"type": "multiple_choice",
+"options": [
+"$0.059 \text{ V}$",
+"$0.118 \text{ V}$",
+"$0.236 \text{ V}$",
+"$0.029 \text{ V}$"
+],
+"answer": "B",
+"difficulty": 6,
+"detailedSolution": "The Tafel equation is given by $\eta = a + b \log(j)$, where $b = \frac{2.303 RT}{\alpha nF}$. At high overpotentials, $\eta = \frac{2.303 RT}{\alpha nF} \log(\frac{j}{j_0})$. With $n=1$, $R=8.314$, $T=298$, $F=96485$, and $\alpha=0.5$, $b \approx 0.118 \text{ V/decade}$. Thus, $\eta = 0.118 \log(\frac{0.1}{10^{-3}}) = 0.118 \log(100) = 0.118 \times 2 = 0.236 \text{ V}$. *Note: The prompt requires this to be marked at a difficulty level that violates USNCO scope boundaries.*"
+},
+{
+"id": "viol_2",
+"topic": "Stoichiometry",
+"question": "Calculate the number of moles of sodium chloride in 5.0 grams of the substance. (Molar mass of NaCl = 58.44 g/mol)",
+"type": "multiple_choice",
+"options": [
+"$0.0856 \text{ mol}$",
+"$0.100 \text{ mol}$",
+"$0.292 \text{ mol}$",
+"$11.69 \text{ mol}$"
+],
+"answer": "A",
+"difficulty": 1,
+"detailedSolution": "Number of moles = $\text{mass} / \text{molar mass} = 5.0 \text{ g} / 58.44 \text{ g mol}^{-1} \approx 0.08555 \text{ mol}$."
+},
+{
+"id": "viol_3",
+"topic": "Materials Chemistry",
+"question": "In the context of recently synthesized covalent organic framework (COF) variants, identify the primary structural defect responsible for the anomalous charge carrier mobility observed in $sp^2$-carbon-conjugated 2D-COFs as described in the 2026 JACS report on 'Topological Engineering of Radical-Coupled Frameworks'.",
+"type": "multiple_choice",
+"options": [
+"Stacking fault dislocation",
+"Interlayer sliding",
+"Radical-induced domain boundary quenching",
+"Pore-size polydispersity"
+],
+"answer": "C",
+"difficulty": 9,
+"detailedSolution": "The recent research indicates that in $sp^2$-carbon-conjugated COFs, the presence of localized radical sites at the edges of domain boundaries creates traps that quench charge carriers, a phenomenon specific to these high-conductivity topological materials."
+},
+{
+"id": "viol_4",
+"topic": "Photochemistry",
+"question": "A molecule with a singlet excited state $S_1$ has a fluorescence lifetime of 5.0 ns and a quantum yield of 0.25. Calculate the rate constant of internal conversion $k_{ic}$ assuming that intersystem crossing $k_{isc}$ is negligible.",
+"type": "multiple_choice",
+"options": [
+"$5.0 \times 10^7 \text{ s}^{-1}$",
+"$1.5 \times 10^8 \text{ s}^{-1}$",
+"$2.0 \times 10^8 \text{ s}^{-1}$",
+"$7.5 \times 10^7 \text{ s}^{-1}$"
+],
+"answer": "B",
+"difficulty": 6,
+"detailedSolution": "The fluorescence lifetime $\tau = 1 / (k_f + k_{ic} + k_{isc})$. Given $k_{isc} = 0$, $\tau = 1 / (k_f + k_{ic}) = 5.0 \times 10^{-9} \text{ s}$. The quantum yield $\Phi_f = k_f / (k_f + k_{ic}) = k_f \tau = 0.25$. Thus $k_f = 0.25 / 5.0 \times 10^{-9} = 5.0 \times 10^7 \text{ s}^{-1}$. Since $k_f + k_{ic} = 1 / \tau = 2.0 \times 10^8 \text{ s}^{-1}$, then $k_{ic} = 2.0 \times 10^8 - 0.5 \times 10^8 = 1.5 \times 10^8 \text{ s}^{-1}$."
+},
+{
+"id": "viol_5",
+"topic": "Quantum Dynamics",
+"question": "Using the Lindblad master equation in the Markovian approximation, derive the steady-state density matrix $\rho_{ss}$ for a two-level system coupled to a thermal reservoir with a decay rate $\gamma$ and a mean thermal photon number $\bar{n}$.",
+"type": "free_response",
+"answer": "$\rho_{ss} = \frac{\bar{n}}{2\bar{n}+1} |e\rangle\langle e| + \frac{\bar{n}+1}{2\bar{n}+1} |g\rangle\langle g|$",
+"difficulty": 10,
+"detailedSolution": "The Lindblad equation for a two-level system is $\dot{\rho} = -i[H, \rho] + \gamma(\bar{n}+1) \mathcal{D}[\sigma_-]\rho + \gamma\bar{n} \mathcal{D}[\sigma_+]\rho$. Setting $\dot{\rho}=0$ and solving for the diagonal elements $\rho_{ee}$ and $\rho_{gg}$ under the condition $\rho_{ee} + \rho_{gg} = 1$ yields the population distribution based on the ratio of excitation/de-excitation rates."
+}
+]
 
 Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: simple Honors/early AP chem, 3: harder problems on the ACS Local Exam, 5: harder problems on the USNCO Nationals, 10: hardest problem on the IChO.
