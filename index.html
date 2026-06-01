@@ -7,9 +7,13 @@
     <title>Chronos Bot</title>
     <script>
       window.MathJax = {
+        loader: {
+          load: ['[tex]/mhchem']
+        },
         tex: {
           inlineMath: [['$', '$'], ['\\(', '\\)']],
-          displayMath: [['$$', '$$'], ['\\[', '\\]']]
+          displayMath: [['$$', '$$'], ['\\[', '\\]']],
+          packages: {'[+]': ['mhchem']}
         },
         svg: {
           fontCache: 'global'

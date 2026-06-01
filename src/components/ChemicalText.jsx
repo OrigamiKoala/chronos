@@ -254,8 +254,9 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
   if (!text) return null;
 
-  // Split by LaTeX blocks ($...$ or $$...$$), SVG blocks wrapped in ```xml ... ```, and raw SVG blocks to keep them intact.
-  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$|```xml[\s\S]*?<\/svg>[\s\S]*?```|<svg[\s\S]*?<\/svg>)/g);
+  // Split by LaTeX blocks ($...$ or $$...$$), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
+  // and markdown bold (**...**) / italic (*...*) to keep them intact.
+  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$|```xml[\s\S]*?<\/svg>[\s\S]*?```|<svg[\s\S]*?<\/svg>|\*\*[^*]+\*\*|\*[^*]+\*)/g);
 
   return (
     <span ref={containerRef} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -285,6 +286,18 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         // If this part is a LaTeX math block, render it directly as text so MathJax can process it
         if (part.startsWith('$')) {
           return <span key={partIndex}>{part}</span>;
+        }
+
+        // If this part is markdown bold (**...**), render as <strong>
+        if (part.startsWith('**') && part.endsWith('**')) {
+          const inner = part.slice(2, -2);
+          return <strong key={partIndex}><ChemicalText text={inner} theme={theme} defaultWidth={defaultWidth} defaultHeight={defaultHeight} /></strong>;
+        }
+
+        // If this part is markdown italic (*...*), render as <em>
+        if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) {
+          const inner = part.slice(1, -1);
+          return <em key={partIndex}><ChemicalText text={inner} theme={theme} defaultWidth={defaultWidth} defaultHeight={defaultHeight} /></em>;
         }
 
         // For non-math text, split by whitespace to detect SMILES/Reactions
