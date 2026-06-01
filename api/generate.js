@@ -314,7 +314,7 @@ IChO Question Example 9:
 
 Examples of bad questions - what you SHOULD NOT DO:
 
-[
+Bad USNCO question #1
 {
 "id": "viol_1",
 "topic": "Electrochemistry",
@@ -330,6 +330,11 @@ Examples of bad questions - what you SHOULD NOT DO:
 "difficulty": 6,
 "detailedSolution": "The Tafel equation is given by $\eta = a + b \log(j)$, where $b = \frac{2.303 RT}{\alpha nF}$. At high overpotentials, $\eta = \frac{2.303 RT}{\alpha nF} \log(\frac{j}{j_0})$. With $n=1$, $R=8.314$, $T=298$, $F=96485$, and $\alpha=0.5$, $b \approx 0.118 \text{ V/decade}$. Thus, $\eta = 0.118 \log(\frac{0.1}{10^{-3}}) = 0.118 \log(100) = 0.118 \times 2 = 0.236 \text{ V}$. *Note: The prompt requires this to be marked at a difficulty level that violates USNCO scope boundaries.*"
 },
+
+Problem: Tests content outside the scope of USNCO (tests breadth instead of depth of knowledge).
+
+Bad USNCO question #2:
+
 {
 "id": "viol_2",
 "topic": "Stoichiometry",
@@ -344,7 +349,12 @@ Examples of bad questions - what you SHOULD NOT DO:
 "answer": "A",
 "difficulty": 1,
 "detailedSolution": "Number of moles = $\text{mass} / \text{molar mass} = 5.0 \text{ g} / 58.44 \text{ g mol}^{-1} \approx 0.08555 \text{ mol}$."
-},
+}
+
+Problem: Too simple - can be solved simply by plugging in a formula.
+
+Bad IChO question #3:
+
 {
 "id": "viol_3",
 "topic": "Materials Chemistry",
@@ -359,7 +369,12 @@ Examples of bad questions - what you SHOULD NOT DO:
 "answer": "C",
 "difficulty": 9,
 "detailedSolution": "The recent research indicates that in $sp^2$-carbon-conjugated COFs, the presence of localized radical sites at the edges of domain boundaries creates traps that quench charge carriers, a phenomenon specific to these high-conductivity topological materials."
-},
+}
+
+Problem: Tests research-level knowledge that high school students do not have, and requires knowledge of advanced concepts IChO does not require students to know, without introducing with a first-principles approach.
+
+Bad USNCO question #4:
+
 {
 "id": "viol_4",
 "topic": "Photochemistry",
@@ -374,7 +389,12 @@ Examples of bad questions - what you SHOULD NOT DO:
 "answer": "B",
 "difficulty": 6,
 "detailedSolution": "The fluorescence lifetime $\tau = 1 / (k_f + k_{ic} + k_{isc})$. Given $k_{isc} = 0$, $\tau = 1 / (k_f + k_{ic}) = 5.0 \times 10^{-9} \text{ s}$. The quantum yield $\Phi_f = k_f / (k_f + k_{ic}) = k_f \tau = 0.25$. Thus $k_f = 0.25 / 5.0 \times 10^{-9} = 5.0 \times 10^7 \text{ s}^{-1}$. Since $k_f + k_{ic} = 1 / \tau = 2.0 \times 10^8 \text{ s}^{-1}$, then $k_{ic} = 2.0 \times 10^8 - 0.5 \times 10^8 = 1.5 \times 10^8 \text{ s}^{-1}$."
-},
+}
+
+Problem: IChO level content in a USNCO level question (outside the scope of USNCO).
+
+Bad IChO question #5:
+
 {
 "id": "viol_5",
 "topic": "Quantum Dynamics",
@@ -384,7 +404,8 @@ Examples of bad questions - what you SHOULD NOT DO:
 "difficulty": 10,
 "detailedSolution": "The Lindblad equation for a two-level system is $\dot{\rho} = -i[H, \rho] + \gamma(\bar{n}+1) \mathcal{D}[\sigma_-]\rho + \gamma\bar{n} \mathcal{D}[\sigma_+]\rho$. Setting $\dot{\rho}=0$ and solving for the diagonal elements $\rho_{ee}$ and $\rho_{gg}$ under the condition $\rho_{ee} + \rho_{gg} = 1$ yields the population distribution based on the ratio of excitation/de-excitation rates."
 }
-]
+
+Requires advanced knowledge beyond what is expected at IChO, without introducing the topic on a first-principles basis.
 
 Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: simple Honors/early AP chem, 3: harder problems on the ACS Local Exam, 5: harder problems on the USNCO Nationals, 10: hardest problem on the IChO.
