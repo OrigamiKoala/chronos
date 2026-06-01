@@ -405,7 +405,7 @@ Bad IChO question #5:
 "detailedSolution": "The Lindblad equation for a two-level system is $\dot{\rho} = -i[H, \rho] + \gamma(\bar{n}+1) \mathcal{D}[\sigma_-]\rho + \gamma\bar{n} \mathcal{D}[\sigma_+]\rho$. Setting $\dot{\rho}=0$ and solving for the diagonal elements $\rho_{ee}$ and $\rho_{gg}$ under the condition $\rho_{ee} + \rho_{gg} = 1$ yields the population distribution based on the ratio of excitation/de-excitation rates."
 }
 
-Requires advanced knowledge beyond what is expected at IChO, without introducing the topic on a first-principles basis.
+Problem: sRequires advanced knowledge beyond what is expected at IChO, without introducing the topic on a first-principles basis.
 
 Calibrate the 1-10 difficulty scale exactly as follows:
 - 1: simple Honors/early AP chem, 3: harder problems on the ACS Local Exam, 5: harder problems on the USNCO Nationals, 10: hardest problem on the IChO.
