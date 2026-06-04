@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -115,29 +115,40 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   });
   const [tagsSaving, setTagsSaving] = useState(false);
   const [tagsSaved, setTagsSaved] = useState(true);
+  const latestTagsRef = useRef(null);
+  const isSavingRef = useRef(false);
 
   const autoSaveTags = async (updatedTags) => {
     if (!user || !examId) return;
+    latestTagsRef.current = updatedTags;
+    if (isSavingRef.current) return;
+
+    isSavingRef.current = true;
     setTagsSaving(true);
     setTagsSaved(false);
+
     try {
-      const tagEntries = Object.entries(updatedTags).map(([idx, tag]) => ({
-        questionIndex: parseInt(idx),
-        tag,
-        isCorrect: results[parseInt(idx)]?.isCorrect || false,
-        pointsValue: results[parseInt(idx)]?.difficulty || results[parseInt(idx)]?.difficultyAtTime || 1
-      }));
+      while (latestTagsRef.current !== null) {
+        const tagsToSave = latestTagsRef.current;
+        latestTagsRef.current = null;
 
-      await fetch('/api/save-tags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: user.user_id,
-          examId,
-          tags: tagEntries
-        })
-      });
+        const tagEntries = Object.entries(tagsToSave).map(([idx, tag]) => ({
+          questionIndex: parseInt(idx),
+          tag,
+          isCorrect: results[parseInt(idx)]?.isCorrect || false,
+          pointsValue: results[parseInt(idx)]?.difficulty || results[parseInt(idx)]?.difficultyAtTime || 1
+        }));
 
+        await fetch('/api/save-tags', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: user.user_id,
+            examId,
+            tags: tagEntries
+          })
+        });
+      }
       setTagsSaved(true);
       if (onRefreshData) {
         onRefreshData();
@@ -145,6 +156,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     } catch (err) {
       console.error('Auto-save tags error:', err);
     } finally {
+      isSavingRef.current = false;
       setTagsSaving(false);
     }
   };
