@@ -98,7 +98,17 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     const initial = {};
     if (resultsObj.savedTags) {
       for (const st of resultsObj.savedTags) {
-        initial[st.questionIndex] = st.tag;
+        let qIdx = st.questionIndex;
+        if (qIdx !== null && qIdx !== undefined) {
+          if (typeof qIdx === 'object' && qIdx.value !== undefined) {
+            qIdx = parseInt(qIdx.value, 10);
+          } else if (typeof qIdx === 'bigint') {
+            qIdx = Number(qIdx);
+          } else {
+            qIdx = parseInt(qIdx, 10);
+          }
+          initial[qIdx] = st.tag;
+        }
       }
     }
     return initial;
@@ -149,7 +159,9 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       } else {
         next = { ...prev, [index]: tag };
       }
-      autoSaveTags(next);
+      setTimeout(() => {
+        autoSaveTags(next);
+      }, 0);
       return next;
     });
   }, [user, examId, results, onRefreshData]);

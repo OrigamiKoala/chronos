@@ -112,6 +112,7 @@ export default async function handler(req, res) {
     }
 
     // A. Grade all questions in parallel! Solve on-the-fly and award partial credit!
+    const isOnlyMCQ = results.every(r => r.type === 'multiple_choice');
     const hasFRQ = results.some(r => r.type === 'free_response');
 
     const gradedResults = await Promise.all(results.map(async (r) => {
@@ -500,10 +501,16 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       await Promise.all([...wrongInsertPromises, ...masteryPromises]);
 
       // 4. Trigger update of user weaknesses using direct Gemini model
-      const [freshAnalysis, freshMistakePatterns] = await Promise.all([
-        updateAIWeaknesses(sanitizedUser, subject, req),
-        analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req)
-      ]);
+      let freshAnalysis = null;
+      let freshMistakePatterns = '';
+      if (!isOnlyMCQ) {
+        const [a, m] = await Promise.all([
+          updateAIWeaknesses(sanitizedUser, subject, req),
+          analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req)
+        ]);
+        freshAnalysis = a;
+        freshMistakePatterns = m;
+      }
 
       return res.status(200).json({ 
         success: true, 
@@ -516,7 +523,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       });
     } else {
       // For Guest user: run mistake analysis via Gemini without BigQuery insert, return detailedAnalysis as null
-      const freshMistakePatterns = await analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req);
+      const freshMistakePatterns = isOnlyMCQ ? '' : await analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req);
       return res.status(200).json({ 
         success: true, 
         detailedAnalysis: null, 

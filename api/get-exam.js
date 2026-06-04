@@ -60,7 +60,19 @@ export default async function handler(req, res) {
 
     // Tags are optional
     const tagRows = tagsResult.status === 'fulfilled' ? tagsResult.value[0] : [];
-    const savedTags = tagRows.map(r => ({ questionIndex: r.question_index, tag: r.tag }));
+    const savedTags = tagRows.map(r => {
+      let qIdx = r.question_index;
+      if (qIdx !== null && qIdx !== undefined) {
+        if (typeof qIdx === 'object' && qIdx.value !== undefined) {
+          qIdx = parseInt(qIdx.value, 10);
+        } else if (typeof qIdx === 'bigint') {
+          qIdx = Number(qIdx);
+        } else {
+          qIdx = parseInt(qIdx, 10);
+        }
+      }
+      return { questionIndex: qIdx, tag: r.tag };
+    });
 
     return res.status(200).json({ results, mistakePatterns, savedTags });
   } catch (err) {

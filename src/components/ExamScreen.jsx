@@ -133,7 +133,12 @@ export function ExamScreen({ config, onFinish }) {
         config.subject,
         config.username || 'default_user',
         (question, index) => {
-          setProblems(prev => [...prev, question]);
+          if (index < config.numQuestions) {
+            setProblems(prev => {
+              if (prev.length >= config.numQuestions) return prev;
+              return [...prev, question];
+            });
+          }
 
           if (!firstReceived) {
             firstReceived = true;
@@ -146,7 +151,7 @@ export function ExamScreen({ config, onFinish }) {
       );
 
       if (generated && generated.length > 0) {
-        setProblems(generated);
+        setProblems(generated.slice(0, config.numQuestions));
       }
     } catch (err) {
       setError("Failed to fetch problems. Retrying...");

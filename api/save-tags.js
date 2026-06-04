@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
   const { username, examId, tags } = req.body;
 
-  if (!username || !examId || !Array.isArray(tags) || tags.length === 0) {
+  if (!username || !examId || !Array.isArray(tags)) {
     return res.status(400).json({ error: 'Missing required parameters' });
   }
 
