@@ -62,10 +62,8 @@ function buildTimeline(exams, maxDuration, intervalSeconds) {
       }
     }
     data.push(Math.round(sum * 100) / 100);
-    const minutes = Math.floor(end / 60);
-    const seconds = end % 60;
-    const timeStr = seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
-    labels.push(timeStr);
+    const pct = Math.round((end / maxDuration) * 100);
+    labels.push(`${pct}%`);
   }
   return { labels, data };
 }
