@@ -11,6 +11,20 @@ const bq = new BigQuery({
   },
 });
 
+function getExamDuration(results) {
+  let maxTime = 0;
+  for (const r of results) {
+    if (r.intervals && r.intervals.length > 0) {
+      for (const inv of r.intervals) {
+        if (inv.end > maxTime) maxTime = inv.end;
+      }
+    } else {
+      maxTime += (r.timeSpent || 0);
+    }
+  }
+  return maxTime || results.reduce((acc, r) => acc + (r.timeSpent || 0), 0) || 1;
+}
+
 function buildTimeline(exams, maxDuration, intervalSeconds) {
   const numIntervals = Math.ceil(maxDuration / intervalSeconds);
   const data = [];
@@ -21,21 +35,30 @@ function buildTimeline(exams, maxDuration, intervalSeconds) {
     let sum = 0;
     for (const exam of exams) {
       let cursor = 0;
+      const examDuration = exam.totalSec || 1;
+      const scaleFactor = maxDuration / examDuration;
+
       for (const r of exam.results) {
-        const qStart = cursor;
-        const qEnd = cursor + (r.timeSpent || 0);
-        const overlapStart = Math.max(qStart, start);
-        const overlapEnd = Math.min(qEnd, end);
-        if (overlapEnd > overlapStart) {
-          const overlapDuration = overlapEnd - overlapStart;
-          if (r.isCorrect) {
-            const isFRQ = r.type === 'free_response';
-            const points = isFRQ ? (r.difficulty || r.difficultyAtTime || 1) : 1;
-            const score = r.score !== undefined ? Number(r.score) : 1.0;
-            sum += (points * score) * (overlapDuration / intervalSeconds);
+        const questionIntervals = (r.intervals && r.intervals.length > 0)
+          ? r.intervals
+          : [{ start: cursor, end: cursor + (r.timeSpent || 0) }];
+        cursor += (r.timeSpent || 0);
+
+        for (const inv of questionIntervals) {
+          const qStart = inv.start * scaleFactor;
+          const qEnd = inv.end * scaleFactor;
+          const overlapStart = Math.max(qStart, start);
+          const overlapEnd = Math.min(qEnd, end);
+          if (overlapEnd > overlapStart) {
+            const overlapDuration = overlapEnd - overlapStart;
+            const score = r.score !== undefined ? Number(r.score) : (r.isCorrect ? 1.0 : 0.0);
+            if (score > 0) {
+              const isFRQ = r.type === 'free_response';
+              const points = isFRQ ? (r.difficulty || r.difficultyAtTime || 1) : 1;
+              sum += (points * score) * (overlapDuration / intervalSeconds) / scaleFactor;
+            }
           }
         }
-        cursor = qEnd;
       }
     }
     data.push(Math.round(sum * 100) / 100);
@@ -262,7 +285,7 @@ export default async function handler(req, res) {
     for (const row of resultRows) {
       try {
         const results = JSON.parse(row.results_json);
-        const totalSec = results.reduce((acc, r) => acc + (r.timeSpent || 0), 0);
+        const totalSec = getExamDuration(results);
         if (totalSec > maxDuration) {
           maxDuration = totalSec;
         }
