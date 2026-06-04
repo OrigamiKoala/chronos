@@ -13,7 +13,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle as TriangleIcon, BookOpen, Save, Check } from 'lucide-react';
+import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle as TriangleIcon, BookOpen, Save, Check, Clock } from 'lucide-react';
 import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 import { normalizeAnswer } from './ExamScreen';
 
@@ -380,60 +380,58 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     }
   }, [resultsObj]);
 
-  // Points-per-minute chart: bucket points earned into 1-minute windows
-  const ppmData = (() => {
-    // Build timeline: for each question, record the cumulative elapsed time at completion
-    // and whether it was correct
-    let cursor = 0;
-    const events = results.map(r => {
-      cursor += (r.timeSpent || 0);
-      return { endSec: cursor, points: r.isCorrect ? (r.difficulty || r.difficultyAtTime || 1) : 0 };
-    });
-
-    const totalSec = cursor;
-    const numMinutes = Math.max(Math.ceil(totalSec / 60), 1);
-
-    const labels = [];
+  // Points timeline chart: continuous points earned rate over time intervals
+  const timelineData = (() => {
+    const totalTime = results.reduce((acc, curr) => acc + curr.timeSpent, 0);
+    const intervalSeconds = totalTime > 1800 ? 60 : (totalTime > 900 ? 30 : 15);
+    const numIntervals = Math.ceil(totalTime / intervalSeconds);
     const data = [];
+    const labels = [];
 
-    for (let m = 1; m <= numMinutes; m++) {
-      const windowStart = (m - 1) * 60;
-      const windowEnd = m * 60;
-      // Sum fractional contributions from each question that overlaps this window
-      let pts = 0;
-      let prev = 0;
-      for (const ev of events) {
-        const qStart = prev;
-        const qEnd = ev.endSec;
-        const qDur = qEnd - qStart;
-        if (qDur > 0 && ev.points > 0) {
-          // Fraction of this question's duration that falls in [windowStart, windowEnd]
-          const overlapStart = Math.max(qStart, windowStart);
-          const overlapEnd = Math.min(qEnd, windowEnd);
-          if (overlapEnd > overlapStart) {
-            pts += ev.points * ((overlapEnd - overlapStart) / qDur);
+    for (let i = 0; i < numIntervals; i++) {
+      const start = i * intervalSeconds;
+      const end = (i + 1) * intervalSeconds;
+      let intervalValue = 0;
+      let cursor = 0;
+
+      for (const r of results) {
+        const qStart = cursor;
+        const qEnd = cursor + (r.timeSpent || 0);
+        const overlapStart = Math.max(qStart, start);
+        const overlapEnd = Math.min(qEnd, end);
+
+        if (overlapEnd > overlapStart) {
+          const overlapDuration = overlapEnd - overlapStart;
+          if (r.isCorrect) {
+            const isFRQ = r.type === 'free_response';
+            const points = isFRQ ? (r.difficulty || r.difficultyAtTime || 1) : 1;
+            const score = r.score !== undefined ? Number(r.score) : 1.0;
+            intervalValue += (points * score) * (overlapDuration / intervalSeconds);
           }
         }
-        prev = qEnd;
+        cursor = qEnd;
       }
-      // ppm = points that fell in this 1-min window (already scaled to 1 full minute)
-      data.push(Math.round(pts * 100) / 100);
-      labels.push(`${m}m`);
+
+      data.push(Math.round(intervalValue * 100) / 100);
+      const minutes = Math.floor(end / 60);
+      const seconds = end % 60;
+      const timeStr = seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
+      labels.push(timeStr);
     }
 
     return { labels, data };
   })();
 
-  const ppmChartData = {
-    labels: ppmData.labels,
+  const timelineChartData = {
+    labels: timelineData.labels,
     datasets: [{
-      label: 'pts/min',
-      data: ppmData.data,
+      label: 'pts',
+      data: timelineData.data,
       fill: true,
       backgroundColor: 'rgba(99, 102, 241, 0.12)',
       borderColor: '#6366f1',
       borderWidth: 2,
-      pointBackgroundColor: ppmData.data.map(v => v > 0 ? '#a78bfa' : 'rgba(239,68,68,0.5)'),
+      pointBackgroundColor: timelineData.data.map(v => v > 0 ? '#10b981' : 'rgba(239,68,68,0.5)'),
       pointRadius: 4,
       tension: 0.35
     }]
@@ -476,11 +474,11 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         </div>
 
         <div className="glass-panel" style={{ padding: 'var(--card-padding-sm)', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
-          <Award size={28} color="var(--accent-secondary)" style={{ margin: '0 auto 0.75rem' }} />
-          <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.85rem' }}>Efficiency</h4>
+          <Clock size={28} color="var(--accent-secondary)" style={{ margin: '0 auto 0.75rem' }} />
+          <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.85rem' }}>Avg Time / Q</h4>
           <span style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-            {efficiency}
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>pts/min</span>
+            {avgTime}
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>seconds</span>
           </span>
         </div>
 
@@ -493,16 +491,16 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         </div>
       </div>
 
-      {/* Points-per-Minute Chart */}
+      {/* Points timeline Chart */}
       <div className="glass-panel" style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', marginBottom: '2.5rem' }}>
         <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Activity size={18} color="var(--accent-primary)" /> Points Earned Per Minute
+          <Activity size={18} color="var(--accent-primary)" /> Points Earned Timeline (Continuous)
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '400', marginLeft: 'auto' }}>
             {pointsEarned}/{totalPoints} pts · {Math.round(totalMinutes * 10) / 10} min total
           </span>
         </h4>
         <div style={{ height: '150px' }}>
-          <Line data={ppmChartData} options={{
+          <Line data={timelineChartData} options={{
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -515,7 +513,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                 borderWidth: 1,
                 cornerRadius: 8,
                 callbacks: {
-                  label: ctx => `${ctx.parsed.y} pts/min`
+                  label: ctx => `Interval Value: ${ctx.parsed.y} pts`
                 }
               }
             },
@@ -525,7 +523,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                 min: 0,
                 ticks: { color: '#666677', font: { size: 10 } },
                 grid: { color: 'rgba(255,255,255,0.04)' },
-                title: { display: true, text: 'pts/min', color: '#666677', font: { size: 9 } }
+                title: { display: true, text: 'points', color: '#666677', font: { size: 9 } }
               }
             }
           }} />

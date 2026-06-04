@@ -228,47 +228,44 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     };
   }, [data]);
 
-  // Point efficiency per exam
-  const efficiencyChartData = useMemo(() => {
-    if (!data?.efficiencyData?.length) return null;
-    const filtered = selectedSubjectFilter === 'All'
-      ? data.efficiencyData
-      : data.efficiencyData.filter(e => e.subject === selectedSubjectFilter);
+  // Aggregate timeline chart
+  const aggregateTimelineChartData = useMemo(() => {
+    if (!data?.timelines) return null;
+    const timeline = data.timelines[selectedSubjectFilter] || data.timelines.All;
+    if (!timeline?.data?.length) return null;
 
     return {
-      labels: filtered.map((e, i) => `#${i + 1} ${formatDate(e.created_at)}`),
+      labels: timeline.labels,
       datasets: [{
-        label: 'Points / Minute',
-        data: filtered.map(e => e.efficiency),
-        backgroundColor: filtered.map(e => CHART_COLORS[e.subject]?.bg || CHART_COLORS.efficiency.bg),
-        borderColor: filtered.map(e => CHART_COLORS[e.subject]?.line || CHART_COLORS.efficiency.line),
+        label: 'Cumulative / Active Points',
+        data: timeline.data,
+        borderColor: CHART_COLORS.efficiency.line,
+        backgroundColor: CHART_COLORS.efficiency.bg,
+        fill: true,
+        tension: 0.35,
+        pointRadius: 2,
+        pointHoverRadius: 5
+      }]
+    };
+  }, [data, selectedSubjectFilter]);
+
+  // Avg Time per Question breakdown per subject
+  const avgTimeSubjectChartData = useMemo(() => {
+    if (!data?.avgTimePerSubject) return null;
+    const subjects = ['Math', 'Physics', 'Chemistry'];
+    return {
+      labels: subjects,
+      datasets: [{
+        label: 'Seconds / Question',
+        data: subjects.map(s => data.avgTimePerSubject[s] || 0),
+        backgroundColor: subjects.map(s => CHART_COLORS[s]?.bg || CHART_COLORS.time.bg),
+        borderColor: subjects.map(s => CHART_COLORS[s]?.line || CHART_COLORS.time.line),
         borderWidth: 1,
         borderRadius: 6,
-        barPercentage: 0.7
+        barPercentage: 0.6
       }]
     };
-  }, [data, selectedSubjectFilter]);
-
-  // Time management per exam
-  const timeChartData = useMemo(() => {
-    if (!data?.efficiencyData?.length) return null;
-    const filtered = selectedSubjectFilter === 'All'
-      ? data.efficiencyData
-      : data.efficiencyData.filter(e => e.subject === selectedSubjectFilter);
-
-    return {
-      labels: filtered.map((e, i) => `#${i + 1} ${formatDate(e.created_at)}`),
-      datasets: [{
-        label: 'Avg Seconds / Question',
-        data: filtered.map(e => e.avgTimePerQuestion),
-        borderColor: CHART_COLORS.time.line,
-        backgroundColor: CHART_COLORS.time.bg,
-        fill: true,
-        tension: 0.3,
-        pointRadius: 3
-      }]
-    };
-  }, [data, selectedSubjectFilter]);
+  }, [data]);
 
   // Topic mastery horizontal bar
   const topicChartData = useMemo(() => {
@@ -464,41 +461,42 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
           )}
         </div>
 
-        {/* Point Efficiency */}
+        {/* Points timeline Chart */}
         <div className="glass-panel analytics-chart-panel">
           <h4 className="analytics-chart-title">
-            <Zap size={18} color={CHART_COLORS.efficiency.line} /> Point Efficiency (pts/min)
+            <Zap size={18} color={CHART_COLORS.efficiency.line} /> Question Completion Timeline (Aggregate)
           </h4>
-          {efficiencyChartData?.datasets[0]?.data?.length ? (
+          {aggregateTimelineChartData ? (
             <div style={{ height: '240px' }}>
-              <Bar data={efficiencyChartData} options={{
-                ...baseChartOptions,
-                plugins: { ...baseChartOptions.plugins, title: { display: false } }
-              }} />
-            </div>
-          ) : (
-            <p className="analytics-empty">Complete exams to see point efficiency</p>
-          )}
-        </div>
-
-        {/* Time Management */}
-        <div className="glass-panel analytics-chart-panel">
-          <h4 className="analytics-chart-title">
-            <Clock size={18} color={CHART_COLORS.time.line} /> Time per Question Trend
-          </h4>
-          {timeChartData?.datasets[0]?.data?.length ? (
-            <div style={{ height: '240px' }}>
-              <Line data={timeChartData} options={{
+              <Line data={aggregateTimelineChartData} options={{
                 ...baseChartOptions,
                 plugins: { ...baseChartOptions.plugins, title: { display: false } },
                 scales: {
                   ...baseChartOptions.scales,
-                  y: { ...baseChartOptions.scales.y, title: { display: true, text: 'Seconds', color: '#666677' } }
+                  x: { ...baseChartOptions.scales.x, title: { display: true, text: 'Time Elapsed', color: '#666677', font: { size: 10 } } },
+                  y: { ...baseChartOptions.scales.y, title: { display: true, text: 'Points', color: '#666677', font: { size: 10 } } }
                 }
               }} />
             </div>
           ) : (
-            <p className="analytics-empty">Complete exams to see time management trend</p>
+            <p className="analytics-empty">No timeline data available</p>
+          )}
+        </div>
+
+        {/* Avg Time / Question by Subject */}
+        <div className="glass-panel analytics-chart-panel">
+          <h4 className="analytics-chart-title">
+            <Clock size={18} color={CHART_COLORS.time.line} /> Avg Time / Question by Subject
+          </h4>
+          {avgTimeSubjectChartData ? (
+            <div style={{ height: '240px' }}>
+              <Bar data={avgTimeSubjectChartData} options={{
+                ...baseChartOptions,
+                plugins: { ...baseChartOptions.plugins, legend: { display: false } }
+              }} />
+            </div>
+          ) : (
+            <p className="analytics-empty">Complete exams to see time breakdown</p>
           )}
         </div>
 
