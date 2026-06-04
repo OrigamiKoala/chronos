@@ -849,6 +849,7 @@ function App() {
         )}
         {currentScreen === 'analytics' && examResults && (
           <AnalyticsScreen
+            key={currentExamId}
             results={examResults}
             onRestart={restart}
             user={user}

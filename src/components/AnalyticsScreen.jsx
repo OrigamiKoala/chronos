@@ -54,6 +54,43 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     setLocalResults(resultsObj.results || []);
     setLocalNewRating(resultsObj.newRating ?? resultsObj.new_rating);
     setLocalRatingChange(resultsObj.ratingChange ?? resultsObj.rating_change);
+
+    // Sync/reset tags
+    const initialTags = {};
+    if (resultsObj.savedTags) {
+      for (const st of resultsObj.savedTags) {
+        let qIdx = st.questionIndex;
+        if (qIdx !== null && qIdx !== undefined) {
+          if (typeof qIdx === 'object' && qIdx.value !== undefined) {
+            qIdx = parseInt(qIdx.value, 10);
+          } else if (typeof qIdx === 'bigint') {
+            qIdx = Number(qIdx);
+          } else {
+            qIdx = parseInt(qIdx, 10);
+          }
+          initialTags[qIdx] = st.tag;
+        }
+      }
+    }
+    setTags(initialTags);
+
+    // Sync/reset explanations
+    const initialExplanations = {};
+    const list = resultsObj.results || [];
+    list.forEach((r, i) => {
+      if (r.aiExplanation) {
+        initialExplanations[i] = {
+          loading: false,
+          text: r.aiExplanation,
+          query: '',
+          remarkedCorrect: false
+        };
+      }
+    });
+    setActiveExplanations(initialExplanations);
+
+    setTagsSaving(false);
+    setTagsSaved(true);
   }, [resultsObj]);
 
   const { subject, oldRating } = resultsObj;
