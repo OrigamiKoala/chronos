@@ -81,6 +81,14 @@ function App() {
     }
   }, [ratings, user]);
 
+  // Trigger data migration for old exams on load
+  useEffect(() => {
+    fetch('/api/update', { method: 'POST' })
+      .then(res => res.json())
+      .then(data => console.log('Migration finished:', data))
+      .catch(err => console.error('Migration error:', err));
+  }, []);
+
   // Auto-login on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('chronos_logged_user');

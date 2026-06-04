@@ -45,6 +45,17 @@ const getSubjectLevelName = (subject, rating) => {
   return 'Novice';
 };
 
+const formatTime = (sec) => {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
+const formatIntervals = (intervals) => {
+  if (!intervals || intervals.length === 0) return '0:00-0:00';
+  return intervals.map(inv => `${formatTime(inv.start)}-${formatTime(inv.end)}`).join(', ');
+};
+
 export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, strengths = [], weaknesses = [], detailedAnalysis = {}, topicBreakdowns = {}, history = [], loadingExamId = null, onReviewExam = null, formatDate = (d) => d, onRefreshData = null }) {
   const [localResults, setLocalResults] = useState(() => resultsObj.results || []);
   const [localNewRating, setLocalNewRating] = useState(() => resultsObj.newRating ?? resultsObj.new_rating);
@@ -382,7 +393,17 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
 
   // Points timeline chart: continuous points earned rate over time intervals
   const timelineData = (() => {
-    const totalTime = results.reduce((acc, curr) => acc + curr.timeSpent, 0);
+    let maxTime = 0;
+    for (const r of results) {
+      if (r.intervals && r.intervals.length > 0) {
+        for (const inv of r.intervals) {
+          if (inv.end > maxTime) maxTime = inv.end;
+        }
+      } else {
+        maxTime += (r.timeSpent || 0);
+      }
+    }
+    const totalTime = maxTime || 1;
     const intervalSeconds = totalTime > 1800 ? 60 : (totalTime > 900 ? 30 : 15);
     const numIntervals = Math.ceil(totalTime / intervalSeconds);
     const data = [];
@@ -395,21 +416,25 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       let cursor = 0;
 
       for (const r of results) {
-        const qStart = cursor;
-        const qEnd = cursor + (r.timeSpent || 0);
-        const overlapStart = Math.max(qStart, start);
-        const overlapEnd = Math.min(qEnd, end);
+        const questionIntervals = (r.intervals && r.intervals.length > 0)
+          ? r.intervals
+          : [{ start: cursor, end: cursor + (r.timeSpent || 0) }];
+        cursor += (r.timeSpent || 0);
 
-        if (overlapEnd > overlapStart) {
-          const overlapDuration = overlapEnd - overlapStart;
-          if (r.isCorrect) {
-            const isFRQ = r.type === 'free_response';
-            const points = isFRQ ? (r.difficulty || r.difficultyAtTime || 1) : 1;
-            const score = r.score !== undefined ? Number(r.score) : 1.0;
-            intervalValue += (points * score) * (overlapDuration / intervalSeconds);
+        for (const inv of questionIntervals) {
+          const overlapStart = Math.max(inv.start, start);
+          const overlapEnd = Math.min(inv.end, end);
+
+          if (overlapEnd > overlapStart) {
+            const overlapDuration = overlapEnd - overlapStart;
+            const score = r.score !== undefined ? Number(r.score) : (r.isCorrect ? 1.0 : 0.0);
+            if (score > 0) {
+              const isFRQ = r.type === 'free_response';
+              const points = isFRQ ? (r.difficulty || r.difficultyAtTime || 1) : 1;
+              intervalValue += (points * score) * (overlapDuration / intervalSeconds);
+            }
           }
         }
-        cursor = qEnd;
       }
 
       data.push(Math.round(intervalValue * 100) / 100);
@@ -680,7 +705,18 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>Question {i + 1} (Level {r.difficultyAtTime})</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: statusColor }}>
-                    {r.timeSpent}s {isPartial ? (
+                    {(() => {
+                      const qIntervals = (r.intervals && r.intervals.length > 0)
+                        ? r.intervals
+                        : (() => {
+                            let start = 0;
+                            for (let j = 0; j < i; j++) {
+                              start += results[j].timeSpent || 0;
+                            }
+                            return [{ start, end: start + (r.timeSpent || 0) }];
+                          })();
+                      return formatIntervals(qIntervals);
+                    })()} {isPartial ? (
                       <>
                         <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--warning)' }}>
                           {Math.round(r.score * 100)}% Credit

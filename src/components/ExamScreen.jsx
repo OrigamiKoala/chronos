@@ -105,6 +105,21 @@ export function ExamScreen({ config, onFinish }) {
 
   const timerRef = useRef(null);
   const whiteboardRef = useRef(null);
+  const elapsedSecondsRef = useRef(0);
+  const currentQuestionEntryTimeRef = useRef(0);
+  const questionIntervalsRef = useRef([]);
+
+  const recordActiveInterval = (qIdx) => {
+    const start = currentQuestionEntryTimeRef.current;
+    const end = elapsedSecondsRef.current;
+    if (end > start) {
+      if (!questionIntervalsRef.current[qIdx]) {
+        questionIntervalsRef.current[qIdx] = [];
+      }
+      questionIntervalsRef.current[qIdx].push({ start, end });
+    }
+    currentQuestionEntryTimeRef.current = end;
+  };
 
   useEffect(() => {
     // Reset question-specific submission states on navigation
@@ -123,6 +138,9 @@ export function ExamScreen({ config, onFinish }) {
     setError(null);
     setProblems([]);
     setCurrentQuestionIndex(0);
+    elapsedSecondsRef.current = 0;
+    currentQuestionEntryTimeRef.current = 0;
+    questionIntervalsRef.current = Array.from({ length: config.numQuestions }, () => []);
 
     let firstReceived = false;
 
@@ -183,6 +201,7 @@ export function ExamScreen({ config, onFinish }) {
     if (!isWholeTestMode && timeForThisQuestion <= 0) return;
 
     timerRef.current = setInterval(() => {
+      elapsedSecondsRef.current += 1;
       if (isWholeTestMode) {
         setTotalTimeLeft((prevTotal) => {
           if (prevTotal <= 1) {
@@ -276,6 +295,7 @@ export function ExamScreen({ config, onFinish }) {
   };
 
   const handleAutoTimeoutSubmit = () => {
+    recordActiveInterval(currentQuestionIndex);
     let finalValue = '[Time Out]';
     let imagePayload = null;
     if (whiteboardRef.current) {
@@ -306,6 +326,7 @@ export function ExamScreen({ config, onFinish }) {
   };
 
   const handleConfirmFRQSubmit = () => {
+    recordActiveInterval(currentQuestionIndex);
     let finalValue = '';
     let imagePayload = null;
 
@@ -374,6 +395,7 @@ export function ExamScreen({ config, onFinish }) {
   };
 
   const handleFinishExam = (strictResults = null, overrideAnswers = null, overrideSubmissions = null) => {
+    recordActiveInterval(currentQuestionIndex);
     clearInterval(timerRef.current);
     
     let finalResults;
@@ -384,9 +406,8 @@ export function ExamScreen({ config, onFinish }) {
       const activeSubmissions = overrideSubmissions || frqSubmissions;
       finalResults = problems.map((prob, idx) => {
         const userAnswer = activeAnswers[idx] || '';
-        const timeSpent = isWholeTestMode 
-          ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
-          : config.timeLimitPerQuestion - questionTimesLeft[idx];
+        const intervals = questionIntervalsRef.current[idx] || [];
+        const timeSpent = intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0);
         const isTimeout = isWholeTestMode 
           ? (totalTimeLeft <= 0)
           : (questionTimesLeft[idx] <= 0);
@@ -398,7 +419,8 @@ export function ExamScreen({ config, onFinish }) {
           ...prob,
           userAnswer: isTimeout && !userAnswer ? '[Time Out]' : userAnswer,
           isCorrect,
-          timeSpent: Math.max(0, timeSpent),
+          timeSpent,
+          intervals,
           timeOut: isTimeout,
           difficultyAtTime: prob.difficulty || config.startingDifficulty,
           frqSubmission: activeSubmissions[idx] || null
@@ -417,9 +439,11 @@ export function ExamScreen({ config, onFinish }) {
   };
 
   const submitStrictAnswer = (isTimeout = false) => {
+    recordActiveInterval(currentQuestionIndex);
     clearInterval(timerRef.current);
     const activeAnswer = answers[currentQuestionIndex] || '';
-    const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[currentQuestionIndex];
+    const intervals = questionIntervalsRef.current[currentQuestionIndex] || [];
+    const timeSpent = intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0);
     const isCorrect = !isTimeout && isAnswerCorrect(problem, activeAnswer);
 
     let nextDifficulty = currentDifficulty;
@@ -438,6 +462,7 @@ export function ExamScreen({ config, onFinish }) {
       userAnswer: isTimeout ? '[Time Out]' : activeAnswer,
       isCorrect,
       timeSpent,
+      intervals,
       timeOut: isTimeout,
       difficultyAtTime: problem.difficulty || currentDifficulty
     };
@@ -904,6 +929,7 @@ export function ExamScreen({ config, onFinish }) {
                 className="btn btn-outline" 
                 disabled={currentQuestionIndex === 0}
                 onClick={() => {
+                  recordActiveInterval(currentQuestionIndex);
                   clearInterval(timerRef.current);
                   setCurrentQuestionIndex(prev => prev - 1);
                 }}
@@ -919,6 +945,7 @@ export function ExamScreen({ config, onFinish }) {
                 className="btn btn-outline" 
                 style={{ marginRight: '0.75rem' }}
                 onClick={() => {
+                  recordActiveInterval(currentQuestionIndex);
                   clearInterval(timerRef.current);
                   setCurrentQuestionIndex(prev => prev + 1);
                 }}
