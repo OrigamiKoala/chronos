@@ -111,8 +111,24 @@ export default async function handler(req, res) {
       const results = JSON.parse(row.results_json);
       const totalTimeSeconds = results.reduce((acc, r) => acc + (r.timeSpent || 0), 0);
       const totalMinutes = Math.max(totalTimeSeconds / 60, 0.1);
-      const pointsEarned = results.filter(r => r.isCorrect).reduce((acc, r) => acc + (r.difficulty || r.difficultyAtTime || 1), 0);
-      const totalPoints = results.reduce((acc, r) => acc + (r.difficulty || r.difficultyAtTime || 1), 0);
+      const rawPointsEarned = results.reduce((acc, r) => {
+        if (r.type === 'free_response') {
+          const difficulty = r.difficulty || r.difficultyAtTime || 1;
+          const score = r.score !== undefined ? Number(r.score) : (r.isCorrect ? 1.0 : 0.0);
+          return acc + (score * difficulty);
+        } else {
+          return acc + (r.isCorrect ? 1 : 0);
+        }
+      }, 0);
+      const pointsEarned = Math.round(rawPointsEarned * 10) / 10;
+
+      const totalPoints = results.reduce((acc, r) => {
+        if (r.type === 'free_response') {
+          return acc + (r.difficulty || r.difficultyAtTime || 1);
+        } else {
+          return acc + 1;
+        }
+      }, 0);
       const avgTimePerQuestion = results.length > 0 ? Math.round(totalTimeSeconds / results.length) : 0;
 
       return {

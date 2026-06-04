@@ -105,8 +105,24 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const avgTime = Math.round(totalTime / totalQuestions) || 0;
 
   // Point efficiency calculation
-  const pointsEarned = results.filter(r => r.isCorrect).reduce((acc, r) => acc + (r.difficulty || r.difficultyAtTime || 1), 0);
-  const totalPoints = results.reduce((acc, r) => acc + (r.difficulty || r.difficultyAtTime || 1), 0);
+  const rawPointsEarned = results.reduce((acc, r) => {
+    if (r.type === 'free_response') {
+      const difficulty = r.difficulty || r.difficultyAtTime || 1;
+      const score = r.score !== undefined ? Number(r.score) : (r.isCorrect ? 1.0 : 0.0);
+      return acc + (score * difficulty);
+    } else {
+      return acc + (r.isCorrect ? 1 : 0);
+    }
+  }, 0);
+  const pointsEarned = Math.round(rawPointsEarned * 10) / 10;
+
+  const totalPoints = results.reduce((acc, r) => {
+    if (r.type === 'free_response') {
+      return acc + (r.difficulty || r.difficultyAtTime || 1);
+    } else {
+      return acc + 1;
+    }
+  }, 0);
   const totalMinutes = Math.max(totalTime / 60, 0.1);
   const efficiency = Math.round((pointsEarned / totalMinutes) * 10) / 10;
 
@@ -169,12 +185,19 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         const tagsToSave = latestTagsRef.current;
         latestTagsRef.current = null;
 
-        const tagEntries = Object.entries(tagsToSave).map(([idx, tag]) => ({
-          questionIndex: parseInt(idx),
-          tag,
-          isCorrect: results[parseInt(idx)]?.isCorrect || false,
-          pointsValue: results[parseInt(idx)]?.difficulty || results[parseInt(idx)]?.difficultyAtTime || 1
-        }));
+        const tagEntries = Object.entries(tagsToSave).map(([idx, tag]) => {
+          const problem = results[parseInt(idx)];
+          const isFRQ = problem?.type === 'free_response';
+          const pointsValue = isFRQ 
+            ? (problem?.difficulty || problem?.difficultyAtTime || 1) 
+            : 1;
+          return {
+            questionIndex: parseInt(idx),
+            tag,
+            isCorrect: problem?.isCorrect || false,
+            pointsValue
+          };
+        });
 
         await fetch('/api/save-tags', {
           method: 'POST',
