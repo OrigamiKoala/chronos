@@ -609,42 +609,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         </div>
       )}
 
-      {/* Save Tags Bar */}
-      {user && examId && (
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          padding: 'var(--card-padding-sm)', 
-          background: 'rgba(99, 102, 241, 0.05)', 
-          border: '1px solid rgba(99, 102, 241, 0.15)', 
-          borderRadius: 'var(--radius-md)', 
-          marginBottom: '1.5rem' 
-        }}>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Tag your problems</strong> — mark questions as <em>unsure</em>, <em>silly mistake</em>, or <em>concept problem</em> below (changes save automatically).
-          </div>
-          <div
-            className={`btn btn-outline`}
-            style={{ 
-              padding: '0.4rem 1rem', 
-              fontSize: '0.85rem', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.35rem', 
-              whiteSpace: 'nowrap', 
-              cursor: 'default', 
-              opacity: 0.85,
-              borderColor: tagsSaved ? 'var(--success)' : 'var(--accent-primary)',
-              color: tagsSaved ? 'var(--success)' : 'var(--text-primary)',
-              background: 'transparent'
-            }}
-          >
-            {tagsSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            {tagsSaving ? 'Saving...' : 'All Saved'}
-          </div>
-        </div>
-      )}
+
 
       <div>
         <h3 style={{ marginBottom: '1.5rem' }}>Question Breakdown</h3>
@@ -849,6 +814,44 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         })}
         </div>
       </div>
+
+      {/* Save Tags Bar */}
+      {user && examId && (
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          padding: 'var(--card-padding-sm)', 
+          background: 'rgba(99, 102, 241, 0.05)', 
+          border: '1px solid rgba(99, 102, 241, 0.15)', 
+          borderRadius: 'var(--radius-md)', 
+          marginTop: '2rem',
+          marginBottom: '1.5rem' 
+        }}>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Tag your problems</strong> — mark questions as <em>unsure</em>, <em>silly mistake</em>, or <em>concept problem</em> below (changes save automatically).
+          </div>
+          <div
+            className={`btn btn-outline`}
+            style={{ 
+              padding: '0.4rem 1rem', 
+              fontSize: '0.85rem', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.35rem', 
+              whiteSpace: 'nowrap', 
+              cursor: 'default', 
+              opacity: 0.85,
+              borderColor: tagsSaved ? 'var(--success)' : 'var(--accent-primary)',
+              color: tagsSaved ? 'var(--success)' : 'var(--text-primary)',
+              background: 'transparent'
+            }}
+          >
+            {tagsSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            {tagsSaving ? 'Saving...' : 'All Saved'}
+          </div>
+        </div>
+      )}
 
       {/* Past Exam History */}
       {user && history.length > 0 && (
