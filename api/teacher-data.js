@@ -215,7 +215,7 @@ export default async function handler(req, res) {
           ORDER BY created_at DESC
         `;
         const getSubmissionsQuery = `
-          SELECT user_id, exam_id, subject, accuracy, new_rating, created_at, assignment_id
+          SELECT user_id, exam_id, subject, accuracy, new_rating, created_at
           FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
           WHERE assignment_id IN (
             SELECT assignment_id FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`

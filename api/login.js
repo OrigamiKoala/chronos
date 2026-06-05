@@ -77,6 +77,14 @@ export default async function handler(req, res) {
               due_date TIMESTAMP,
               created_at TIMESTAMP
             )
+          `),
+          bq.query(`
+            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+            ADD COLUMN IF NOT EXISTS content_based BOOL
+          `),
+          bq.query(`
+            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+            ADD COLUMN IF NOT EXISTS assignment_id STRING
           `)
         ]);
       } catch (e) {
