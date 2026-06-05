@@ -72,26 +72,99 @@ export default async function handler(req, res) {
   const sanitizedUser = String(targetUserId).replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
 
   try {
-    // 1. Fetch user weaknesses from BigQuery
-    const weaknessesQuery = `
-      SELECT 
-        COALESCE(
-          STRING_AGG(
-            FORMAT("Topic: %s (Accuracy: %d%%)", sub_category, CAST(accuracy_rate * 100 AS INT64)), 
-            "; "
-          ),
-          "None (excellent performance across all topics)"
-        ) AS weaknesses
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-      WHERE accuracy_rate < 0.65 AND user_id = @targetUserId AND subject = @subject
-    `;
+    // 1. Fetch user weaknesses and diagnostic data from BigQuery in parallel
+    let weaknesses = 'None (excellent performance across all topics)';
+    let weaknessAnalysis = 'None (no previous analysis available)';
+    let topicBreakdown = 'None (no previous topic breakdown available)';
+    let mistakeAnalysis = 'None (no previous mistake pattern analysis available)';
 
-    const [rows] = await bq.query({
-      query: weaknessesQuery,
-      params: { targetUserId: sanitizedUser, subject },
-    });
-
-    const weaknesses = rows[0]?.weaknesses || 'None (excellent performance across all topics)';
+    try {
+      await Promise.all([
+        (async () => {
+          try {
+            const weaknessesQuery = `
+              SELECT 
+                COALESCE(
+                  STRING_AGG(
+                    FORMAT("Topic: %s (Accuracy: %d%%)", sub_category, CAST(accuracy_rate * 100 AS INT64)), 
+                    "; "
+                  ),
+                  "None (excellent performance across all topics)"
+                ) AS weaknesses
+              FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+              WHERE accuracy_rate < 0.65 AND user_id = @targetUserId AND subject = @subject
+            `;
+            const [rows] = await bq.query({
+              query: weaknessesQuery,
+              params: { targetUserId: sanitizedUser, subject },
+            });
+            weaknesses = rows[0]?.weaknesses || 'None (excellent performance across all topics)';
+          } catch (err) {
+            console.error('Error fetching user weaknesses:', err);
+          }
+        })(),
+        (async () => {
+          try {
+            const weaknessAnalysisQuery = `
+              SELECT detailed_analysis
+              FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
+              WHERE user_id = @targetUserId AND subject = @subject
+              ORDER BY updated_at DESC
+              LIMIT 1
+            `;
+            const [rows] = await bq.query({
+              query: weaknessAnalysisQuery,
+              params: { targetUserId: sanitizedUser, subject },
+            });
+            if (rows && rows.length > 0) {
+              weaknessAnalysis = rows[0].detailed_analysis;
+            }
+          } catch (err) {
+            console.error('Error fetching user weakness analysis:', err);
+          }
+        })(),
+        (async () => {
+          try {
+            const topicBreakdownQuery = `
+              SELECT topic, good_at, not_good_at
+              FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+              WHERE user_id = @targetUserId AND subject = @subject
+            `;
+            const [rows] = await bq.query({
+              query: topicBreakdownQuery,
+              params: { targetUserId: sanitizedUser, subject },
+            });
+            if (rows && rows.length > 0) {
+              topicBreakdown = rows.map(row => `Topic: ${row.topic} | Good at: ${row.good_at} | Not good at: ${row.not_good_at}`).join('\n');
+            }
+          } catch (err) {
+            console.error('Error fetching user topic breakdown:', err);
+          }
+        })(),
+        (async () => {
+          try {
+            const mistakeAnalysisQuery = `
+              SELECT mistake_patterns
+              FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+              WHERE user_id = @targetUserId AND subject = @subject
+              ORDER BY created_at DESC
+              LIMIT 3
+            `;
+            const [rows] = await bq.query({
+              query: mistakeAnalysisQuery,
+              params: { targetUserId: sanitizedUser, subject },
+            });
+            if (rows && rows.length > 0) {
+              mistakeAnalysis = rows.map((row, idx) => `Mistake Pattern ${idx + 1}: ${row.mistake_patterns}`).join('\n');
+            }
+          } catch (err) {
+            console.error('Error fetching user mistake analysis:', err);
+          }
+        })()
+      ]);
+    } catch (err) {
+      console.error('Parallel fetch error:', err);
+    }
 
     // 2. Build the Gemini generation prompt
     let constraints = '';
@@ -266,6 +339,17 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
     const systemInstruction = `###Role:### You are a professional olympiad question writer for high school olympiad-level tests. You want to write tricky problems that challenges students in their understanding of [subject] concepts, rather than their breadth of knowledge.
 
 ###Goal:### Write questions for a user's practice tests that mirror the style of actual olympiad exams and challenge the user to think deeply about the material. Target the user's weak areas ( ${weaknesses} ).
+
+Additionally, utilize the following diagnostic information about the user to tailor the test:
+- User Weakness Analysis: ${weaknessAnalysis}
+- User Topic Breakdown:
+${topicBreakdown}
+- Recent Mistake Patterns (thinking / test-taking style):
+${mistakeAnalysis}
+
+Tailor the questions to target the user's weaknesses:
+1. In knowledge base and skill set (using the User Weakness Analysis and User Topic Breakdown).
+2. In thinking and test-taking style (using the Recent Mistake Patterns). Craft questions that specifically test or trigger their common mistake patterns (such as conceptual traps, calculation errors, panic, or edge case negligence) to help them overcome these pitfalls.
 
 ###Constraints:###
 
