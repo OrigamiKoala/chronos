@@ -35,6 +35,7 @@ export function TeacherScreen({ user, onBack }) {
   const [lessonError, setLessonError] = useState('');
 
   const fetchTeacherData = () => {
+    if (!user) return;
     fetch(`/api/teacher-data?username=${encodeURIComponent(user.user_id)}`)
       .then(r => {
         if (!r.ok) throw new Error('Failed to load teacher portal');

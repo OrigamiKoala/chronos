@@ -95,6 +95,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           timeLimitWholeTest: 30,
         };
         delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
         return next;
       });
     } else if (preset === 'math_state') {
@@ -108,6 +110,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           timeLimitWholeTest: 30,
         };
         delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
         return next;
       });
     } else if (preset === 'chem_part_1') {
@@ -121,6 +125,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           timeLimitWholeTest: 90,
         };
         delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
         return next;
       });
     }
@@ -141,6 +147,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       timeLimitStyle: hw.time_limit_style || 'per_question',
       examFormat: formatVal,
       assignmentId: hw.assignment_id,
+      lessonTitle: hw.lesson_title,
+      lessonDescription: hw.lesson_description,
     });
     setSelectedPreset('custom');
     if (onSubjectChange) {
@@ -153,6 +161,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     setConfig((prev) => {
       const next = { ...prev, [name]: isNaN(value) ? value : Number(value) || value };
       delete next.assignmentId;
+      delete next.lessonTitle;
+      delete next.lessonDescription;
       if (name === 'subject' && onSubjectChange) {
         onSubjectChange(value);
       }
@@ -318,6 +328,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                       : prev.examFormat.filter(f => f !== 'multiple_choice');
                     const next = { ...prev, examFormat: formats };
                     delete next.assignmentId;
+                    delete next.lessonTitle;
+                    delete next.lessonDescription;
                     return next;
                   });
                   setSelectedPreset('custom');
@@ -338,6 +350,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                       : prev.examFormat.filter(f => f !== 'short_answer');
                     const next = { ...prev, examFormat: formats };
                     delete next.assignmentId;
+                    delete next.lessonTitle;
+                    delete next.lessonDescription;
                     return next;
                   });
                   setSelectedPreset('custom');
@@ -358,6 +372,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                       : prev.examFormat.filter(f => f !== 'free_response');
                     const next = { ...prev, examFormat: formats };
                     delete next.assignmentId;
+                    delete next.lessonTitle;
+                    delete next.lessonDescription;
                     return next;
                   });
                   setSelectedPreset('custom');

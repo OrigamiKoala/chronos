@@ -190,7 +190,7 @@ async function readSSEStream(response, onQuestion) {
  *                                for each question the moment it fully arrives.
  * @returns {Promise<Array>} Resolves with the complete array of question objects.
  */
-export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix') {
+export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix', lessonTitle = null, lessonDescription = null) {
     // Attempt to call Vercel Serverless Function first in production or if VITE_USE_VERCEL_API is enabled
     if (import.meta.env.PROD || import.meta.env.VITE_USE_VERCEL_API) {
         try {
@@ -205,7 +205,9 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
                     subject,
                     targetUserId: username,
                     freeResponseMode,
-                    examFormat
+                    examFormat,
+                    lessonTitle,
+                    lessonDescription
                 }),
             });
 
@@ -440,9 +442,21 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
       : ``;
     let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
 
+    let lessonInstructions = '';
+    if (lessonTitle || lessonDescription) {
+        lessonInstructions = `
+Additionally, this exam is a homework assignment for the lesson "${lessonTitle || ''}".
+The teacher set the following lesson plan/content:
+"${lessonDescription || ''}"
+
+You MUST generate questions that are directly related to the content and concepts outlined in this lesson plan/content.
+`;
+    }
+
     const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
 
 ${subjectContext}
+${lessonInstructions}
 
 For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 

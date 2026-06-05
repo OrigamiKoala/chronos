@@ -102,7 +102,7 @@ export default async function handler(req, res) {
 
     try {
       const query = `
-        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.due_date, l.title as lesson_title
+        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.due_date, l.title as lesson_title, l.description as lesson_description
         FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` a
         JOIN \`${projectId}\`.\`chronos_users\`.\`lessons\` l ON a.lesson_id = l.lesson_id
         LEFT JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h ON a.assignment_id = h.assignment_id AND h.user_id = @username

@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode, examFormat } = req.body;
+  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode, examFormat, lessonTitle, lessonDescription } = req.body;
 
   if (!count || !startingDifficulty || !subject) {
     return res.status(400).json({ error: 'Missing required parameters: count, startingDifficulty, subject' });
@@ -336,10 +336,21 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
       : ``;
     let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
 
+    let lessonInstructions = '';
+    if (lessonTitle || lessonDescription) {
+      lessonInstructions = `
+Additionally, this exam is a homework assignment for the lesson "${lessonTitle || ''}".
+The teacher set the following lesson plan/content:
+"${lessonDescription || ''}"
+
+You MUST generate questions that are directly related to the content and concepts outlined in this lesson plan/content.
+`;
+    }
+
     const systemInstruction = `###Role:### You are a professional olympiad question writer for high school olympiad-level tests. You want to write tricky problems that challenges students in their understanding of [subject] concepts, rather than their breadth of knowledge.
 
 ###Goal:### Write questions for a user's practice tests that mirror the style of actual olympiad exams and challenge the user to think deeply about the material. Target the user's weak areas ( ${weaknesses} ).
-
+${lessonInstructions}
 Additionally, utilize the following diagnostic information about the user to tailor the test:
 - User Weakness Analysis: ${weaknessAnalysis}
 - User Topic Breakdown:

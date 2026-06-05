@@ -165,7 +165,9 @@ export function ExamScreen({ config, onFinish }) {
           }
         },
         config.examFormat === 'free_response',
-        config.examFormat || 'mix'
+        config.examFormat || 'mix',
+        config.lessonTitle,
+        config.lessonDescription
       );
 
       if (generated && generated.length > 0) {
