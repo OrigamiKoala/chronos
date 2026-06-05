@@ -227,8 +227,8 @@ export default async function handler(req, res) {
         `;
 
         const [assignResult, subResult] = await Promise.all([
-          bq.query({ query: getAssignmentsQuery }),
-          bq.query({ query: getSubmissionsQuery })
+          bq.query({ query: getAssignmentsQuery, params: { username: sanitizedUser } }),
+          bq.query({ query: getSubmissionsQuery, params: { username: sanitizedUser } })
         ]);
         assignments = assignResult[0];
         submissions = subResult[0];
