@@ -42,15 +42,11 @@ export function AdminScreen({ user, onBack }) {
     }
   };
 
-  const fetchMembers = () => {
-    if (!user?.user_organization) {
-      setTimeout(() => {
-        setError('You are not associated with any organization.');
-        setLoading(false);
-      }, 0);
-      return;
-    }
-    fetch(`/api/org-members?organization=${encodeURIComponent(user.user_organization)}`)
+  const fetchMembers = (org) => {
+    if (!org) return; // stay in loading state until org is available
+    setLoading(true);
+    setError('');
+    fetch(`/api/org-members?organization=${encodeURIComponent(org)}`)
       .then(r => r.json())
       .then(d => {
         if (d.members) {
@@ -66,9 +62,11 @@ export function AdminScreen({ user, onBack }) {
   };
 
   useEffect(() => {
-    fetchMembers();
+    if (user?.user_organization) {
+      fetchMembers(user.user_organization);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.user_organization]);
 
   const handleBulkPromote = async (e) => {
     e.preventDefault();
@@ -98,7 +96,7 @@ export function AdminScreen({ user, onBack }) {
         setPromoteSuccess(`Successfully updated roles for: ${data.updated.join(', ')}`);
         setPromoteList('');
         setLoading(true);
-        fetchMembers();
+        fetchMembers(user.user_organization);
       } else {
         setPromoteError(data.error || 'Failed to promote users.');
       }

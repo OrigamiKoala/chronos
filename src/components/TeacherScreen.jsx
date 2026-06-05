@@ -21,6 +21,7 @@ export function TeacherScreen({ user, onBack }) {
   const [assignHomework, setAssignHomework] = useState(false);
   
   // Homework config state
+  const [homeworkList, setHomeworkList] = useState([]);
   const [hwTitle, setHwTitle] = useState('');
   const [hwSubject, setHwSubject] = useState('Math');
   const [hwQuestions, setHwQuestions] = useState(5);
@@ -95,17 +96,22 @@ export function TeacherScreen({ user, onBack }) {
       };
 
       if (assignHomework) {
-        payload.homework = [{
-          title: hwTitle.trim() || `Homework: ${lessonTitle.trim()}`,
-          subject: hwSubject,
-          numQuestions: hwQuestions,
-          startingDifficulty: hwDifficulty,
-          examFormat: hwFormats,
-          timeLimitStyle: hwTimeStyle,
-          timeLimitValue: hwTimeValue,
-          stressMode: hwStress,
-          dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : null
-        }];
+        const finalHomework = [...homeworkList];
+        const hasDraft = hwTitle.trim() !== '' || hwDueDate !== '';
+        if (homeworkList.length === 0 || hasDraft) {
+          finalHomework.push({
+            title: hwTitle.trim() || `Homework ${homeworkList.length + 1}: ${lessonTitle.trim()}`,
+            subject: hwSubject,
+            numQuestions: hwQuestions,
+            startingDifficulty: hwDifficulty,
+            examFormat: hwFormats,
+            timeLimitStyle: hwTimeStyle,
+            timeLimitValue: hwTimeValue,
+            stressMode: hwStress,
+            dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          });
+        }
+        payload.homework = finalHomework;
       }
 
       const res = await fetch('/api/lessons', {
@@ -119,6 +125,7 @@ export function TeacherScreen({ user, onBack }) {
         setLessonTitle('');
         setLessonDescription('');
         setAssignHomework(false);
+        setHomeworkList([]);
         setHwTitle('');
         setHwDueDate('');
         fetchTeacherData();
@@ -152,6 +159,37 @@ export function TeacherScreen({ user, onBack }) {
 
   const toggleFormat = (f) => {
     setHwFormats(prev => prev.includes(f) ? prev.filter(item => item !== f) : [...prev, f]);
+  };
+
+  const addHomeworkItem = () => {
+    const titleVal = hwTitle.trim() || `Homework ${homeworkList.length + 1}: ${lessonTitle.trim() || 'Lesson'}`;
+    const newItem = {
+      title: titleVal,
+      subject: hwSubject,
+      numQuestions: hwQuestions,
+      startingDifficulty: hwDifficulty,
+      examFormat: hwFormats,
+      timeLimitStyle: hwTimeStyle,
+      timeLimitValue: hwTimeValue,
+      stressMode: hwStress,
+      dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    };
+    setHomeworkList([...homeworkList, newItem]);
+    
+    // Reset temporary form states to defaults
+    setHwTitle('');
+    setHwSubject('Math');
+    setHwQuestions(5);
+    setHwDifficulty(5);
+    setHwFormats(['short_answer']);
+    setHwTimeStyle('whole_test');
+    setHwTimeValue(30);
+    setHwStress('none');
+    setHwDueDate('');
+  };
+
+  const removeHomeworkItem = (index) => {
+    setHomeworkList(homeworkList.filter((_, i) => i !== index));
   };
 
   if (user?.user_role !== 'teacher' && user?.user_role !== 'admin') {
@@ -321,20 +359,22 @@ export function TeacherScreen({ user, onBack }) {
 
       {/* Selected Student Analytics Area */}
       {studentAnalyticsUser && (
-        <div className="glass-panel" style={{ padding: 'var(--panel-padding)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 className="text-gradient" style={{ fontSize: '1.25rem' }}>
-              Student Analytics: {selectedStudent}
-            </h3>
-            <button className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => { setStudentAnalyticsUser(null); setSelectedStudent(null); }}>
-              Close Student Dashboard
-            </button>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '5vh', overflowY: 'auto', zIndex: 1001 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '95%', maxWidth: '1000px', marginBottom: '5vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 className="text-gradient" style={{ fontSize: '1.25rem', margin: 0 }}>
+                Student Analytics: {selectedStudent}
+              </h3>
+              <button className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => { setStudentAnalyticsUser(null); setSelectedStudent(null); }}>
+                Close Student Dashboard
+              </button>
+            </div>
+            <AnalyticsDashboard
+              user={studentAnalyticsUser}
+              onBack={() => {}}
+              onReviewExam={handleReviewExam}
+            />
           </div>
-          <AnalyticsDashboard
-            user={studentAnalyticsUser}
-            onBack={() => {}}
-            onReviewExam={handleReviewExam}
-          />
         </div>
       )}
 
@@ -406,8 +446,8 @@ export function TeacherScreen({ user, onBack }) {
 
       {/* Review Past Exam Modal */}
       {reviewExam && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1001 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '800px', maxHeight: '85vh', overflowY: 'auto', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '5vh', overflowY: 'auto', zIndex: 1001 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '800px', marginBottom: '5vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.3rem' }}>
                 Review Exam: <strong style={{ color: 'var(--accent-primary)' }}>{reviewExam.subject}</strong> (Acc: {Math.round(reviewExam.accuracy * 100)}%)
@@ -468,8 +508,8 @@ export function TeacherScreen({ user, onBack }) {
 
       {/* Create Lesson Modal */}
       {showLessonModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1001 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '8vh', overflowY: 'auto', zIndex: 1001 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '600px', marginBottom: '8vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <h3 className="text-gradient" style={{ marginBottom: '1.5rem', fontSize: '1.4rem' }}>Create New Lesson</h3>
             {lessonError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginBottom: '1rem' }}>{lessonError}</p>}
             
@@ -515,7 +555,35 @@ export function TeacherScreen({ user, onBack }) {
 
               {assignHomework && (
                 <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', background: 'var(--bg-tertiary)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--accent-primary)' }}>Homework Assignment Config</h4>
+                  
+                  {/* List of currently added homework items */}
+                  {homeworkList.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Added Homework Mock Exams ({homeworkList.length}):</span>
+                      {homeworkList.map((hw, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.03)', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>{hw.title}</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                              {hw.subject} | {hw.numQuestions} Qs | Diff: {hw.startingDifficulty} | {hw.stressMode === 'none' ? 'No Stress' : `${hw.stressMode} stress`}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                            onClick={() => removeHomeworkItem(idx)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--accent-primary)' }}>
+                    {homeworkList.length > 0 ? 'Add Another Mock Exam' : 'Configure Mock Exam'}
+                  </h4>
 
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Assignment Title</label>
@@ -594,14 +662,24 @@ export function TeacherScreen({ user, onBack }) {
                       onChange={(e) => setHwDueDate(e.target.value)}
                       className="input-field"
                       style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}
-                      required={assignHomework}
+                      required={assignHomework && homeworkList.length === 0}
                     />
                   </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ marginTop: '0.25rem', borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)', fontSize: '0.85rem', padding: '0.4rem' }}
+                    onClick={addHomeworkItem}
+                  >
+                    + Add Mock Exam to Homework List
+                  </button>
+
                 </div>
               )}
 
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
-                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setShowLessonModal(false); setLessonError(''); }} disabled={lessonLoading}>Cancel</button>
+                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setShowLessonModal(false); setLessonError(''); setHomeworkList([]); }} disabled={lessonLoading}>Cancel</button>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} disabled={lessonLoading}>
                   {lessonLoading ? <Loader2 size={16} className="animate-spin" /> : null} Publish Lesson
                 </button>
