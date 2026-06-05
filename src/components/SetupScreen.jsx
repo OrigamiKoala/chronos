@@ -64,7 +64,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
   }, []);
 
   useEffect(() => {
-    if (user?.user_organization && user?.user_id) {
+    if (user?.user_role === 'student' && user?.user_organization && user?.user_id) {
       fetch(`/api/student-homework?organization=${encodeURIComponent(user.user_organization)}&username=${encodeURIComponent(user.user_id)}`)
         .then(res => res.json())
         .then(data => {

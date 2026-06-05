@@ -106,8 +106,11 @@ export default async function handler(req, res) {
         SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.content_based, a.due_date, l.title as lesson_title, l.description as lesson_description
         FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` a
         JOIN \`${projectId}\`.\`chronos_users\`.\`lessons\` l ON a.lesson_id = l.lesson_id
-        LEFT JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h ON a.assignment_id = h.assignment_id AND h.user_id = @username
-        WHERE l.organization = @organization AND h.assignment_id IS NULL
+        WHERE l.organization = @organization
+          AND NOT EXISTS (
+            SELECT 1 FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+            WHERE user_id = @username AND assignment_id = a.assignment_id
+          )
         ORDER BY a.due_date ASC
       `;
 
