@@ -217,9 +217,7 @@ export function ExamScreen({ config, onFinish }) {
         const next = [...prevTimes];
         const currentVal = next[currentQuestionIndex];
         if (isWholeTestMode) {
-          if (currentVal > 0) {
-            next[currentQuestionIndex] = currentVal - 1;
-          }
+          next[currentQuestionIndex] = currentVal - 1;
         } else {
           if (currentVal <= 1) {
             clearInterval(timerRef.current);
@@ -245,6 +243,7 @@ export function ExamScreen({ config, onFinish }) {
   };
 
   const handleGlobalTimeUp = async () => {
+    recordActiveInterval(currentQuestionIndex);
     clearInterval(timerRef.current);
     alert("Test time limit reached! Auto-submitting your exam.");
 
@@ -274,9 +273,12 @@ export function ExamScreen({ config, onFinish }) {
 
     const finalResults = problems.map((prob, idx) => {
       const userAnswer = finalAnswers[idx] || '';
-      const timeSpent = isWholeTestMode 
-        ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
-        : config.timeLimitPerQuestion - questionTimesLeft[idx];
+      const intervals = questionIntervalsRef.current[idx] || [];
+      const timeSpent = intervals.length > 0
+        ? intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0)
+        : (isWholeTestMode 
+            ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
+            : config.timeLimitPerQuestion - questionTimesLeft[idx]);
       const isTimeout = idx === currentQuestionIndex || !userAnswer;
       const isCorrect = prob.type !== 'free_response' && !isTimeout && isAnswerCorrect(prob, userAnswer);
       
@@ -285,6 +287,7 @@ export function ExamScreen({ config, onFinish }) {
         userAnswer: userAnswer || '[Time Out]',
         isCorrect,
         timeSpent: Math.max(0, timeSpent),
+        intervals,
         timeOut: isTimeout,
         difficultyAtTime: prob.difficulty || config.startingDifficulty,
         frqSubmission: idx === currentQuestionIndex ? updatedSubmissions[currentQuestionIndex] : frqSubmissions[idx]
