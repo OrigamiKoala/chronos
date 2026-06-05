@@ -122,15 +122,17 @@ export function AdminScreen({ user, onBack }) {
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <div>
-          <h2 className="text-gradient" style={{ fontSize: '2rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Shield size={28} /> Admin Control Panel
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Organization: <strong>{user.user_organization}</strong>
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Shield size={32} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+          <div>
+            <h2 className="text-gradient" style={{ fontSize: '2rem', marginBottom: '0.15rem', lineHeight: '1.2' }}>
+              Admin Control Panel
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+              Organization: <strong>{user.user_organization}</strong>
+            </p>
+          </div>
         </div>
         <button className="btn btn-outline" onClick={onBack}>
           Exit Admin
