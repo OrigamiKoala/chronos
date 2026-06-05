@@ -933,7 +933,7 @@ Do NOT include markdown formatting, backticks, or any conversational text. Retur
 
 Incorrect questions: ${wrongProblemsString}`;
 
-    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const modelId = 'gemini-3.1-flash-lite';
     const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
       model: modelId,
       contents: prompt,
@@ -1176,7 +1176,7 @@ Timed Out: ${r.timeOut ? 'Yes' : 'No'}
 Provide a professional, diagnostic summary of their mistake patterns and concrete recommendations to avoid these mistakes in the future.
 Be direct, supportive, and pedagogical. Do not include markdown headers or greetings.`;
 
-    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const modelId = 'gemini-3.1-flash-lite';
     const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
       model: modelId,
       contents: prompt,

@@ -38,7 +38,7 @@ Return strictly a valid JSON object with the following schema:
   "shouldRemarkCorrect": true or false
 }`;
 
-    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const modelId = 'gemini-3.1-flash-lite';
     const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
       model: modelId,
       contents: prompt,
