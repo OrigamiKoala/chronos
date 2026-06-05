@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { username, password, recoveryQuestion, recoveryAnswer, isSettingRecovery } = req.body;
+  const { username, password, recoveryQuestion, recoveryAnswer, isSettingRecovery, userRole, userOrganization } = req.body;
   if (!username || username.trim() === '') {
     return res.status(400).json({ error: 'Username is required' });
   }
@@ -38,9 +38,47 @@ export default async function handler(req, res) {
           ADD COLUMN IF NOT EXISTS password STRING,
           ADD COLUMN IF NOT EXISTS recovery_question STRING,
           ADD COLUMN IF NOT EXISTS recovery_answer STRING,
-          ADD COLUMN IF NOT EXISTS elo_version INT64
+          ADD COLUMN IF NOT EXISTS elo_version INT64,
+          ADD COLUMN IF NOT EXISTS user_role STRING,
+          ADD COLUMN IF NOT EXISTS user_organization STRING
         `;
         await bq.query(alterQuery);
+
+        await Promise.all([
+          bq.query(`
+            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`teacher_students\` (
+              teacher_id STRING,
+              student_id STRING,
+              created_at TIMESTAMP
+            )
+          `),
+          bq.query(`
+            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`lessons\` (
+              lesson_id STRING,
+              teacher_id STRING,
+              organization STRING,
+              title STRING,
+              description STRING,
+              created_at TIMESTAMP
+            )
+          `),
+          bq.query(`
+            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` (
+              assignment_id STRING,
+              lesson_id STRING,
+              title STRING,
+              subject STRING,
+              num_questions INT64,
+              starting_difficulty INT64,
+              exam_format STRING,
+              time_limit_style STRING,
+              time_limit_value INT64,
+              stress_mode STRING,
+              due_date TIMESTAMP,
+              created_at TIMESTAMP
+            )
+          `)
+        ]);
       } catch (e) {
         console.warn("Alter table error or already exists:", e);
       }
@@ -48,7 +86,7 @@ export default async function handler(req, res) {
     }
 
     const checkQuery = `
-      SELECT user_id, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating, elo_version 
+      SELECT user_id, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating, elo_version, user_role, user_organization 
       FROM \`${projectId}\`.\`chronos_users\`.\`users\`
       WHERE user_id = @username
     `;
@@ -108,12 +146,20 @@ export default async function handler(req, res) {
       // User is new
       if (isSettingRecovery && recoveryQuestion && recoveryAnswer) {
         const insertUserQuery = `
-          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`users\` (user_id, created_at, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating, elo_version)
-          VALUES (@username, CURRENT_TIMESTAMP(), @password, @recoveryQuestion, @recoveryAnswer, 100, 100, 100, @eloVersion)
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`users\` (user_id, created_at, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating, elo_version, user_role, user_organization)
+          VALUES (@username, CURRENT_TIMESTAMP(), @password, @recoveryQuestion, @recoveryAnswer, 100, 100, 100, @eloVersion, @userRole, @userOrganization)
         `;
         await bq.query({
           query: insertUserQuery,
-          params: { username: sanitizedUser, password, recoveryQuestion, recoveryAnswer, eloVersion: ELO_ALGORITHM_VERSION }
+          params: {
+            username: sanitizedUser,
+            password,
+            recoveryQuestion,
+            recoveryAnswer,
+            eloVersion: ELO_ALGORITHM_VERSION,
+            userRole: userRole || null,
+            userOrganization: userOrganization || null
+          }
         });
 
         // Insert baseline topic masteries
@@ -144,7 +190,9 @@ export default async function handler(req, res) {
           user_id: sanitizedUser,
           math_rating: 100,
           physics_rating: 100,
-          chemistry_rating: 100
+          chemistry_rating: 100,
+          user_role: userRole || null,
+          user_organization: userOrganization || null
         };
       } else {
         // Ask new user to set recovery question/answer

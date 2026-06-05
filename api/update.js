@@ -14,14 +14,63 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const { operatorUsername } = req.body || {};
+  if (!operatorUsername) {
+    return res.status(400).json({ error: 'operatorUsername is required' });
+  }
+
+  const operator = operatorUsername.trim().toLowerCase();
+
   try {
-    // Only fetch tests done before 2026-06-04 16:21:00 PDT (which is 23:21:00 UTC)
+    // 0. Ensure migration_done column exists
+    try {
+      await bq.query(`
+        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`users\`
+        ADD COLUMN IF NOT EXISTS migration_done BOOL
+      `);
+    } catch (e) {
+      console.warn("Alter table migration_done error or already exists:", e);
+    }
+
+    // 1. Verify operator is admin
+    const checkOpQuery = `
+      SELECT user_role
+      FROM \`${projectId}\`.\`chronos_users\`.\`users\`
+      WHERE user_id = @operator
+    `;
+    const [opUsers] = await bq.query({
+      query: checkOpQuery,
+      params: { operator }
+    });
+
+    if (opUsers.length === 0 || opUsers[0].user_role !== 'admin') {
+      return res.status(403).json({ error: 'Permission denied. Only admins can run system update scripts.' });
+    }
+
+    // 2. Fetch all users who have NOT completed migration yet
+    const pendingUsersQuery = `
+      SELECT user_id
+      FROM \`${projectId}\`.\`chronos_users\`.\`users\`
+      WHERE migration_done IS NOT TRUE
+    `;
+    const [pendingUsers] = await bq.query(pendingUsersQuery);
+
+    if (pendingUsers.length === 0) {
+      return res.status(200).json({ success: true, message: 'All users already migrated', updatedCount: 0 });
+    }
+
+    const pendingUserIds = pendingUsers.map(u => u.user_id);
+
+    // 3. Fetch all exam results for these pending users done before 2026-06-04 16:21:00 PDT (which is 23:21:00 UTC)
     const resultsQuery = `
       SELECT user_id, exam_id, results_json
       FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-      WHERE created_at < '2026-06-04 23:21:00 UTC'
+      WHERE user_id IN UNNEST(@pendingUserIds) AND created_at < '2026-06-04 23:21:00 UTC'
     `;
-    const [resultRows] = await bq.query({ query: resultsQuery });
+    const [resultRows] = await bq.query({
+      query: resultsQuery,
+      params: { pendingUserIds }
+    });
 
     let updatedCount = 0;
     for (const row of resultRows) {
@@ -63,6 +112,17 @@ export default async function handler(req, res) {
       });
       updatedCount++;
     }
+
+    // 4. Mark all pending users as migrated
+    const markDoneQuery = `
+      UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+      SET migration_done = true
+      WHERE user_id IN UNNEST(@pendingUserIds)
+    `;
+    await bq.query({
+      query: markDoneQuery,
+      params: { pendingUserIds }
+    });
 
     return res.status(200).json({ success: true, updatedCount });
   } catch (err) {

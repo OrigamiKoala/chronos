@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { username, subject, examId, accuracy, avgTime, ratingChange, newRating, results } = req.body;
+  const { username, subject, examId, accuracy, avgTime, ratingChange, newRating, results, assignmentId } = req.body;
 
   if (!username || !subject || !examId || accuracy === undefined || !results) {
     return res.status(400).json({ error: 'Missing required parameters' });
@@ -106,6 +106,14 @@ export default async function handler(req, res) {
             user_id STRING NOT NULL, exam_id STRING NOT NULL, subject STRING NOT NULL,
             mistake_patterns STRING NOT NULL, created_at TIMESTAMP NOT NULL
           )
+        `),
+        bq.query(`
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+          ADD COLUMN IF NOT EXISTS assignment_id STRING
+        `),
+        bq.query(`
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+          ADD COLUMN IF NOT EXISTS assignment_id STRING
         `)
       ]);
       tablesEnsured = true;
@@ -405,15 +413,15 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       await Promise.all([
         bq.query({
           query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
-            (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at)
-            VALUES (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP())`,
-          params: { username: sanitizedUser, examId, subject, accuracy: finalAccuracy, avgTime, ratingChange: finalRatingChange, newRating: finalNewRating }
+            (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at, assignment_id)
+            VALUES (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP(), @assignmentId)`,
+          params: { username: sanitizedUser, examId, subject, accuracy: finalAccuracy, avgTime, ratingChange: finalRatingChange, newRating: finalNewRating, assignmentId: assignmentId || null }
         }),
         bq.query({
           query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-            (user_id, exam_id, results_json, created_at)
-            VALUES (@username, @examId, @resultsJson, CURRENT_TIMESTAMP())`,
-          params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(gradedResults) }
+            (user_id, exam_id, results_json, created_at, assignment_id)
+            VALUES (@username, @examId, @resultsJson, CURRENT_TIMESTAMP(), @assignmentId)`,
+          params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(gradedResults), assignmentId: assignmentId || null }
         }),
         bq.query({
           query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`

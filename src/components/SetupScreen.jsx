@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Play, ShieldAlert, Timer } from 'lucide-react';
+import { Settings, Play, ShieldAlert, Timer, ClipboardList } from 'lucide-react';
 
 const getSubjectLevelName = (subject, rating) => {
   if (subject === 'Math') {
@@ -27,7 +27,7 @@ const getSubjectLevelName = (subject, rating) => {
   return 'Novice';
 };
 
-export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chemistry: 100 }, onSubjectChange }) {
+export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chemistry: 100 }, onSubjectChange, user }) {
   const [config, setConfig] = useState(() => {
     const saved = localStorage.getItem('chronos_exam_config');
     const parsed = saved ? JSON.parse(saved) : null;
@@ -50,6 +50,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     };
   });
 
+  const [homeworks, setHomeworks] = useState([]);
+
   useEffect(() => {
     localStorage.setItem('chronos_exam_config', JSON.stringify(config));
   }, [config]);
@@ -61,15 +63,102 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (user?.user_organization && user?.user_id) {
+      fetch(`/api/student-homework?organization=${encodeURIComponent(user.user_organization)}&username=${encodeURIComponent(user.user_id)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.assignments) {
+            setHomeworks(data.assignments);
+          }
+        })
+        .catch(err => {
+          console.error("Error loading student homework:", err);
+        });
+    } else {
+      setTimeout(() => setHomeworks([]), 0);
+    }
+  }, [user]);
+
+  const [selectedPreset, setSelectedPreset] = useState('custom');
+
+  const handleApplyPreset = (preset) => {
+    setSelectedPreset(preset);
+    if (preset === 'math_chapter') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 40,
+          startingDifficulty: 1,
+          examFormat: ['short_answer'],
+          timeLimitStyle: 'whole_test',
+          timeLimitWholeTest: 30,
+        };
+        delete next.assignmentId;
+        return next;
+      });
+    } else if (preset === 'math_state') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 40,
+          startingDifficulty: 3,
+          examFormat: ['short_answer'],
+          timeLimitStyle: 'whole_test',
+          timeLimitWholeTest: 30,
+        };
+        delete next.assignmentId;
+        return next;
+      });
+    } else if (preset === 'chem_part_1') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 60,
+          startingDifficulty: 3,
+          examFormat: ['multiple_choice'],
+          timeLimitStyle: 'whole_test',
+          timeLimitWholeTest: 90,
+        };
+        delete next.assignmentId;
+        return next;
+      });
+    }
+  };
+
+  const handleSelectHomework = (hw) => {
+    let formatVal = ['multiple_choice', 'short_answer', 'free_response'];
+    if (hw.exam_format) {
+      formatVal = hw.exam_format.split(',').map(f => f.trim()).filter(f => f);
+    }
+    setConfig({
+      subject: hw.subject || 'Math',
+      startingDifficulty: Number(hw.starting_difficulty) || 5,
+      numQuestions: Number(hw.num_questions) || 5,
+      stressMode: hw.stress_mode || 'none',
+      timeLimitPerQuestion: hw.time_limit_style === 'per_question' ? (Number(hw.time_limit_value) || 60) : 60,
+      timeLimitWholeTest: hw.time_limit_style === 'whole_test' ? (Number(hw.time_limit_value) || 30) : 30,
+      timeLimitStyle: hw.time_limit_style || 'per_question',
+      examFormat: formatVal,
+      assignmentId: hw.assignment_id,
+    });
+    setSelectedPreset('custom');
+    if (onSubjectChange) {
+      onSubjectChange(hw.subject);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setConfig((prev) => {
       const next = { ...prev, [name]: isNaN(value) ? value : Number(value) || value };
+      delete next.assignmentId;
       if (name === 'subject' && onSubjectChange) {
         onSubjectChange(value);
       }
       return next;
     });
+    setSelectedPreset('custom');
   };
 
   const handleSubmit = (e) => {
@@ -84,6 +173,83 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         <Settings size={28} className="text-gradient" />
         <h2>Configure Exam Session</h2>
       </div>
+
+      {homeworks.length > 0 && (
+        <div style={{
+          background: 'rgba(99, 102, 241, 0.05)',
+          border: '1px solid rgba(99, 102, 241, 0.2)',
+          borderRadius: 'var(--radius-md)',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          boxSizing: 'border-box'
+        }}>
+          <h3 style={{
+            fontSize: '0.95rem',
+            fontWeight: '600',
+            color: 'var(--accent-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            margin: '0 0 0.75rem 0'
+          }}>
+            <ClipboardList size={16} /> Pending Homework Assignments
+          </h3>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+            maxHeight: '150px',
+            overflowY: 'auto',
+            paddingRight: '0.25rem'
+          }}>
+            {homeworks.map(hw => {
+              const isSelected = config.assignmentId === hw.assignment_id;
+              const due = hw.due_date ? new Date(hw.due_date.value || hw.due_date) : null;
+              const dueStr = due && !isNaN(due.getTime()) ? due.toLocaleDateString() + ' ' + due.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'No due date';
+              
+              return (
+                <div
+                  key={hw.assignment_id}
+                  style={{
+                    background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-tertiary)',
+                    border: isSelected ? '1px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.03)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.5rem 0.75rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={() => handleSelectHomework(hw)}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{hw.title}</strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      Lesson: {hw.lesson_title} | {hw.subject} • {hw.num_questions} Qs • Diff {hw.starting_difficulty}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.15rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Due: {dueStr}</span>
+                    {isSelected && (
+                      <span style={{
+                        fontSize: '0.65rem',
+                        background: 'rgba(99, 102, 241, 0.2)',
+                        color: 'var(--accent-primary)',
+                        padding: '0.1rem 0.35rem',
+                        borderRadius: '4px',
+                        fontWeight: 'bold'
+                      }}>
+                        PREFILLED
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
@@ -100,6 +266,31 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             <option value="Chemistry">Chemistry</option>
           </select>
         </div>
+
+        {(config.subject === 'Math' || config.subject === 'Chemistry') && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+              Quick Presets
+            </label>
+            <select
+              value={selectedPreset}
+              onChange={(e) => handleApplyPreset(e.target.value)}
+              className="input-field"
+              style={{ borderColor: selectedPreset !== 'custom' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.08)' }}
+            >
+              <option value="custom">Custom (Manual Configuration)</option>
+              {config.subject === 'Math' && (
+                <>
+                  <option value="math_chapter">MATHCOUNTS Chapter Sprint (40 SAQ, 30 min, Diff 1)</option>
+                  <option value="math_state">MATHCOUNTS State Sprint (40 SAQ, 30 min, Diff 3)</option>
+                </>
+              )}
+              {config.subject === 'Chemistry' && (
+                <option value="chem_part_1">Part I (60 MCQ, 90 min, Diff 3)</option>
+              )}
+            </select>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '1rem' }}>
           <div style={{ flex: 1 }}>
@@ -125,8 +316,11 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                     const formats = checked 
                       ? [...prev.examFormat, 'multiple_choice'] 
                       : prev.examFormat.filter(f => f !== 'multiple_choice');
-                    return { ...prev, examFormat: formats };
+                    const next = { ...prev, examFormat: formats };
+                    delete next.assignmentId;
+                    return next;
                   });
+                  setSelectedPreset('custom');
                 }}
                 style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
               />
@@ -142,8 +336,11 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                     const formats = checked 
                       ? [...prev.examFormat, 'short_answer'] 
                       : prev.examFormat.filter(f => f !== 'short_answer');
-                    return { ...prev, examFormat: formats };
+                    const next = { ...prev, examFormat: formats };
+                    delete next.assignmentId;
+                    return next;
                   });
+                  setSelectedPreset('custom');
                 }}
                 style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
               />
@@ -159,8 +356,11 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                     const formats = checked 
                       ? [...prev.examFormat, 'free_response'] 
                       : prev.examFormat.filter(f => f !== 'free_response');
-                    return { ...prev, examFormat: formats };
+                    const next = { ...prev, examFormat: formats };
+                    delete next.assignmentId;
+                    return next;
                   });
+                  setSelectedPreset('custom');
                 }}
                 style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
               />

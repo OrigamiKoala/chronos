@@ -3,10 +3,17 @@ import { SetupScreen } from './components/SetupScreen';
 import { ExamScreen } from './components/ExamScreen';
 import { AnalyticsScreen } from './components/AnalyticsScreen';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
-import { BrainCircuit, Award, LogIn, LogOut, User, Loader2, BarChart3 } from 'lucide-react';
+import { AdminScreen } from './components/AdminScreen';
+import { TeacherScreen } from './components/TeacherScreen';
+import { BrainCircuit, Award, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
 
 function App() {
-  const [currentScreen, setCurrentScreen] = useState('setup');
+  const [currentScreen, setCurrentScreen] = useState(() => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+    if (path === '/teacher') return 'teacher';
+    if (path === '/admin') return 'admin';
+    return 'setup';
+  });
   const [examConfig, setExamConfig] = useState(null);
   const [examResults, setExamResults] = useState(null);
   const [ratings, setRatings] = useState(() => {
@@ -46,6 +53,13 @@ function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginModalMode, setLoginModalMode] = useState('login'); // 'login', 'setup_recovery', 'forgot_username', 'forgot_verify'
 
+  // Organization & Role States
+  const [selectedOrg, setSelectedOrg] = useState('');
+  const [selectedRole, setSelectedRole] = useState('student');
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileOrg, setProfileOrg] = useState('');
+  const [profileRole, setProfileRole] = useState('');
+
   // Setup Recovery State
   const [recoveryQuestion, setRecoveryQuestion] = useState('');
   const [recoveryAnswer, setRecoveryAnswer] = useState('');
@@ -81,12 +95,32 @@ function App() {
     }
   }, [ratings, user]);
 
-  // Trigger data migration for old exams on load
+
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, '', path);
+    if (path === '/teacher') {
+      setCurrentScreen('teacher');
+    } else if (path === '/admin') {
+      setCurrentScreen('admin');
+    } else {
+      setCurrentScreen('setup');
+    }
+  };
+
   useEffect(() => {
-    fetch('/api/update', { method: 'POST' })
-      .then(res => res.json())
-      .then(data => console.log('Migration finished:', data))
-      .catch(err => console.error('Migration error:', err));
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/teacher') {
+        setCurrentScreen('teacher');
+      } else if (path === '/admin') {
+        setCurrentScreen('admin');
+      } else {
+        setCurrentScreen('setup');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // Auto-login on mount
@@ -152,6 +186,8 @@ function App() {
         payload.recoveryQuestion = recoveryQuestion.trim();
         payload.recoveryAnswer = recoveryAnswer.trim();
         payload.isSettingRecovery = true;
+        payload.userRole = selectedOrg ? selectedRole : '';
+        payload.userOrganization = selectedOrg;
       }
 
       const response = await fetch('/api/login', {
@@ -192,6 +228,8 @@ function App() {
           setLoginPassword('');
           setRecoveryQuestion('');
           setRecoveryAnswer('');
+          setSelectedOrg('');
+          setSelectedRole('student');
         }
       } else {
         setLoginError(data.error || 'Failed to login. Please try again.');
@@ -411,6 +449,7 @@ function App() {
         avgTime: avgQuestionRating,
         ratingChange,
         newRating,
+        assignmentId: examConfig?.assignmentId || null,
         results: results.map(r => ({
           id: r.id,
           topic: r.topic || 'General',
@@ -592,7 +631,7 @@ function App() {
   const restart = () => {
     setExamConfig(null);
     setExamResults(null);
-    setCurrentScreen('setup');
+    navigateTo('/');
   };
 
   const filteredStrengths = strengths
@@ -631,6 +670,20 @@ function App() {
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                 >
                   <User size={14} /> {user.user_id}
+                  {user.user_organization && (
+                    <span style={{
+                      fontSize: '0.7rem',
+                      background: 'rgba(99, 102, 241, 0.2)',
+                      color: 'var(--accent-primary)',
+                      padding: '0.1rem 0.35rem',
+                      borderRadius: '4px',
+                      marginLeft: '0.4rem',
+                      fontWeight: '600',
+                      textTransform: 'uppercase'
+                    }}>
+                      {user.user_role}
+                    </span>
+                  )}
                 </button>
                 {showUserDropdown && (
                   <div style={{
@@ -643,9 +696,50 @@ function App() {
                     borderRadius: 'var(--radius-sm)',
                     padding: '0.25rem',
                     zIndex: 100,
-                    minWidth: '120px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                    minWidth: '150px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem'
                   }}>
+                    {(user.user_role === 'teacher' || user.user_role === 'admin') && (
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
+                        onClick={() => {
+                          navigateTo('/teacher');
+                          setShowUserDropdown(false);
+                        }}
+                      >
+                        <BookOpen size={14} /> Teacher Portal
+                      </button>
+                    )}
+                    {user.user_role === 'admin' && (
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
+                        onClick={() => {
+                          navigateTo('/admin');
+                          setShowUserDropdown(false);
+                        }}
+                      >
+                        <Shield size={14} /> Admin Portal
+                      </button>
+                    )}
+                    {user.user_role === 'admin' && (
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
+                        onClick={() => {
+                          setProfileOrg(user.user_organization || '');
+                          setProfileRole(user.user_role || '');
+                          setShowProfileModal(true);
+                          setShowUserDropdown(false);
+                        }}
+                      >
+                        <Settings size={14} /> Profile Settings
+                      </button>
+                    )}
                     <button 
                       className="btn btn-outline" 
                       style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--danger)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
@@ -692,7 +786,7 @@ function App() {
           <>
             {currentScreen === 'setup' && (
           <div className={`setup-grid ${user ? 'two-cols' : ''}`}>
-            <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} />
+            <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} user={user} />
             {user && (
               <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
                 <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -887,6 +981,12 @@ function App() {
             formatDate={formatDate}
           />
         )}
+        {currentScreen === 'teacher' && (
+          <TeacherScreen user={user} onBack={restart} />
+        )}
+        {currentScreen === 'admin' && (
+          <AdminScreen user={user} onBack={restart} />
+        )}
           </>
         )}
       </main>
@@ -1015,6 +1115,27 @@ function App() {
                     disabled={loginLoading}
                     required
                   />
+                  {recoverySetupIsNew && (
+                    <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Join an Organization (Optional)</label>
+                      <select
+                        className="input-field"
+                        value={selectedOrg}
+                        onChange={(e) => {
+                          setSelectedOrg(e.target.value);
+                          if (e.target.value === '') {
+                            setSelectedRole('');
+                          } else {
+                            setSelectedRole('student');
+                          }
+                        }}
+                        disabled={loginLoading}
+                      >
+                        <option value="">No organization (Individual)</option>
+                        <option value="Rancho MATHCOUNTS">Rancho MATHCOUNTS</option>
+                      </select>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
                     <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setLoginModalMode('login'); setLoginError(''); }} disabled={loginLoading}>Back</button>
                     <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} disabled={loginLoading}>
@@ -1090,6 +1211,96 @@ function App() {
               </>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* Profile Settings Modal */}
+      {showProfileModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '420px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <User size={24} /> Profile Settings
+            </h3>
+            {loginError && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{loginError}</p>}
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setLoginLoading(true);
+              setLoginError('');
+              try {
+                const res = await fetch('/api/org-members', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    targetUsername: user.user_id,
+                    userRole: profileOrg ? profileRole : '',
+                    userOrganization: profileOrg,
+                    operatorUsername: user.user_id
+                  })
+                });
+                const resData = await res.json();
+                if (res.ok) {
+                  setUser(prev => ({
+                    ...prev,
+                    user_role: profileOrg ? profileRole : null,
+                    user_organization: profileOrg || null
+                  }));
+                  refreshUserData();
+                  setShowProfileModal(false);
+                } else {
+                  setLoginError(resData.error || 'Failed to update profile');
+                }
+              } catch (err) {
+                console.error(err);
+                setLoginError('Error updating profile');
+              } finally {
+                setLoginLoading(false);
+              }
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', textAlign: 'left' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Organization</label>
+                <select
+                  className="input-field"
+                  value={profileOrg}
+                  onChange={(e) => {
+                    const org = e.target.value;
+                    setProfileOrg(org);
+                    if (org === '') {
+                      setProfileRole('');
+                    } else if (!profileRole) {
+                      setProfileRole('student');
+                    }
+                  }}
+                  disabled={loginLoading}
+                >
+                  <option value="">No organization (Individual)</option>
+                  <option value="Rancho MATHCOUNTS">Rancho MATHCOUNTS</option>
+                </select>
+              </div>
+
+              {profileOrg && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Role</label>
+                  <select
+                    className="input-field"
+                    value={profileRole}
+                    onChange={(e) => setProfileRole(e.target.value)}
+                    disabled={loginLoading}
+                  >
+                    <option value="student">Student (Default)</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setShowProfileModal(false); setLoginError(''); }} disabled={loginLoading}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} disabled={loginLoading}>
+                  {loginLoading ? <Loader2 size={16} className="animate-spin" /> : null} Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
