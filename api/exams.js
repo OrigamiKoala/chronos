@@ -5,6 +5,7 @@ import { executeWithRetry } from './_gemini.js';
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const ELO_ALGORITHM_VERSION = 3;
 let tablesEnsured = false;
+let tagsTableEnsured = false;
 
 const bq = new BigQuery({
   projectId: projectId,
@@ -19,7 +20,7 @@ function normalizeAnswer(str) {
   return str
     .replace(/\$\$([\s\S]*?)\$\$/g, '$1')   // strip $$...$$
     .replace(/\$([\s\S]*?)\$/g, '$1')        // strip $...$
-    .replace(/\\(?:text|mathrm|mathbf|mathit|rm|bf)\{([^}]*)\}/g, '$1') // \text{X} -> X
+    .replace(/\\(text|mathrm|mathbf|mathit|rm|bf)\{([^}]*)\}/g, '$2') // \text{X} -> X
     .replace(/~/g, ' ')                      // LaTeX thin-space -> space
     .replace(/\s+/g, ' ')                    // collapse whitespace
     .trim()
@@ -60,6 +61,351 @@ function evaluateKeywordExpression(expression, userAnswer) {
 }
 
 export default async function handler(req, res) {
+  const { route } = req.query;
+
+  // 1. Get Exam Route
+  if (route === 'get-exam') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { examId } = req.query;
+    if (!examId) {
+      return res.status(400).json({ error: 'Exam ID is required' });
+    }
+
+    try {
+      const resultsQuery = `
+        SELECT results_json
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+        WHERE exam_id = @examId
+        LIMIT 1
+      `;
+      const mistakeQuery = `
+        SELECT mistake_patterns
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+        WHERE exam_id = @examId
+        LIMIT 1
+      `;
+      const tagsQuery = `
+        SELECT question_index, tag
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+        WHERE exam_id = @examId
+        ORDER BY question_index ASC
+      `;
+
+      const params = { examId };
+      const [resultsResult, mistakeResult, tagsResult] = await Promise.allSettled([
+        bq.query({ query: resultsQuery, params }),
+        bq.query({ query: mistakeQuery, params }),
+        bq.query({ query: tagsQuery, params })
+      ]);
+
+      // Results are required
+      if (resultsResult.status !== 'fulfilled' || resultsResult.value[0].length === 0) {
+        return res.status(404).json({ error: 'Exam results not found' });
+      }
+      const results = JSON.parse(resultsResult.value[0][0].results_json);
+
+      // Mistakes are optional
+      const mistakeRows = mistakeResult.status === 'fulfilled' ? mistakeResult.value[0] : [];
+      const mistakePatterns = mistakeRows.length > 0 ? mistakeRows[0].mistake_patterns : null;
+
+      // Tags are optional
+      const tagRows = tagsResult.status === 'fulfilled' ? tagsResult.value[0] : [];
+      const savedTags = tagRows.map(r => {
+        let qIdx = r.question_index;
+        if (qIdx !== null && qIdx !== undefined) {
+          if (typeof qIdx === 'object' && qIdx.value !== undefined) {
+            qIdx = parseInt(qIdx.value, 10);
+          } else if (typeof qIdx === 'bigint') {
+            qIdx = Number(qIdx);
+          } else {
+            qIdx = parseInt(qIdx, 10);
+          }
+        }
+        return { questionIndex: qIdx, tag: r.tag };
+      });
+
+      return res.status(200).json({ results, mistakePatterns, savedTags });
+    } catch (err) {
+      console.error('Get exam error:', err);
+      return res.status(500).json({ error: err.message || 'Internal Server Error' });
+    }
+  }
+
+  // 2. Remark Correct Route
+  if (route === 'remark-correct') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { username, examId, questionId, subject, topic } = req.body;
+
+    if (!username || !examId || !questionId || !subject || !topic) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    const sanitizedUser = username.trim().toLowerCase();
+
+    try {
+      // 1. Fetch current results_json from user_exam_results and history details from user_exam_history
+      const getResultsQuery = `
+        SELECT results_json
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+        WHERE exam_id = @examId AND user_id = @username
+        LIMIT 1
+      `;
+      const getHistoryQuery = `
+        SELECT rating_change, new_rating, avg_time, accuracy
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+        WHERE exam_id = @examId AND user_id = @username
+        LIMIT 1
+      `;
+
+      const [[examRows], [historyRows]] = await Promise.all([
+        bq.query({ query: getResultsQuery, params: { examId, username: sanitizedUser } }),
+        bq.query({ query: getHistoryQuery, params: { examId, username: sanitizedUser } })
+      ]);
+
+      if (!examRows || examRows.length === 0 || !historyRows || historyRows.length === 0) {
+        return res.status(404).json({ error: 'Exam results or history not found' });
+      }
+
+      const results = JSON.parse(examRows[0].results_json);
+      const hist = historyRows[0];
+
+      // 2. Find and update the specific question
+      let questionFound = false;
+      for (const r of results) {
+        if (r.id === questionId) {
+          r.isCorrect = true;
+          if (req.body.explanation) {
+            r.aiExplanation = req.body.explanation;
+          }
+          questionFound = true;
+          break;
+        }
+      }
+
+      if (!questionFound) {
+        return res.status(404).json({ error: 'Question not found in this exam' });
+      }
+
+      // 3. Recalculate accuracy
+      const correctCount = results.filter(r => r.isCorrect).length;
+      const totalCount = results.length;
+      const score = correctCount / totalCount;
+      const newAccuracy = Math.round(score * 100) || 0;
+
+      // 4. Recalculate ELO Rating
+      const oldRating = hist.new_rating - hist.rating_change;
+      const avgQuestionRating = hist.avg_time;
+      const questionMultiplier = Math.sqrt(totalCount / 5);
+
+      let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - oldRating) / 400));
+      if (avgQuestionRating < oldRating) {
+        expectedScore = Math.max(expectedScore, 0.75);
+      }
+
+      // Solve for original K factor (either 32 or 250)
+      const originalScore = (correctCount - 1) / totalCount;
+      const diff32 = Math.round(32 * questionMultiplier * (originalScore - expectedScore));
+      const diff250 = Math.round(250 * questionMultiplier * (originalScore - expectedScore));
+      let K = 250;
+      if (Math.abs(diff32 - hist.rating_change) < Math.abs(diff250 - hist.rating_change)) {
+        K = 32;
+      }
+
+      const newRatingChange = Math.round(K * questionMultiplier * (score - expectedScore));
+      const newRatingVal = Math.max(100, oldRating + newRatingChange);
+      const ratingDiff = newRatingVal - hist.new_rating;
+
+      // 5. Update user_exam_results, user_exam_history, delete wrong problem entry, and update active ELO
+      let ratingColumn = 'math_rating';
+      if (subject === 'Physics') ratingColumn = 'physics_rating';
+      else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
+
+      await Promise.all([
+        bq.query({
+          query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+            SET results_json = @resultsJson
+            WHERE exam_id = @examId AND user_id = @username`,
+          params: { examId, username: sanitizedUser, resultsJson: JSON.stringify(results) }
+        }),
+        bq.query({
+          query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+            SET accuracy = @newAccuracy, rating_change = @newRatingChange, new_rating = @newRatingVal
+            WHERE exam_id = @examId AND user_id = @username`,
+          params: { examId, username: sanitizedUser, newAccuracy: score, newRatingChange, newRatingVal }
+        }),
+        bq.query({
+          query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+            WHERE exam_id = @examId AND question_id = @questionId AND user_id = @username`,
+          params: { examId, questionId, username: sanitizedUser }
+        }),
+        bq.query({
+          query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+            SET ${ratingColumn} = ${ratingColumn} + @ratingDiff
+            WHERE user_id = @username`,
+          params: { ratingDiff, username: sanitizedUser }
+        })
+      ]);
+
+      // 6. Update user_topic_mastery
+      const getMasteryQuery = `
+        SELECT correct_count, total_count
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+        WHERE user_id = @username AND sub_category = @topic AND subject = @subject
+        LIMIT 1
+      `;
+      const [masteryRows] = await bq.query({
+        query: getMasteryQuery,
+        params: { username: sanitizedUser, topic, subject }
+      });
+
+      if (masteryRows && masteryRows.length > 0) {
+        const existing = masteryRows[0];
+        const nextCorrect = existing.correct_count + 1;
+        const nextTotal = existing.total_count;
+        const nextAccuracy = nextCorrect / nextTotal;
+
+        await bq.query({
+          query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+            SET correct_count = @nextCorrect, accuracy_rate = @nextAccuracy
+            WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
+          params: { username: sanitizedUser, topic, subject, nextCorrect, nextAccuracy }
+        });
+      }
+
+      return res.status(200).json({ success: true, newAccuracy, newRatingVal, newRatingChange });
+    } catch (err) {
+      console.error('Remark correct error:', err);
+      return res.status(500).json({ error: err.message || 'Internal Server Error' });
+    }
+  }
+
+  // 3. Save Tags Route
+  if (route === 'save-tags') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { username, examId, tags } = req.body;
+
+    if (!username || !examId || !Array.isArray(tags)) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    const sanitizedUser = username.trim().toLowerCase();
+
+    try {
+      // Ensure table exists (once per cold start)
+      if (!tagsTableEnsured) {
+        await bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\` (
+            user_id STRING NOT NULL, exam_id STRING NOT NULL, question_index INT64 NOT NULL,
+            tag STRING NOT NULL, is_correct BOOL NOT NULL, points_value FLOAT64, created_at TIMESTAMP NOT NULL
+          )
+        `);
+        tagsTableEnsured = true;
+      }
+
+      // Delete any existing tags for this exam (allows re-tagging)
+      await bq.query({
+        query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+          WHERE user_id = @username AND exam_id = @examId`,
+        params: { username: sanitizedUser, examId }
+      });
+
+      // Insert all tags in parallel
+      const insertQuery = `
+        INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+          (user_id, exam_id, question_index, tag, is_correct, points_value, created_at)
+        VALUES
+          (@username, @examId, @questionIndex, @tag, @isCorrect, @pointsValue, CURRENT_TIMESTAMP())
+      `;
+      await Promise.all(tags.map(t =>
+        bq.query({
+          query: insertQuery,
+          params: {
+            username: sanitizedUser,
+            examId,
+            questionIndex: t.questionIndex,
+            tag: t.tag,
+            isCorrect: t.isCorrect,
+            pointsValue: t.pointsValue || 0
+          }
+        })
+      ));
+
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error('Save tags error:', err);
+      return res.status(500).json({ error: err.message || 'Internal Server Error' });
+    }
+  }
+
+  // 4. Save Explanation Route
+  if (route === 'save-explanation') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { username, examId, questionId, explanation } = req.body;
+
+    if (!username || !examId || !questionId || !explanation) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    const sanitizedUser = username.trim().toLowerCase();
+
+    try {
+      const getResultsQuery = `
+        SELECT results_json
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+        WHERE exam_id = @examId AND user_id = @username
+        LIMIT 1
+      `;
+      const [examRows] = await bq.query({
+        query: getResultsQuery,
+        params: { examId, username: sanitizedUser }
+      });
+
+      if (!examRows || examRows.length === 0) {
+        return res.status(404).json({ error: 'Exam results not found' });
+      }
+
+      const results = JSON.parse(examRows[0].results_json);
+
+      let questionFound = false;
+      for (const r of results) {
+        if (r.id === questionId) {
+          r.aiExplanation = explanation;
+          questionFound = true;
+          break;
+        }
+      }
+
+      if (!questionFound) {
+        return res.status(404).json({ error: 'Question not found in this exam' });
+      }
+
+      await bq.query({
+        query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+          SET results_json = @resultsJson
+          WHERE exam_id = @examId AND user_id = @username`,
+        params: { examId, username: sanitizedUser, resultsJson: JSON.stringify(results) }
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error('Save explanation error:', err);
+      return res.status(500).json({ error: err.message || 'Internal Server Error' });
+    }
+  }
+
+  // 5. Submit Exam Route (Default fallback/submit-exam)
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -73,7 +419,7 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // 0. Ensure tables exist (once per cold start)
+    // Ensure tables exist (once per cold start)
     if (!tablesEnsured) {
       await Promise.all([
         bq.query(`
@@ -119,7 +465,7 @@ export default async function handler(req, res) {
       tablesEnsured = true;
     }
 
-    // A. Grade all questions in parallel! Solve on-the-fly and award partial credit!
+    // Grade all questions in parallel! Solve on-the-fly and award partial credit!
     const isOnlyMCQ = results.every(r => r.type === 'multiple_choice');
     const hasFRQ = results.some(r => r.type === 'free_response');
 
@@ -316,7 +662,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       return r;
     }));
 
-    // B. Recompute ELO if there are free_response questions to accurately reflect AI grading & partial credits!
+    // Recompute ELO if there are free_response questions to accurately reflect AI grading & partial credits!
     let finalAccuracy = accuracy;
     let finalRatingChange = ratingChange;
     let finalNewRating = newRating;
@@ -552,8 +898,6 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
 // Background worker function to analyze wrong problems and update weaknesses
 async function updateAIWeaknesses(username, subject, req) {
   try {
-    // Tables already ensured in cold-start block
-
     // A. Fetch incorrect questions for this user and subject
     const fetchWrongProblemsQuery = `
       SELECT topic, question_text, user_answer, correct_answer
@@ -746,7 +1090,7 @@ Incorrect questions: ${wrongProblemsString}`;
                 USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
                 ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
                 WHEN MATCHED THEN
-                  UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
+                  UPDATE SET good_at = @goodAt, not_good_at = @goodAt, updated_at = CURRENT_TIMESTAMP()
                 WHEN NOT MATCHED THEN
                   INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
                   VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
@@ -816,8 +1160,6 @@ Incorrect questions: ${wrongProblemsString}`;
 
 async function analyzeMistakesAndSave(username, examId, subject, results, req) {
   try {
-    // Table already ensured in cold-start block
-
     const prompt = `You are an expert tutor. Analyze the user's performance on this ${subject} exam.
 Look closely at their answers to determine what kind of mistakes they made (e.g., conceptual gaps, calculation errors, timing issues, or panic).
 

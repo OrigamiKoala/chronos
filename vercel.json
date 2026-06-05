@@ -1,6 +1,34 @@
 {
   "rewrites": [
     {
+      "source": "/api/submit-exam",
+      "destination": "/api/exams?route=submit-exam"
+    },
+    {
+      "source": "/api/get-exam",
+      "destination": "/api/exams?route=get-exam"
+    },
+    {
+      "source": "/api/remark-correct",
+      "destination": "/api/exams?route=remark-correct"
+    },
+    {
+      "source": "/api/save-tags",
+      "destination": "/api/exams?route=save-tags"
+    },
+    {
+      "source": "/api/save-explanation",
+      "destination": "/api/exams?route=save-explanation"
+    },
+    {
+      "source": "/api/lessons",
+      "destination": "/api/teacher-data?route=lessons"
+    },
+    {
+      "source": "/api/student-homework",
+      "destination": "/api/teacher-data?route=student-homework"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*"
     },
