@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, BookOpen, Plus, Loader2, Award, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
+import { StudentAIInsights } from './StudentAIInsights';
 
 export function TeacherScreen({ user, onBack }) {
   const [data, setData] = useState(null);
@@ -487,6 +488,10 @@ export function TeacherScreen({ user, onBack }) {
                 Close Student Dashboard
               </button>
             </div>
+            <StudentAIInsights
+              studentId={selectedStudent}
+              teacherId={user.user_id}
+            />
             <AnalyticsDashboard
               user={studentAnalyticsUser}
               onBack={() => {}}

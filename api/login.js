@@ -103,6 +103,18 @@ export default async function handler(req, res) {
               created_at TIMESTAMP NOT NULL,
               updated_at TIMESTAMP NOT NULL
             )
+          `),
+          bq.query(`
+            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_insights\` (
+              insight_id STRING NOT NULL,
+              student_id STRING NOT NULL,
+              teacher_id STRING NOT NULL,
+              lesson_id STRING NOT NULL,
+              summary STRING NOT NULL,
+              suggestions STRING NOT NULL,
+              progress_status STRING NOT NULL,
+              created_at TIMESTAMP NOT NULL
+            )
           `)
         ]);
       } catch (e) {

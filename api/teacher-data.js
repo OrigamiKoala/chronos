@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
+import { executeWithRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const bq = new BigQuery({
@@ -272,6 +273,216 @@ export default async function handler(req, res) {
       return res.status(200).json({ assignments });
     } catch (err) {
       console.error('Error fetching student homework:', err);
+      return res.status(500).json({ error: err.message || 'Internal Server Error' });
+    }
+  }
+
+  // 2b. Student AI insights route
+  if (route === 'insights') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { studentId, teacherId, bypassLimit } = req.query;
+    if (!studentId || !teacherId) {
+      return res.status(400).json({ error: 'Missing studentId or teacherId' });
+    }
+
+    const sId = studentId.trim().toLowerCase();
+    const tId = teacherId.trim().toLowerCase();
+
+    try {
+      // Fetch lessons created by this teacher
+      const getLessonsQuery = `
+        SELECT lesson_id, title, description, created_at
+        FROM \`${projectId}\`.\`chronos_users\`.\`lessons\`
+        WHERE teacher_id = @teacherId
+        ORDER BY created_at ASC
+      `;
+      const [lessons] = await bq.query({
+        query: getLessonsQuery,
+        params: { teacherId: tId }
+      });
+
+      // Fetch existing insights for this student from this teacher
+      const getInsightsQuery = `
+        SELECT insight_id, lesson_id, summary, suggestions, progress_status, created_at
+        FROM \`${projectId}\`.\`chronos_users\`.\`student_insights\`
+        WHERE student_id = @studentId AND teacher_id = @teacherId
+        ORDER BY created_at DESC
+      `;
+      const [insights] = await bq.query({
+        query: getInsightsQuery,
+        params: { studentId: sId, teacherId: tId }
+      });
+
+      const existingLessonsMap = new Map();
+      insights.forEach(ins => {
+        existingLessonsMap.set(ins.lesson_id, ins);
+      });
+
+      // Find the latest insight creation timestamp
+      let latestInsightTime = 0;
+      if (insights.length > 0) {
+        const first = insights[0];
+        const dateStr = first.created_at?.value || first.created_at;
+        latestInsightTime = new Date(dateStr).getTime();
+      }
+
+      // Check if we can generate a new insight today (max once every 6 days)
+      const nowTime = Date.now();
+      const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
+      const bypass = bypassLimit === 'true';
+      const canGenerate = bypass || (nowTime - latestInsightTime) >= SIX_DAYS_MS;
+
+      let newInsightGenerated = false;
+
+      if (canGenerate) {
+        // Find the oldest lesson plan created >= 7 days ago that does not have an insight yet
+        let eligibleLessons = lessons.filter(l => {
+          const lDate = l.created_at?.value || l.created_at;
+          const lTime = new Date(lDate).getTime();
+          const isOlderThanAWeek = (nowTime - lTime) >= ONE_WEEK_MS;
+          const hasNoInsight = !existingLessonsMap.has(l.lesson_id);
+          return isOlderThanAWeek && hasNoInsight;
+        });
+
+        // If bypass is true and there are no eligible lessons without insights, we can regenerate the most recent lesson plan's insight
+        if (eligibleLessons.length === 0 && bypass && lessons.length > 0) {
+          const latestLesson = lessons.filter(l => {
+            const lDate = l.created_at?.value || l.created_at;
+            const lTime = new Date(lDate).getTime();
+            return (nowTime - lTime) >= ONE_WEEK_MS;
+          }).slice(-1)[0]; // get the most recent lesson older than a week
+
+          if (latestLesson) {
+            eligibleLessons = [latestLesson];
+          }
+        }
+
+        if (eligibleLessons.length > 0) {
+          const targetLesson = eligibleLessons[0]; // oldest eligible
+          const lessonDateStr = targetLesson.created_at?.value || targetLesson.created_at;
+          const lessonTime = new Date(lessonDateStr).getTime();
+
+          const startTime = new Date(lessonTime).toISOString();
+          const endTime = new Date(lessonTime + ONE_WEEK_MS).toISOString();
+
+          // Query student's practice in this 7-day range
+          const getHistoryQuery = `
+            SELECT h.exam_id, h.subject, h.accuracy, h.created_at, r.results_json
+            FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
+            LEFT JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
+              ON h.exam_id = r.exam_id AND h.user_id = r.user_id
+            WHERE h.user_id = @studentId
+              AND h.created_at >= CAST(@startTime AS TIMESTAMP)
+              AND h.created_at <= CAST(@endTime AS TIMESTAMP)
+            ORDER BY h.created_at ASC
+          `;
+          const [practiceRows] = await bq.query({
+            query: getHistoryQuery,
+            params: { studentId: sId, startTime, endTime }
+          });
+
+          // Prepare prompt for Gemini
+          let practiceSummaryText = `The student did not submit any exams or practice results during this week (from ${startTime.slice(0, 10)} to ${endTime.slice(0, 10)}).`;
+          if (practiceRows.length > 0) {
+            practiceSummaryText = practiceRows.map((row, index) => {
+              let parsedResults = [];
+              try {
+                parsedResults = row.results_json ? JSON.parse(row.results_json) : [];
+              } catch (e) {
+                console.error('Failed to parse results_json:', e);
+              }
+              const questionsSummary = parsedResults.map((q, qidx) => 
+                `Q${qidx + 1} (${q.topic || 'General'}): ${q.question} | Student Answer: "${q.userAnswer || 'none'}" | Correct Answer: "${q.answer || ''}" | Is Correct: ${q.isCorrect ? 'Yes' : 'No'}`
+              ).join('\n  ');
+
+              return `Exam ${index + 1}: Subject: ${row.subject} | Accuracy: ${Math.round(row.accuracy * 100)}% | Date: ${new Date(row.created_at?.value || row.created_at).toLocaleDateString()}\n  Questions details:\n  ${questionsSummary}`;
+            }).join('\n\n');
+          }
+
+          const geminiPrompt = `You are a world-class educational AI assistant. You help teachers and coaches track student progress and tailor their lessons.
+Analyze a student's practice and exam attempts over a 1-week period following a specific lesson plan.
+
+Student ID: ${sId}
+Lesson Title: ${targetLesson.title}
+Lesson Syllabus / Description: ${targetLesson.description}
+Lesson Created At: ${new Date(lessonDateStr).toLocaleDateString()}
+
+Student's Practice History during the week of ${new Date(lessonDateStr).toLocaleDateString()} to ${new Date(lessonTime + ONE_WEEK_MS).toLocaleDateString()}:
+${practiceSummaryText}
+
+Your tasks:
+1. Summarize the student's practice during the week. Note key areas they attempted, their accuracy, and any obvious conceptual gaps or silly mistakes. If they didn't practice, clearly report that they did not record any practice activity.
+2. Formulate specific suggestions for the coach/teacher on what the student should learn or practice next to improve.
+3. Determine if the student is progressing toward the learning goals (defined by the lesson title and description). Clearly state "Yes", "No", or "Partial" and explain why based on their performance/practice in topics related to the lesson plan.
+
+Return strictly a valid JSON object with the following schema:
+{
+  "summary": "Your detailed summary of the last week of practice",
+  "suggestions": "Your concrete advice for the teacher on what the student should be learning/practicing next",
+  "progress_status": "Yes / No / Partial (and explain why)"
+}
+Do NOT include markdown headers, backticks, or any conversational text. Return ONLY the raw JSON object.`;
+
+          const modelId = 'gemini-3.1-flash-lite';
+          const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
+            model: modelId,
+            contents: geminiPrompt,
+            config: {
+              responseMimeType: "application/json",
+              temperature: 0.3
+            }
+          }), req);
+
+          if (response.text) {
+            try {
+              const responseText = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
+              const responseObj = JSON.parse(responseText);
+
+              const insightId = `insight_${Date.now()}_${sId}`;
+              const insertInsightQuery = `
+                INSERT INTO \`${projectId}\`.\`chronos_users\`.\`student_insights\`
+                  (insight_id, student_id, teacher_id, lesson_id, summary, suggestions, progress_status, created_at)
+                VALUES
+                  (@insightId, @studentId, @teacherId, @lessonId, @summary, @suggestions, @progressStatus, CURRENT_TIMESTAMP())
+              `;
+
+              await bq.query({
+                query: insertInsightQuery,
+                params: {
+                  insightId,
+                  studentId: sId,
+                  teacherId: tId,
+                  lessonId: targetLesson.lesson_id,
+                  summary: responseObj.summary || 'Summary generation failed.',
+                  suggestions: responseObj.suggestions || 'Suggestions generation failed.',
+                  progressStatus: responseObj.progress_status || 'Unknown',
+                }
+              });
+
+              newInsightGenerated = true;
+            } catch (err) {
+              console.error('Error parsing or saving insight:', err);
+            }
+          }
+        }
+      }
+
+      let finalInsights = insights;
+      if (newInsightGenerated) {
+        const [reFetched] = await bq.query({
+          query: getInsightsQuery,
+          params: { studentId: sId, teacherId: tId }
+        });
+        finalInsights = reFetched;
+      }
+
+      return res.status(200).json({ insights: finalInsights });
+    } catch (err) {
+      console.error('Error fetching/generating student insights:', err);
       return res.status(500).json({ error: err.message || 'Internal Server Error' });
     }
   }

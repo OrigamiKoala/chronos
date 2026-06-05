@@ -56,6 +56,8 @@ function App() {
   // Organization & Role States
   const [selectedOrg, setSelectedOrg] = useState('');
   const [selectedRole, setSelectedRole] = useState('student');
+  const [joinCode, setJoinCode] = useState('');
+  const [profileJoinCode, setProfileJoinCode] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileOrg, setProfileOrg] = useState('');
   const [profileRole, setProfileRole] = useState('');
@@ -188,8 +190,19 @@ function App() {
         payload.recoveryQuestion = recoveryQuestion.trim();
         payload.recoveryAnswer = recoveryAnswer.trim();
         payload.isSettingRecovery = true;
-        payload.userRole = selectedOrg ? selectedRole : '';
-        payload.userOrganization = selectedOrg;
+
+        let orgName = '';
+        if (joinCode.trim()) {
+          if (joinCode.trim() === 'RanchoMC') {
+            orgName = 'Rancho MATHCOUNTS';
+          } else {
+            setLoginError('Invalid join code');
+            setLoginLoading(false);
+            return;
+          }
+        }
+        payload.userOrganization = orgName;
+        payload.userRole = orgName ? 'student' : '';
       }
 
       const response = await fetch('/api/login', {
@@ -233,6 +246,7 @@ function App() {
           setRecoveryAnswer('');
           setSelectedOrg('');
           setSelectedRole('student');
+          setJoinCode('');
         }
       } else {
         setLoginError(data.error || 'Failed to login. Please try again.');
@@ -746,7 +760,7 @@ function App() {
                         className="btn btn-outline" 
                         style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
                         onClick={() => {
-                          setProfileOrg(user.user_organization || '');
+                          setProfileJoinCode(user.user_organization === 'Rancho MATHCOUNTS' ? 'RanchoMC' : '');
                           setProfileRole(user.user_role || '');
                           setShowProfileModal(true);
                           setShowUserDropdown(false);
@@ -1164,23 +1178,15 @@ function App() {
                   />
                   {recoverySetupIsNew && (
                     <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Join an Organization (Optional)</label>
-                      <select
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Join Code (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="Enter Join Code"
                         className="input-field"
-                        value={selectedOrg}
-                        onChange={(e) => {
-                          setSelectedOrg(e.target.value);
-                          if (e.target.value === '') {
-                            setSelectedRole('');
-                          } else {
-                            setSelectedRole('student');
-                          }
-                        }}
+                        value={joinCode}
+                        onChange={(e) => setJoinCode(e.target.value)}
                         disabled={loginLoading}
-                      >
-                        <option value="">No organization (Individual)</option>
-                        <option value="Rancho MATHCOUNTS">Rancho MATHCOUNTS</option>
-                      </select>
+                      />
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
@@ -1275,13 +1281,23 @@ function App() {
               setLoginLoading(true);
               setLoginError('');
               try {
+                let orgName = '';
+                if (profileJoinCode.trim()) {
+                  if (profileJoinCode.trim() === 'RanchoMC') {
+                    orgName = 'Rancho MATHCOUNTS';
+                  } else {
+                    setLoginError('Invalid join code');
+                    setLoginLoading(false);
+                    return;
+                  }
+                }
                 const res = await fetch('/api/org-members', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     targetUsername: user.user_id,
-                    userRole: profileOrg ? profileRole : '',
-                    userOrganization: profileOrg,
+                    userRole: orgName ? (profileRole || 'student') : '',
+                    userOrganization: orgName,
                     operatorUsername: user.user_id
                   })
                 });
@@ -1289,8 +1305,8 @@ function App() {
                 if (res.ok) {
                   setUser(prev => ({
                     ...prev,
-                    user_role: profileOrg ? profileRole : null,
-                    user_organization: profileOrg || null
+                    user_role: orgName ? (profileRole || 'student') : null,
+                    user_organization: orgName || null
                   }));
                   refreshUserData();
                   setShowProfileModal(false);
@@ -1305,27 +1321,18 @@ function App() {
               }
             }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', textAlign: 'left' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Organization</label>
-                <select
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Join Code</label>
+                <input
+                  type="text"
+                  placeholder="Enter Join Code"
                   className="input-field"
-                  value={profileOrg}
-                  onChange={(e) => {
-                    const org = e.target.value;
-                    setProfileOrg(org);
-                    if (org === '') {
-                      setProfileRole('');
-                    } else if (!profileRole) {
-                      setProfileRole('student');
-                    }
-                  }}
+                  value={profileJoinCode}
+                  onChange={(e) => setProfileJoinCode(e.target.value)}
                   disabled={loginLoading}
-                >
-                  <option value="">No organization (Individual)</option>
-                  <option value="Rancho MATHCOUNTS">Rancho MATHCOUNTS</option>
-                </select>
+                />
               </div>
 
-              {profileOrg && (
+              {profileJoinCode.trim() === 'RanchoMC' && (
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Role</label>
                   <select
