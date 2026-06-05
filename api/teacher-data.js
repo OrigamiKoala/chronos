@@ -258,6 +258,10 @@ export default async function handler(req, res) {
         FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` a
         JOIN \`${projectId}\`.\`chronos_users\`.\`lessons\` l ON a.lesson_id = l.lesson_id
         WHERE l.organization = @organization
+          AND EXISTS (
+            SELECT 1 FROM \`${projectId}\`.\`chronos_users\`.\`teacher_students\` ts
+            WHERE ts.student_id = @username AND ts.teacher_id = l.teacher_id
+          )
           AND NOT EXISTS (
             SELECT 1 FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
             WHERE user_id = @username AND assignment_id = a.assignment_id
