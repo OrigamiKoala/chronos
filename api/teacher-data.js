@@ -54,8 +54,8 @@ export default async function handler(req, res) {
 
           const insertAssignmentQuery = `
             INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
-              (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, due_date, created_at)
-            VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP())
+              (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at)
+            VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP())
           `;
 
           return bq.query({
@@ -71,6 +71,7 @@ export default async function handler(req, res) {
               timeLimitStyle: hw.timeLimitStyle || 'per_question',
               timeLimitValue: Number(hw.timeLimitValue) || 60,
               stressMode: hw.stressMode || 'none',
+              contentBased: hw.contentBased !== false,
               dueDate
             }
           });
@@ -102,7 +103,7 @@ export default async function handler(req, res) {
 
     try {
       const query = `
-        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.due_date, l.title as lesson_title, l.description as lesson_description
+        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.content_based, a.due_date, l.title as lesson_title, l.description as lesson_description
         FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` a
         JOIN \`${projectId}\`.\`chronos_users\`.\`lessons\` l ON a.lesson_id = l.lesson_id
         LEFT JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h ON a.assignment_id = h.assignment_id AND h.user_id = @username
@@ -206,7 +207,7 @@ export default async function handler(req, res) {
 
       if (lessons.length > 0) {
         const getAssignmentsQuery = `
-          SELECT assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, due_date, created_at
+          SELECT assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at
           FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
           WHERE lesson_id IN (
             SELECT lesson_id FROM \`${projectId}\`.\`chronos_users\`.\`lessons\` WHERE teacher_id = @username

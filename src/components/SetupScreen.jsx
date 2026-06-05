@@ -137,6 +137,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     if (hw.exam_format) {
       formatVal = hw.exam_format.split(',').map(f => f.trim()).filter(f => f);
     }
+    const isContentBased = hw.content_based !== false && hw.content_based !== 0;
     setConfig({
       subject: hw.subject || 'Math',
       startingDifficulty: Number(hw.starting_difficulty) || 5,
@@ -147,8 +148,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       timeLimitStyle: hw.time_limit_style || 'per_question',
       examFormat: formatVal,
       assignmentId: hw.assignment_id,
-      lessonTitle: hw.lesson_title,
-      lessonDescription: hw.lesson_description,
+      ...(isContentBased ? { lessonTitle: hw.lesson_title, lessonDescription: hw.lesson_description } : {}),
     });
     setSelectedPreset('custom');
     if (onSubjectChange) {

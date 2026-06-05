@@ -31,6 +31,7 @@ export function TeacherScreen({ user, onBack }) {
   const [hwTimeValue, setHwTimeValue] = useState(30);
   const [hwStress, setHwStress] = useState('none');
   const [hwDueDate, setHwDueDate] = useState('');
+  const [hwContentBased, setHwContentBased] = useState(true);
 
   const [lessonLoading, setLessonLoading] = useState(false);
   const [lessonError, setLessonError] = useState('');
@@ -108,6 +109,7 @@ export function TeacherScreen({ user, onBack }) {
             timeLimitStyle: hwTimeStyle,
             timeLimitValue: hwTimeValue,
             stressMode: hwStress,
+            contentBased: hwContentBased,
             dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
           });
         }
@@ -172,6 +174,7 @@ export function TeacherScreen({ user, onBack }) {
       timeLimitStyle: hwTimeStyle,
       timeLimitValue: hwTimeValue,
       stressMode: hwStress,
+      contentBased: hwContentBased,
       dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     };
     setHomeworkList([...homeworkList, newItem]);
@@ -185,6 +188,7 @@ export function TeacherScreen({ user, onBack }) {
     setHwTimeStyle('whole_test');
     setHwTimeValue(30);
     setHwStress('none');
+    setHwContentBased(true);
     setHwDueDate('');
   };
 
@@ -565,7 +569,7 @@ export function TeacherScreen({ user, onBack }) {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>{hw.title}</span>
                             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                              {hw.subject} | {hw.numQuestions} Qs | Diff: {hw.startingDifficulty} | {hw.stressMode === 'none' ? 'No Stress' : `${hw.stressMode} stress`}
+                              {hw.subject} | {hw.numQuestions} Qs | Diff: {hw.startingDifficulty} | {hw.stressMode === 'none' ? 'No Stress' : `${hw.stressMode} stress`} | {hw.contentBased ? '📚 Content-based' : '🎲 Generic'}
                             </span>
                           </div>
                           <button
@@ -651,6 +655,29 @@ export function TeacherScreen({ user, onBack }) {
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Timer Value</label>
                       <input type="number" min="1" value={hwTimeValue} onChange={(e) => setHwTimeValue(Number(e.target.value))} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
+                    </div>
+                  </div>
+
+                  {/* Content-based toggle */}
+                  <div style={{ background: hwContentBased ? 'rgba(99,102,241,0.06)' : 'rgba(255,255,255,0.03)', border: `1px solid ${hwContentBased ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '6px', padding: '0.6rem 0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        id="hwContentBased"
+                        checked={hwContentBased}
+                        onChange={(e) => setHwContentBased(e.target.checked)}
+                        style={{ width: '16px', height: '16px', marginTop: '2px', accentColor: 'var(--accent-primary)', cursor: 'pointer', flexShrink: 0 }}
+                      />
+                      <div>
+                        <label htmlFor="hwContentBased" style={{ fontSize: '0.82rem', color: hwContentBased ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer', userSelect: 'none', display: 'block' }}>
+                          {hwContentBased ? '📚 Content-Based Exam' : '🎲 Generic Exam'}
+                        </label>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4', display: 'block', marginTop: '0.1rem' }}>
+                          {hwContentBased
+                            ? 'Questions will be generated based on this lesson\'s syllabus/description.'
+                            : 'Questions will be generic for the selected subject (no lesson context).'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
