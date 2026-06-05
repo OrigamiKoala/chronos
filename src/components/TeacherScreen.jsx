@@ -7,6 +7,13 @@ export function TeacherScreen({ user, onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const parseDate = (d) => {
+    if (!d) return null;
+    const val = typeof d === 'object' && d.value ? d.value : d;
+    const date = new Date(val);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
   // Roster view state
   const [viewAllStudents, setViewAllStudents] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -211,7 +218,10 @@ export function TeacherScreen({ user, onBack }) {
         timeLimitValue: hw.time_limit_value !== undefined ? hw.time_limit_value : hw.timeLimitValue || 30,
         stressMode: hw.stress_mode || hw.stressMode || 'none',
         contentBased: (hw.content_based !== undefined ? hw.content_based : hw.contentBased) !== false,
-        dueDate: hw.due_date ? new Date(hw.due_date).toISOString().slice(0, 16) : (hw.dueDate ? new Date(hw.dueDate).toISOString().slice(0, 16) : ''),
+        dueDate: (() => {
+          const dObj = parseDate(hw.due_date || hw.dueDate);
+          return dObj ? dObj.toISOString().slice(0, 16) : '';
+        })(),
         sharedQuestions: hw.shared_questions_json ? JSON.parse(hw.shared_questions_json) : []
       }));
 
@@ -679,7 +689,10 @@ export function TeacherScreen({ user, onBack }) {
                             </span>
                           </div>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            Due: {new Date(hw.due_date ?? hw.dueDate).toLocaleDateString()}
+                            Due: {(() => {
+                              const dObj = parseDate(hw.due_date || hw.dueDate);
+                              return dObj ? dObj.toLocaleDateString() + ' ' + dObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'No due date';
+                            })()}
                           </span>
                         </div>
 
