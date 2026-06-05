@@ -81,7 +81,7 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // Fire all 4 independent reads in parallel
+    // Fire all 6 independent reads in parallel
     const eloQuery = `
       SELECT exam_id, subject, accuracy, new_rating, rating_change, created_at
       FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
@@ -110,19 +110,33 @@ export default async function handler(req, res) {
       WHERE user_id = @username AND total_count > 0
       ORDER BY subject, accuracy_rate DESC
     `;
+    const analysisQuery = `
+      SELECT subject, detailed_analysis
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
+      WHERE user_id = @username
+    `;
+    const breakdownQuery = `
+      SELECT topic, good_at, not_good_at
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+      WHERE user_id = @username
+    `;
 
     const params = { username: sanitizedUser };
-    const [eloResult, tagResult, resultsResult, masteryResult] = await Promise.allSettled([
+    const [eloResult, tagResult, resultsResult, masteryResult, analysisResult, breakdownResult] = await Promise.allSettled([
       bq.query({ query: eloQuery, params }),
       bq.query({ query: tagQuery, params }),
       bq.query({ query: resultsQuery, params }),
-      bq.query({ query: masteryQuery, params })
+      bq.query({ query: masteryQuery, params }),
+      bq.query({ query: analysisQuery, params }),
+      bq.query({ query: breakdownQuery, params })
     ]);
 
     const eloHistory = eloResult.status === 'fulfilled' ? eloResult.value[0] : [];
     const tagData = tagResult.status === 'fulfilled' ? tagResult.value[0] : [];
     const resultRows = resultsResult.status === 'fulfilled' ? resultsResult.value[0] : [];
     const topicMastery = masteryResult.status === 'fulfilled' ? masteryResult.value[0] : [];
+    const analyses = analysisResult.status === 'fulfilled' ? analysisResult.value[0] : [];
+    const breakdowns = breakdownResult.status === 'fulfilled' ? breakdownResult.value[0] : [];
 
     // Build a map of exam results to dynamically look up question type and difficulty
     const examResultsMap = {};
@@ -302,6 +316,32 @@ export default async function handler(req, res) {
       Chemistry: buildTimeline(allExams.filter(e => e.subject === 'Chemistry'), maxDuration, timelineIntervalSeconds)
     };
 
+    const history = [...eloHistory]
+      .sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at))
+      .slice(0, 25);
+
+    const strengths = topicMastery.filter(m => m.total_count > 5 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
+    const weaknesses = topicMastery.filter(m => m.total_count > 5 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
+
+    const detailedAnalysis = {};
+    for (const a of analyses) {
+      const subject = a.subject;
+      if (typeof subject === 'string' && subject !== '__proto__' && subject !== 'constructor' && subject !== 'prototype') {
+        detailedAnalysis[subject] = a.detailed_analysis;
+      }
+    }
+
+    const topicBreakdowns = {};
+    for (const b of breakdowns) {
+      const topic = b.topic;
+      if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
+        topicBreakdowns[topic] = {
+          good_at: b.good_at,
+          not_good_at: b.not_good_at
+        };
+      }
+    }
+
     return res.status(200).json({
       eloHistory,
       tagTimeSeries,
@@ -310,6 +350,11 @@ export default async function handler(req, res) {
       topicMastery,
       avgTimePerSubject,
       timelines,
+      history,
+      strengths,
+      weaknesses,
+      detailedAnalysis,
+      topicBreakdowns,
       summary: {
         totalExams,
         subjectCounts,

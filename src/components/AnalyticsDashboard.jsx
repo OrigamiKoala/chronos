@@ -74,6 +74,12 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   const [orgMembers, setOrgMembers] = useState([]);
   const [orgLoading, setOrgLoading] = useState(false);
 
+  const displayHistory = useMemo(() => history && history.length > 0 ? history : (data?.history || []), [history, data?.history]);
+  const displayStrengths = useMemo(() => strengths && strengths.length > 0 ? strengths : (data?.strengths || []), [strengths, data?.strengths]);
+  const displayWeaknesses = useMemo(() => weaknesses && weaknesses.length > 0 ? weaknesses : (data?.weaknesses || []), [weaknesses, data?.weaknesses]);
+  const displayDetailedAnalysis = useMemo(() => Object.keys(detailedAnalysis || {}).length > 0 ? detailedAnalysis : (data?.detailedAnalysis || {}), [detailedAnalysis, data?.detailedAnalysis]);
+  const displayTopicBreakdowns = useMemo(() => Object.keys(topicBreakdowns || {}).length > 0 ? topicBreakdowns : (data?.topicBreakdowns || {}), [topicBreakdowns, data?.topicBreakdowns]);
+
   const fetchOrgMembers = () => {
     if (!user?.user_organization) return;
     setOrgLoading(true);
@@ -699,7 +705,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         {/* Subject Diagnosis */}
         {(() => {
           const subjects = selectedSubjectFilter === 'All' ? ['Math', 'Physics', 'Chemistry'] : [selectedSubjectFilter];
-          const entries = subjects.map(s => ({ subject: s, text: detailedAnalysis[s] })).filter(e => e.text);
+          const entries = subjects.map(s => ({ subject: s, text: displayDetailedAnalysis[s] })).filter(e => e.text);
           if (!entries.length) return null;
           return entries.map(({ subject, text }) => (
             <div key={subject} className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2', padding: 'var(--card-padding)', background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 4px 20px -2px rgba(168,85,247,0.1)' }}>
@@ -813,8 +819,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
       {/* Strengths & Weaknesses */}
       {(() => {
-        const filteredS = selectedSubjectFilter === 'All' ? strengths : strengths.filter(s => s.subject === selectedSubjectFilter);
-        const filteredW = selectedSubjectFilter === 'All' ? weaknesses : weaknesses.filter(w => w.subject === selectedSubjectFilter);
+        const filteredS = selectedSubjectFilter === 'All' ? displayStrengths : displayStrengths.filter(s => s.subject === selectedSubjectFilter);
+        const filteredW = selectedSubjectFilter === 'All' ? displayWeaknesses : displayWeaknesses.filter(w => w.subject === selectedSubjectFilter);
         if (filteredS.length === 0 && filteredW.length === 0) return null;
         return (
           <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>
@@ -856,15 +862,15 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                   </h4>
                   <button className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }} onClick={() => setSelectedTopicDetail(null)}>Close</button>
                 </div>
-                {topicBreakdowns[selectedTopicDetail.topic] ? (
+                {displayTopicBreakdowns[selectedTopicDetail.topic] ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
                     <div>
                       <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✓ What you are good at:</span>
-                      <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].good_at}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{displayTopicBreakdowns[selectedTopicDetail.topic].good_at}</span>
                     </div>
                     <div>
                       <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✗ What you are not good at:</span>
-                      <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{displayTopicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
                     </div>
                   </div>
                 ) : (
@@ -877,13 +883,13 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       })()}
 
       {/* Past Exam History */}
-      {history.length > 0 && (
+      {displayHistory.length > 0 && (
         <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>
           <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
             <TrendingUp size={18} color="var(--accent-primary)" /> Past Exam History
           </h4>
           <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
-            {history.map((h, i) => (
+            {displayHistory.map((h, i) => (
               <div
                 key={i}
                 className="history-row"
