@@ -139,9 +139,13 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     const teachers = orgMembers.filter(m => m.user_role === 'teacher');
     const admins = orgMembers.filter(m => m.user_role === 'admin');
 
-    const getOverallElo = (m) => Math.round(((m.math_rating || 100) + (m.physics_rating || 100) + (m.chemistry_rating || 100)) / 3);
+    const getOverallElo = (m) => {
+      if (m.user_role === 'teacher' || m.user_role === 'admin') return null;
+      return Math.round(((m.math_rating || 100) + (m.physics_rating || 100) + (m.chemistry_rating || 100)) / 3);
+    };
     
     const getSortRating = (m) => {
+      if (m.user_role === 'teacher' || m.user_role === 'admin') return -9999;
       if (selectedSubjectFilter === 'Math') return m.math_rating || 100;
       if (selectedSubjectFilter === 'Physics') return m.physics_rating || 100;
       if (selectedSubjectFilter === 'Chemistry') return m.chemistry_rating || 100;
@@ -150,9 +154,9 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
     const sortedMembers = [...orgMembers].sort((a, b) => getSortRating(b) - getSortRating(a));
 
-    const avgMath = orgMembers.length > 0 ? Math.round(orgMembers.reduce((acc, m) => acc + (m.math_rating || 100), 0) / orgMembers.length) : 100;
-    const avgPhys = orgMembers.length > 0 ? Math.round(orgMembers.reduce((acc, m) => acc + (m.physics_rating || 100), 0) / orgMembers.length) : 100;
-    const avgChem = orgMembers.length > 0 ? Math.round(orgMembers.reduce((acc, m) => acc + (m.chemistry_rating || 100), 0) / orgMembers.length) : 100;
+    const avgMath = students.length > 0 ? Math.round(students.reduce((acc, m) => acc + (m.math_rating || 100), 0) / students.length) : 100;
+    const avgPhys = students.length > 0 ? Math.round(students.reduce((acc, m) => acc + (m.physics_rating || 100), 0) / students.length) : 100;
+    const avgChem = students.length > 0 ? Math.round(students.reduce((acc, m) => acc + (m.chemistry_rating || 100), 0) / students.length) : 100;
 
     const isTeacherOrAdmin = user.user_role === 'teacher' || user.user_role === 'admin';
     const isAdmin = user.user_role === 'admin';
@@ -255,10 +259,18 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                           {m.user_role || 'student'}
                         </span>
                       </td>
-                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#6366f1' }}>{m.math_rating || 100}</td>
-                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#f59e0b' }}>{m.physics_rating || 100}</td>
-                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#10b981' }}>{m.chemistry_rating || 100}</td>
-                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 'bold', color: 'var(--text-primary)' }}>{overall}</td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#6366f1' }}>
+                        {m.user_role === 'teacher' || m.user_role === 'admin' ? '—' : (m.math_rating || 100)}
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#f59e0b' }}>
+                        {m.user_role === 'teacher' || m.user_role === 'admin' ? '—' : (m.physics_rating || 100)}
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#10b981' }}>
+                        {m.user_role === 'teacher' || m.user_role === 'admin' ? '—' : (m.chemistry_rating || 100)}
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                        {m.user_role === 'teacher' || m.user_role === 'admin' ? '—' : overall}
+                      </td>
                       {isAdmin && (
                         <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
                           {isSelf ? (

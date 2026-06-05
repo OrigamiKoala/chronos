@@ -226,9 +226,13 @@ export function AdminScreen({ user, onBack }) {
             const teachers = members.filter(m => m.user_role === 'teacher');
             const admins = members.filter(m => m.user_role === 'admin');
 
-            const getOverallElo = (m) => Math.round(((m.math_rating || 100) + (m.physics_rating || 100) + (m.chemistry_rating || 100)) / 3);
+            const getOverallElo = (m) => {
+              if (m.user_role === 'teacher' || m.user_role === 'admin') return null;
+              return Math.round(((m.math_rating || 100) + (m.physics_rating || 100) + (m.chemistry_rating || 100)) / 3);
+            };
             
             const getSortRating = (m) => {
+              if (m.user_role === 'teacher' || m.user_role === 'admin') return -9999;
               if (selectedSubjectFilter === 'Math') return m.math_rating || 100;
               if (selectedSubjectFilter === 'Physics') return m.physics_rating || 100;
               if (selectedSubjectFilter === 'Chemistry') return m.chemistry_rating || 100;
@@ -237,9 +241,9 @@ export function AdminScreen({ user, onBack }) {
 
             const sortedMembers = [...members].sort((a, b) => getSortRating(b) - getSortRating(a));
 
-            const avgMath = members.length > 0 ? Math.round(members.reduce((acc, m) => acc + (m.math_rating || 100), 0) / members.length) : 100;
-            const avgPhys = members.length > 0 ? Math.round(members.reduce((acc, m) => acc + (m.physics_rating || 100), 0) / members.length) : 100;
-            const avgChem = members.length > 0 ? Math.round(members.reduce((acc, m) => acc + (m.chemistry_rating || 100), 0) / members.length) : 100;
+            const avgMath = students.length > 0 ? Math.round(students.reduce((acc, m) => acc + (m.math_rating || 100), 0) / students.length) : 100;
+            const avgPhys = students.length > 0 ? Math.round(students.reduce((acc, m) => acc + (m.physics_rating || 100), 0) / students.length) : 100;
+            const avgChem = students.length > 0 ? Math.round(students.reduce((acc, m) => acc + (m.chemistry_rating || 100), 0) / students.length) : 100;
 
             return (
               <div>
@@ -301,10 +305,18 @@ export function AdminScreen({ user, onBack }) {
                                 {m.user_role || 'student'}
                               </span>
                             </td>
-                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#6366f1' }}>{m.math_rating || 100}</td>
-                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#f59e0b' }}>{m.physics_rating || 100}</td>
-                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#10b981' }}>{m.chemistry_rating || 100}</td>
-                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 'bold', color: 'var(--text-primary)' }}>{overall}</td>
+                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#6366f1' }}>
+                              {m.user_role === 'teacher' || m.user_role === 'admin' ? '—' : (m.math_rating || 100)}
+                            </td>
+                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#f59e0b' }}>
+                              {m.user_role === 'teacher' || m.user_role === 'admin' ? '—' : (m.physics_rating || 100)}
+                            </td>
+                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#10b981' }}>
+                              {m.user_role === 'teacher' || m.user_role === 'admin' ? '—' : (m.chemistry_rating || 100)}
+                            </td>
+                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                              {m.user_role === 'teacher' || m.user_role === 'admin' ? '—' : overall}
+                            </td>
                             <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
                               {isSelf ? (
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Self</span>
