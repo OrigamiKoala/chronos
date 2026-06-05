@@ -16,6 +16,8 @@ export function TeacherScreen({ user, onBack }) {
 
   // Create Lesson Modal state
   const [showLessonModal, setShowLessonModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingLessonId, setEditingLessonId] = useState(null);
   const [lessonTitle, setLessonTitle] = useState('');
   const [lessonDescription, setLessonDescription] = useState('');
   const [assignHomework, setAssignHomework] = useState(false);
@@ -110,6 +112,10 @@ export function TeacherScreen({ user, onBack }) {
         description: lessonDescription.trim()
       };
 
+      if (isEditing) {
+        payload.lessonId = editingLessonId;
+      }
+
       if (assignHomework) {
         const finalHomework = [...homeworkList];
         const hasDraft = hwTitle.trim() !== '' || hwDueDate !== '';
@@ -131,31 +137,94 @@ export function TeacherScreen({ user, onBack }) {
         payload.homework = finalHomework;
       }
 
-      const res = await fetch('/api/lessons', {
-        method: 'POST',
+      const url = '/api/lessons';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       if (res.ok) {
         setShowLessonModal(false);
+        setIsEditing(false);
+        setEditingLessonId(null);
         setLessonTitle('');
         setLessonDescription('');
         setAssignHomework(false);
         setHomeworkList([]);
         setHwTitle('');
         setHwDueDate('');
+        setHwSharedQuestions([]);
         fetchTeacherData();
       } else {
         const d = await res.json();
-        setLessonError(d.error || 'Failed to create lesson.');
+        setLessonError(d.error || `Failed to ${isEditing ? 'update' : 'create'} lesson.`);
       }
     } catch (err) {
       console.error(err);
-      setLessonError('Connection error creating lesson.');
+      setLessonError(`Connection error ${isEditing ? 'updating' : 'creating'} lesson.`);
     } finally {
       setLessonLoading(false);
     }
+  };
+
+  const handleDeleteLesson = async (lessonId) => {
+    if (!confirm('Are you sure you want to delete this lesson plan? This will automatically delete all associated homework assignments.')) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/lessons?lessonId=${encodeURIComponent(lessonId)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setSelectedLesson(null);
+        fetchTeacherData();
+      } else {
+        alert('Failed to delete lesson.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error deleting lesson.');
+    }
+  };
+
+  const handleStartEditLesson = (lesson) => {
+    setIsEditing(true);
+    setEditingLessonId(lesson.lesson_id);
+    setLessonTitle(lesson.title);
+    setLessonDescription(lesson.description);
+
+    // Get current homework assignments for this lesson
+    const lessonHws = assignments
+      .filter(a => a.lesson_id === lesson.lesson_id)
+      .map(hw => ({
+        assignment_id: hw.assignment_id,
+        title: hw.title,
+        subject: hw.subject,
+        numQuestions: hw.num_questions !== undefined ? hw.num_questions : hw.numQuestions,
+        startingDifficulty: hw.starting_difficulty !== undefined ? hw.starting_difficulty : hw.startingDifficulty,
+        examFormat: (hw.exam_format || hw.examFormat || 'multiple_choice').includes(',') ? (hw.exam_format || hw.examFormat).split(',') : [hw.exam_format || hw.examFormat || 'multiple_choice'],
+        timeLimitStyle: hw.time_limit_style || hw.timeLimitStyle || 'whole_test',
+        timeLimitValue: hw.time_limit_value !== undefined ? hw.time_limit_value : hw.timeLimitValue || 30,
+        stressMode: hw.stress_mode || hw.stressMode || 'none',
+        contentBased: (hw.content_based !== undefined ? hw.content_based : hw.contentBased) !== false,
+        dueDate: hw.due_date ? new Date(hw.due_date).toISOString().slice(0, 16) : (hw.dueDate ? new Date(hw.dueDate).toISOString().slice(0, 16) : ''),
+        sharedQuestions: hw.shared_questions_json ? JSON.parse(hw.shared_questions_json) : []
+      }));
+
+    setHomeworkList(lessonHws);
+    setAssignHomework(lessonHws.length > 0);
+    
+    // Clear draft fields
+    setHwTitle('');
+    setHwDueDate('');
+    setHwSharedQuestions([]);
+
+    // Close details view and open modal
+    setSelectedLesson(null);
+    setShowLessonModal(true);
   };
 
   const handleReviewExam = async (historyItem) => {
@@ -389,35 +458,14 @@ export function TeacherScreen({ user, onBack }) {
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No lessons created yet. Start by planning your first classroom topic!</p>
             ) : (
               lessons.map(lesson => {
-                const lessonHws = assignments.filter(a => a.lesson_id === lesson.lesson_id);
                 return (
                   <div key={lesson.lesson_id} className="lesson-card" onClick={() => setSelectedLesson(lesson)}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ color: 'var(--accent-primary)', fontSize: '0.95rem' }}>{lesson.title}</strong>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {new Date(lesson.created_at?.value || lesson.created_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.25rem', whiteSpace: 'pre-wrap' }}>
-                      {lesson.description}
-                    </p>
-                    
-                    {lessonHws.length > 0 && (
-                      <div style={{ marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Assigned Homework:</span>
-                        {lessonHws.map(hw => {
-                          const doneCount = submissions.filter(s => s.assignment_id === hw.assignment_id).length;
-                          return (
-                            <div key={hw.assignment_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                              <span>{hw.title} ({hw.subject})</span>
-                              <span style={{ color: doneCount > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
-                                {doneCount} completed
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 );
               })
@@ -579,12 +627,16 @@ export function TeacherScreen({ user, onBack }) {
       {/* Lesson Details Modal */}
       {selectedLesson && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '5vh', overflowY: 'auto', zIndex: 1001 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '750px', marginBottom: '5vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+           <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '750px', marginBottom: '5vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--accent-primary)' }}>
                 Lesson Plan: {selectedLesson.title}
               </h3>
-              <button className="btn btn-outline" style={{ padding: '0.3rem 0.75rem' }} onClick={() => setSelectedLesson(null)}>Close</button>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button className="btn btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }} onClick={() => handleStartEditLesson(selectedLesson)}>Edit</button>
+                <button className="btn btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={() => handleDeleteLesson(selectedLesson.lesson_id)}>Delete</button>
+                <button className="btn btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }} onClick={() => setSelectedLesson(null)}>Close</button>
+              </div>
             </div>
             
             <div style={{ marginBottom: '1.5rem' }}>
@@ -618,11 +670,11 @@ export function TeacherScreen({ user, onBack }) {
                           <div>
                             <strong style={{ color: 'var(--text-primary)', fontSize: '1rem' }}>{hw.title}</strong>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.1rem' }}>
-                              Subject: {hw.subject} | {hw.numQuestions} Qs | Start Diff: {hw.startingDifficulty}
+                              Subject: {hw.subject} | {hw.num_questions ?? hw.numQuestions} Qs | Start Diff: {hw.starting_difficulty ?? hw.startingDifficulty}
                             </span>
                           </div>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            Due: {new Date(hw.dueDate).toLocaleDateString()}
+                            Due: {new Date(hw.due_date ?? hw.dueDate).toLocaleDateString()}
                           </span>
                         </div>
 
@@ -688,7 +740,7 @@ export function TeacherScreen({ user, onBack }) {
       {showLessonModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '8vh', overflowY: 'auto', zIndex: 1001 }}>
           <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '600px', marginBottom: '8vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <h3 className="text-gradient" style={{ marginBottom: '1.5rem', fontSize: '1.4rem' }}>Create New Lesson</h3>
+            <h3 className="text-gradient" style={{ marginBottom: '1.5rem', fontSize: '1.4rem' }}>{isEditing ? 'Edit Lesson Plan' : 'Create New Lesson'}</h3>
             {lessonError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginBottom: '1rem' }}>{lessonError}</p>}
             
             <form onSubmit={handleCreateLesson} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
@@ -995,9 +1047,9 @@ export function TeacherScreen({ user, onBack }) {
               )}
 
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
-                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setShowLessonModal(false); setLessonError(''); setHomeworkList([]); }} disabled={lessonLoading}>Cancel</button>
+                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setShowLessonModal(false); setIsEditing(false); setEditingLessonId(null); setLessonError(''); setHomeworkList([]); }} disabled={lessonLoading}>Cancel</button>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} disabled={lessonLoading}>
-                  {lessonLoading ? <Loader2 size={16} className="animate-spin" /> : null} Publish Lesson
+                  {lessonLoading ? <Loader2 size={16} className="animate-spin" /> : null} {isEditing ? 'Save Changes' : 'Publish Lesson'}
                 </button>
               </div>
             </form>

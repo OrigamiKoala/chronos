@@ -15,75 +15,225 @@ export default async function handler(req, res) {
 
   // 1. Lessons route
   if (route === 'lessons') {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
-    }
+    if (req.method === 'POST') {
+      const { teacherId, organization, title, description, homework } = req.body;
+      if (!teacherId || !organization || !title || !description) {
+        return res.status(400).json({ error: 'Missing required parameters (teacherId, organization, title, description)' });
+      }
 
-    const { teacherId, organization, title, description, homework } = req.body;
-    if (!teacherId || !organization || !title || !description) {
-      return res.status(400).json({ error: 'Missing required parameters (teacherId, organization, title, description)' });
-    }
+      const tId = teacherId.trim().toLowerCase();
+      const org = organization.trim();
+      const lessonId = `lesson_${Date.now()}`;
 
-    const tId = teacherId.trim().toLowerCase();
-    const org = organization.trim();
-    const lessonId = `lesson_${Date.now()}`;
+      try {
+        // Insert lesson plan
+        const insertLessonQuery = `
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`lessons\` (lesson_id, teacher_id, organization, title, description, created_at)
+          VALUES (@lessonId, @teacherId, @organization, @title, @description, CURRENT_TIMESTAMP())
+        `;
+        await bq.query({
+          query: insertLessonQuery,
+          params: {
+            lessonId,
+            teacherId: tId,
+            organization: org,
+            title: title.trim(),
+            description: description.trim()
+          }
+        });
 
-    try {
-      // Insert lesson plan
-      const insertLessonQuery = `
-        INSERT INTO \`${projectId}\`.\`chronos_users\`.\`lessons\` (lesson_id, teacher_id, organization, title, description, created_at)
-        VALUES (@lessonId, @teacherId, @organization, @title, @description, CURRENT_TIMESTAMP())
-      `;
-      await bq.query({
-        query: insertLessonQuery,
-        params: {
-          lessonId,
-          teacherId: tId,
-          organization: org,
-          title: title.trim(),
-          description: description.trim()
+        // Insert homework assignments if provided
+        if (Array.isArray(homework) && homework.length > 0) {
+          const assignmentPromises = homework.map((hw, index) => {
+            const assignmentId = `assign_${Date.now()}_${index}`;
+            const formatsStr = Array.isArray(hw.examFormat) ? hw.examFormat.join(',') : String(hw.examFormat || 'multiple_choice');
+            const dueDate = hw.dueDate ? hw.dueDate : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+            const sharedQJson = hw.sharedQuestions ? JSON.stringify(hw.sharedQuestions) : null;
+
+            const insertAssignmentQuery = `
+              INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
+                (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json)
+              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson)
+            `;
+
+            return bq.query({
+              query: insertAssignmentQuery,
+              params: {
+                assignmentId,
+                lessonId,
+                title: hw.title ? hw.title.trim() : `Homework for ${title}`,
+                subject: hw.subject || 'Math',
+                numQuestions: Number(hw.numQuestions) || 5,
+                startingDifficulty: Number(hw.startingDifficulty) || 5,
+                examFormat: formatsStr,
+                timeLimitStyle: hw.timeLimitStyle || 'per_question',
+                timeLimitValue: Number(hw.timeLimitValue) || 60,
+                stressMode: hw.stressMode || 'none',
+                contentBased: hw.contentBased !== false,
+                dueDate,
+                sharedQuestionsJson: sharedQJson
+              }
+            });
+          });
+
+          await Promise.all(assignmentPromises);
         }
-      });
 
-      // Insert homework assignments if provided
-      if (Array.isArray(homework) && homework.length > 0) {
-        const assignmentPromises = homework.map((hw, index) => {
-          const assignmentId = `assign_${Date.now()}_${index}`;
+        return res.status(200).json({ success: true, lessonId });
+      } catch (err) {
+        console.error('Error creating lesson/homework:', err);
+        return res.status(500).json({ error: err.message || 'Internal Server Error' });
+      }
+    } else if (req.method === 'PUT') {
+      const { lessonId, title, description, homework } = req.body;
+      if (!lessonId || !title || !description) {
+        return res.status(400).json({ error: 'Missing required parameters (lessonId, title, description)' });
+      }
+
+      try {
+        // Update lesson plan
+        const updateLessonQuery = `
+          UPDATE \`${projectId}\`.\`chronos_users\`.\`lessons\`
+          SET title = @title, description = @description
+          WHERE lesson_id = @lessonId
+        `;
+        await bq.query({
+          query: updateLessonQuery,
+          params: {
+            lessonId,
+            title: title.trim(),
+            description: description.trim()
+          }
+        });
+
+        // Manage homework assignments
+        const getAssignsQuery = `
+          SELECT assignment_id FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+          WHERE lesson_id = @lessonId
+        `;
+        const [existingRows] = await bq.query({
+          query: getAssignsQuery,
+          params: { lessonId }
+        });
+        const existingIds = existingRows.map(r => r.assignment_id);
+
+        const updatedHomework = Array.isArray(homework) ? homework : [];
+        const updatedIds = updatedHomework.map(h => h.assignment_id).filter(Boolean);
+
+        // Delete removed homework assignments
+        const idsToDelete = existingIds.filter(id => !updatedIds.includes(id));
+        if (idsToDelete.length > 0) {
+          const deleteHwsQuery = `
+            DELETE FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+            WHERE assignment_id IN UNNEST(@idsToDelete)
+          `;
+          await bq.query({
+            query: deleteHwsQuery,
+            params: { idsToDelete }
+          });
+        }
+
+        // Upsert assignments
+        const assignmentPromises = updatedHomework.map((hw, index) => {
           const formatsStr = Array.isArray(hw.examFormat) ? hw.examFormat.join(',') : String(hw.examFormat || 'multiple_choice');
           const dueDate = hw.dueDate ? hw.dueDate : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          const sharedQJson = hw.sharedQuestions ? JSON.stringify(hw.sharedQuestions) : null;
 
-          const insertAssignmentQuery = `
-            INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
-              (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at)
-            VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP())
-          `;
-
-          return bq.query({
-            query: insertAssignmentQuery,
-            params: {
-              assignmentId,
-              lessonId,
-              title: hw.title ? hw.title.trim() : `Homework for ${title}`,
-              subject: hw.subject || 'Math',
-              numQuestions: Number(hw.numQuestions) || 5,
-              startingDifficulty: Number(hw.startingDifficulty) || 5,
-              examFormat: formatsStr,
-              timeLimitStyle: hw.timeLimitStyle || 'per_question',
-              timeLimitValue: Number(hw.timeLimitValue) || 60,
-              stressMode: hw.stressMode || 'none',
-              contentBased: hw.contentBased !== false,
-              dueDate
-            }
-          });
+          if (hw.assignment_id && existingIds.includes(hw.assignment_id)) {
+            const updateAssignmentQuery = `
+              UPDATE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+              SET title = @title, subject = @subject, num_questions = @numQuestions, 
+                  starting_difficulty = @startingDifficulty, exam_format = @examFormat, 
+                  time_limit_style = @timeLimitStyle, time_limit_value = @timeLimitValue, 
+                  stress_mode = @stressMode, content_based = @contentBased, due_date = CAST(@dueDate AS TIMESTAMP),
+                  shared_questions_json = @sharedQuestionsJson
+              WHERE assignment_id = @assignmentId
+            `;
+            return bq.query({
+              query: updateAssignmentQuery,
+              params: {
+                assignmentId: hw.assignment_id,
+                title: hw.title ? hw.title.trim() : `Homework for ${title}`,
+                subject: hw.subject || 'Math',
+                numQuestions: Number(hw.numQuestions) || 5,
+                startingDifficulty: Number(hw.startingDifficulty) || 5,
+                examFormat: formatsStr,
+                timeLimitStyle: hw.timeLimitStyle || 'per_question',
+                timeLimitValue: Number(hw.timeLimitValue) || 60,
+                stressMode: hw.stressMode || 'none',
+                contentBased: hw.contentBased !== false,
+                dueDate,
+                sharedQuestionsJson: sharedQJson
+              }
+            });
+          } else {
+            const assignmentId = `assign_${Date.now()}_${index}`;
+            const insertAssignmentQuery = `
+              INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
+                (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json)
+              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson)
+            `;
+            return bq.query({
+              query: insertAssignmentQuery,
+              params: {
+                assignmentId,
+                lessonId,
+                title: hw.title ? hw.title.trim() : `Homework for ${title}`,
+                subject: hw.subject || 'Math',
+                numQuestions: Number(hw.numQuestions) || 5,
+                startingDifficulty: Number(hw.startingDifficulty) || 5,
+                examFormat: formatsStr,
+                timeLimitStyle: hw.timeLimitStyle || 'per_question',
+                timeLimitValue: Number(hw.timeLimitValue) || 60,
+                stressMode: hw.stressMode || 'none',
+                contentBased: hw.contentBased !== false,
+                dueDate,
+                sharedQuestionsJson: sharedQJson
+              }
+            });
+          }
         });
 
         await Promise.all(assignmentPromises);
+        return res.status(200).json({ success: true });
+      } catch (err) {
+        console.error('Error updating lesson:', err);
+        return res.status(500).json({ error: err.message || 'Internal Server Error' });
+      }
+    } else if (req.method === 'DELETE') {
+      const { lessonId } = req.query;
+      if (!lessonId) {
+        return res.status(400).json({ error: 'lessonId is required' });
       }
 
-      return res.status(200).json({ success: true, lessonId });
-    } catch (err) {
-      console.error('Error creating lesson/homework:', err);
-      return res.status(500).json({ error: err.message || 'Internal Server Error' });
+      try {
+        // Delete assignments
+        const deleteAssignmentsQuery = `
+          DELETE FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+          WHERE lesson_id = @lessonId
+        `;
+        await bq.query({
+          query: deleteAssignmentsQuery,
+          params: { lessonId }
+        });
+
+        // Delete lesson
+        const deleteLessonQuery = `
+          DELETE FROM \`${projectId}\`.\`chronos_users\`.\`lessons\`
+          WHERE lesson_id = @lessonId
+        `;
+        await bq.query({
+          query: deleteLessonQuery,
+          params: { lessonId }
+        });
+
+        return res.status(200).json({ success: true });
+      } catch (err) {
+        console.error('Error deleting lesson:', err);
+        return res.status(500).json({ error: err.message || 'Internal Server Error' });
+      }
+    } else {
+      return res.status(405).json({ error: 'Method not allowed' });
     }
   }
 
@@ -103,7 +253,7 @@ export default async function handler(req, res) {
 
     try {
       const query = `
-        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.content_based, a.due_date, l.title as lesson_title, l.description as lesson_description
+        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.content_based, a.due_date, a.shared_questions_json, l.title as lesson_title, l.description as lesson_description
         FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` a
         JOIN \`${projectId}\`.\`chronos_users\`.\`lessons\` l ON a.lesson_id = l.lesson_id
         WHERE l.organization = @organization
@@ -210,7 +360,7 @@ export default async function handler(req, res) {
 
       if (lessons.length > 0) {
         const getAssignmentsQuery = `
-          SELECT assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at
+          SELECT assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json
           FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
           WHERE lesson_id IN (
             SELECT lesson_id FROM \`${projectId}\`.\`chronos_users\`.\`lessons\` WHERE teacher_id = @username

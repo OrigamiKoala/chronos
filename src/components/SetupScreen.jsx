@@ -138,6 +138,14 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       formatVal = hw.exam_format.split(',').map(f => f.trim()).filter(f => f);
     }
     const isContentBased = hw.content_based !== false && hw.content_based !== 0;
+    let sharedQs = [];
+    if (hw.shared_questions_json) {
+      try {
+        sharedQs = typeof hw.shared_questions_json === 'string' ? JSON.parse(hw.shared_questions_json) : hw.shared_questions_json;
+      } catch (e) {
+        console.error('Failed to parse shared questions:', e);
+      }
+    }
     setConfig({
       subject: hw.subject || 'Math',
       startingDifficulty: Number(hw.starting_difficulty) || 5,
@@ -148,6 +156,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       timeLimitStyle: hw.time_limit_style || 'per_question',
       examFormat: formatVal,
       assignmentId: hw.assignment_id,
+      sharedQuestions: sharedQs,
       ...(isContentBased ? { lessonTitle: hw.lesson_title, lessonDescription: hw.lesson_description } : {}),
     });
     setSelectedPreset('custom');

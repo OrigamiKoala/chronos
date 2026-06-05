@@ -144,32 +144,48 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   const fetchProblems = async () => {
     setLoading(true);
     setError(null);
-    setProblems([]);
+
+    const sharedQuestions = config.sharedQuestions || [];
+    const totalCount = config.numQuestions;
+    const aiCount = totalCount - sharedQuestions.length;
+
+    setProblems(sharedQuestions);
     setCurrentQuestionIndex(0);
     elapsedSecondsRef.current = 0;
     currentQuestionEntryTimeRef.current = 0;
-    questionIntervalsRef.current = Array.from({ length: config.numQuestions }, () => []);
+    questionIntervalsRef.current = Array.from({ length: totalCount }, () => []);
+
+    if (sharedQuestions.length > 0) {
+      setCurrentDifficulty(sharedQuestions[0].difficulty || config.startingDifficulty);
+      setLoading(false);
+    }
+
+    if (aiCount <= 0) {
+      return;
+    }
 
     let firstReceived = false;
 
     try {
       const generated = await generateProblems(
-        config.numQuestions,
+        aiCount,
         config.startingDifficulty,
         config.subject,
         config.username || 'default_user',
         (question, index) => {
-          if (index < config.numQuestions) {
+          if (index < aiCount) {
             setProblems(prev => {
-              if (prev.length >= config.numQuestions) return prev;
+              if (prev.length >= totalCount) return prev;
               return [...prev, question];
             });
           }
 
           if (!firstReceived) {
             firstReceived = true;
-            setCurrentDifficulty(question.difficulty || config.startingDifficulty);
-            setLoading(false);
+            if (sharedQuestions.length === 0) {
+              setCurrentDifficulty(question.difficulty || config.startingDifficulty);
+              setLoading(false);
+            }
           }
         },
         config.examFormat === 'free_response',
@@ -179,11 +195,18 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       );
 
       if (generated && generated.length > 0) {
-        setProblems(generated.slice(0, config.numQuestions));
+        setProblems(prev => {
+          const shared = prev.slice(0, sharedQuestions.length);
+          return [...shared, ...generated].slice(0, totalCount);
+        });
       }
     } catch (err) {
-      setError("Failed to fetch problems. Retrying...");
-      setTimeout(() => fetchProblems(), 2000);
+      if (sharedQuestions.length === 0) {
+        setError("Failed to fetch problems. Retrying...");
+        setTimeout(() => fetchProblems(), 2000);
+      } else {
+        console.error("Failed to generate remainder of problems:", err);
+      }
     } finally {
       setLoading(false);
     }
