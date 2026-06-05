@@ -63,6 +63,70 @@ function evaluateKeywordExpression(expression, userAnswer) {
 export default async function handler(req, res) {
   const { route } = req.query;
 
+  // Ensure tables exist (once per cold start)
+  if (!tablesEnsured) {
+    try {
+      await Promise.all([
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` (
+            user_id STRING NOT NULL, exam_id STRING NOT NULL, question_id STRING NOT NULL,
+            subject STRING NOT NULL, topic STRING NOT NULL, question_text STRING NOT NULL,
+            user_answer STRING, correct_answer STRING NOT NULL, created_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
+            user_id STRING NOT NULL, subject STRING NOT NULL,
+            detailed_analysis STRING NOT NULL, updated_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` (
+            user_id STRING NOT NULL, exam_id STRING NOT NULL,
+            results_json STRING NOT NULL, created_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
+            user_id STRING NOT NULL, subject STRING NOT NULL, topic STRING NOT NULL,
+            good_at STRING NOT NULL, not_good_at STRING NOT NULL, updated_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` (
+            user_id STRING NOT NULL, exam_id STRING NOT NULL, subject STRING NOT NULL,
+            mistake_patterns STRING NOT NULL, created_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_active_exams\` (
+            user_id STRING NOT NULL,
+            exam_id STRING NOT NULL,
+            subject STRING NOT NULL,
+            config_json STRING NOT NULL,
+            problems_json STRING NOT NULL,
+            answers_json STRING NOT NULL,
+            frq_submissions_json STRING,
+            current_question_index INT64 NOT NULL,
+            created_at TIMESTAMP NOT NULL,
+            updated_at TIMESTAMP NOT NULL
+          )
+        `),
+        bq.query(`
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+          ADD COLUMN IF NOT EXISTS assignment_id STRING
+        `),
+        bq.query(`
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+          ADD COLUMN IF NOT EXISTS assignment_id STRING
+        `)
+      ]);
+      tablesEnsured = true;
+    } catch (e) {
+      console.warn("Alter table error or already exists in exams.js:", e);
+    }
+  }
+
   // 1. Get Exam Route
   if (route === 'get-exam') {
     if (req.method !== 'GET') {
@@ -405,6 +469,62 @@ export default async function handler(req, res) {
     }
   }
 
+  // 4b. Save Active Exam Route
+  if (route === 'save-active-exam') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { username, examId, subject, config, problems, answers, frqSubmissions, currentQuestionIndex } = req.body;
+
+    if (!username || !examId || !subject || !config || !problems || !answers) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    const sanitizedUser = username.trim().toLowerCase();
+    if (sanitizedUser === 'default_user') {
+      return res.status(200).json({ success: true, message: 'Guest active exams are not stored in BigQuery' });
+    }
+
+    try {
+      const mergeQuery = `
+        MERGE \`${projectId}\`.\`chronos_users\`.\`user_active_exams\` T
+        USING (SELECT @username AS user_id, @examId AS exam_id) S
+        ON T.user_id = S.user_id AND T.exam_id = S.exam_id
+        WHEN MATCHED THEN
+          UPDATE SET
+            config_json = @configJson,
+            problems_json = @problemsJson,
+            answers_json = @answersJson,
+            frq_submissions_json = @frqSubmissionsJson,
+            current_question_index = @currentQuestionIndex,
+            updated_at = CURRENT_TIMESTAMP()
+        WHEN NOT MATCHED THEN
+          INSERT (user_id, exam_id, subject, config_json, problems_json, answers_json, frq_submissions_json, current_question_index, created_at, updated_at)
+          VALUES (@username, @examId, @subject, @configJson, @problemsJson, @answersJson, @frqSubmissionsJson, @currentQuestionIndex, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
+      `;
+
+      await bq.query({
+        query: mergeQuery,
+        params: {
+          username: sanitizedUser,
+          examId,
+          subject,
+          configJson: JSON.stringify(config),
+          problemsJson: JSON.stringify(problems),
+          answersJson: JSON.stringify(answers),
+          frqSubmissionsJson: JSON.stringify(frqSubmissions || []),
+          currentQuestionIndex: Number(currentQuestionIndex) || 0
+        }
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error('Save active exam error:', err);
+      return res.status(500).json({ error: err.message || 'Internal Server Error' });
+    }
+  }
+
   // 5. Submit Exam Route (Default fallback/submit-exam)
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -419,51 +539,6 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // Ensure tables exist (once per cold start)
-    if (!tablesEnsured) {
-      await Promise.all([
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` (
-            user_id STRING NOT NULL, exam_id STRING NOT NULL, question_id STRING NOT NULL,
-            subject STRING NOT NULL, topic STRING NOT NULL, question_text STRING NOT NULL,
-            user_answer STRING, correct_answer STRING NOT NULL, created_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
-            user_id STRING NOT NULL, subject STRING NOT NULL,
-            detailed_analysis STRING NOT NULL, updated_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` (
-            user_id STRING NOT NULL, exam_id STRING NOT NULL,
-            results_json STRING NOT NULL, created_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
-            user_id STRING NOT NULL, subject STRING NOT NULL, topic STRING NOT NULL,
-            good_at STRING NOT NULL, not_good_at STRING NOT NULL, updated_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` (
-            user_id STRING NOT NULL, exam_id STRING NOT NULL, subject STRING NOT NULL,
-            mistake_patterns STRING NOT NULL, created_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-          ADD COLUMN IF NOT EXISTS assignment_id STRING
-        `),
-        bq.query(`
-          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-          ADD COLUMN IF NOT EXISTS assignment_id STRING
-        `)
-      ]);
-      tablesEnsured = true;
-    }
 
     // Grade all questions in parallel! Solve on-the-fly and award partial credit!
     const isOnlyMCQ = results.every(r => r.type === 'multiple_choice');
@@ -774,6 +849,11 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
             SET ${ratingColumn} = @newRating, elo_version = @eloVersion
             WHERE user_id = @username`,
           params: { username: sanitizedUser, newRating: finalNewRating, eloVersion: ELO_ALGORITHM_VERSION }
+        }),
+        bq.query({
+          query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
+            WHERE user_id = @username AND exam_id = @examId`,
+          params: { username: sanitizedUser, examId }
         })
       ]);
 

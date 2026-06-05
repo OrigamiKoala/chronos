@@ -610,7 +610,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         </div>
       </div>
 
-      {user?.user_organization && (
+      {user?.user_organization && user?.user_role !== 'admin' && (
         <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.5rem', paddingBottom: '0.25rem' }}>
           <button
             onClick={() => setActiveTab('analytics')}
@@ -650,7 +650,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         </div>
       )}
 
-      {activeTab === 'org_portal' ? (
+      {user?.user_organization && user?.user_role !== 'admin' && activeTab === 'org_portal' ? (
         renderOrgPortal()
       ) : (
         <>
@@ -666,17 +666,54 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
           </div>
         </div>
 
-        {['Math', 'Physics', 'Chemistry'].map(s => (
-          <div key={s} className="glass-panel analytics-stat-card">
-            <TrendingUp size={22} color={CHART_COLORS[s].line} />
-            <div>
-              <span className="analytics-stat-label">{s} ELO</span>
-              <span className="analytics-stat-value" style={{ color: CHART_COLORS[s].line }}>
-                {user?.[`${s.toLowerCase()}_rating`] || 100}
-              </span>
+        {selectedSubjectFilter === 'All' ? (
+          ['Math', 'Physics', 'Chemistry'].map(s => (
+            <div key={s} className="glass-panel analytics-stat-card">
+              <TrendingUp size={22} color={CHART_COLORS[s].line} />
+              <div>
+                <span className="analytics-stat-label">{s} ELO</span>
+                <span className="analytics-stat-value" style={{ color: CHART_COLORS[s].line }}>
+                  {user?.[`${s.toLowerCase()}_rating`] || 100}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          <>
+            <div className="glass-panel analytics-stat-card">
+              <TrendingUp size={22} color={CHART_COLORS[selectedSubjectFilter].line} />
+              <div>
+                <span className="analytics-stat-label">{selectedSubjectFilter} ELO</span>
+                <span className="analytics-stat-value" style={{ color: CHART_COLORS[selectedSubjectFilter].line }}>
+                  {user?.[`${selectedSubjectFilter.toLowerCase()}_rating`] || 100}
+                </span>
+              </div>
+            </div>
+            <div className="glass-panel analytics-stat-card">
+              <Clock size={22} color="var(--accent-secondary)" />
+              <div>
+                <span className="analytics-stat-label">Average Time per Question</span>
+                <span className="analytics-stat-value" style={{ color: 'var(--accent-secondary)' }}>
+                  {data?.avgTimePerSubject?.[selectedSubjectFilter] ? `${Math.round(data.avgTimePerSubject[selectedSubjectFilter])}s` : '0s'}
+                </span>
+              </div>
+            </div>
+            <div className="glass-panel analytics-stat-card">
+              <Target size={22} color="var(--success)" />
+              <div>
+                <span className="analytics-stat-label">Overall Subject Accuracy</span>
+                <span className="analytics-stat-value" style={{ color: 'var(--success)' }}>
+                  {(() => {
+                    const subjectHistory = (data?.eloHistory || []).filter(h => h.subject === selectedSubjectFilter);
+                    if (subjectHistory.length === 0) return '0%';
+                    const sum = subjectHistory.reduce((acc, h) => acc + (h.accuracy || 0), 0);
+                    return Math.round((sum / subjectHistory.length) * 100) + '%';
+                  })()}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Charts Grid */}
@@ -778,21 +815,23 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         </div>
 
         {/* Avg Time / Question by Subject */}
-        <div className="glass-panel analytics-chart-panel">
-          <h4 className="analytics-chart-title">
-            <Clock size={18} color={CHART_COLORS.time.line} /> Avg Time / Question by Subject
-          </h4>
-          {avgTimeSubjectChartData ? (
-            <div style={{ height: '240px' }}>
-              <Bar data={avgTimeSubjectChartData} options={{
-                ...baseChartOptions,
-                plugins: { ...baseChartOptions.plugins, legend: { display: false } }
-              }} />
-            </div>
-          ) : (
-            <p className="analytics-empty">Complete exams to see time breakdown</p>
-          )}
-        </div>
+        {selectedSubjectFilter === 'All' && (
+          <div className="glass-panel analytics-chart-panel">
+            <h4 className="analytics-chart-title">
+              <Clock size={18} color={CHART_COLORS.time.line} /> Avg Time / Question by Subject
+            </h4>
+            {avgTimeSubjectChartData ? (
+              <div style={{ height: '240px' }}>
+                <Bar data={avgTimeSubjectChartData} options={{
+                  ...baseChartOptions,
+                  plugins: { ...baseChartOptions.plugins, legend: { display: false } }
+                }} />
+              </div>
+            ) : (
+              <p className="analytics-empty">Complete exams to see time breakdown</p>
+            )}
+          </div>
+        )}
 
         {/* Topic Mastery */}
         <div className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2' }}>

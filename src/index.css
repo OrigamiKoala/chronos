@@ -248,6 +248,24 @@ input, select, textarea {
   border-color: rgba(99, 102, 241, 0.2) !important;
 }
 
+/* Lesson Card styles */
+.lesson-card {
+  background: var(--bg-tertiary);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.lesson-card:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+
 /* Tag Buttons */
 .tag-btn {
   display: inline-flex;

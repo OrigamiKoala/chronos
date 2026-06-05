@@ -81,6 +81,7 @@ function App() {
   const [loadingExamId, setLoadingExamId] = useState(null);
   const [currentExamId, setCurrentExamId] = useState(null);
   const [gradingLoading, setGradingLoading] = useState(false);
+  const [activeExam, setActiveExam] = useState(null);
 
   const formatDate = (dateVal) => {
     if (!dateVal) return '';
@@ -150,6 +151,7 @@ function App() {
             Physics: data.user.physics_rating || 100,
             Chemistry: data.user.chemistry_rating || 100
           });
+          setActiveExam(data.activeExam || null);
         }
         setAutoLoginLoading(false);
       })
@@ -215,6 +217,7 @@ function App() {
             Physics: data.user.physics_rating || 100,
             Chemistry: data.user.chemistry_rating || 100
           });
+          setActiveExam(data.activeExam || null);
           localStorage.setItem('chronos_logged_user', data.user.user_id);
           localStorage.setItem('chronos_logged_password', loginPassword);
           localStorage.removeItem('chronos_guest_history');
@@ -323,6 +326,7 @@ function App() {
     const guestTopicBreakdowns = localStorage.getItem('chronos_guest_topic_breakdowns');
     setTopicBreakdowns(guestTopicBreakdowns ? JSON.parse(guestTopicBreakdowns) : {});
     setSelectedTopicDetail(null);
+    setActiveExam(null);
     localStorage.removeItem('chronos_logged_user');
     localStorage.removeItem('chronos_logged_password');
   };
@@ -349,6 +353,7 @@ function App() {
           Physics: loginData.user.physics_rating,
           Chemistry: loginData.user.chemistry_rating
         });
+        setActiveExam(loginData.activeExam || null);
       }
     }).catch(err => console.error("Failed to refresh user data:", err));
   };
@@ -358,9 +363,16 @@ function App() {
       setPendingConfig(config);
       setShowConversionPrompt(true);
     } else {
-      setExamConfig({ ...config, username: user.user_id });
+      const examId = `${Date.now()}`;
+      setExamConfig({ ...config, username: user.user_id, examId });
       setCurrentScreen('exam');
     }
+  };
+
+  const handleResumeExam = () => {
+    if (!activeExam) return;
+    setExamConfig({ ...activeExam.config, username: user.user_id, examId: activeExam.exam_id });
+    setCurrentScreen('exam');
   };
 
   const finishExam = (results) => {
@@ -469,6 +481,7 @@ function App() {
     })
     .then(res => res.json())
     .then(submitData => {
+      setActiveExam(null);
       // Overwrite results, rating, and change with AI-graded values if present
       if (submitData.results) {
         setExamResults({
@@ -529,6 +542,7 @@ function App() {
             Physics: data.user.physics_rating || 100,
             Chemistry: data.user.chemistry_rating || 100
           });
+          setActiveExam(null);
           setCurrentScreen('analytics');
           setGradingLoading(false);
         })
@@ -588,6 +602,7 @@ function App() {
     })
     .catch(err => {
       console.error("Error submitting exam:", err);
+      setActiveExam(null);
       setExamResults({
         results,
         subject,
@@ -793,6 +808,34 @@ function App() {
                   <Award size={24} /> {user.user_id}'s {selectedSubject} Analytics Dashboard
                 </h3>
                 
+                {activeExam && (
+                  <div style={{
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1rem',
+                    marginBottom: '1.5rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    boxSizing: 'border-box'
+                  }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600' }}>In-Progress Exam Found</h4>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        {activeExam.subject} • {activeExam.config.numQuestions} Qs • Started {new Date(activeExam.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <button 
+                      className="btn btn-primary"
+                      style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+                      onClick={handleResumeExam}
+                    >
+                      Resume Exam
+                    </button>
+                  </div>
+                )}
+                
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                   <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
                     <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Strengths</h4>
@@ -947,7 +990,11 @@ function App() {
           </div>
         )}
         {currentScreen === 'exam' && examConfig && (
-          <ExamScreen config={examConfig} onFinish={finishExam} />
+          <ExamScreen 
+            config={examConfig} 
+            onFinish={finishExam} 
+            resumeState={activeExam && activeExam.exam_id === examConfig?.examId ? activeExam : null} 
+          />
         )}
         {currentScreen === 'analytics' && examResults && (
           <AnalyticsScreen

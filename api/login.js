@@ -83,8 +83,26 @@ export default async function handler(req, res) {
             ADD COLUMN IF NOT EXISTS content_based BOOL
           `),
           bq.query(`
+            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+            ADD COLUMN IF NOT EXISTS shared_questions_json STRING
+          `),
+          bq.query(`
             ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
             ADD COLUMN IF NOT EXISTS assignment_id STRING
+          `),
+          bq.query(`
+            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_active_exams\` (
+              user_id STRING NOT NULL,
+              exam_id STRING NOT NULL,
+              subject STRING NOT NULL,
+              config_json STRING NOT NULL,
+              problems_json STRING NOT NULL,
+              answers_json STRING NOT NULL,
+              frq_submissions_json STRING,
+              current_question_index INT64 NOT NULL,
+              created_at TIMESTAMP NOT NULL,
+              updated_at TIMESTAMP NOT NULL
+            )
           `)
         ]);
       } catch (e) {
@@ -236,18 +254,37 @@ export default async function handler(req, res) {
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
       WHERE user_id = @username
     `;
+    const activeExamQuery = `
+      SELECT exam_id, subject, config_json, problems_json, answers_json, frq_submissions_json, current_question_index, created_at
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
+      WHERE user_id = @username
+      LIMIT 1
+    `;
 
-    const [historyResult, masteryResult, analysisResult, breakdownResult] = await Promise.allSettled([
+    const [historyResult, masteryResult, analysisResult, breakdownResult, activeExamResult] = await Promise.allSettled([
       bq.query({ query: allHistoryQuery, params: { username: sanitizedUser } }),
       bq.query({ query: masteryQuery, params: { username: sanitizedUser } }),
       bq.query({ query: analysisQuery, params: { username: sanitizedUser } }),
-      bq.query({ query: breakdownQuery, params: { username: sanitizedUser } })
+      bq.query({ query: breakdownQuery, params: { username: sanitizedUser } }),
+      bq.query({ query: activeExamQuery, params: { username: sanitizedUser } })
     ]);
 
     const allHistory = historyResult.status === 'fulfilled' ? historyResult.value[0] : [];
     const mastery = masteryResult.status === 'fulfilled' ? masteryResult.value[0] : [];
     const analyses = analysisResult.status === 'fulfilled' ? analysisResult.value[0] : [];
     const breakdowns = breakdownResult.status === 'fulfilled' ? breakdownResult.value[0] : [];
+
+    const activeExamRows = activeExamResult && activeExamResult.status === 'fulfilled' ? activeExamResult.value[0] : [];
+    const activeExam = activeExamRows.length > 0 ? {
+      exam_id: activeExamRows[0].exam_id,
+      subject: activeExamRows[0].subject,
+      config: JSON.parse(activeExamRows[0].config_json),
+      problems: JSON.parse(activeExamRows[0].problems_json),
+      answers: JSON.parse(activeExamRows[0].answers_json),
+      frqSubmissions: activeExamRows[0].frq_submissions_json ? JSON.parse(activeExamRows[0].frq_submissions_json) : [],
+      currentQuestionIndex: Number(activeExamRows[0].current_question_index),
+      created_at: activeExamRows[0].created_at?.value || activeExamRows[0].created_at
+    } : null;
 
     if (needsRecalculation) {
       const subjectRatings = { Math: 100, Physics: 100, Chemistry: 100 };
@@ -434,7 +471,8 @@ export default async function handler(req, res) {
       strengths,
       weaknesses,
       detailedAnalysis,
-      topicBreakdowns
+      topicBreakdowns,
+      activeExam
     });
 
   } catch (err) {

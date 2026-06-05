@@ -160,6 +160,9 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     const { name, value } = e.target;
     setConfig((prev) => {
       const next = { ...prev, [name]: isNaN(value) ? value : Number(value) || value };
+      if (name === 'timeLimitStyle' && value === 'none') {
+        next.stressMode = 'none';
+      }
       delete next.assignmentId;
       delete next.lessonTitle;
       delete next.lessonDescription;
@@ -433,38 +436,43 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             <h3 style={{ margin: 0 }}>Stress Factors</h3>
           </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Stress Mode</label>
-            <select name="stressMode" value={config.stressMode} onChange={handleChange} className="input-field">
-              <option value="none">None (Standard Timer)</option>
-              <option value="hidden">Hidden Clock (Reveals last 10s)</option>
-              <option value="strict">Strict (Auto-skip on zero)</option>
-              <option value="dynamic">Dynamic (Visually speeds up near end)</option>
-            </select>
-          </div>
+          {config.timeLimitStyle !== 'none' && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Stress Mode</label>
+              <select name="stressMode" value={config.stressMode} onChange={handleChange} className="input-field">
+                <option value="none">None (Standard Timer)</option>
+                <option value="hidden">Hidden Clock (Reveals last 10s)</option>
+                <option value="strict">Strict (Auto-skip on zero)</option>
+                <option value="dynamic">Dynamic (Visually speeds up near end)</option>
+              </select>
+            </div>
+          )}
 
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Time Limit Style</label>
             <select name="timeLimitStyle" value={config.timeLimitStyle} onChange={handleChange} className="input-field">
               <option value="per_question">Time Limit Per Question</option>
               <option value="whole_test">Time Limit For Whole Test</option>
+              <option value="none">No Timer (Untimed)</option>
             </select>
           </div>
 
-          {config.timeLimitStyle === 'whole_test' ? (
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                <Timer size={16} /> Total Test Time (Minutes)
-              </label>
-              <input type="number" name="timeLimitWholeTest" min="1" max="180" value={config.timeLimitWholeTest} onChange={handleChange} className="input-field" />
-            </div>
-          ) : (
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                <Timer size={16} /> Time Per Question (Seconds)
-              </label>
-              <input type="number" name="timeLimitPerQuestion" min="10" max="300" value={config.timeLimitPerQuestion} onChange={handleChange} className="input-field" />
-            </div>
+          {config.timeLimitStyle !== 'none' && (
+            config.timeLimitStyle === 'whole_test' ? (
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                  <Timer size={16} /> Total Test Time (Minutes)
+                </label>
+                <input type="number" name="timeLimitWholeTest" min="1" max="180" value={config.timeLimitWholeTest} onChange={handleChange} className="input-field" />
+              </div>
+            ) : (
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                  <Timer size={16} /> Time Per Question (Seconds)
+                </label>
+                <input type="number" name="timeLimitPerQuestion" min="10" max="300" value={config.timeLimitPerQuestion} onChange={handleChange} className="input-field" />
+              </div>
+            )
           )}
         </div>
 

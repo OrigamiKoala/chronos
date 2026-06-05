@@ -20,6 +20,9 @@ export function TeacherScreen({ user, onBack }) {
   const [lessonDescription, setLessonDescription] = useState('');
   const [assignHomework, setAssignHomework] = useState(false);
   
+  // Selected Lesson Details Modal state
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  
   // Homework config state
   const [homeworkList, setHomeworkList] = useState([]);
   const [hwTitle, setHwTitle] = useState('');
@@ -32,6 +35,17 @@ export function TeacherScreen({ user, onBack }) {
   const [hwStress, setHwStress] = useState('none');
   const [hwDueDate, setHwDueDate] = useState('');
   const [hwContentBased, setHwContentBased] = useState(true);
+
+  // Shared questions state
+  const [hwSharedQuestions, setHwSharedQuestions] = useState([]);
+  const [showAddSharedQuestion, setShowAddSharedQuestion] = useState(false);
+  const [sharedQType, setSharedQType] = useState('multiple_choice');
+  const [sharedQTopic, setSharedQTopic] = useState('');
+  const [sharedQText, setSharedQText] = useState('');
+  const [sharedQOptions, setSharedQOptions] = useState(['', '', '', '']);
+  const [sharedQAnswer, setSharedQAnswer] = useState('');
+  const [sharedQDifficulty, setSharedQDifficulty] = useState(5);
+  const [sharedQSolution, setSharedQSolution] = useState('');
 
   const [lessonLoading, setLessonLoading] = useState(false);
   const [lessonError, setLessonError] = useState('');
@@ -110,7 +124,8 @@ export function TeacherScreen({ user, onBack }) {
             timeLimitValue: hwTimeValue,
             stressMode: hwStress,
             contentBased: hwContentBased,
-            dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+            dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            sharedQuestions: hwSharedQuestions
           });
         }
         payload.homework = finalHomework;
@@ -163,6 +178,55 @@ export function TeacherScreen({ user, onBack }) {
     setHwFormats(prev => prev.includes(f) ? prev.filter(item => item !== f) : [...prev, f]);
   };
 
+  const handleAddSharedQuestion = () => {
+    if (!sharedQText.trim()) {
+      alert('Question text is required.');
+      return;
+    }
+    if (sharedQType === 'multiple_choice') {
+      if (sharedQOptions.some(o => !o.trim())) {
+        alert('All 4 options are required for multiple choice.');
+        return;
+      }
+      if (!sharedQAnswer) {
+        alert('Please select a correct option.');
+        return;
+      }
+      if (!['A', 'B', 'C', 'D'].includes(sharedQAnswer.toUpperCase())) {
+        alert('Correct answer must be A, B, C, or D.');
+        return;
+      }
+    } else if (sharedQType === 'short_answer') {
+      if (!sharedQAnswer.trim()) {
+        alert('Correct answer is required for short answer.');
+        return;
+      }
+    }
+
+    const newQ = {
+      id: `manual_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      type: sharedQType,
+      topic: sharedQTopic.trim() || 'General',
+      question: sharedQText.trim(),
+      difficulty: Number(sharedQDifficulty) || 5,
+      detailedSolution: sharedQSolution.trim() || 'No detailed solution provided.',
+      answer: sharedQType === 'multiple_choice' ? sharedQAnswer.toUpperCase() : sharedQAnswer.trim(),
+      ...(sharedQType === 'multiple_choice' ? { options: sharedQOptions.map(o => o.trim()) } : {}),
+      ...(sharedQType === 'short_answer' ? { keywordExpression: `'${sharedQAnswer.trim()}'` } : {})
+    };
+
+    setHwSharedQuestions([...hwSharedQuestions, newQ]);
+    
+    // Reset inputs
+    setSharedQTopic('');
+    setSharedQText('');
+    setSharedQOptions(['', '', '', '']);
+    setSharedQAnswer('');
+    setSharedQDifficulty(5);
+    setSharedQSolution('');
+    setShowAddSharedQuestion(false);
+  };
+
   const addHomeworkItem = () => {
     const titleVal = hwTitle.trim() || `Homework ${homeworkList.length + 1}: ${lessonTitle.trim() || 'Lesson'}`;
     const newItem = {
@@ -175,7 +239,8 @@ export function TeacherScreen({ user, onBack }) {
       timeLimitValue: hwTimeValue,
       stressMode: hwStress,
       contentBased: hwContentBased,
-      dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      sharedQuestions: hwSharedQuestions
     };
     setHomeworkList([...homeworkList, newItem]);
     
@@ -190,6 +255,7 @@ export function TeacherScreen({ user, onBack }) {
     setHwStress('none');
     setHwContentBased(true);
     setHwDueDate('');
+    setHwSharedQuestions([]);
   };
 
   const removeHomeworkItem = (index) => {
@@ -325,7 +391,7 @@ export function TeacherScreen({ user, onBack }) {
               lessons.map(lesson => {
                 const lessonHws = assignments.filter(a => a.lesson_id === lesson.lesson_id);
                 return (
-                  <div key={lesson.lesson_id} style={{ background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div key={lesson.lesson_id} className="lesson-card" onClick={() => setSelectedLesson(lesson)}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <strong style={{ color: 'var(--accent-primary)', fontSize: '0.95rem' }}>{lesson.title}</strong>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -478,7 +544,7 @@ export function TeacherScreen({ user, onBack }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       {r.isCorrect ? <CheckCircle size={16} color="var(--success)" /> : <XCircle size={16} color="var(--danger)" />}
                       <span style={{ fontSize: '0.8rem', color: r.isCorrect ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold' }}>
-                        {r.isCorrect ? 'Correct' : 'Incorrect'} ({r.score !== undefined ? Math.round(r.score * 100) : 0}% credit)
+                        {r.isCorrect ? 'Correct' : 'Incorrect'} ({r.score !== undefined ? Math.round(r.score * 100) : (r.isCorrect ? 100 : 0)}% credit)
                       </span>
                     </div>
                   </div>
@@ -506,6 +572,114 @@ export function TeacherScreen({ user, onBack }) {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lesson Details Modal */}
+      {selectedLesson && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '5vh', overflowY: 'auto', zIndex: 1001 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '750px', marginBottom: '5vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--accent-primary)' }}>
+                Lesson Plan: {selectedLesson.title}
+              </h3>
+              <button className="btn btn-outline" style={{ padding: '0.3rem 0.75rem' }} onClick={() => setSelectedLesson(null)}>Close</button>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
+                CREATED ON: {new Date(selectedLesson.created_at?.value || selectedLesson.created_at).toLocaleDateString()}
+              </span>
+              <p style={{ color: 'var(--text-primary)', fontSize: '0.95rem', whiteSpace: 'pre-wrap', lineHeight: '1.6', background: 'rgba(0,0,0,0.15)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                {selectedLesson.description}
+              </p>
+            </div>
+
+            <h4 className="text-gradient" style={{ fontSize: '1.1rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.25rem' }}>
+              Homework Assignments
+            </h4>
+
+            {(() => {
+              const lessonHws = assignments.filter(a => a.lesson_id === selectedLesson.lesson_id);
+              if (lessonHws.length === 0) {
+                return <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>No homework assigned for this lesson.</p>;
+              }
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  {lessonHws.map(hw => {
+                    const hwSubmissions = submissions.filter(s => s.assignment_id === hw.assignment_id && claimedStudentIds.includes(s.user_id));
+                    const completedUserIds = hwSubmissions.map(s => s.user_id);
+                    const incompleteStudents = myStudentsList.filter(student => !completedUserIds.includes(student.user_id));
+
+                    return (
+                      <div key={hw.assignment_id} style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                          <div>
+                            <strong style={{ color: 'var(--text-primary)', fontSize: '1rem' }}>{hw.title}</strong>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.1rem' }}>
+                              Subject: {hw.subject} | {hw.numQuestions} Qs | Start Diff: {hw.startingDifficulty}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            Due: {new Date(hw.dueDate).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        {/* Completed Students list */}
+                        <div style={{ marginBottom: '1rem' }}>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 'bold', display: 'block', marginBottom: '0.35rem' }}>
+                            Completed ({hwSubmissions.length})
+                          </span>
+                          {hwSubmissions.length === 0 ? (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No students completed yet.</span>
+                          ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                              {hwSubmissions.map(sub => (
+                                <div key={sub.user_id} style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-primary)' }}>{sub.user_id}</span>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                                      Acc: {Math.round(sub.accuracy * 100)}% | ELO: {sub.rating_change !== undefined ? (sub.rating_change >= 0 ? `+${sub.rating_change}` : sub.rating_change) : 'N/A'}
+                                    </span>
+                                  </div>
+                                  <button
+                                    className="btn btn-outline"
+                                    style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto' }}
+                                    onClick={() => handleReviewExam(sub)}
+                                  >
+                                    View
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Incomplete Students list */}
+                        <div>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--warning)', fontWeight: 'bold', display: 'block', marginBottom: '0.35rem' }}>
+                            Assigned / Not Completed ({incompleteStudents.length})
+                          </span>
+                          {incompleteStudents.length === 0 ? (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>All students have completed this assignment!</span>
+                          ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                              {incompleteStudents.map(student => (
+                                <span key={student.user_id} style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.15)', color: 'var(--warning)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>
+                                  {student.user_id}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -679,6 +853,121 @@ export function TeacherScreen({ user, onBack }) {
                         </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Shared Questions Section */}
+                  <div style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '4px', padding: '0.6rem', background: 'rgba(0,0,0,0.15)' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', display: 'block', marginBottom: '0.35rem' }}>
+                      Shared Questions (Optional)
+                    </span>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0 0 0.5rem', lineHeight: '1.3' }}>
+                      Add manual questions that everyone will have on their test. AI will generate the remainder of the {hwQuestions} questions.
+                    </p>
+
+                    {hwSharedQuestions.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.6rem' }}>
+                        {hwSharedQuestions.map((q, qidx) => (
+                          <div key={q.id || qidx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>
+                              Q{qidx + 1}: {q.question}
+                            </span>
+                            <button
+                              type="button"
+                              style={{ color: 'var(--danger)', fontSize: '0.7rem', background: 'none', border: 'none', cursor: 'pointer' }}
+                              onClick={() => setHwSharedQuestions(hwSharedQuestions.filter((_, i) => i !== qidx))}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {!showAddSharedQuestion ? (
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', color: 'var(--accent-primary)', borderColor: 'rgba(99,102,241,0.2)', width: 'auto', minHeight: 'auto' }}
+                        onClick={() => setShowAddSharedQuestion(true)}
+                      >
+                        + Add Manual Question
+                      </button>
+                    ) : (
+                      <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', padding: '0.6rem', background: 'rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Type</label>
+                            <select value={sharedQType} onChange={(e) => setSharedQType(e.target.value)} className="input-field" style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}>
+                              <option value="multiple_choice">Multiple Choice</option>
+                              <option value="short_answer">Short Answer</option>
+                              <option value="free_response">Free Response</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Topic</label>
+                            <input type="text" placeholder="Algebra, etc." value={sharedQTopic} onChange={(e) => setSharedQTopic(e.target.value)} className="input-field" style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }} />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.35rem' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Difficulty (1-10)</label>
+                            <input type="number" min="1" max="10" value={sharedQDifficulty} onChange={(e) => setSharedQDifficulty(Number(e.target.value))} className="input-field" style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Question Text</label>
+                          <textarea placeholder="Write the question here (LaTeX $...$ supported)..." value={sharedQText} onChange={(e) => setSharedQText(e.target.value)} className="input-field" style={{ padding: '0.25rem 0.4rem', fontSize: '0.75rem', minHeight: '60px' }} />
+                        </div>
+
+                        {sharedQType === 'multiple_choice' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Options</label>
+                            {['A', 'B', 'C', 'D'].map((opt, oIdx) => (
+                              <input
+                                key={opt}
+                                type="text"
+                                placeholder={`Option ${opt}`}
+                                value={sharedQOptions[oIdx]}
+                                onChange={(e) => {
+                                  const updated = [...sharedQOptions];
+                                  updated[oIdx] = e.target.value;
+                                  setSharedQOptions(updated);
+                                }}
+                                className="input-field"
+                                style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                              />
+                            ))}
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Correct Option</label>
+                            <select value={sharedQAnswer} onChange={(e) => setSharedQAnswer(e.target.value)} className="input-field" style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}>
+                              <option value="">Select Correct Option</option>
+                              <option value="A">A</option>
+                              <option value="B">B</option>
+                              <option value="C">C</option>
+                              <option value="D">D</option>
+                            </select>
+                          </div>
+                        )}
+
+                        {sharedQType === 'short_answer' && (
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Correct Answer</label>
+                            <input type="text" placeholder="E.g. 42 or water" value={sharedQAnswer} onChange={(e) => setSharedQAnswer(e.target.value)} className="input-field" style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }} />
+                          </div>
+                        )}
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>Detailed Solution / Explanation</label>
+                          <textarea placeholder="Step-by-step correct solution..." value={sharedQSolution} onChange={(e) => setSharedQSolution(e.target.value)} className="input-field" style={{ padding: '0.25rem 0.4rem', fontSize: '0.75rem', minHeight: '60px' }} />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.25rem' }}>
+                          <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '0.2rem', fontSize: '0.75rem' }} onClick={() => setShowAddSharedQuestion(false)}>Cancel</button>
+                          <button type="button" className="btn btn-primary" style={{ flex: 1, padding: '0.2rem', fontSize: '0.75rem' }} onClick={handleAddSharedQuestion}>Add Question</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div>

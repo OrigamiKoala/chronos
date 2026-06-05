@@ -70,23 +70,31 @@ function isAnswerCorrect(prob, ans) {
   return normalizeAnswer(ans) === normalizeAnswer(prob.answer);
 }
 
-export function ExamScreen({ config, onFinish }) {
+export function ExamScreen({ config, onFinish, resumeState }) {
   const isWholeTestMode = config.timeLimitStyle === 'whole_test';
   const recommendedQuestionTime = isWholeTestMode 
     ? Math.floor((config.timeLimitWholeTest * 60) / config.numQuestions) 
     : config.timeLimitPerQuestion;
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [currentDifficulty, setCurrentDifficulty] = useState(config.startingDifficulty);
-  const [problems, setProblems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(() => 
+    resumeState ? resumeState.currentQuestionIndex : 0
+  );
+  const [problems, setProblems] = useState(() => 
+    resumeState ? resumeState.problems : []
+  );
+  const [loading, setLoading] = useState(() => 
+    resumeState ? false : true
+  );
+  const [currentDifficulty, setCurrentDifficulty] = useState(() => 
+    resumeState ? (resumeState.problems[resumeState.currentQuestionIndex]?.difficulty || config.startingDifficulty) : config.startingDifficulty
+  );
   const [isPaused, setIsPaused] = useState(false);
   const [totalTimeLeft, setTotalTimeLeft] = useState(() => config.timeLimitWholeTest * 60);
   const [questionTimesLeft, setQuestionTimesLeft] = useState(() => 
     Array(config.numQuestions).fill(isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion)
   );
   const [answers, setAnswers] = useState(() => 
-    Array(config.numQuestions).fill('')
+    resumeState ? resumeState.answers : Array(config.numQuestions).fill('')
   );
   const [results, setResults] = useState([]);
   const [error, setError] = useState(null);
@@ -100,7 +108,7 @@ export function ExamScreen({ config, onFinish }) {
   const [whiteboardPreview, setWhiteboardPreview] = useState('');
   const [transcribing, setTranscribing] = useState(false);
   const [frqSubmissions, setFrqSubmissions] = useState(() => 
-    Array(config.numQuestions).fill(null)
+    resumeState ? resumeState.frqSubmissions : Array(config.numQuestions).fill(null)
   );
 
   const timerRef = useRef(null);
@@ -182,7 +190,9 @@ export function ExamScreen({ config, onFinish }) {
   };
 
   useEffect(() => {
-    fetchProblems();
+    if (!resumeState) {
+      fetchProblems();
+    }
   }, []);
 
   useEffect(() => {
@@ -192,7 +202,7 @@ export function ExamScreen({ config, onFinish }) {
   }, [loading, currentQuestionIndex, problem]);
 
   useEffect(() => {
-    if (loading || !problem || workSubmitted || isPaused) return;
+    if (config.timeLimitStyle === 'none' || loading || !problem || workSubmitted || isPaused) return;
 
     if (isWholeTestMode && totalTimeLeft <= 0) {
       handleGlobalTimeUp();
@@ -235,6 +245,25 @@ export function ExamScreen({ config, onFinish }) {
 
     return () => clearInterval(timerRef.current);
   }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft, isPaused]);
+
+  useEffect(() => {
+    if (config.timeLimitStyle === 'none' && problems.length > 0 && !loading && config.username && config.username !== 'default_user') {
+      fetch('/api/exams?route=save-active-exam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: config.username,
+          examId: config.examId,
+          subject: config.subject,
+          config,
+          problems,
+          answers,
+          frqSubmissions,
+          currentQuestionIndex
+        })
+      }).catch(err => console.error("Error auto-saving active exam to BigQuery:", err));
+    }
+  }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config]);
 
   const handleTimeUp = () => {
     if (problem && problem.type === 'free_response') {
@@ -646,21 +675,23 @@ export function ExamScreen({ config, onFinish }) {
             </div>
           )}
           
-          <div className={`
-            glass-panel
-            ${isHidden ? 'hidden-timer' : ''} 
-            ${isDynamicStress ? 'stress-pulse stress-glitch' : ''}
-          `} style={{
+          <div className="glass-panel" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.4rem',
             padding: '0.4rem 0.8rem',
-            background: isEditingLocked ? 'var(--danger-glass)' : 'rgba(255, 255, 255, 0.02)',
-            border: `1px solid ${isEditingLocked ? 'var(--danger)' : 'rgba(255, 255, 255, 0.05)'}`,
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
             borderRadius: 'var(--radius-sm)',
             fontSize: '0.9rem'
           }}>
-            {isHidden ? (
+            {config.timeLimitStyle === 'none' ? (
+              <>
+                <Clock size={14} color="var(--accent-secondary)" />
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Mode:</span>
+                <strong style={{ color: 'var(--text-primary)' }}>Untimed</strong>
+              </>
+            ) : isHidden ? (
               <span style={{ color: 'var(--text-muted)' }}>Timer Hidden</span>
             ) : (
               <>
@@ -679,7 +710,7 @@ export function ExamScreen({ config, onFinish }) {
       </div>
 
       {/* Timer Progress Bar */}
-      {!isHidden && (
+      {config.timeLimitStyle !== 'none' && !isHidden && (
         <div style={{ 
           height: '6px', 
           background: 'rgba(255, 255, 255, 0.05)', 
