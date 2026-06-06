@@ -223,10 +223,12 @@ Difficulty scale: 1=MATHCOUNTS, 3=AMC 10, 5=AMC 12 Q20, 8=USAJMO, 10=hardest IMO
       constraints = `
 Follow these strict Olympiad Design Philosophies:
 
-1. Novelty & "Invisible Traps"
-- Create highly original questions requiring first-principles reasoning over template-matching.
-- Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption.
-- Incorporate a deceptive path: the most common rote shortcut should yield a value matching one incorrect distractor.
+1. Novelty & "Invisible Traps" (Subtle Conceptual Bottlenecks)
+- Create highly original questions requiring first-principles reasoning over memory or template-matching.
+- Questions should reward chemical intuition, not breadth of knowledge, experience grinding previous problems, or computational power.
+- Center every problem on a non-obvious conceptual trick, hidden limiting factor, or subtle breakdown of a standard assumption.
+- Keep question text neutral and objective — no hints, warnings, or clarifying instructions.
+- Incorporate a deceptive path: the most common rote formula shortcut should yield a value matching one incorrect distractor.
 
 2. Advanced Design & Difficulty Criteria
 - Multi-Topic Coupling: Require simultaneous application of disparate physical principles (e.g., thermodynamic cycle with magnetic induction, electrostatics with rotational dynamics, spring-mass with RC circuit via EM induction).
