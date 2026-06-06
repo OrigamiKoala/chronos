@@ -46,11 +46,20 @@ async function executeWithRetry(modelId, apiCallFn) {
   const keys = [
     import.meta.env.GEMINI_API_KEY,
     import.meta.env.GEMINI_API_KEY_2,
-    import.meta.env.GEMINI_API_KEY_3
+    import.meta.env.GEMINI_API_KEY_3,
+    import.meta.env.GEMINI_API_KEY_4,
+    import.meta.env.GEMINI_API_KEY_5,
+    import.meta.env.GEMINI_API_KEY_6,
+    import.meta.env.GEMINI_API_KEY_7,
+    import.meta.env.GEMINI_API_KEY_8,
+    import.meta.env.GEMINI_API_KEY_9,
+    import.meta.env.GEMINI_API_KEY_10,
+    import.meta.env.GEMINI_API_KEY_11,
+    import.meta.env.GEMINI_API_KEY_12
   ].filter(Boolean);
 
   if (keys.length === 0) {
-    throw new Error('GEMINI_API_KEY, GEMINI_API_KEY_2, and GEMINI_API_KEY_3 are missing');
+    throw new Error('GEMINI_API_KEYs are missing');
   }
 
   let selectedIndex = 0;
@@ -101,7 +110,20 @@ async function executeWithRetry(modelId, apiCallFn) {
   throw lastError || new Error('All API keys failed or are rate limited');
 }
 
-const hasKeys = !!(import.meta.env.GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY_2 || import.meta.env.GEMINI_API_KEY_3);
+const hasKeys = !!(
+  import.meta.env.GEMINI_API_KEY ||
+  import.meta.env.GEMINI_API_KEY_2 ||
+  import.meta.env.GEMINI_API_KEY_3 ||
+  import.meta.env.GEMINI_API_KEY_4 ||
+  import.meta.env.GEMINI_API_KEY_5 ||
+  import.meta.env.GEMINI_API_KEY_6 ||
+  import.meta.env.GEMINI_API_KEY_7 ||
+  import.meta.env.GEMINI_API_KEY_8 ||
+  import.meta.env.GEMINI_API_KEY_9 ||
+  import.meta.env.GEMINI_API_KEY_10 ||
+  import.meta.env.GEMINI_API_KEY_11 ||
+  import.meta.env.GEMINI_API_KEY_12
+);
 
 function extractCompleteObjects(jsonStr) {
   const objects = [];
