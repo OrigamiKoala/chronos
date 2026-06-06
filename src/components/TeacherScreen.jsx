@@ -29,10 +29,10 @@ export function TeacherScreen({ user, onBack }) {
   const [lessonTitle, setLessonTitle] = useState('');
   const [lessonDescription, setLessonDescription] = useState('');
   const [assignHomework, setAssignHomework] = useState(false);
-  
+
   // Selected Lesson Details Modal state
   const [selectedLesson, setSelectedLesson] = useState(null);
-  
+
   // Homework config state
   const [homeworkList, setHomeworkList] = useState([]);
   const [hwTitle, setHwTitle] = useState('');
@@ -338,7 +338,7 @@ export function TeacherScreen({ user, onBack }) {
 
     setHomeworkList(lessonHws);
     setAssignHomework(lessonHws.length > 0);
-    
+
     // Clear draft fields
     setHwTitle('');
     setHwDueDate('');
@@ -409,7 +409,7 @@ export function TeacherScreen({ user, onBack }) {
     };
 
     setHwSharedQuestions([...hwSharedQuestions, newQ]);
-    
+
     // Reset inputs
     setSharedQTopic('');
     setSharedQText('');
@@ -436,7 +436,7 @@ export function TeacherScreen({ user, onBack }) {
       sharedQuestions: hwSharedQuestions
     };
     setHomeworkList([...homeworkList, newItem]);
-    
+
     // Reset temporary form states to defaults
     setHwTitle('');
     setHwSubject('Math');
@@ -489,18 +489,15 @@ export function TeacherScreen({ user, onBack }) {
               Teacher Dashboard
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-              Organization: <strong>{user.user_organization}</strong>
+              <strong>{user.user_organization}</strong>
             </p>
           </div>
         </div>
-        <button className="btn btn-outline" onClick={onBack}>
-          Practice Mode
-        </button>
       </div>
 
       {/* Main columns */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start', flexWrap: 'wrap' }}>
-        
+
         {/* Column 1: My Students */}
         <div className="glass-panel" style={{ padding: 'var(--panel-padding)', height: '100%', minHeight: '380px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -535,8 +532,8 @@ export function TeacherScreen({ user, onBack }) {
                       transition: 'all 0.2s'
                     }}
                   >
-                    <div 
-                      style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }} 
+                    <div
+                      style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                       onClick={() => {
                         setSelectedStudent(student.user_id);
                         setStudentAnalyticsUser({
@@ -552,7 +549,7 @@ export function TeacherScreen({ user, onBack }) {
                         Math: {student.math_rating} | Phys: {student.physics_rating} | Chem: {student.chemistry_rating}
                       </span>
                     </div>
-                    
+
                     <button
                       className={`btn ${isClaimed ? 'btn-outline' : 'btn-primary'}`}
                       style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }}
@@ -618,7 +615,7 @@ export function TeacherScreen({ user, onBack }) {
             />
             <AnalyticsDashboard
               user={studentAnalyticsUser}
-              onBack={() => {}}
+              onBack={() => { }}
               onReviewExam={handleReviewExam}
             />
           </div>
@@ -756,7 +753,7 @@ export function TeacherScreen({ user, onBack }) {
       {/* Lesson Details Modal */}
       {selectedLesson && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '5vh', overflowY: 'auto', zIndex: 1001 }}>
-           <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '750px', marginBottom: '5vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '750px', marginBottom: '5vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--accent-primary)' }}>
                 Lesson Plan: {selectedLesson.title}
@@ -767,7 +764,7 @@ export function TeacherScreen({ user, onBack }) {
                 <button className="btn btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }} onClick={() => setSelectedLesson(null)}>Close</button>
               </div>
             </div>
-            
+
             <div style={{ marginBottom: '1.5rem' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
                 CREATED ON: {new Date(selectedLesson.created_at?.value || selectedLesson.created_at).toLocaleDateString()}
@@ -805,7 +802,7 @@ export function TeacherScreen({ user, onBack }) {
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                             Due: {(() => {
                               const dObj = parseDate(hw.due_date || hw.dueDate);
-                              return dObj ? dObj.toLocaleDateString() + ' ' + dObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'No due date';
+                              return dObj ? dObj.toLocaleDateString() + ' ' + dObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No due date';
                             })()}
                           </span>
                         </div>
@@ -874,7 +871,7 @@ export function TeacherScreen({ user, onBack }) {
           <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '600px', marginBottom: '8vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <h3 className="text-gradient" style={{ marginBottom: '1.5rem', fontSize: '1.4rem' }}>{isEditing ? 'Edit Lesson Plan' : 'Create New Lesson'}</h3>
             {lessonError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginBottom: '1rem' }}>{lessonError}</p>}
-            
+
             <form onSubmit={handleCreateLesson} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Lesson Title</label>
@@ -917,7 +914,7 @@ export function TeacherScreen({ user, onBack }) {
 
               {assignHomework && (
                 <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', background: 'var(--bg-tertiary)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  
+
                   {/* List of currently added homework items */}
                   {homeworkList.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>

@@ -298,7 +298,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     <div className="glass-panel" style={{ padding: 'var(--panel-padding)', maxWidth: '600px', margin: '0 auto', height: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
         <Settings size={28} className="text-gradient" />
-        <h2>Configure Exam Session</h2>
+        <h2>Start New Test</h2>
       </div>
 
       {homeworks.length > 0 && (
@@ -332,8 +332,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             {homeworks.map(hw => {
               const isSelected = config.assignmentId === hw.assignment_id;
               const due = hw.due_date ? new Date(hw.due_date.value || hw.due_date) : null;
-              const dueStr = due && !isNaN(due.getTime()) ? due.toLocaleDateString() + ' ' + due.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'No due date';
-              
+              const dueStr = due && !isNaN(due.getTime()) ? due.toLocaleDateString() + ' ' + due.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No due date';
+
               return (
                 <div
                   key={hw.assignment_id}
@@ -397,7 +397,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         {(config.subject === 'Math' || config.subject === 'Chemistry') && (
           <div>
             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-              Quick Presets
+              Presets
             </label>
             <select
               value={selectedPreset}
@@ -405,7 +405,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
               className="input-field"
               style={{ borderColor: selectedPreset !== 'custom' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.08)' }}
             >
-              <option value="custom">Custom (Manual Configuration)</option>
+              <option value="custom">Custom</option>
               {config.subject === 'Math' && (
                 <>
                   <option value="amc8">AMC 8 (25 MCQ, 40 min, Diff 2-4)</option>
@@ -434,23 +434,23 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             <input type="number" name="numQuestions" min="1" max="20" value={config.numQuestions} onChange={handleChange} className="input-field" />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Start Difficulty (1-10)</label>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Difficulty (1-10)</label>
             <input type="number" name="startingDifficulty" min="1" max="10" value={config.startingDifficulty} onChange={handleChange} className="input-field" />
           </div>
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Exam Format (Select one or more)</label>
+          <label style={{ display: 'block', marginBottom: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Exam Format</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
-              <input 
-                type="checkbox" 
-                checked={config.examFormat.includes('multiple_choice')} 
+              <input
+                type="checkbox"
+                checked={config.examFormat.includes('multiple_choice')}
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setConfig(prev => {
-                    const formats = checked 
-                      ? [...prev.examFormat, 'multiple_choice'] 
+                    const formats = checked
+                      ? [...prev.examFormat, 'multiple_choice']
                       : prev.examFormat.filter(f => f !== 'multiple_choice');
                     const next = { ...prev, examFormat: formats };
                     delete next.assignmentId;
@@ -465,14 +465,14 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
               <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Multiple Choice</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
-              <input 
-                type="checkbox" 
-                checked={config.examFormat.includes('short_answer')} 
+              <input
+                type="checkbox"
+                checked={config.examFormat.includes('short_answer')}
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setConfig(prev => {
-                    const formats = checked 
-                      ? [...prev.examFormat, 'short_answer'] 
+                    const formats = checked
+                      ? [...prev.examFormat, 'short_answer']
                       : prev.examFormat.filter(f => f !== 'short_answer');
                     const next = { ...prev, examFormat: formats };
                     delete next.assignmentId;
@@ -487,14 +487,14 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
               <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Short Answer</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
-              <input 
-                type="checkbox" 
-                checked={config.examFormat.includes('free_response')} 
+              <input
+                type="checkbox"
+                checked={config.examFormat.includes('free_response')}
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setConfig(prev => {
-                    const formats = checked 
-                      ? [...prev.examFormat, 'free_response'] 
+                    const formats = checked
+                      ? [...prev.examFormat, 'free_response']
                       : prev.examFormat.filter(f => f !== 'free_response');
                     const next = { ...prev, examFormat: formats };
                     delete next.assignmentId;
@@ -518,7 +518,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
 
         {config.subject === 'Math' && (
           <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
-            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Math Difficulty Scale Reference:</span>
+            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
               <div><strong>1:</strong> MATHCOUNTS school/chapter</div>
               <div><strong>5:</strong> AMC 12 question 20-ish</div>
@@ -530,7 +530,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
 
         {config.subject === 'Physics' && (
           <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
-            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Physics Difficulty Scale Reference:</span>
+            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
               <div><strong>1:</strong> Introductory level</div>
               <div><strong>3:</strong> AP Physics C level</div>
@@ -543,7 +543,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
 
         {config.subject === 'Chemistry' && (
           <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
-            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Chemistry Difficulty Scale Reference:</span>
+            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
               <div><strong>1:</strong> Honors and early AP Chem</div>
               <div><strong>3:</strong> Harder problems on ACS LSE</div>
@@ -556,12 +556,12 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         <div style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger-glass)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--danger)' }}>
             <ShieldAlert size={20} />
-            <h3 style={{ margin: 0 }}>Stress Factors</h3>
+            <h3 style={{ margin: 0 }}>Timer</h3>
           </div>
 
           {config.timeLimitStyle !== 'none' && (
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Stress Mode</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Timer Display</label>
               <select name="stressMode" value={config.stressMode} onChange={handleChange} className="input-field">
                 <option value="none">None (Standard Timer)</option>
                 <option value="hidden">Hidden Clock (Reveals last 10s)</option>
@@ -572,7 +572,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           )}
 
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Time Limit Style</label>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Time Limit</label>
             <select name="timeLimitStyle" value={config.timeLimitStyle} onChange={handleChange} className="input-field">
               <option value="per_question">Time Limit Per Question</option>
               <option value="whole_test">Time Limit For Whole Test</option>
@@ -584,14 +584,14 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             config.timeLimitStyle === 'whole_test' ? (
               <div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                  <Timer size={16} /> Total Test Time (Minutes)
+                  <Timer size={16} /> Test Time Limit (Minutes)
                 </label>
                 <input type="number" name="timeLimitWholeTest" min="1" max="180" value={config.timeLimitWholeTest} onChange={handleChange} className="input-field" />
               </div>
             ) : (
               <div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                  <Timer size={16} /> Time Per Question (Seconds)
+                  <Timer size={16} /> Per Question Time Limit (Seconds)
                 </label>
                 <input type="number" name="timeLimitPerQuestion" min="10" max="300" value={config.timeLimitPerQuestion} onChange={handleChange} className="input-field" />
               </div>
@@ -600,7 +600,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         </div>
 
         <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }}>
-          <Play size={20} /> Start Mock Exam
+          <Play size={20} /> Start
         </button>
       </form>
     </div>

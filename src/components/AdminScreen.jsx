@@ -7,7 +7,7 @@ export function AdminScreen({ user, onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('All');
-  
+
   // Bulk promotion form state
   const [promoteList, setPromoteList] = useState('');
   const [promoteRole, setPromoteRole] = useState('teacher');
@@ -74,7 +74,7 @@ export function AdminScreen({ user, onBack }) {
     e.preventDefault();
     setPromoteError('');
     setPromoteSuccess('');
-    
+
     if (!promoteList.trim()) {
       setPromoteError('Please enter at least one username.');
       return;
@@ -177,16 +177,13 @@ export function AdminScreen({ user, onBack }) {
           <Shield size={32} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
           <div>
             <h2 className="text-gradient" style={{ fontSize: '2rem', marginBottom: '0.15rem', lineHeight: '1.2' }}>
-              Admin Control Panel
+              Admin Dashboard
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-              Organization: <strong>{user.user_organization}</strong>
+              <strong>{user.user_organization}</strong>
             </p>
           </div>
         </div>
-        <button className="btn btn-outline" onClick={onBack}>
-          Exit Admin
-        </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem', alignItems: 'start', flexWrap: 'wrap-reverse' }}>
@@ -230,7 +227,7 @@ export function AdminScreen({ user, onBack }) {
               if (m.user_role === 'teacher' || m.user_role === 'admin') return null;
               return Math.round(((m.math_rating || 100) + (m.physics_rating || 100) + (m.chemistry_rating || 100)) / 3);
             };
-            
+
             const getSortRating = (m) => {
               if (m.user_role === 'teacher' || m.user_role === 'admin') return -9999;
               if (selectedSubjectFilter === 'Math') return m.math_rating || 100;
@@ -332,8 +329,8 @@ export function AdminScreen({ user, onBack }) {
                                     <option value="teacher">Teacher</option>
                                     <option value="admin">Admin</option>
                                   </select>
-                                  <button 
-                                    className="btn btn-outline" 
+                                  <button
+                                    className="btn btn-outline"
                                     style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
                                     onClick={() => handleRemoveMember(m.user_id)}
                                   >
@@ -420,11 +417,11 @@ export function AdminScreen({ user, onBack }) {
             {scriptError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{scriptError}</p>}
             {scriptMessage && <p style={{ color: 'var(--success)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{scriptMessage}</p>}
 
-            <button 
-              type="button" 
-              className="btn btn-outline" 
-              style={{ width: '100%', borderColor: 'rgba(99, 102, 241, 0.4)', color: 'var(--accent-primary)' }} 
-              onClick={handleRunScripts} 
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ width: '100%', borderColor: 'rgba(99, 102, 241, 0.4)', color: 'var(--accent-primary)' }}
+              onClick={handleRunScripts}
               disabled={scriptLoading}
             >
               {scriptLoading ? (

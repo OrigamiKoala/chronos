@@ -143,7 +143,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       if (m.user_role === 'teacher' || m.user_role === 'admin') return null;
       return Math.round(((m.math_rating || 100) + (m.physics_rating || 100) + (m.chemistry_rating || 100)) / 3);
     };
-    
+
     const getSortRating = (m) => {
       if (m.user_role === 'teacher' || m.user_role === 'admin') return -9999;
       if (selectedSubjectFilter === 'Math') return m.math_rating || 100;
@@ -229,10 +229,10 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                   const isSelf = m.user_id === user.user_id;
                   const overall = getOverallElo(m);
                   return (
-                    <tr 
-                      key={m.user_id} 
-                      style={{ 
-                        borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                    <tr
+                      key={m.user_id}
+                      style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
                         background: isSelf ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
                         transition: 'background 0.2s',
                         cursor: 'default'
@@ -287,8 +287,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                                 <option value="teacher">Teacher</option>
                                 <option value="admin">Admin</option>
                               </select>
-                              <button 
-                                className="btn btn-outline" 
+                              <button
+                                className="btn btn-outline"
                                 style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
                                 onClick={async () => {
                                   if (confirm(`Remove ${m.user_id} from organization?`)) {
@@ -363,10 +363,10 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     // We map each point to its exact time/date to see the ELO vs time progression accurately.
     const datasets = filteredSubjects.map(s => {
       const subjectHistory = sortedHistory.filter(h => h.subject === s);
-      
+
       // Starting point: (100) before any exam
       const points = [{ x: 'Start', y: 100 }];
-      
+
       let lastRating = 100;
       for (const h of subjectHistory) {
         lastRating = h.new_rating;
@@ -406,7 +406,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       const sub = h.subject;
       subjectState[sub] = h.new_rating;
       const dateStr = formatDate(h.created_at?.value || h.created_at);
-      
+
       timeline.push({
         label: dateStr,
         ratings: { ...subjectState }
@@ -603,8 +603,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
-          <h2 className="text-gradient" style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>Performance Analytics</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{summary.totalExams || 0} exams analyzed</p>
+          <h2 className="text-gradient" style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>Analytics</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Across {summary.totalExams || 0} tests</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {['All', 'Math', 'Physics', 'Chemistry'].map(s => (
@@ -669,303 +669,303 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         <>
           {/* Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <div className="glass-panel analytics-stat-card">
-          <Flame size={22} color="var(--warning)" />
-          <div>
-            <span className="analytics-stat-label">Current Streak</span>
-            <span className="analytics-stat-value" style={{ color: streakColor }}>
-              {displayedStreak} {summary.streakType === 'correct' && !missedADay ? '🔥' : (missedADay ? '❄️' : '')}
-            </span>
-          </div>
-        </div>
-
-        {selectedSubjectFilter === 'All' ? (
-          ['Math', 'Physics', 'Chemistry'].map(s => (
-            <div key={s} className="glass-panel analytics-stat-card">
-              <TrendingUp size={22} color={CHART_COLORS[s].line} />
-              <div>
-                <span className="analytics-stat-label">{s} ELO</span>
-                <span className="analytics-stat-value" style={{ color: CHART_COLORS[s].line }}>
-                  {user?.[`${s.toLowerCase()}_rating`] || 100}
-                </span>
-              </div>
-            </div>
-          ))
-        ) : (
-          <>
             <div className="glass-panel analytics-stat-card">
-              <TrendingUp size={22} color={CHART_COLORS[selectedSubjectFilter].line} />
+              <Flame size={22} color="var(--warning)" />
               <div>
-                <span className="analytics-stat-label">{selectedSubjectFilter} ELO</span>
-                <span className="analytics-stat-value" style={{ color: CHART_COLORS[selectedSubjectFilter].line }}>
-                  {user?.[`${selectedSubjectFilter.toLowerCase()}_rating`] || 100}
+                <span className="analytics-stat-label">Current Streak</span>
+                <span className="analytics-stat-value" style={{ color: streakColor }}>
+                  {displayedStreak} {summary.streakType === 'correct' && !missedADay ? '🔥' : (missedADay ? '❄️' : '')}
                 </span>
               </div>
             </div>
-            <div className="glass-panel analytics-stat-card">
-              <Clock size={22} color="var(--accent-secondary)" />
-              <div>
-                <span className="analytics-stat-label">Average Time per Question</span>
-                <span className="analytics-stat-value" style={{ color: 'var(--accent-secondary)' }}>
-                  {data?.avgTimePerSubject?.[selectedSubjectFilter] ? `${Math.round(data.avgTimePerSubject[selectedSubjectFilter])}s` : '0s'}
-                </span>
-              </div>
-            </div>
-            <div className="glass-panel analytics-stat-card">
-              <Target size={22} color="var(--success)" />
-              <div>
-                <span className="analytics-stat-label">Overall Subject Accuracy</span>
-                <span className="analytics-stat-value" style={{ color: 'var(--success)' }}>
-                  {(() => {
-                    const subjectHistory = (data?.eloHistory || []).filter(h => h.subject === selectedSubjectFilter);
-                    if (subjectHistory.length === 0) return '0%';
-                    const sum = subjectHistory.reduce((acc, h) => acc + (h.accuracy || 0), 0);
-                    return Math.round((sum / subjectHistory.length) * 100) + '%';
-                  })()}
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
 
-      {/* Charts Grid */}
-      <div className="analytics-grid">
-        {/* ELO Over Time */}
-        <div className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2' }}>
-          <h4 className="analytics-chart-title">
-            <TrendingUp size={18} color="var(--accent-primary)" /> ELO Rating Over Time
-          </h4>
-          {eloChartData ? (
-            <div style={{ height: '280px' }}>
-              <Line data={eloChartData} options={{
-                ...baseChartOptions,
-                plugins: { ...baseChartOptions.plugins, title: { display: false } },
-                scales: {
-                  ...baseChartOptions.scales,
-                  y: { ...baseChartOptions.scales.y, suggestedMin: 50 }
-                }
-              }} />
-            </div>
-          ) : (
-            <p className="analytics-empty">Take some exams to see your ELO trend</p>
-          )}
-        </div>
-
-        {/* Subject Diagnosis */}
-        {(() => {
-          const subjects = selectedSubjectFilter === 'All' ? ['Math', 'Physics', 'Chemistry'] : [selectedSubjectFilter];
-          const entries = subjects.map(s => ({ subject: s, text: displayDetailedAnalysis[s] })).filter(e => e.text);
-          if (!entries.length) return null;
-          return entries.map(({ subject, text }) => (
-            <div key={subject} className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2', padding: 'var(--card-padding)', background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 4px 20px -2px rgba(168,85,247,0.1)' }}>
-              <h4 className="analytics-chart-title" style={{ color: 'var(--accent-secondary)', marginBottom: '0.75rem' }}>
-                <Brain size={18} color="var(--accent-secondary)" /> {subject} Diagnosis
-              </h4>
-              <p style={{ fontSize: '0.875rem', lineHeight: '1.65', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'pre-line' }}>{text}</p>
-            </div>
-          ));
-        })()}
-
-        {/* Silly vs Concept */}
-        <div className="glass-panel analytics-chart-panel">
-          <h4 className="analytics-chart-title">
-            <Target size={18} color="var(--warning)" /> Silly vs Concept Points Lost
-          </h4>
-          {tagChartData ? (
-            <div style={{ height: '240px' }}>
-              <Line data={tagChartData} options={{
-                ...baseChartOptions,
-                plugins: { ...baseChartOptions.plugins, title: { display: false } }
-              }} />
-            </div>
-          ) : (
-            <p className="analytics-empty">Tag problems during review to track mistake types</p>
-          )}
-        </div>
-
-        {/* Intuition */}
-        <div className="glass-panel analytics-chart-panel">
-          <h4 className="analytics-chart-title">
-            <Brain size={18} color={CHART_COLORS.intuition.line} /> Intuition Accuracy
-          </h4>
-          {intuitionChartData ? (
-            <div style={{ height: '240px' }}>
-              <Line data={intuitionChartData} options={{
-                ...baseChartOptions,
-                plugins: { ...baseChartOptions.plugins, title: { display: false } },
-                scales: {
-                  ...baseChartOptions.scales,
-                  y: { ...baseChartOptions.scales.y, min: 0, max: 100 }
-                }
-              }} />
-            </div>
-          ) : (
-            <p className="analytics-empty">Tag problems as &ldquo;unsure&rdquo; during review to track intuition</p>
-          )}
-        </div>
-
-        {/* Points timeline Chart */}
-        <div className="glass-panel analytics-chart-panel">
-          <h4 className="analytics-chart-title">
-            <Zap size={18} color={CHART_COLORS.efficiency.line} /> Question Completion Timeline (Aggregate)
-          </h4>
-          {aggregateTimelineChartData ? (
-            <div style={{ height: '240px' }}>
-              <Line data={aggregateTimelineChartData} options={{
-                ...baseChartOptions,
-                plugins: { ...baseChartOptions.plugins, title: { display: false } },
-                scales: {
-                  ...baseChartOptions.scales,
-                  x: { ...baseChartOptions.scales.x, title: { display: true, text: 'Time Elapsed', color: '#666677', font: { size: 10 } } },
-                  y: { ...baseChartOptions.scales.y, title: { display: true, text: 'Points', color: '#666677', font: { size: 10 } } }
-                }
-              }} />
-            </div>
-          ) : (
-            <p className="analytics-empty">No timeline data available</p>
-          )}
-        </div>
-
-        {/* Avg Time / Question by Subject */}
-        {selectedSubjectFilter === 'All' && (
-          <div className="glass-panel analytics-chart-panel">
-            <h4 className="analytics-chart-title">
-              <Clock size={18} color={CHART_COLORS.time.line} /> Avg Time / Question by Subject
-            </h4>
-            {avgTimeSubjectChartData ? (
-              <div style={{ height: '240px' }}>
-                <Bar data={avgTimeSubjectChartData} options={{
-                  ...baseChartOptions,
-                  plugins: { ...baseChartOptions.plugins, legend: { display: false } }
-                }} />
-              </div>
+            {selectedSubjectFilter === 'All' ? (
+              ['Math', 'Physics', 'Chemistry'].map(s => (
+                <div key={s} className="glass-panel analytics-stat-card">
+                  <TrendingUp size={22} color={CHART_COLORS[s].line} />
+                  <div>
+                    <span className="analytics-stat-label">{s} ELO</span>
+                    <span className="analytics-stat-value" style={{ color: CHART_COLORS[s].line }}>
+                      {user?.[`${s.toLowerCase()}_rating`] || 100}
+                    </span>
+                  </div>
+                </div>
+              ))
             ) : (
-              <p className="analytics-empty">Complete exams to see time breakdown</p>
+              <>
+                <div className="glass-panel analytics-stat-card">
+                  <TrendingUp size={22} color={CHART_COLORS[selectedSubjectFilter].line} />
+                  <div>
+                    <span className="analytics-stat-label">{selectedSubjectFilter} ELO</span>
+                    <span className="analytics-stat-value" style={{ color: CHART_COLORS[selectedSubjectFilter].line }}>
+                      {user?.[`${selectedSubjectFilter.toLowerCase()}_rating`] || 100}
+                    </span>
+                  </div>
+                </div>
+                <div className="glass-panel analytics-stat-card">
+                  <Clock size={22} color="var(--accent-secondary)" />
+                  <div>
+                    <span className="analytics-stat-label">Average Time per Question</span>
+                    <span className="analytics-stat-value" style={{ color: 'var(--accent-secondary)' }}>
+                      {data?.avgTimePerSubject?.[selectedSubjectFilter] ? `${Math.round(data.avgTimePerSubject[selectedSubjectFilter])}s` : '0s'}
+                    </span>
+                  </div>
+                </div>
+                <div className="glass-panel analytics-stat-card">
+                  <Target size={22} color="var(--success)" />
+                  <div>
+                    <span className="analytics-stat-label">Overall Subject Accuracy</span>
+                    <span className="analytics-stat-value" style={{ color: 'var(--success)' }}>
+                      {(() => {
+                        const subjectHistory = (data?.eloHistory || []).filter(h => h.subject === selectedSubjectFilter);
+                        if (subjectHistory.length === 0) return '0%';
+                        const sum = subjectHistory.reduce((acc, h) => acc + (h.accuracy || 0), 0);
+                        return Math.round((sum / subjectHistory.length) * 100) + '%';
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </>
             )}
           </div>
-        )}
 
-        {/* Topic Mastery */}
-        <div className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2' }}>
-          <h4 className="analytics-chart-title">
-            <BarChart3 size={18} color="var(--success)" /> Topic Mastery Breakdown
-          </h4>
-          {topicChartData?.labels?.length ? (
-            <div style={{ height: Math.max(200, topicChartData.labels.length * 32) + 'px' }}>
-              <Bar data={topicChartData} options={{
-                ...baseChartOptions,
-                indexAxis: 'y',
-                plugins: { ...baseChartOptions.plugins, legend: { display: false }, title: { display: false } },
-                scales: {
-                  ...baseChartOptions.scales,
-                  x: { ...baseChartOptions.scales.x, min: 0, max: 100 }
-                }
-              }} />
-            </div>
-          ) : (
-            <p className="analytics-empty">Complete exams to build topic mastery data</p>
-          )}
-        </div>
-      </div>
-
-      {/* Strengths & Weaknesses */}
-      {(() => {
-        const filteredS = selectedSubjectFilter === 'All' ? displayStrengths : displayStrengths.filter(s => s.subject === selectedSubjectFilter);
-        const filteredW = selectedSubjectFilter === 'All' ? displayWeaknesses : displayWeaknesses.filter(w => w.subject === selectedSubjectFilter);
-        if (filteredS.length === 0 && filteredW.length === 0) return null;
-        return (
-          <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>
-            <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
-              <Target size={18} color="var(--success)" /> Strengths &amp; Weaknesses
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: selectedTopicDetail ? '0.75rem' : 0 }}>
-              {filteredS.length > 0 && (
-                <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 'var(--radius-md)' }}>
-                  <h5 style={{ color: 'var(--success)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Strengths</h5>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                    {filteredS.map((s, i) => (
-                      <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === s.topic && prev?.type === 'strength' ? null : { topic: s.topic, subject: s.subject, type: 'strength' })} style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--success)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === s.topic && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent', transition: 'all 0.2s' }}>
-                        {s.subject !== 'All' && selectedSubjectFilter === 'All' ? `${s.topic} (${s.subject})` : s.topic}
-                      </span>
-                    ))}
-                  </div>
+          {/* Charts Grid */}
+          <div className="analytics-grid">
+            {/* ELO Over Time */}
+            <div className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2' }}>
+              <h4 className="analytics-chart-title">
+                <TrendingUp size={18} color="var(--accent-primary)" /> ELO Rating Over Time
+              </h4>
+              {eloChartData ? (
+                <div style={{ height: '280px' }}>
+                  <Line data={eloChartData} options={{
+                    ...baseChartOptions,
+                    plugins: { ...baseChartOptions.plugins, title: { display: false } },
+                    scales: {
+                      ...baseChartOptions.scales,
+                      y: { ...baseChartOptions.scales.y, suggestedMin: 50 }
+                    }
+                  }} />
                 </div>
-              )}
-              {filteredW.length > 0 && (
-                <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 'var(--radius-md)' }}>
-                  <h5 style={{ color: 'var(--danger)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Weaknesses</h5>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                    {filteredW.map((w, i) => (
-                      <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === w.topic && prev?.type === 'weakness' ? null : { topic: w.topic, subject: w.subject, type: 'weakness' })} style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--danger)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === w.topic && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent', transition: 'all 0.2s' }}>
-                        {w.subject !== 'All' && selectedSubjectFilter === 'All' ? `${w.topic} (${w.subject})` : w.topic}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+              ) : (
+                <p className="analytics-empty">Take some exams to see your ELO trend</p>
               )}
             </div>
-            {selectedTopicDetail && (
-              <div style={{ marginTop: '0.75rem', padding: 'var(--card-padding-sm)', background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)', border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: 'var(--radius-md)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-                    Topic Detail: <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
-                    {selectedTopicDetail.subject && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.4rem' }}>({selectedTopicDetail.subject})</span>}
+
+            {/* Subject Diagnosis */}
+            {(() => {
+              const subjects = selectedSubjectFilter === 'All' ? ['Math', 'Physics', 'Chemistry'] : [selectedSubjectFilter];
+              const entries = subjects.map(s => ({ subject: s, text: displayDetailedAnalysis[s] })).filter(e => e.text);
+              if (!entries.length) return null;
+              return entries.map(({ subject, text }) => (
+                <div key={subject} className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2', padding: 'var(--card-padding)', background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 4px 20px -2px rgba(168,85,247,0.1)' }}>
+                  <h4 className="analytics-chart-title" style={{ color: 'var(--accent-secondary)', marginBottom: '0.75rem' }}>
+                    <Brain size={18} color="var(--accent-secondary)" /> {subject} Overview
                   </h4>
-                  <button className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }} onClick={() => setSelectedTopicDetail(null)}>Close</button>
+                  <p style={{ fontSize: '0.875rem', lineHeight: '1.65', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'pre-line' }}>{text}</p>
                 </div>
-                {displayTopicBreakdowns[selectedTopicDetail.topic] ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
-                    <div>
-                      <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✓ What you are good at:</span>
-                      <span style={{ color: 'var(--text-secondary)' }}>{displayTopicBreakdowns[selectedTopicDetail.topic].good_at}</span>
-                    </div>
-                    <div>
-                      <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✗ What you are not good at:</span>
-                      <span style={{ color: 'var(--text-secondary)' }}>{displayTopicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
-                    </div>
+              ));
+            })()}
+
+            {/* Silly vs Concept */}
+            <div className="glass-panel analytics-chart-panel">
+              <h4 className="analytics-chart-title">
+                <Target size={18} color="var(--warning)" />Points Lost
+              </h4>
+              {tagChartData ? (
+                <div style={{ height: '240px' }}>
+                  <Line data={tagChartData} options={{
+                    ...baseChartOptions,
+                    plugins: { ...baseChartOptions.plugins, title: { display: false } }
+                  }} />
+                </div>
+              ) : (
+                <p className="analytics-empty">Tag problems during review to track mistake types</p>
+              )}
+            </div>
+
+            {/* Intuition */}
+            <div className="glass-panel analytics-chart-panel">
+              <h4 className="analytics-chart-title">
+                <Brain size={18} color={CHART_COLORS.intuition.line} /> Intuition Accuracy
+              </h4>
+              {intuitionChartData ? (
+                <div style={{ height: '240px' }}>
+                  <Line data={intuitionChartData} options={{
+                    ...baseChartOptions,
+                    plugins: { ...baseChartOptions.plugins, title: { display: false } },
+                    scales: {
+                      ...baseChartOptions.scales,
+                      y: { ...baseChartOptions.scales.y, min: 0, max: 100 }
+                    }
+                  }} />
+                </div>
+              ) : (
+                <p className="analytics-empty">Tag problems as &ldquo;unsure&rdquo; during review to track intuition</p>
+              )}
+            </div>
+
+            {/* Points timeline Chart */}
+            <div className="glass-panel analytics-chart-panel">
+              <h4 className="analytics-chart-title">
+                <Zap size={18} color={CHART_COLORS.efficiency.line} /> Question Completion Timeline (Aggregate)
+              </h4>
+              {aggregateTimelineChartData ? (
+                <div style={{ height: '240px' }}>
+                  <Line data={aggregateTimelineChartData} options={{
+                    ...baseChartOptions,
+                    plugins: { ...baseChartOptions.plugins, title: { display: false } },
+                    scales: {
+                      ...baseChartOptions.scales,
+                      x: { ...baseChartOptions.scales.x, title: { display: true, text: 'Time Elapsed', color: '#666677', font: { size: 10 } } },
+                      y: { ...baseChartOptions.scales.y, title: { display: true, text: 'Points', color: '#666677', font: { size: 10 } } }
+                    }
+                  }} />
+                </div>
+              ) : (
+                <p className="analytics-empty">No timeline data available</p>
+              )}
+            </div>
+
+            {/* Avg Time / Question by Subject */}
+            {selectedSubjectFilter === 'All' && (
+              <div className="glass-panel analytics-chart-panel">
+                <h4 className="analytics-chart-title">
+                  <Clock size={18} color={CHART_COLORS.time.line} /> Avg Time / Question by Subject
+                </h4>
+                {avgTimeSubjectChartData ? (
+                  <div style={{ height: '240px' }}>
+                    <Bar data={avgTimeSubjectChartData} options={{
+                      ...baseChartOptions,
+                      plugins: { ...baseChartOptions.plugins, legend: { display: false } }
+                    }} />
                   </div>
                 ) : (
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No AI breakdown stored yet. Complete more sessions to build detail!</span>
+                  <p className="analytics-empty">Complete exams to see time breakdown</p>
                 )}
               </div>
             )}
-          </div>
-        );
-      })()}
 
-      {/* Past Exam History */}
-      {displayHistory.length > 0 && (
-        <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>
-          <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
-            <TrendingUp size={18} color="var(--accent-primary)" /> Past Exam History
-          </h4>
-          <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
-            {displayHistory.map((h, i) => (
-              <div
-                key={i}
-                className="history-row"
-                onClick={() => loadingExamId === null && onReviewExam && onReviewExam(h)}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)', padding: 'var(--card-padding-sm)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: onReviewExam ? 'pointer' : 'default', transition: 'all 0.2s ease' }}
-              >
-                <div>
-                  <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>
-                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{formatDate(h.created_at)}</span>
+            {/* Topic Mastery */}
+            <div className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2' }}>
+              <h4 className="analytics-chart-title">
+                <BarChart3 size={18} color="var(--success)" /> Topic Breakdown
+              </h4>
+              {topicChartData?.labels?.length ? (
+                <div style={{ height: Math.max(200, topicChartData.labels.length * 32) + 'px' }}>
+                  <Bar data={topicChartData} options={{
+                    ...baseChartOptions,
+                    indexAxis: 'y',
+                    plugins: { ...baseChartOptions.plugins, legend: { display: false }, title: { display: false } },
+                    scales: {
+                      ...baseChartOptions.scales,
+                      x: { ...baseChartOptions.scales.x, min: 0, max: 100 }
+                    }
+                  }} />
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                  <span style={{ color: h.accuracy >= 0.70 ? 'var(--success)' : h.accuracy >= 0.40 ? 'var(--warning)' : 'var(--danger)' }}>{Math.round(h.accuracy * 100)}% Acc</span>
-                  <strong style={{ color: h.rating_change >= 0 ? 'var(--success)' : 'var(--danger)' }}>{h.rating_change >= 0 ? `+${h.rating_change}` : h.rating_change} ({h.new_rating})</strong>
-                  {onReviewExam && (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-secondary)', textDecoration: 'underline', opacity: 0.8 }}>
-                      {loadingExamId === h.exam_id ? 'Loading...' : 'Review'}
-                    </span>
+              ) : (
+                <p className="analytics-empty">Complete exams to build topic mastery data</p>
+              )}
+            </div>
+          </div>
+
+          {/* Strengths & Weaknesses */}
+          {(() => {
+            const filteredS = selectedSubjectFilter === 'All' ? displayStrengths : displayStrengths.filter(s => s.subject === selectedSubjectFilter);
+            const filteredW = selectedSubjectFilter === 'All' ? displayWeaknesses : displayWeaknesses.filter(w => w.subject === selectedSubjectFilter);
+            if (filteredS.length === 0 && filteredW.length === 0) return null;
+            return (
+              <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>
+                <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
+                  <Target size={18} color="var(--success)" /> Strengths &amp; Weaknesses
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: selectedTopicDetail ? '0.75rem' : 0 }}>
+                  {filteredS.length > 0 && (
+                    <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 'var(--radius-md)' }}>
+                      <h5 style={{ color: 'var(--success)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Strengths</h5>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                        {filteredS.map((s, i) => (
+                          <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === s.topic && prev?.type === 'strength' ? null : { topic: s.topic, subject: s.subject, type: 'strength' })} style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--success)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === s.topic && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent', transition: 'all 0.2s' }}>
+                            {s.subject !== 'All' && selectedSubjectFilter === 'All' ? `${s.topic} (${s.subject})` : s.topic}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {filteredW.length > 0 && (
+                    <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 'var(--radius-md)' }}>
+                      <h5 style={{ color: 'var(--danger)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Weaknesses</h5>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                        {filteredW.map((w, i) => (
+                          <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === w.topic && prev?.type === 'weakness' ? null : { topic: w.topic, subject: w.subject, type: 'weakness' })} style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--danger)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === w.topic && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent', transition: 'all 0.2s' }}>
+                            {w.subject !== 'All' && selectedSubjectFilter === 'All' ? `${w.topic} (${w.subject})` : w.topic}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
+                {selectedTopicDetail && (
+                  <div style={{ marginTop: '0.75rem', padding: 'var(--card-padding-sm)', background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)', border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        Topic Detail: <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
+                        {selectedTopicDetail.subject && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.4rem' }}>({selectedTopicDetail.subject})</span>}
+                      </h4>
+                      <button className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }} onClick={() => setSelectedTopicDetail(null)}>Close</button>
+                    </div>
+                    {displayTopicBreakdowns[selectedTopicDetail.topic] ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                        <div>
+                          <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✓ What you are good at:</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{displayTopicBreakdowns[selectedTopicDetail.topic].good_at}</span>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✗ What you are not good at:</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{displayTopicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No AI breakdown stored yet. Complete more sessions to build detail!</span>
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            );
+          })()}
+
+          {/* Past Exam History */}
+          {displayHistory.length > 0 && (
+            <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>
+              <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
+                <TrendingUp size={18} color="var(--accent-primary)" /> History
+              </h4>
+              <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
+                {displayHistory.map((h, i) => (
+                  <div
+                    key={i}
+                    className="history-row"
+                    onClick={() => loadingExamId === null && onReviewExam && onReviewExam(h)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)', padding: 'var(--card-padding-sm)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: onReviewExam ? 'pointer' : 'default', transition: 'all 0.2s ease' }}
+                  >
+                    <div>
+                      <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>
+                      <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{formatDate(h.created_at)}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                      <span style={{ color: h.accuracy >= 0.70 ? 'var(--success)' : h.accuracy >= 0.40 ? 'var(--warning)' : 'var(--danger)' }}>{Math.round(h.accuracy * 100)}% Acc</span>
+                      <strong style={{ color: h.rating_change >= 0 ? 'var(--success)' : 'var(--danger)' }}>{h.rating_change >= 0 ? `+${h.rating_change}` : h.rating_change} ({h.new_rating})</strong>
+                      {onReviewExam && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--accent-secondary)', textDecoration: 'underline', opacity: 0.8 }}>
+                          {loadingExamId === h.exam_id ? 'Loading...' : 'Review'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

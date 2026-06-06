@@ -199,8 +199,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         const tagEntries = Object.entries(tagsToSave).map(([idx, tag]) => {
           const problem = results[parseInt(idx)];
           const isFRQ = problem?.type === 'free_response';
-          const pointsValue = isFRQ 
-            ? (problem?.difficulty || problem?.difficultyAtTime || 1) 
+          const pointsValue = isFRQ
+            ? (problem?.difficulty || problem?.difficultyAtTime || 1)
             : 1;
           return {
             questionIndex: parseInt(idx),
@@ -298,8 +298,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       setLocalResults(prev => {
         const next = [...prev];
         if (next[index]) {
-          next[index] = { 
-            ...next[index], 
+          next[index] = {
+            ...next[index],
             aiExplanation: data.explanation,
             isCorrect: data.shouldRemarkCorrect ? true : next[index].isCorrect
           };
@@ -321,20 +321,20 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
               explanation: data.explanation
             })
           })
-          .then(res => {
-            if (res.ok) return res.json();
-            throw new Error('Failed to update ELO');
-          })
-          .then(resData => {
-            if (resData.newRatingVal !== undefined && resData.newRatingChange !== undefined) {
-              setLocalNewRating(resData.newRatingVal);
-              setLocalRatingChange(resData.newRatingChange);
-            }
-            if (onRefreshData) {
-              onRefreshData();
-            }
-          })
-          .catch(err => console.error('Failed to update remark-correct in database:', err));
+            .then(res => {
+              if (res.ok) return res.json();
+              throw new Error('Failed to update ELO');
+            })
+            .then(resData => {
+              if (resData.newRatingVal !== undefined && resData.newRatingChange !== undefined) {
+                setLocalNewRating(resData.newRatingVal);
+                setLocalRatingChange(resData.newRatingChange);
+              }
+              if (onRefreshData) {
+                onRefreshData();
+              }
+            })
+            .catch(err => console.error('Failed to update remark-correct in database:', err));
         } else {
           // Just save explanation
           fetch('/api/save-explanation', {
@@ -347,12 +347,12 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
               explanation: data.explanation
             })
           })
-          .then(res => {
-            if (res.ok && onRefreshData) {
-              onRefreshData();
-            }
-          })
-          .catch(err => console.error('Failed to save explanation in database:', err));
+            .then(res => {
+              if (res.ok && onRefreshData) {
+                onRefreshData();
+              }
+            })
+            .catch(err => console.error('Failed to save explanation in database:', err));
         }
       }
 
@@ -675,11 +675,11 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       )}
 
       {resultsObj.mistakePatterns && (
-        <div style={{ 
-          padding: 'var(--card-padding)', 
-          background: 'rgba(168, 85, 247, 0.05)', 
-          borderRadius: 'var(--radius-md)', 
-          border: '1px solid rgba(168, 85, 247, 0.2)', 
+        <div style={{
+          padding: 'var(--card-padding)',
+          background: 'rgba(168, 85, 247, 0.05)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid rgba(168, 85, 247, 0.2)',
           marginBottom: '2.5rem',
           boxShadow: '0 4px 20px -2px rgba(168, 85, 247, 0.1)'
         }}>
@@ -709,12 +709,12 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                       const qIntervals = (r.intervals && r.intervals.length > 0)
                         ? r.intervals
                         : (() => {
-                            let start = 0;
-                            for (let j = 0; j < i; j++) {
-                              start += results[j].timeSpent || 0;
-                            }
-                            return [{ start, end: start + (r.timeSpent || 0) }];
-                          })();
+                          let start = 0;
+                          for (let j = 0; j < i; j++) {
+                            start += results[j].timeSpent || 0;
+                          }
+                          return [{ start, end: start + (r.timeSpent || 0) }];
+                        })();
                       return formatIntervals(qIntervals);
                     })()} {isPartial ? (
                       <>
@@ -787,154 +787,154 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                   </div>
                 )}
 
-              {/* Tag buttons */}
-              {user && examId && (
-                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {/* Unsure — available for all problems */}
-                  <button
-                    className={`tag-btn ${tags[i] === 'unsure' ? 'tag-btn-active tag-unsure' : ''}`}
-                    onClick={() => handleTag(i, 'unsure')}
-                  >
-                    <HelpCircle size={14} /> Unsure
-                  </button>
+                {/* Tag buttons */}
+                {user && examId && (
+                  <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {/* Unsure — available for all problems */}
+                    <button
+                      className={`tag-btn ${tags[i] === 'unsure' ? 'tag-btn-active tag-unsure' : ''}`}
+                      onClick={() => handleTag(i, 'unsure')}
+                    >
+                      <HelpCircle size={14} /> Unsure
+                    </button>
 
-                  {/* Silly & Concept — only for incorrect */}
-                  {!r.isCorrect && (
-                    <>
-                      <button
-                        className={`tag-btn ${tags[i] === 'silly' ? 'tag-btn-active tag-silly' : ''}`}
-                        onClick={() => handleTag(i, 'silly')}
-                      >
-                        <TriangleIcon size={14} /> Silly Mistake
-                      </button>
-                      <button
-                        className={`tag-btn ${tags[i] === 'concept' ? 'tag-btn-active tag-concept' : ''}`}
-                        onClick={() => handleTag(i, 'concept')}
-                      >
-                        <BookOpen size={14} /> Concept Problem
-                      </button>
-                    </>
-                  )}
-
-                  {tags[i] && (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: '0.25rem' }}>
-                      Tagged: {tags[i]}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
-                {!activeExplanations[i] ? (
-                  <button 
-                    className="btn btn-outline" 
-                    style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                    onClick={() => handleAskAI(i, r)}
-                  >
-                    <BrainCircuit size={16} color="var(--accent-secondary)" /> Ask AI why this is correct
-                  </button>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {activeExplanations[i].remarkedCorrect && (
-                      <div style={{
-                        background: 'rgba(52, 211, 153, 0.08)',
-                        border: '1px solid var(--success)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '0.75rem 1rem',
-                        color: 'var(--success)',
-                        fontSize: '0.85rem',
-                        fontWeight: '500',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}>
-                        🎉 AI determined your answer was correct! This question has been remarked correct and analytics updated.
-                      </div>
+                    {/* Silly & Concept — only for incorrect */}
+                    {!r.isCorrect && (
+                      <>
+                        <button
+                          className={`tag-btn ${tags[i] === 'silly' ? 'tag-btn-active tag-silly' : ''}`}
+                          onClick={() => handleTag(i, 'silly')}
+                        >
+                          <TriangleIcon size={14} /> Silly Mistake
+                        </button>
+                        <button
+                          className={`tag-btn ${tags[i] === 'concept' ? 'tag-btn-active tag-concept' : ''}`}
+                          onClick={() => handleTag(i, 'concept')}
+                        >
+                          <BookOpen size={14} /> Concept Problem
+                        </button>
+                      </>
                     )}
 
-                    {activeExplanations[i].text && (
-                      <div style={{ 
-                        background: 'var(--bg-tertiary)', 
-                        padding: '1rem', 
-                        borderRadius: 'var(--radius-sm)', 
-                        fontSize: '0.9rem', 
-                        lineHeight: '1.6',
-                        borderLeft: '3px solid var(--accent-secondary)',
-                        color: 'var(--text-secondary)'
-                      }}>
-                        <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
-                          <ChemicalText text={activeExplanations[i].text} theme="dark" defaultWidth={110} defaultHeight={110} />
-                        </p>
-                      </div>
+                    {tags[i] && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: '0.25rem' }}>
+                        Tagged: {tags[i]}
+                      </span>
                     )}
-
-                    {activeExplanations[i].loading && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                        <Loader2 size={16} className="animate-spin" /> Analyzing problem...
-                      </div>
-                    )}
-
-                    {activeExplanations[i].error && (
-                      <div style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
-                        {activeExplanations[i].error}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                      <input 
-                        type="text" 
-                        placeholder="Ask a follow-up or custom question..." 
-                        className="input-field" 
-                        style={{ flex: 1, padding: 'var(--input-padding)', fontSize: '0.85rem' }}
-                        value={activeExplanations[i].query || ''}
-                        onChange={(e) => updateExplanationQuery(i, e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && activeExplanations[i].query?.trim() && handleAskAI(i, r, activeExplanations[i].query)}
-                        disabled={activeExplanations[i].loading}
-                      />
-                      <button 
-                        className="btn btn-primary" 
-                        style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
-                        onClick={() => handleAskAI(i, r, activeExplanations[i].query)}
-                        disabled={activeExplanations[i].loading || !activeExplanations[i].query?.trim()}
-                      >
-                        Ask
-                      </button>
-                    </div>
                   </div>
                 )}
+
+                <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
+                  {!activeExplanations[i] ? (
+                    <button
+                      className="btn btn-outline"
+                      style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                      onClick={() => handleAskAI(i, r)}
+                    >
+                      <BrainCircuit size={16} color="var(--accent-secondary)" /> Ask AI why this is correct
+                    </button>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {activeExplanations[i].remarkedCorrect && (
+                        <div style={{
+                          background: 'rgba(52, 211, 153, 0.08)',
+                          border: '1px solid var(--success)',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '0.75rem 1rem',
+                          color: 'var(--success)',
+                          fontSize: '0.85rem',
+                          fontWeight: '500',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}>
+                          🎉 AI determined your answer was correct! This question has been remarked correct and analytics updated.
+                        </div>
+                      )}
+
+                      {activeExplanations[i].text && (
+                        <div style={{
+                          background: 'var(--bg-tertiary)',
+                          padding: '1rem',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.9rem',
+                          lineHeight: '1.6',
+                          borderLeft: '3px solid var(--accent-secondary)',
+                          color: 'var(--text-secondary)'
+                        }}>
+                          <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
+                            <ChemicalText text={activeExplanations[i].text} theme="dark" defaultWidth={110} defaultHeight={110} />
+                          </p>
+                        </div>
+                      )}
+
+                      {activeExplanations[i].loading && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          <Loader2 size={16} className="animate-spin" /> Analyzing problem...
+                        </div>
+                      )}
+
+                      {activeExplanations[i].error && (
+                        <div style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
+                          {activeExplanations[i].error}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        <input
+                          type="text"
+                          placeholder="Ask a follow-up or custom question..."
+                          className="input-field"
+                          style={{ flex: 1, padding: 'var(--input-padding)', fontSize: '0.85rem' }}
+                          value={activeExplanations[i].query || ''}
+                          onChange={(e) => updateExplanationQuery(i, e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && activeExplanations[i].query?.trim() && handleAskAI(i, r, activeExplanations[i].query)}
+                          disabled={activeExplanations[i].loading}
+                        />
+                        <button
+                          className="btn btn-primary"
+                          style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+                          onClick={() => handleAskAI(i, r, activeExplanations[i].query)}
+                          disabled={activeExplanations[i].loading || !activeExplanations[i].query?.trim()}
+                        >
+                          Ask
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       </div>
 
       {/* Save Tags Bar */}
       {user && examId && (
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
-          padding: 'var(--card-padding-sm)', 
-          background: 'rgba(99, 102, 241, 0.05)', 
-          border: '1px solid rgba(99, 102, 241, 0.15)', 
-          borderRadius: 'var(--radius-md)', 
+          padding: 'var(--card-padding-sm)',
+          background: 'rgba(99, 102, 241, 0.05)',
+          border: '1px solid rgba(99, 102, 241, 0.15)',
+          borderRadius: 'var(--radius-md)',
           marginTop: '2rem',
-          marginBottom: '1.5rem' 
+          marginBottom: '1.5rem'
         }}>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             <strong style={{ color: 'var(--text-primary)' }}>Tag your problems</strong> — mark questions as <em>unsure</em>, <em>silly mistake</em>, or <em>concept problem</em> below (changes save automatically).
           </div>
           <div
             className={`btn btn-outline`}
-            style={{ 
-              padding: '0.4rem 1rem', 
-              fontSize: '0.85rem', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.35rem', 
-              whiteSpace: 'nowrap', 
-              cursor: 'default', 
+            style={{
+              padding: '0.4rem 1rem',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              whiteSpace: 'nowrap',
+              cursor: 'default',
               opacity: 0.85,
               borderColor: tagsSaved ? 'var(--success)' : 'var(--accent-primary)',
               color: tagsSaved ? 'var(--success)' : 'var(--text-primary)',
@@ -951,7 +951,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       {user && history.length > 0 && (
         <div style={{ marginTop: '3rem' }}>
           <h3 style={{ marginBottom: '1rem', fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <TrendingUp size={18} color="var(--accent-primary)" /> Past Exam History
+            <TrendingUp size={18} color="var(--accent-primary)" /> History
           </h3>
           <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
             {history.map((h, i) => (

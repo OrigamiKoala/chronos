@@ -136,31 +136,31 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: savedUser, password: savedPass })
       })
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Auto login failed response');
-      })
-      .then(data => {
-        if (data && !data.status) {
-          setUser(data.user);
-          setStrengths(data.strengths);
-          setWeaknesses(data.weaknesses);
-          setDetailedAnalysis(data.detailedAnalysis || {});
-          setTopicBreakdowns(data.topicBreakdowns || {});
-          setHistory(data.history);
-          setRatings({
-            Math: data.user.math_rating || 100,
-            Physics: data.user.physics_rating || 100,
-            Chemistry: data.user.chemistry_rating || 100
-          });
-          setActiveExam(data.activeExam || null);
-        }
-        setAutoLoginLoading(false);
-      })
-      .catch(err => {
-        console.error("Auto login failed:", err);
-        setAutoLoginLoading(false);
-      });
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error('Auto login failed response');
+        })
+        .then(data => {
+          if (data && !data.status) {
+            setUser(data.user);
+            setStrengths(data.strengths);
+            setWeaknesses(data.weaknesses);
+            setDetailedAnalysis(data.detailedAnalysis || {});
+            setTopicBreakdowns(data.topicBreakdowns || {});
+            setHistory(data.history);
+            setRatings({
+              Math: data.user.math_rating || 100,
+              Physics: data.user.physics_rating || 100,
+              Chemistry: data.user.chemistry_rating || 100
+            });
+            setActiveExam(data.activeExam || null);
+          }
+          setAutoLoginLoading(false);
+        })
+        .catch(err => {
+          console.error("Auto login failed:", err);
+          setAutoLoginLoading(false);
+        });
     }
   }, []);
 
@@ -353,23 +353,23 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: user.user_id, password })
     })
-    .then(res => res.json())
-    .then(loginData => {
-      if (loginData && !loginData.status) {
-        setUser(loginData.user);
-        setStrengths(loginData.strengths || []);
-        setWeaknesses(loginData.weaknesses || []);
-        setDetailedAnalysis(loginData.detailedAnalysis || {});
-        setTopicBreakdowns(loginData.topicBreakdowns || {});
-        setHistory(loginData.history || []);
-        setRatings({
-          Math: loginData.user.math_rating,
-          Physics: loginData.user.physics_rating,
-          Chemistry: loginData.user.chemistry_rating
-        });
-        setActiveExam(loginData.activeExam || null);
-      }
-    }).catch(err => console.error("Failed to refresh user data:", err));
+      .then(res => res.json())
+      .then(loginData => {
+        if (loginData && !loginData.status) {
+          setUser(loginData.user);
+          setStrengths(loginData.strengths || []);
+          setWeaknesses(loginData.weaknesses || []);
+          setDetailedAnalysis(loginData.detailedAnalysis || {});
+          setTopicBreakdowns(loginData.topicBreakdowns || {});
+          setHistory(loginData.history || []);
+          setRatings({
+            Math: loginData.user.math_rating,
+            Physics: loginData.user.physics_rating,
+            Chemistry: loginData.user.chemistry_rating
+          });
+          setActiveExam(loginData.activeExam || null);
+        }
+      }).catch(err => console.error("Failed to refresh user data:", err));
   };
 
   const startExam = (config) => {
@@ -493,23 +493,130 @@ function App() {
         }))
       })
     })
-    .then(res => res.json())
-    .then(submitData => {
-      setActiveExam(null);
-      // Overwrite results, rating, and change with AI-graded values if present
-      if (submitData.results) {
-        setExamResults({
-          results: submitData.results,
-          subject,
-          oldRating: currentRating,
-          newRating: submitData.newRating ?? newRating,
-          ratingChange: submitData.ratingChange ?? ratingChange,
-          mistakePatterns: submitData.mistakePatterns
-        });
-        if (submitData.newRating !== undefined) {
-          setRatings(prev => ({ ...prev, [subject]: submitData.newRating }));
+      .then(res => res.json())
+      .then(submitData => {
+        setActiveExam(null);
+        // Overwrite results, rating, and change with AI-graded values if present
+        if (submitData.results) {
+          setExamResults({
+            results: submitData.results,
+            subject,
+            oldRating: currentRating,
+            newRating: submitData.newRating ?? newRating,
+            ratingChange: submitData.ratingChange ?? ratingChange,
+            mistakePatterns: submitData.mistakePatterns
+          });
+          if (submitData.newRating !== undefined) {
+            setRatings(prev => ({ ...prev, [subject]: submitData.newRating }));
+          }
+        } else {
+          setExamResults({
+            results,
+            subject,
+            oldRating: currentRating,
+            newRating,
+            ratingChange
+          });
         }
-      } else {
+
+        // Inject fresh diagnosis + mistake patterns into analytics immediately
+        if (submitData.detailedAnalysis || submitData.mistakePatterns) {
+          setDetailedAnalysis(prev => ({
+            ...prev,
+            [subject]: submitData.detailedAnalysis || prev[subject]
+          }));
+
+          if (!submitData.results) {
+            setExamResults(prev => prev ? {
+              ...prev,
+              mistakePatterns: submitData.mistakePatterns || prev.mistakePatterns
+            } : prev);
+          }
+        }
+
+        // Then re-login to refresh all state (history, strengths, weaknesses, etc.) if logged in
+        if (user) {
+          const password = localStorage.getItem('chronos_logged_password') || '';
+          fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user.user_id, password })
+          })
+            .then(res2 => res2.json())
+            .then(data => {
+              // Instantly populate the latest state in case background refresh lags
+              setUser(data.user);
+              setStrengths(data.strengths);
+              setWeaknesses(data.weaknesses);
+              setDetailedAnalysis(data.detailedAnalysis || {});
+              setTopicBreakdowns(data.topicBreakdowns || {});
+              setHistory(data.history);
+              setRatings({
+                Math: data.user.math_rating || 100,
+                Physics: data.user.physics_rating || 100,
+                Chemistry: data.user.chemistry_rating || 100
+              });
+              setActiveExam(null);
+              setCurrentScreen('analytics');
+              setGradingLoading(false);
+            })
+            .catch((err) => {
+              console.error("Failed to fetch fresh user data post-submit:", err);
+              setCurrentScreen('analytics');
+              setGradingLoading(false);
+            });
+        } else {
+          // Guest history item is already pre-logged immediately before fetch. Let's just update the stored ratings if the AI modified it
+          if (submitData.ratingChange !== undefined || submitData.newRating !== undefined) {
+            const guestHistory = JSON.parse(localStorage.getItem('chronos_guest_history') || '[]');
+            const target = guestHistory.find(h => h.exam_id === examIdStr);
+            if (target) {
+              target.accuracy = submitData.accuracy ?? target.accuracy;
+              target.rating_change = submitData.ratingChange ?? target.rating_change;
+              target.new_rating = submitData.newRating ?? target.new_rating;
+              localStorage.setItem('chronos_guest_history', JSON.stringify(guestHistory));
+              setHistory(guestHistory);
+            }
+          }
+
+          if (submitData.results) {
+            const topicStats = {};
+            const localStrengths = [];
+            const localWeaknesses = [];
+
+            for (const r of submitData.results) {
+              const topic = r.topic || 'General';
+              if (!topicStats[topic]) topicStats[topic] = { correct: 0, total: 0 };
+              topicStats[topic].total += 1;
+              if (r.isCorrect) topicStats[topic].correct += 1;
+            }
+
+            for (const [topic, stats] of Object.entries(topicStats)) {
+              const acc = stats.correct / stats.total;
+              if (acc >= 0.7) {
+                localStrengths.push(topic);
+              } else if (acc < 0.6) {
+                localWeaknesses.push(topic);
+              }
+            }
+
+            const guestStrengths = Array.from(new Set([...strengths.map(s => typeof s === 'object' ? s.topic : s), ...localStrengths])).map(topic => ({ subject, topic }));
+            const guestWeaknesses = Array.from(new Set([...weaknesses.map(w => typeof w === 'object' ? w.topic : w), ...localWeaknesses])).map(topic => ({ subject, topic }));
+
+            setStrengths(guestStrengths);
+            setWeaknesses(guestWeaknesses);
+
+            localStorage.setItem('chronos_guest_strengths', JSON.stringify(guestStrengths));
+            localStorage.setItem('chronos_guest_weaknesses', JSON.stringify(guestWeaknesses));
+          }
+
+          setCurrentScreen('analytics');
+          setGradingLoading(false);
+        }
+      })
+      .catch(err => {
+        console.error("Error submitting exam:", err);
+        setActiveExam(null);
         setExamResults({
           results,
           subject,
@@ -517,116 +624,9 @@ function App() {
           newRating,
           ratingChange
         });
-      }
-
-      // Inject fresh diagnosis + mistake patterns into analytics immediately
-      if (submitData.detailedAnalysis || submitData.mistakePatterns) {
-        setDetailedAnalysis(prev => ({
-          ...prev,
-          [subject]: submitData.detailedAnalysis || prev[subject]
-        }));
-        
-        if (!submitData.results) {
-          setExamResults(prev => prev ? {
-            ...prev,
-            mistakePatterns: submitData.mistakePatterns || prev.mistakePatterns
-          } : prev);
-        }
-      }
-      
-      // Then re-login to refresh all state (history, strengths, weaknesses, etc.) if logged in
-      if (user) {
-        const password = localStorage.getItem('chronos_logged_password') || '';
-        fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: user.user_id, password })
-        })
-        .then(res2 => res2.json())
-        .then(data => {
-          // Instantly populate the latest state in case background refresh lags
-          setUser(data.user);
-          setStrengths(data.strengths);
-          setWeaknesses(data.weaknesses);
-          setDetailedAnalysis(data.detailedAnalysis || {});
-          setTopicBreakdowns(data.topicBreakdowns || {});
-          setHistory(data.history);
-          setRatings({
-            Math: data.user.math_rating || 100,
-            Physics: data.user.physics_rating || 100,
-            Chemistry: data.user.chemistry_rating || 100
-          });
-          setActiveExam(null);
-          setCurrentScreen('analytics');
-          setGradingLoading(false);
-        })
-        .catch((err) => {
-          console.error("Failed to fetch fresh user data post-submit:", err);
-          setCurrentScreen('analytics');
-          setGradingLoading(false);
-        });
-      } else {
-        // Guest history item is already pre-logged immediately before fetch. Let's just update the stored ratings if the AI modified it
-        if (submitData.ratingChange !== undefined || submitData.newRating !== undefined) {
-          const guestHistory = JSON.parse(localStorage.getItem('chronos_guest_history') || '[]');
-          const target = guestHistory.find(h => h.exam_id === examIdStr);
-          if (target) {
-            target.accuracy = submitData.accuracy ?? target.accuracy;
-            target.rating_change = submitData.ratingChange ?? target.rating_change;
-            target.new_rating = submitData.newRating ?? target.new_rating;
-            localStorage.setItem('chronos_guest_history', JSON.stringify(guestHistory));
-            setHistory(guestHistory);
-          }
-        }
-
-        if (submitData.results) {
-          const topicStats = {};
-          const localStrengths = [];
-          const localWeaknesses = [];
-          
-          for (const r of submitData.results) {
-            const topic = r.topic || 'General';
-            if (!topicStats[topic]) topicStats[topic] = { correct: 0, total: 0 };
-            topicStats[topic].total += 1;
-            if (r.isCorrect) topicStats[topic].correct += 1;
-          }
-          
-          for (const [topic, stats] of Object.entries(topicStats)) {
-            const acc = stats.correct / stats.total;
-            if (acc >= 0.7) {
-              localStrengths.push(topic);
-            } else if (acc < 0.6) {
-              localWeaknesses.push(topic);
-            }
-          }
-          
-          const guestStrengths = Array.from(new Set([...strengths.map(s => typeof s === 'object' ? s.topic : s), ...localStrengths])).map(topic => ({ subject, topic }));
-          const guestWeaknesses = Array.from(new Set([...weaknesses.map(w => typeof w === 'object' ? w.topic : w), ...localWeaknesses])).map(topic => ({ subject, topic }));
-          
-          setStrengths(guestStrengths);
-          setWeaknesses(guestWeaknesses);
-          
-          localStorage.setItem('chronos_guest_strengths', JSON.stringify(guestStrengths));
-          localStorage.setItem('chronos_guest_weaknesses', JSON.stringify(guestWeaknesses));
-        }
-
         setCurrentScreen('analytics');
         setGradingLoading(false);
-      }
-    })
-    .catch(err => {
-      console.error("Error submitting exam:", err);
-      setActiveExam(null);
-      setExamResults({
-        results,
-        subject,
-        oldRating: currentRating,
-        newRating,
-        ratingChange
       });
-      setCurrentScreen('analytics');
-      setGradingLoading(false);
-    });
   };
 
   const reviewPastExam = async (h) => {
@@ -674,8 +674,8 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--header-padding)' }}>
-        <div 
-          className="logo text-gradient" 
+        <div
+          className="logo text-gradient"
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
           onClick={restart}
         >
@@ -685,15 +685,15 @@ function App() {
         <div>
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button 
-                className={`btn ${currentScreen === 'dashboard' ? 'btn-primary' : 'btn-outline'}`} 
-                style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }} 
+              <button
+                className={`btn ${currentScreen === 'dashboard' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                 onClick={() => setCurrentScreen(currentScreen === 'dashboard' ? 'setup' : 'dashboard')}
               >
                 <BarChart3 size={16} /> Analytics
               </button>
               <div style={{ position: 'relative' }}>
-                <button 
+                <button
                   className="btn btn-outline"
                   style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
@@ -732,8 +732,8 @@ function App() {
                     gap: '0.25rem'
                   }}>
                     {(user.user_role === 'teacher' || user.user_role === 'admin') && (
-                      <button 
-                        className="btn btn-outline" 
+                      <button
+                        className="btn btn-outline"
                         style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
                         onClick={() => {
                           navigateTo('/teacher');
@@ -744,8 +744,8 @@ function App() {
                       </button>
                     )}
                     {user.user_role === 'admin' && (
-                      <button 
-                        className="btn btn-outline" 
+                      <button
+                        className="btn btn-outline"
                         style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
                         onClick={() => {
                           navigateTo('/admin');
@@ -756,8 +756,8 @@ function App() {
                       </button>
                     )}
                     {user.user_role === 'admin' && (
-                      <button 
-                        className="btn btn-outline" 
+                      <button
+                        className="btn btn-outline"
                         style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
                         onClick={() => {
                           setProfileJoinCode(user.user_organization === 'Rancho MATHCOUNTS' ? 'RanchoMC' : '');
@@ -766,11 +766,11 @@ function App() {
                           setShowUserDropdown(false);
                         }}
                       >
-                        <Settings size={14} /> Profile Settings
+                        <Settings size={14} /> Settings
                       </button>
                     )}
-                    <button 
-                      className="btn btn-outline" 
+                    <button
+                      className="btn btn-outline"
                       style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--danger)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
                       onClick={() => {
                         handleLogout();
@@ -784,9 +784,9 @@ function App() {
               </div>
             </div>
           ) : (
-            <button 
-              className="btn btn-primary" 
-              style={{ padding: '0.4rem 1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} 
+            <button
+              className="btn btn-primary"
+              style={{ padding: '0.4rem 1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
               onClick={() => !autoLoginLoading && setShowLoginModal(true)}
               disabled={autoLoginLoading}
             >
@@ -814,240 +814,240 @@ function App() {
         ) : (
           <>
             {currentScreen === 'setup' && (
-          <div className={`setup-grid ${user ? 'two-cols' : ''}`}>
-            <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} user={user} />
-            {user && (
-              <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
-                <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Award size={24} /> {user.user_id}'s {selectedSubject} Analytics Dashboard
-                </h3>
-                
-                {activeExam && (
-                  <div style={{
-                    background: 'rgba(99, 102, 241, 0.08)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '1rem',
-                    marginBottom: '1.5rem',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    boxSizing: 'border-box'
-                  }}>
-                    <div>
-                      <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600' }}>In-Progress Exam Found</h4>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {activeExam.subject} • {activeExam.config.numQuestions} Qs • Started {new Date(activeExam.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <button 
-                      className="btn btn-primary"
-                      style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
-                      onClick={handleResumeExam}
-                    >
-                      Resume Exam
-                    </button>
-                  </div>
-                )}
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
-                    <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Strengths</h4>
-                    {filteredStrengths.length > 0 ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                        {filteredStrengths.map((s, i) => (
-                          <span 
-                            key={i} 
-                            style={{ 
-                              background: 'rgba(74, 222, 128, 0.1)', 
-                              color: 'var(--success)', 
-                              padding: '0.25rem 0.6rem', 
-                              borderRadius: '4px', 
-                              fontSize: '0.75rem',
-                              cursor: 'pointer',
-                              border: selectedTopicDetail?.topic === s && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent',
-                              transition: 'all 0.2s ease',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => setSelectedTopicDetail(prev => prev?.topic === s && prev?.type === 'strength' ? null : { topic: s, type: 'strength' })}
-                          >
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal strengths!</span>
-                    )}
-                  </div>
-                  <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-sm)' }}>
-                    <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Weaknesses</h4>
-                    {filteredWeaknesses.length > 0 ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                        {filteredWeaknesses.map((w, i) => (
-                          <span 
-                            key={i} 
-                            style={{ 
-                              background: 'rgba(248, 113, 113, 0.1)', 
-                              color: 'var(--danger)', 
-                              padding: '0.25rem 0.6rem', 
-                              borderRadius: '4px', 
-                              fontSize: '0.75rem',
-                              cursor: 'pointer',
-                              border: selectedTopicDetail?.topic === w && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent',
-                              transition: 'all 0.2s ease',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => setSelectedTopicDetail(prev => prev?.topic === w && prev?.type === 'weakness' ? null : { topic: w, type: 'weakness' })}
-                          >
-                            {w}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal weaknesses!</span>
-                    )}
-                  </div>
-                </div>
+              <div className={`setup-grid ${user ? 'two-cols' : ''}`}>
+                <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} user={user} />
+                {user && (
+                  <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+                    <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Award size={24} /> {user.user_id}'s {selectedSubject} Analytics Dashboard
+                    </h3>
 
-                {selectedTopicDetail && (
-                  <div style={{ 
-                    marginBottom: '1.5rem', 
-                    padding: 'var(--card-padding-sm)', 
-                    background: selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.03)' : 'rgba(248, 113, 113, 0.03)', 
-                    border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)'}`, 
-                    borderRadius: 'var(--radius-md)',
-                    animation: 'fade-in 0.3s ease'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                      <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>
-                        Topic Detail: <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
-                      </h4>
-                      <button 
-                        className="btn btn-outline" 
-                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }} 
-                        onClick={() => setSelectedTopicDetail(null)}
-                      >
-                        Close
-                      </button>
-                    </div>
-                    {topicBreakdowns[selectedTopicDetail.topic] ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                    {activeExam && (
+                      <div style={{
+                        background: 'rgba(99, 102, 241, 0.08)',
+                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '1rem',
+                        marginBottom: '1.5rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        boxSizing: 'border-box'
+                      }}>
                         <div>
-                          <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✓ What you are good at:</span>
-                          <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].good_at}</span>
+                          <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600' }}>In-Progress Exam Found</h4>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            {activeExam.subject} • {activeExam.config.numQuestions} Qs • Started {new Date(activeExam.created_at).toLocaleDateString()}
+                          </span>
                         </div>
-                        <div>
-                          <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✗ What you are not good at:</span>
-                          <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        No specific AI-breakdown stored yet for this topic. Complete more sessions to analyze details!
-                      </span>
-                    )}
-                  </div>
-                )}
-
-
-
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                  <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem', color: 'var(--text-primary)', flexShrink: 0 }}>Past Exam History (Last 25)</h4>
-                  {history.length > 0 ? (
-                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
-                      {history.map((h, i) => (
-                        <div 
-                          key={i} 
-                          style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center', 
-                            background: 'var(--bg-tertiary)', 
-                            padding: '0.75rem', 
-                            borderRadius: 'var(--radius-sm)', 
-                            border: '1px solid rgba(255,255,255,0.05)', 
-                            fontSize: '0.85rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                          }}
-                          className="history-row"
-                          onClick={() => loadingExamId === null && reviewPastExam(h)}
+                        <button
+                          className="btn btn-primary"
+                          style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+                          onClick={handleResumeExam}
                         >
-                          <div>
-                            <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>
-                            <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{formatDate(h.created_at)}</span>
+                          Resume Exam
+                        </button>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
+                        <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Strengths</h4>
+                        {filteredStrengths.length > 0 ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                            {filteredStrengths.map((s, i) => (
+                              <span
+                                key={i}
+                                style={{
+                                  background: 'rgba(74, 222, 128, 0.1)',
+                                  color: 'var(--success)',
+                                  padding: '0.25rem 0.6rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer',
+                                  border: selectedTopicDetail?.topic === s && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent',
+                                  transition: 'all 0.2s ease',
+                                  userSelect: 'none'
+                                }}
+                                onClick={() => setSelectedTopicDetail(prev => prev?.topic === s && prev?.type === 'strength' ? null : { topic: s, type: 'strength' })}
+                              >
+                                {s}
+                              </span>
+                            ))}
                           </div>
-                          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            <span style={{ color: h.accuracy >= 0.70 ? 'var(--success)' : h.accuracy >= 0.40 ? 'var(--warning)' : 'var(--danger)' }}>{Math.round(h.accuracy * 100)}% Acc</span>
-                            <strong style={{ color: h.rating_change >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                              {h.rating_change >= 0 ? `+${h.rating_change}` : h.rating_change} ({h.new_rating})
-                            </strong>
-                            <span style={{ 
-                              fontSize: '0.75rem', 
-                              color: 'var(--accent-secondary)', 
-                              textDecoration: 'underline',
-                              marginLeft: '0.5rem',
-                              opacity: 0.8
-                            }}>
-                              {loadingExamId === h.exam_id ? 'Loading...' : 'Review'}
-                            </span>
+                        ) : (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal strengths!</span>
+                        )}
+                      </div>
+                      <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-sm)' }}>
+                        <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Weaknesses</h4>
+                        {filteredWeaknesses.length > 0 ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                            {filteredWeaknesses.map((w, i) => (
+                              <span
+                                key={i}
+                                style={{
+                                  background: 'rgba(248, 113, 113, 0.1)',
+                                  color: 'var(--danger)',
+                                  padding: '0.25rem 0.6rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer',
+                                  border: selectedTopicDetail?.topic === w && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent',
+                                  transition: 'all 0.2s ease',
+                                  userSelect: 'none'
+                                }}
+                                onClick={() => setSelectedTopicDetail(prev => prev?.topic === w && prev?.type === 'weakness' ? null : { topic: w, type: 'weakness' })}
+                              >
+                                {w}
+                              </span>
+                            ))}
                           </div>
-                        </div>
-                      ))}
+                        ) : (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal weaknesses!</span>
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No tests taken yet. Start a session to build your history!</p>
-                  )}
-                </div>
+
+                    {selectedTopicDetail && (
+                      <div style={{
+                        marginBottom: '1.5rem',
+                        padding: 'var(--card-padding-sm)',
+                        background: selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.03)' : 'rgba(248, 113, 113, 0.03)',
+                        border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)'}`,
+                        borderRadius: 'var(--radius-md)',
+                        animation: 'fade-in 0.3s ease'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                          <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>
+                            Topic Detail: <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
+                          </h4>
+                          <button
+                            className="btn btn-outline"
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }}
+                            onClick={() => setSelectedTopicDetail(null)}
+                          >
+                            Close
+                          </button>
+                        </div>
+                        {topicBreakdowns[selectedTopicDetail.topic] ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                            <div>
+                              <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✓ What you are good at:</span>
+                              <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].good_at}</span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✗ What you are not good at:</span>
+                              <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            No specific AI-breakdown stored yet for this topic. Complete more sessions to analyze details!
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+
+
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                      <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem', color: 'var(--text-primary)', flexShrink: 0 }}>Past Exam History (Last 25)</h4>
+                      {history.length > 0 ? (
+                        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
+                          {history.map((h, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: 'var(--bg-tertiary)',
+                                padding: '0.75rem',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                              }}
+                              className="history-row"
+                              onClick={() => loadingExamId === null && reviewPastExam(h)}
+                            >
+                              <div>
+                                <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>
+                                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{formatDate(h.created_at)}</span>
+                              </div>
+                              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <span style={{ color: h.accuracy >= 0.70 ? 'var(--success)' : h.accuracy >= 0.40 ? 'var(--warning)' : 'var(--danger)' }}>{Math.round(h.accuracy * 100)}% Acc</span>
+                                <strong style={{ color: h.rating_change >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                                  {h.rating_change >= 0 ? `+${h.rating_change}` : h.rating_change} ({h.new_rating})
+                                </strong>
+                                <span style={{
+                                  fontSize: '0.75rem',
+                                  color: 'var(--accent-secondary)',
+                                  textDecoration: 'underline',
+                                  marginLeft: '0.5rem',
+                                  opacity: 0.8
+                                }}>
+                                  {loadingExamId === h.exam_id ? 'Loading...' : 'Review'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No tests taken yet. Start a session to build your history!</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
-        {currentScreen === 'exam' && examConfig && (
-          <ExamScreen 
-            config={examConfig} 
-            onFinish={finishExam} 
-            resumeState={activeExam && activeExam.exam_id === examConfig?.examId ? activeExam : null} 
-          />
-        )}
-        {currentScreen === 'analytics' && examResults && (
-          <AnalyticsScreen
-            key={currentExamId}
-            results={examResults}
-            onRestart={restart}
-            user={user}
-            examId={currentExamId}
-            strengths={strengths}
-            weaknesses={weaknesses}
-            detailedAnalysis={detailedAnalysis}
-            topicBreakdowns={topicBreakdowns}
-            history={history}
-            loadingExamId={loadingExamId}
-            onReviewExam={reviewPastExam}
-            formatDate={formatDate}
-            onRefreshData={refreshUserData}
-          />
-        )}
-        {currentScreen === 'dashboard' && user && (
-          <AnalyticsDashboard
-            user={user}
-            onBack={restart}
-            strengths={strengths}
-            weaknesses={weaknesses}
-            topicBreakdowns={topicBreakdowns}
-            detailedAnalysis={detailedAnalysis}
-            history={history}
-            loadingExamId={loadingExamId}
-            onReviewExam={reviewPastExam}
-            formatDate={formatDate}
-          />
-        )}
-        {currentScreen === 'teacher' && (
-          <TeacherScreen user={user} onBack={restart} />
-        )}
-        {currentScreen === 'admin' && (
-          <AdminScreen user={user} onBack={restart} />
-        )}
+            {currentScreen === 'exam' && examConfig && (
+              <ExamScreen
+                config={examConfig}
+                onFinish={finishExam}
+                resumeState={activeExam && activeExam.exam_id === examConfig?.examId ? activeExam : null}
+              />
+            )}
+            {currentScreen === 'analytics' && examResults && (
+              <AnalyticsScreen
+                key={currentExamId}
+                results={examResults}
+                onRestart={restart}
+                user={user}
+                examId={currentExamId}
+                strengths={strengths}
+                weaknesses={weaknesses}
+                detailedAnalysis={detailedAnalysis}
+                topicBreakdowns={topicBreakdowns}
+                history={history}
+                loadingExamId={loadingExamId}
+                onReviewExam={reviewPastExam}
+                formatDate={formatDate}
+                onRefreshData={refreshUserData}
+              />
+            )}
+            {currentScreen === 'dashboard' && user && (
+              <AnalyticsDashboard
+                user={user}
+                onBack={restart}
+                strengths={strengths}
+                weaknesses={weaknesses}
+                topicBreakdowns={topicBreakdowns}
+                detailedAnalysis={detailedAnalysis}
+                history={history}
+                loadingExamId={loadingExamId}
+                onReviewExam={reviewPastExam}
+                formatDate={formatDate}
+              />
+            )}
+            {currentScreen === 'teacher' && (
+              <TeacherScreen user={user} onBack={restart} />
+            )}
+            {currentScreen === 'admin' && (
+              <AdminScreen user={user} onBack={restart} />
+            )}
           </>
         )}
       </main>
@@ -1062,10 +1062,10 @@ function App() {
               You are currently playing as a <strong>Guest</strong>. Sign in or register an account to save your exam history, ELO rankings, and get access to detailed AI weakness diagnostics across sessions!
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <button 
-                type="button" 
-                className="btn btn-primary" 
-                style={{ width: '100%', padding: '0.75rem' }} 
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '0.75rem' }}
                 onClick={() => {
                   setShowConversionPrompt(false);
                   setShowLoginModal(true);
@@ -1073,10 +1073,10 @@ function App() {
               >
                 Sign In / Create Account
               </button>
-              <button 
-                type="button" 
-                className="btn btn-outline" 
-                style={{ width: '100%', padding: '0.75rem' }} 
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ width: '100%', padding: '0.75rem' }}
                 onClick={() => {
                   setShowConversionPrompt(false);
                   if (pendingConfig) {
@@ -1096,7 +1096,7 @@ function App() {
       {showLoginModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '420px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            
+
             {loginModalMode === 'login' && (
               <>
                 <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
@@ -1124,9 +1124,9 @@ function App() {
                     required
                     style={{ textAlign: 'center' }}
                   />
-                  <button 
-                    type="button" 
-                    className="btn btn-link" 
+                  <button
+                    type="button"
+                    className="btn btn-link"
                     style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', alignSelf: 'flex-end', padding: 0, border: 'none', background: 'none', cursor: 'pointer', opacity: 0.8 }}
                     onClick={() => {
                       setLoginError('');
