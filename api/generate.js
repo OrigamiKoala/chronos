@@ -202,24 +202,24 @@ Difficulty scale: 1=MATHCOUNTS, 3=AMC 10, 5=AMC 12 Q20, 8=USAJMO, 10=hardest IMO
 {
   "id": "math_ex1",
   "topic": "Geometry",
-  "question": "A point $P$ is chosen at random inside square $ABCD$. The probability that $\overline{AP}$ is neither the shortest nor the longest side of $\triangle APB$ can be written as $\frac{a + b \pi - c \sqrt{d}}{e}$, where $a, b, c, d,$ and $e$ are positive integers, $\text{gcd}(a, b, c, e) = 1$, and $d$ is not divisible by the square of a prime. What is $a+b+c+d+e$?",
+  "question": "A point $P$ is chosen at random inside square $ABCD$. The probability that $\\\\overline{AP}$ is neither the shortest nor the longest side of $\\\\triangle APB$ can be written as $\\\\frac{a + b \\\\pi - c \\\\sqrt{d}}{e}$, where $a, b, c, d,$ and $e$ are positive integers, $\\\\text{gcd}(a, b, c, e) = 1$, and $d$ is not divisible by the square of a prime. What is $a+b+c+d+e$?",
   "type": "multiple_choice",
   "options": ["$25$", "$26$", "$27$", "$28$", "29"],
   "answer": "A",
   "difficulty": 5,
   "detailedSolution": "Say WLOG that $AB$ is the top side of the square, and the square is of side length 1. Let us say that the midpoint of $AB$ is $M$, while the midpoint of $CD$ is $Q$. Drawing a vertical line to split the square in half, we notice that if $P$ is to the left of the line, $AP < BP$, and if P is to the right of the line, $AP > BP$. Also, drawing a quarter circle of radius 1 from point $A$, we can split the area into points P for which $AP < AB$ and $AP > AB$. Because of our constraints, there are 2 cases:
 
-Case 1: $AB > AP > BP$ In this case, $P$ will be to the right of the vertical line and inside of the quarter circle. Let us say that the intersection of the vertical line and quarter circle is $N$. The distance from $N$ to $AD$ is 1/2, and we can say that $\angle BAN$ is $60^\circ$. Sector $BAN$ of circle $A$ would therefore have an area of $\frac{\pi}{6}$. Because $\triangle AMN$ is a 30-60-90 triangle, the area of $AMN$ is $\frac{\sqrt{3}}{8}$. The probability of case 1 happening should then be $\frac{\pi}{6}-\frac{\sqrt{3}}{8}$.
+Case 1: $AB > AP > BP$ In this case, $P$ will be to the right of the vertical line and inside of the quarter circle. Let us say that the intersection of the vertical line and quarter circle is $N$. The distance from $N$ to $AD$ is 1/2, and we can say that $\\\\angle BAN$ is $60^\\circ$. Sector $BAN$ of circle $A$ would therefore have an area of $\\\\frac{\\\\pi}{6}$. Because $\\\\triangle AMN$ is a 30-60-90 triangle, the area of $AMN$ is $\\\\frac{\\\\sqrt{3}}{8}$. The probability of case 1 happening should then be $\\\\frac{\\\\pi}{6}-\\\\frac{\\\\sqrt{3}}{8}$.
 
-Case 2: $AB < AP < BP$ In this case, $P$ will be to the left of the vertical line and outside of the quarter circle. Knowing that the quarter circle's area is $\frac{\pi}{4}$, we can subtract the probability of Case 1 happening to get the chance that $P$ is on the left of the vertical line and in circle $A$. Doing this would give $\frac{\pi}{12}+\frac{\sqrt{3}}{8}$. To get the probability of Case 2 happening, we can subtract this from the area of rectangle $AMQD$. This would give us $\frac{1}{2}-\frac{\pi}{12}-\frac{\sqrt{3}}{8}$.
+Case 2: $AB < AP < BP$ In this case, $P$ will be to the left of the vertical line and outside of the quarter circle. Knowing that the quarter circle's area is $\\\\frac{\\\\pi}{4}$, we can subtract the probability of Case 1 happening to get the chance that $P$ is on the left of the vertical line and in circle $A$. Doing this would give $\\\\frac{\\\\pi}{12}+\\\\\frac{\\\\sqrt{3}}{8}$. To get the probability of Case 2 happening, we can subtract this from the area of rectangle $AMQD$. This would give us $\\\\frac{1}{2}-\\\\frac{\\\\pi}{12}-\\\\frac{\\\\sqrt{3}}{8}$.
 
-Adding both cases, we get the total probability as $\frac{1}{2}+\frac{\pi}{12}-\frac{\sqrt{3}}{4} = \frac{6+\pi-3\sqrt{3}}{12}$. Formatting this gives us $6+1+3+3+12 = \boxed{\textbf{(A) } 25}$."
+Adding both cases, we get the total probability as $\\\\frac{1}{2}+\\\\frac{\\\\pi}{12}-\\\\frac{\\\\sqrt{3}}{4} = \\\\frac{6+\\\\pi-3\\\\sqrt{3}}{12}$. Formatting this gives us $6+1+3+3+12 = \\\\boxed{\\\\textbf{(A) } 25}$."
 }
 
 {
   "id": "math_ex2",
   "topic": "Combinatorics, Algebra, Number Theory",
-  "question": "For each nonnegative integer $r$ less than $502$, define\[S_r=\sum_{m\geq 0}\binom{10,000}{502m+r},\]where $\binom{10,000}{n}$ is defined to be $0$ when $n>10,000$. That is, $S_r$ is the sum of all the binomial coefficients of the form $\binom{10,000}{k}$ for which $0\leq k\leq 10,000$ and $k-r$ is a multiple of $502$. Find the number of integers in the list $S_0,S_1,S_2,\dots,S_{501}$ that are multiples of the prime number $503$.",
+  "question": "For each nonnegative integer $r$ less than $502$, define\\\\[S_r=\\\\sum_{m\\\\geq 0}\\\\binom{10,000}{502m+r},\\\\]where $\\\\binom{10,000}{n}$ is defined to be $0$ when $n>10,000$. That is, $S_r$ is the sum of all the binomial coefficients of the form $\\\\binom{10,000}{k}$ for which $0\\\\leq k\\\\leq 10,000$ and $k-r$ is a multiple of $502$. Find the number of integers in the list $S_0,S_1,S_2,\\\\dots,S_{501}$ that are multiples of the prime number $503$.",
   "type": "short_answer",
   "answer": "39",
   "difficulty": 7,
@@ -231,30 +231,27 @@ Adding both cases, we get the total probability as $\frac{1}{2}+\frac{\pi}{12}-\
   "topic": "Combinatorics",
   "question": "The integers from $1$ through $25$ are arbitrarily separated into five groups of $5$ numbers each. The median of each group is identified. Let $M$ equal the median of the five medians. What is the least possible value of $M$?
 
-$\textbf{(A) }9 \qquad \textbf{(B) }10 \qquad \textbf{(C) }12 \qquad \textbf{(D) }13 \qquad \textbf{(E) }14$
+$\\\\textbf{(A) }9 \\\\qquad \\\\textbf{(B) }10 \\\\qquad \\\\textbf{(C) }12 \\\\qquad \\\\textbf{(D) }13 \\\\qquad \\\\textbf{(E) }14$
 
 ",
   "type": "multiple_choice",
   "options": ["$9$", "$10$", "$12$", "$13$", "14"],
   "answer": "A",
   "difficulty": 3,
-  "detailedSolution": "If a group has median $m$, then we must have that $3$ of the numbers in that group are $\leq m$. Since there are 5 different groups, $3$ groups must have a median $\leq M$, so there are at least $3\cdot3=9$ numbers that are $\leq M$. Since there are at least $9$ numbers that are $\leq M$, we have $M$ at minimum $\boxed{\textbf{(A) }9}.$"
+  "detailedSolution": "If a group has median $m$, then we must have that $3$ of the numbers in that group are $\\\\leq m$. Since there are 5 different groups, $3$ groups must have a median $\\\\leq M$, so there are at least $3\\\\cdot3=9$ numbers that are $\\\\leq M$. Since there are at least $9$ numbers that are $\\\\leq M$, we have $M$ at minimum $\\\\boxed{\\\\textbf{(A) }9}.$"
 }
 
 {
   "id": "math_ex4",
   "topic": "Number Theory",
-  "question": "Let $a$ and $b$ be positive integers such that $ab + 1$ divides $a^{2} + b^{2}$. Show that $\frac {a^{2} + b^{2}}{ab + 1}$ is the square of an integer.",
+  "question": "Let $a$ and $b$ be positive integers such that $ab + 1$ divides $a^{2} + b^{2}$. Show that $\\\\frac {a^{2} + b^{2}}{ab + 1}$ is the square of an integer.",
   "type": "free_response",
   "answer": "",
   "difficulty": 10,
-  "detailedSolution": "Choose integers $a,b,k$ such that $a^2+b^2=k(ab+1)$ Now, for fixed $k$, out of all pairs $(a,b)$ choose the one with the lowest value of $\min(a,b)$. Label $b'=\min(a,b), a'=\max(a,b)$. Thus, $a'^2-kb'a'+b'^2-k=0$ is a quadratic in $a'$. Should there be another root, $c'$, the root would satisfy: $b'c'\leq a'c'=b'^2-k<b'^2\implies c'<b'$ Thus, $c'$ isn't a positive integer (if it were, it would contradict the minimality condition). But $c'=kb'-a'$, so $c'$ is an integer; hence, $c'\leq 0$. In addition, $(a'+1)(c'+1)=a'c'+a'+c'+1=b'^2-k+b'k+1=b'^2+(b'-1)k+1\geq 1$ so that $c'>-1$. We conclude that $c'=0$ so that $b'^2=k$.
+  "detailedSolution": "Choose integers $a,b,k$ such that $a^2+b^2=k(ab+1)$ Now, for fixed $k$, out of all pairs $(a,b)$ choose the one with the lowest value of $\\\\min(a,b)$. Label $b'=\\\\min(a,b), a'=\\\\max(a,b)$. Thus, $a'^2-kb'a'+b'^2-k=0$ is a quadratic in $a'$. Should there be another root, $c'$, the root would satisfy: $b'c'\\\\leq a'c'=b'^2-k<b'^2\\\\implies c'<b'$ Thus, $c'$ isn't a positive integer (if it were, it would contradict the minimality condition). But $c'=kb'-a'$, so $c'$ is an integer; hence, $c'\\\\leq 0$. In addition, $(a'+1)(c'+1)=a'c'+a'+c'+1=b'^2-k+b'k+1=b'^2+(b'-1)k+1\\\\geq 1$ so that $c'>-1$. We conclude that $c'=0$ so that $b'^2=k$.
 
 This construction works whenever there exists a solution $(a,b)$ for a fixed $k$, hence $k$ is always a perfect square."
 }
-
-
-
 `;
     } else if (normSubject === 'physics') {
       constraints = `
@@ -287,23 +284,141 @@ Difficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest I
 
 {
   "id": "phys_ex1",
-  "topic": "Mechanics & Rotational Dynamics",
-  "question": "A uniform solid cylinder of mass $M$ and radius $R$ is on a rough incline at angle $\\\\theta$. A horizontal force $\\\\vec{F}$ is applied to the center, perpendicular to the surface (into the incline). Coefficient of static friction is $\\\\mu_s$. Determine $\\\\theta_{\\\\max}$ for static equilibrium without slipping.",
+  "topic": "Mechanics",
+  "question": "In astronomy, some galactic objects appear to sweep across the sky faster than light speed, $c$. This effect, called superluminal motion, comes purely from geometry and the finite travel time of light, and it has nothing to do with special relativity.
+A jet moves from point $A$ to $B$ at speed $v = \\\\beta c$. The jet emits a pulse of light at $A$, and a second pulse a time \\\\delta t later at $B$. An observer sees these pulses at point $O$. The angle between the jet and the line of sight is \\\\theta$. Assume the angle \\\\phi is small, so the distances from $O$ to points $B$ and $C$ can be treated as equal.
+Find the apparent transverse velocity, $v_T$, along $CB$ as measured by the observer, in terms of \\\\beta and \\\\theta$. Express your answer as \\\\beta_T \\\\equiv \\\\frac{v_T}{c}.
+. <svg width="500" height="200" viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+  <line x1="50" y1="150" x2="450" y2="150" stroke="black" stroke-width="2" /> <line x1="450" y1="150" x2="250" y2="80" stroke="black" stroke-width="2" />  <line x1="50" y1="150" x2="250" y2="80" stroke="black" stroke-dasharray="4" /> <line x1="250" y1="80" x2="250" y2="150" stroke="black" stroke-dasharray="4" /> <circle cx="50" cy="150" r="4" fill="black" /> <circle cx="250" cy="80" r="4" fill="black" />  <circle cx="250" cy="150" r="4" fill="black" /> <circle cx="450" cy="150" r="4" fill="black" /> <text x="40" y="140" font-family="serif" font-style="italic">O</text>
+  <text x="250" y="70" font-family="serif" font-style="italic">B</text>
+  <text x="250" y="170" font-family="serif" font-style="italic">C</text>
+  <text x="450" y="170" font-family="serif" font-style="italic">A</text>
+  
+  <text x="350" y="130" font-family="serif" font-style="italic">θ</text>
+  <text x="350" y="100" font-family="serif" font-style="italic">v</text>
+  <path d="M 420 150 A 30 30 0 0 0 400 120" fill="none" stroke="black" />
+  
+  <text x="90" y="140" font-family="serif" font-style="italic">φ</text>
+  <path d="M 80 150 A 30 30 0 0 0 100 140" fill="none" stroke="black" />
+</svg>
+",
   "type": "multiple_choice",
-  "options": ["$\\\\tan^{-1}\\\\left(\\\\frac{3\\\\mu_s(Mg + F)}{Mg}\\\\right)$", "$\\\\tan^{-1}\\\\left(\\\\frac{3\\\\mu_s(Mg\\\\cos\\\\theta + F)}{Mg}\\\\right)$", "$\\\\tan^{-1}(3\\\\mu_s)$", "$\\\\tan^{-1}\\\\left(\\\\frac{\\\\mu_s(Mg + F)}{Mg}\\\\right)$"],
+  "options": ["$\\\\beta_T = \\\\frac{\\\\beta \\\\sin \\\\theta}{1 - \\\\beta \\\\cos \\\\theta}$",
+
+"$\\\\beta_T = \\\\beta \\\\sin \\\\theta(1 - \\\\beta \\\\cos \\\\theta)$",
+
+"$\\\\beta_T = \\\\frac{\\\\beta \\\\sin \\\\theta}{1 + \\\\beta \\\\cos \\\\theta}$",
+
+"$\\\\beta_T = \\\\frac{\\\\beta \\\\sin \\\\theta}{\\\\sqrt{1 - \\\\beta^2}}$",
+
+"$\\\\beta_T = \\\\beta \\\\tan \\\\theta$"],
   "answer": "A",
   "difficulty": 6,
-  "detailedSolution": "Normal force $N = Mg\\\\cos\\\\theta + F$. For rolling without slipping, friction needed is $f = \\\\frac{1}{3}Mg\\\\sin\\\\theta$ (from combined translational/rotational equations with $I=\\\\frac{1}{2}MR^2$). Setting $f \\\\leq \\\\mu_s N$ and solving at equality gives $\\\\theta_{\\\\max} = \\\\tan^{-1}(3\\\\mu_s(Mg+F)/Mg)$."
+  "detailedSolution": "Let $OB = OC = d$.
+The time interval between the emission of the two pulses is \\\\delta t = t_2 - t_1$.
+The arrival time of the first pulse at $O$ is:
+$$t'_1 = t_1 + \\\\frac{d + v \\\\delta t \\\\cos \\\\theta}{c}$$
+The arrival time of the second pulse at $O$ is:
+$$t'_2 = t_2 + \\\\frac{d}{c}$$
+The observed time interval \\\\delta t' is:
+$$\\\\delta t' = t'_2 - t'_1 = (t_2 - t_1) - \\\\frac{v \\\\delta t \\\\cos \\\\theta}{c} = \\\\delta t \\\\left( 1 - \\\\frac{v}{c} \\\\cos \\\\theta \\\\right) = \\\\delta t (1 - \\\\beta \\\\cos \\\\theta)$$
+The transverse distance covered is $v \\\\delta t \\\\sin \\\\theta$. The apparent transverse velocity is $v_T = \\\\frac{v \\\\delta t \\\\sin \\\\theta}{\\\\delta t'}$.
+Substituting \\\\delta t':
+$$\\\\beta_T = \\\\frac{v_T}{c} = \\\\frac{v \\\\delta t \\\\sin \\\\theta}{c \\\\delta t (1 - \\\\beta \\\\cos \\\\theta)} = \\\\frac{\\\\beta \\\\sin \\\\theta}{1 - \\\\beta \\\\cos \\\\theta}$$
+The correct choice is (A).
+"
 }
 
 {
   "id": "phys_ex2",
-  "topic": "Electromagnetism & Induction",
-  "question": "A thin conducting ring (radius $a$, resistance $R$, self-inductance $L$) is coaxial with a solenoid (radius $b<a$, $n$ turns/length, current $I(t)=I_0 e^{-t/\\\\tau}$). At $t=0$ the ring is released from rest under gravity.\\\\n(a) Derive the induced EMF.\\\\n(b) Write the coupled ODEs for induced current $i(t)$ and velocity $v(t)$.\\\\n(c) For $L \\\\ll R\\\\tau$, find the approximate terminal velocity.",
+  "topic": "Mechanics",
+  "question": "A projectile of total mass $4M$ is launched from the ground at position $x=0$ and time $t=0$. The projectile is launched with an initial speed $v_{0}$ at an angle \\\\theta above the horizontal. When the projectile is at the highest point in its trajectory, it breaks into Pieces Q and R of masses $M$ and $3M$, respectively. The motion of the projectile is described for the following times:
+    - At $t=t_{1}$, immediately after the projectile breaks apart, the two pieces are moving away from each other horizontally.
+    - At $t=t_{2}$, Piece Q reaches the ground at $x=0$ and Piece R reaches the ground at $x=x_{2}$.
+
+Part A: The horizontal and vertical components of a momentum vector are represented by $p_{x}$ and $p_{y}$, respectively. The shaded bars in Figure 2 represent $p_{x}$ and $p_{y}$ of the projectile immediately after $t=0$. On Figure 3, draw shaded bars to represent $p_{x}$ and $p_{y}$ of Pieces Q and R at $t=t_{1}$.
+
+Part B: Derive an expression for $x_{2}$ in terms of $v_{0}$, \\\\theta, and physical constants, as appropriate. Begin your derivation by writing a fundamental physics principle or an equation from the reference information.
+
+Part C: The horizontal component of a velocity vector is represented by $v_{x}$. Figure 4 shows the horizontal component $v_{x,cm}$ of the velocity of the center of mass of the projectile as a function of $t$ during the time interval $0 < t < t_{1}$. On Figure 4, sketch a line or curve to represent $v_{x}$ as a function of $t$ for the time interval $t_{1} < t < t_{2}$ for each of the following:
+    - Piece Q
+    - Piece R
+    - The center of mass of the two-piece system
+Clearly label all lines or curves.
+
+Part D: Consider a case in which the projectile is launched at the same angle and initial speed as initially described. When the projectile breaks into Pieces Q and R, Piece Q falls straight down. In this case, Piece R reaches the ground at $x=x_{new}$. Indicate whether $x_{new}$ is greater than, less than, or equal to $x_{2}$ by writing one of the following:
+    - $x_{new} > x_{2}$
+    - $x_{new} < x_{2}$
+    - $x_{new} = x_{2}$
+Briefly justify your answer either by referencing a feature of the representations you drew in part A or C or by using conceptual reasoning beyond algebraic solutions.
+",
   "type": "free_response",
   "answer": "",
-  "difficulty": 8,
-  "detailedSolution": "(a) Flux $\\\\Phi = \\\\mu_0 n I(t) \\\\pi b^2$. EMF from time-varying current: $\\\\mathcal{E}_1 = \\\\mu_0 n \\\\pi b^2 I_0/\\\\tau \\\\cdot e^{-t/\\\\tau}$. (b) Circuit: $L di/dt + Ri = \\\\mathcal{E}$. Motion: $m dv/dt = mg - F_{drag}$. (c) When $L \\\\ll R\\\\tau$, $i \\\\approx \\\\mathcal{E}/R$. At terminal velocity $mg = F_{drag}$, solve for $v_{term}$."
+  "difficulty": 3,
+  "detailedSolution": "### Part A: Momentum at $t=t_1$
+
+Immediately after the projectile (mass $4M$) reaches its highest point at $t=t_1$, it breaks into Piece Q (mass $M$) and Piece R (mass $3M$).
+
+* **At the highest point ($t=t_1$):** The vertical component of momentum for the complete projectile is $p_y = 0$. The horizontal component is $p_x = (4M)v_x = (4M)v_0 \\\\cos \\\\theta$.
+* **Conservation of Momentum:** Since the explosion is internal, horizontal momentum is conserved:
+
+$$p_{x, \\\\text{initial}} = p_{x, \\\\text{Piece Q}} + p_{x, \\\\text{Piece R}}$$
+
+
+$$4M(v_0 \\\\cos \\\\theta) = p_{x,Q} + p_{x,R}$$
+
+
+* **Vertical Momentum:** Since both pieces are at the same height and start with $v_y = 0$ at $t_1$, both will hit the ground simultaneously. Since the net external vertical force (gravity) acts on both pieces equally, the vertical momentum components at $t_1$ immediately after the break are $p_{y,Q} = 0$ and $p_{y,R} = 0$.
+
+### Part B: Expression for $x_2$
+
+We use the conservation of the center of mass motion. The center of mass of the system continues to follow the parabolic trajectory of the original projectile.
+
+1. **Horizontal position of CM:** The horizontal position of the center of mass at time $t_2$ is:
+
+$$x_{cm} = v_{cm,x} t_2 = (v_0 \\\\cos \\\\theta) t_2$$
+
+
+2. **Total time of flight ($t_2$):** At the highest point ($t_1$), $v_y = 0$. The time to fall from the maximum height $H = \\\\frac{(v_0 \\\\sin \\\\theta)^2}{2g}$ to the ground is $t_{fall} = \\\\sqrt{\\\\frac{2H}{g}} = \\\\frac{v_0 \\\\sin \\\\theta}{g}$.
+The total time $t_2$ is $t_1 + t_{fall} = \\\\frac{v_0 \\\\sin \\\\theta}{g} + \\\\frac{v_0 \\\\sin \\\\theta}{g} = \\\\frac{2v_0 \\\\sin \\\\theta}{g}$.
+3. **Horizontal center of mass at $t_2$:**
+
+$$x_{cm}(t_2) = (v_0 \\\\cos \\\\theta) \\\\left( \\\\frac{2v_0 \\\\sin \\\\theta}{g} \\\\right) = \\\\frac{2v_0^2 \\\\sin \\\\theta \\\\cos \\\\theta}{g}$$
+
+
+4. **Relating to $x_2$:**
+
+$$x_{cm} = \\\\frac{M x_Q + (3M) x_R}{4M}$$
+
+
+
+Given Piece Q lands at $x_Q = 0$:
+
+$$\\\\frac{2v_0^2 \\\\sin \\\\theta \\\\cos \\\\theta}{g} = \\\\frac{M(0) + 3M(x_2)}{4M} = \\\\frac{3}{4} x_2$$
+
+
+$$x_2 = \\\\frac{8}{3} \\\\frac{v_0^2 \\\\sin \\\\theta \\\\cos \\\\theta}{g} = \\\\frac{4v_0^2 \\\\sin(2\\\\theta)}{3g}$$
+
+
+
+### Part C: Horizontal Velocity $v_x$
+
+* **Center of Mass ($v_{x,cm}$):** Since there are no external horizontal forces, the center of mass velocity remains constant: $v_{x,cm} = v_0 \\\\cos \\\\theta$ for all $t$.
+* **Piece Q:** Since it lands at $x=0$ at $t_2$, and it was at $x_{cm}(t_1)$ at $t_1$, it must have a negative horizontal velocity $v_{x,Q} < 0$.
+* **Piece R:** Since $x_{cm}$ is a weighted average and Piece Q is behind the center of mass, Piece R must be in front of the center of mass to maintain $v_{x,cm}$, so $v_{x,R} > v_{x,cm}$.
+
+### Part D: Comparison ($x_{new}$ vs $x_2$)
+
+If Piece Q falls straight down, its horizontal velocity immediately after the break is $v_{x,Q} = 0$.
+To conserve momentum:
+
+
+$$4M(v_0 \\\\cos \\\\theta) = M(0) + 3M(v_{x,R,new})$$
+
+$$v_{x,R,new} = \\\\frac{4}{3} v_0 \\\\cos \\\\theta$$
+
+
+In the original case, $v_{x,R} < \\\\frac{4}{3} v_0 \\\\cos \\\\theta$ (because $v_{x,Q} < 0$). Since $x_R = x_{cm}(t_1) + v_{x,R} t_{fall}$, and $v_{x,R,new}$ is larger, **$x_{new} > x_2$**."
 }
 `;
     } else if (normSubject === 'chemistry') {
