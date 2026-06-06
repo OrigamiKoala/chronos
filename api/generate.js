@@ -547,7 +547,7 @@ All questions generated MUST adhere to these critical design directives:
 4. For each question, generate the question text, taking into account the topic, trap, and difficulty level.
 5. Test-solve each of the questions to ensure they satisfy each of the constraints. Write feedback for each of the problems for how to improve them.
 6. Improve the questions based on the feedback. Fix all questions that do not adhere to the constraints, and ones you can easily solve.
-7. Solve each question. Double check that the answers generated are the only valid solutions. If the answer is not the only valid solution, change the problem, repeating steps 4 and 5.
+7. Solve each question. Double check that the answers generated are the only valid solutions. If the answer is not the only valid solution, change the problem, repeating steps 4 and 5. Explain the trick in the problem. If the trick is not a trap students are likely to fall into, or there is no trick, redo the question (add a trick).
 8. Double check that all constraints and output requirements have been met. If they have not, change the format and/or problem so that all constraints and output requirements are met.
 
 For example, your thought process might look like:
