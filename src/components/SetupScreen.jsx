@@ -84,30 +84,105 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
 
   const handleApplyPreset = (preset) => {
     setSelectedPreset(preset);
-    if (preset === 'math_chapter') {
+    if (preset === 'amc8') {
       setConfig((prev) => {
         const next = {
           ...prev,
-          numQuestions: 40,
-          startingDifficulty: 1,
-          examFormat: ['short_answer'],
+          numQuestions: 25,
+          startingDifficulty: 3,
+          examFormat: ['multiple_choice'],
           timeLimitStyle: 'whole_test',
-          timeLimitWholeTest: 30,
+          timeLimitWholeTest: 40,
         };
         delete next.assignmentId;
         delete next.lessonTitle;
         delete next.lessonDescription;
         return next;
       });
-    } else if (preset === 'math_state') {
+    } else if (preset === 'amc10') {
       setConfig((prev) => {
         const next = {
           ...prev,
-          numQuestions: 40,
+          numQuestions: 25,
+          startingDifficulty: 4,
+          examFormat: ['multiple_choice'],
+          timeLimitStyle: 'whole_test',
+          timeLimitWholeTest: 75,
+        };
+        delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
+        return next;
+      });
+    } else if (preset === 'amc12') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 25,
+          startingDifficulty: 5,
+          examFormat: ['multiple_choice'],
+          timeLimitStyle: 'whole_test',
+          timeLimitWholeTest: 75,
+        };
+        delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
+        return next;
+      });
+    } else if (preset === 'math_nationals_sprint') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 30,
           startingDifficulty: 3,
           examFormat: ['short_answer'],
           timeLimitStyle: 'whole_test',
-          timeLimitWholeTest: 30,
+          timeLimitWholeTest: 40,
+        };
+        delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
+        return next;
+      });
+    } else if (preset === 'math_chapter_target') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 8,
+          startingDifficulty: 2,
+          examFormat: ['short_answer'],
+          timeLimitStyle: 'per_question',
+          timeLimitPerQuestion: 180,
+        };
+        delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
+        return next;
+      });
+    } else if (preset === 'math_state_target') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 8,
+          startingDifficulty: 3,
+          examFormat: ['short_answer'],
+          timeLimitStyle: 'per_question',
+          timeLimitPerQuestion: 180,
+        };
+        delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
+        return next;
+      });
+    } else if (preset === 'math_nationals_target') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 8,
+          startingDifficulty: 4,
+          examFormat: ['short_answer'],
+          timeLimitStyle: 'per_question',
+          timeLimitPerQuestion: 180,
         };
         delete next.assignmentId;
         delete next.lessonTitle;
@@ -119,10 +194,40 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 60,
-          startingDifficulty: 3,
+          startingDifficulty: 4,
           examFormat: ['multiple_choice'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 90,
+        };
+        delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
+        return next;
+      });
+    } else if (preset === 'chem_acs_lse') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 60,
+          startingDifficulty: 2,
+          examFormat: ['multiple_choice'],
+          timeLimitStyle: 'whole_test',
+          timeLimitWholeTest: 110,
+        };
+        delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
+        return next;
+      });
+    } else if (preset === 'chem_part_2') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 8,
+          startingDifficulty: 5,
+          examFormat: ['free_response'],
+          timeLimitStyle: 'whole_test',
+          timeLimitWholeTest: 105,
         };
         delete next.assignmentId;
         delete next.lessonTitle;
@@ -303,12 +408,21 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
               <option value="custom">Custom (Manual Configuration)</option>
               {config.subject === 'Math' && (
                 <>
-                  <option value="math_chapter">MATHCOUNTS Chapter Sprint (40 SAQ, 30 min, Diff 1)</option>
-                  <option value="math_state">MATHCOUNTS State Sprint (40 SAQ, 30 min, Diff 3)</option>
+                  <option value="amc8">AMC 8 (25 MCQ, 40 min, Diff 2-4)</option>
+                  <option value="amc10">AMC 10 (25 MCQ, 75 min, Diff 3-5)</option>
+                  <option value="amc12">AMC 12 (25 MCQ, 75 min, Diff 4-6)</option>
+                  <option value="math_nationals_sprint">MATHCOUNTS Nationals Sprint (30 SAQ, 40 min, Diff 3)</option>
+                  <option value="math_chapter_target">MATHCOUNTS Chapter Target (8 SAQ, 3 min/q, Diff 1-3)</option>
+                  <option value="math_state_target">MATHCOUNTS State Target (8 SAQ, 3 min/q, Diff 2-4)</option>
+                  <option value="math_nationals_target">MATHCOUNTS Nationals Target (8 SAQ, 3 min/q, Diff 3-5)</option>
                 </>
               )}
               {config.subject === 'Chemistry' && (
-                <option value="chem_part_1">Part I (60 MCQ, 90 min, Diff 3)</option>
+                <>
+                  <option value="chem_part_1">Part I (60 MCQ, 90 min, Diff 2-5)</option>
+                  <option value="chem_acs_lse">ACS LSE (60 MCQ, 110 min, Diff 1-4)</option>
+                  <option value="chem_part_2">Part II (8 FRQ, 105 min, Diff 3-6)</option>
+                </>
               )}
             </select>
           </div>
