@@ -45,6 +45,116 @@ export function TeacherScreen({ user, onBack }) {
   const [hwStress, setHwStress] = useState('none');
   const [hwDueDate, setHwDueDate] = useState('');
   const [hwContentBased, setHwContentBased] = useState(true);
+  const [hwPreset, setHwPreset] = useState('custom');
+
+  const handleApplyHwPreset = (preset) => {
+    setHwPreset(preset);
+    if (preset === 'custom') return;
+
+    const configMap = {
+      amc8: {
+        title: 'AMC 8 Mock Exam',
+        subject: 'Math',
+        numQuestions: 25,
+        startingDifficulty: 3,
+        examFormat: ['multiple_choice'],
+        timeLimitStyle: 'whole_test',
+        timeLimitValue: 40,
+      },
+      amc10: {
+        title: 'AMC 10 Mock Exam',
+        subject: 'Math',
+        numQuestions: 25,
+        startingDifficulty: 4,
+        examFormat: ['multiple_choice'],
+        timeLimitStyle: 'whole_test',
+        timeLimitValue: 75,
+      },
+      amc12: {
+        title: 'AMC 12 Mock Exam',
+        subject: 'Math',
+        numQuestions: 25,
+        startingDifficulty: 5,
+        examFormat: ['multiple_choice'],
+        timeLimitStyle: 'whole_test',
+        timeLimitValue: 75,
+      },
+      math_nationals_sprint: {
+        title: 'MATHCOUNTS Nationals Sprint',
+        subject: 'Math',
+        numQuestions: 30,
+        startingDifficulty: 3,
+        examFormat: ['short_answer'],
+        timeLimitStyle: 'whole_test',
+        timeLimitValue: 40,
+      },
+      math_chapter_target: {
+        title: 'MATHCOUNTS Chapter Target',
+        subject: 'Math',
+        numQuestions: 8,
+        startingDifficulty: 2,
+        examFormat: ['short_answer'],
+        timeLimitStyle: 'per_question',
+        timeLimitValue: 180,
+      },
+      math_state_target: {
+        title: 'MATHCOUNTS State Target',
+        subject: 'Math',
+        numQuestions: 8,
+        startingDifficulty: 3,
+        examFormat: ['short_answer'],
+        timeLimitStyle: 'per_question',
+        timeLimitValue: 180,
+      },
+      math_nationals_target: {
+        title: 'MATHCOUNTS Nationals Target',
+        subject: 'Math',
+        numQuestions: 8,
+        startingDifficulty: 4,
+        examFormat: ['short_answer'],
+        timeLimitStyle: 'per_question',
+        timeLimitValue: 180,
+      },
+      chem_part_1: {
+        title: 'Chemistry Part I Mock Exam',
+        subject: 'Chemistry',
+        numQuestions: 60,
+        startingDifficulty: 4,
+        examFormat: ['multiple_choice'],
+        timeLimitStyle: 'whole_test',
+        timeLimitValue: 90,
+      },
+      chem_acs_lse: {
+        title: 'Chemistry ACS LSE Mock Exam',
+        subject: 'Chemistry',
+        numQuestions: 60,
+        startingDifficulty: 2,
+        examFormat: ['multiple_choice'],
+        timeLimitStyle: 'whole_test',
+        timeLimitValue: 110,
+      },
+      chem_part_2: {
+        title: 'Chemistry Part II Mock Exam',
+        subject: 'Chemistry',
+        numQuestions: 8,
+        startingDifficulty: 5,
+        examFormat: ['free_response'],
+        timeLimitStyle: 'whole_test',
+        timeLimitValue: 105,
+      },
+    };
+
+    const cfg = configMap[preset];
+    if (cfg) {
+      setHwTitle(cfg.title);
+      setHwSubject(cfg.subject);
+      setHwQuestions(cfg.numQuestions);
+      setHwDifficulty(cfg.startingDifficulty);
+      setHwFormats(cfg.examFormat);
+      setHwTimeStyle(cfg.timeLimitStyle);
+      setHwTimeValue(cfg.timeLimitValue);
+    }
+  };
 
   // Shared questions state
   const [hwSharedQuestions, setHwSharedQuestions] = useState([]);
@@ -165,6 +275,7 @@ export function TeacherScreen({ user, onBack }) {
         setHwTitle('');
         setHwDueDate('');
         setHwSharedQuestions([]);
+        setHwPreset('custom');
         fetchTeacherData();
       } else {
         const d = await res.json();
@@ -232,6 +343,7 @@ export function TeacherScreen({ user, onBack }) {
     setHwTitle('');
     setHwDueDate('');
     setHwSharedQuestions([]);
+    setHwPreset('custom');
 
     // Close details view and open modal
     setSelectedLesson(null);
@@ -256,6 +368,7 @@ export function TeacherScreen({ user, onBack }) {
 
   const toggleFormat = (f) => {
     setHwFormats(prev => prev.includes(f) ? prev.filter(item => item !== f) : [...prev, f]);
+    setHwPreset('custom');
   };
 
   const handleAddSharedQuestion = () => {
@@ -336,6 +449,7 @@ export function TeacherScreen({ user, onBack }) {
     setHwContentBased(true);
     setHwDueDate('');
     setHwSharedQuestions([]);
+    setHwPreset('custom');
   };
 
   const removeHomeworkItem = (index) => {
@@ -834,12 +948,38 @@ export function TeacherScreen({ user, onBack }) {
                   </h4>
 
                   <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Use Preset</label>
+                    <select
+                      value={hwPreset}
+                      onChange={(e) => handleApplyHwPreset(e.target.value)}
+                      className="input-field"
+                      style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem', borderColor: hwPreset !== 'custom' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.08)' }}
+                    >
+                      <option value="custom">Custom Configuration</option>
+                      <optgroup label="Math Presets">
+                        <option value="amc8">AMC 8 (25 MCQ, 40 min, Diff 2-4)</option>
+                        <option value="amc10">AMC 10 (25 MCQ, 75 min, Diff 3-5)</option>
+                        <option value="amc12">AMC 12 (25 MCQ, 75 min, Diff 4-6)</option>
+                        <option value="math_nationals_sprint">MATHCOUNTS Nationals Sprint (30 SAQ, 40 min, Diff 3)</option>
+                        <option value="math_chapter_target">MATHCOUNTS Chapter Target (8 SAQ, 3 min/q, Diff 1-3)</option>
+                        <option value="math_state_target">MATHCOUNTS State Target (8 SAQ, 3 min/q, Diff 2-4)</option>
+                        <option value="math_nationals_target">MATHCOUNTS Nationals Target (8 SAQ, 3 min/q, Diff 3-5)</option>
+                      </optgroup>
+                      <optgroup label="Chemistry Presets">
+                        <option value="chem_part_1">Part I (60 MCQ, 90 min, Diff 2-5)</option>
+                        <option value="chem_acs_lse">ACS LSE (60 MCQ, 110 min, Diff 1-4)</option>
+                        <option value="chem_part_2">Part II (8 FRQ, 105 min, Diff 3-6)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Assignment Title</label>
                     <input
                       type="text"
                       placeholder="E.g., Chapter Sprint Homework"
                       value={hwTitle}
-                      onChange={(e) => setHwTitle(e.target.value)}
+                      onChange={(e) => { setHwTitle(e.target.value); setHwPreset('custom'); }}
                       className="input-field"
                       style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}
                     />
@@ -848,7 +988,7 @@ export function TeacherScreen({ user, onBack }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Subject</label>
-                      <select value={hwSubject} onChange={(e) => setHwSubject(e.target.value)} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}>
+                      <select value={hwSubject} onChange={(e) => { setHwSubject(e.target.value); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}>
                         <option value="Math">Math</option>
                         <option value="Physics">Physics</option>
                         <option value="Chemistry">Chemistry</option>
@@ -856,18 +996,18 @@ export function TeacherScreen({ user, onBack }) {
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Questions count</label>
-                      <input type="number" min="1" max="60" value={hwQuestions} onChange={(e) => setHwQuestions(Number(e.target.value))} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
+                      <input type="number" min="1" max="60" value={hwQuestions} onChange={(e) => { setHwQuestions(Number(e.target.value)); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
                     </div>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Start Difficulty (1-10)</label>
-                      <input type="number" min="1" max="10" value={hwDifficulty} onChange={(e) => setHwDifficulty(Number(e.target.value))} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
+                      <input type="number" min="1" max="10" value={hwDifficulty} onChange={(e) => { setHwDifficulty(Number(e.target.value)); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Stress Mode</label>
-                      <select value={hwStress} onChange={(e) => setHwStress(e.target.value)} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}>
+                      <select value={hwStress} onChange={(e) => { setHwStress(e.target.value); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}>
                         <option value="none">None</option>
                         <option value="hidden">Hidden Clock</option>
                         <option value="strict">Strict Auto-skip</option>
@@ -891,14 +1031,14 @@ export function TeacherScreen({ user, onBack }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Timer Style</label>
-                      <select value={hwTimeStyle} onChange={(e) => setHwTimeStyle(e.target.value)} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}>
+                      <select value={hwTimeStyle} onChange={(e) => { setHwTimeStyle(e.target.value); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}>
                         <option value="per_question">Per Question (sec)</option>
                         <option value="whole_test">Whole Test (min)</option>
                       </select>
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Timer Value</label>
-                      <input type="number" min="1" value={hwTimeValue} onChange={(e) => setHwTimeValue(Number(e.target.value))} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
+                      <input type="number" min="1" value={hwTimeValue} onChange={(e) => { setHwTimeValue(Number(e.target.value)); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
                     </div>
                   </div>
 
@@ -909,7 +1049,7 @@ export function TeacherScreen({ user, onBack }) {
                         type="checkbox"
                         id="hwContentBased"
                         checked={hwContentBased}
-                        onChange={(e) => setHwContentBased(e.target.checked)}
+                        onChange={(e) => { setHwContentBased(e.target.checked); setHwPreset('custom'); }}
                         style={{ width: '16px', height: '16px', marginTop: '2px', accentColor: 'var(--accent-primary)', cursor: 'pointer', flexShrink: 0 }}
                       />
                       <div>
