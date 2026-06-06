@@ -130,7 +130,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       return (
         <div style={{ padding: '3rem', textAlign: 'center' }}>
           <Loader2 className="animate-spin" size={32} style={{ margin: '0 auto 1rem', color: 'var(--accent-primary)' }} />
-          <p style={{ color: 'var(--text-secondary)' }}>Loading organization portal...</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Loading organization dashboard...</p>
         </div>
       );
     }
@@ -166,7 +166,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h3 className="text-gradient" style={{ fontSize: '1.75rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Brain size={28} /> {user.user_organization} Portal
+              <Brain size={28} /> {user.user_organization} Dashboard
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
               You are logged in as a <strong style={{ color: 'var(--accent-primary)', textTransform: 'capitalize' }}>{user.user_role || 'member'}</strong>
@@ -658,7 +658,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
               gap: '0.35rem'
             }}
           >
-            <Brain size={14} /> {user.user_organization} Portal
+            <Brain size={14} /> {user.user_organization} Dashboard
           </button>
         </div>
       )}

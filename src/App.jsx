@@ -740,7 +740,7 @@ function App() {
                           setShowUserDropdown(false);
                         }}
                       >
-                        <BookOpen size={14} /> Teacher Portal
+                        <BookOpen size={14} /> Teacher
                       </button>
                     )}
                     {user.user_role === 'admin' && (
@@ -752,7 +752,7 @@ function App() {
                           setShowUserDropdown(false);
                         }}
                       >
-                        <Shield size={14} /> Admin Portal
+                        <Shield size={14} /> Admin
                       </button>
                     )}
                     {user.user_role === 'admin' && (

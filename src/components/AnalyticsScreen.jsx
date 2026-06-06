@@ -473,8 +473,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', maxWidth: '850px', margin: '0 auto' }}>
 
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-        <h2 className="text-gradient" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Session Complete</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>Review your performance and tag problems for analytics.</p>
+        <h2 className="text-gradient" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Exam Complete</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>Review your performance</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
@@ -519,7 +519,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       {/* Points timeline Chart */}
       <div className="glass-panel" style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', marginBottom: '2.5rem' }}>
         <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Activity size={18} color="var(--accent-primary)" /> Points Earned Timeline (Continuous)
+          <Activity size={18} color="var(--accent-primary)" /> Points Earned Over Time
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '400', marginLeft: 'auto' }}>
             {pointsEarned}/{totalPoints} pts · {Math.round(totalMinutes * 10) / 10} min total
           </span>
@@ -558,7 +558,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       {panicPoints.length > 0 && (
         <div style={{ padding: 'var(--card-padding)', background: 'var(--danger-glass)', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger)', marginBottom: '2.5rem' }}>
           <h3 style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <Activity size={20} /> Panic Points Detected
+            <Activity size={20} /> Panic Points
           </h3>
           <p style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>
             You spent significantly longer than average on these questions but still answered incorrectly.
@@ -666,7 +666,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           boxShadow: '0 4px 20px -2px rgba(168, 85, 247, 0.1)'
         }}>
           <h3 style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', margin: 0 }}>
-            <BrainCircuit size={20} /> Detailed {subject} Diagnosis
+            <BrainCircuit size={20} /> Overall Analysis
           </h3>
           <p style={{ fontSize: '0.9rem', lineHeight: '1.65', color: 'var(--text-secondary)', marginTop: '0.75rem', marginBottom: 0, whiteSpace: 'pre-line' }}>
             {subjectDiagnosis}
@@ -684,7 +684,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           boxShadow: '0 4px 20px -2px rgba(168, 85, 247, 0.1)'
         }}>
           <h3 style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', margin: 0 }}>
-            <BrainCircuit size={20} /> AI Error & Mistake Pattern Diagnosis
+            <BrainCircuit size={20} /> Mistake Analysis
           </h3>
           <p style={{ fontSize: '0.925rem', lineHeight: '1.6', color: 'var(--text-secondary)', marginTop: '0.75rem', marginBottom: 0, whiteSpace: 'pre-line' }}>
             {resultsObj.mistakePatterns}
@@ -992,7 +992,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
 
       <div style={{ marginTop: '3rem', textAlign: 'center' }}>
         <button className="btn btn-primary" onClick={onRestart}>
-          Start New Session
+          New Exam
         </button>
       </div>
 

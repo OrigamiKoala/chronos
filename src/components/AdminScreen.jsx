@@ -192,7 +192,7 @@ export function AdminScreen({ user, onBack }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem' }}>
-                <Users size={20} color="var(--accent-primary)" /> Members Directory ({members.length})
+                <Users size={20} color="var(--accent-primary)" /> Members ({members.length})
               </h3>
             </div>
             <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>

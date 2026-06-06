@@ -625,7 +625,7 @@ export function TeacherScreen({ user, onBack }) {
       {/* Overall Class Averages section */}
       <div className="glass-panel" style={{ padding: 'var(--panel-padding)' }}>
         <h3 className="text-gradient" style={{ fontSize: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Award size={24} /> Overall Class Analytics ({myStudentsList.length} Claimed Students)
+          <Award size={24} /> Class Analytics
         </h3>
 
         {myStudentsList.length === 0 ? (
@@ -634,19 +634,19 @@ export function TeacherScreen({ user, onBack }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
               <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Class Math Avg ELO</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Avg Math ELO</span>
                 <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#6366f1' }}>{collectiveStats.avgMath}</span>
               </div>
               <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Class Physics Avg ELO</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Avg Physics ELO</span>
                 <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b' }}>{collectiveStats.avgPhys}</span>
               </div>
               <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Class Chemistry Avg ELO</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Avg Chemistry ELO</span>
                 <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>{collectiveStats.avgChem}</span>
               </div>
               <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Class Practice Index</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Practice</span>
                 <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>
                   {collectiveStats.totalExams} tests ({collectiveStats.avgAccuracy}% acc)
                 </span>
@@ -655,7 +655,7 @@ export function TeacherScreen({ user, onBack }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.04)', border: '1px solid rgba(74, 222, 128, 0.15)', borderRadius: 'var(--radius-md)' }}>
-                <h4 style={{ color: 'var(--success)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>Collective Class Strengths</h4>
+                <h4 style={{ color: 'var(--success)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>Class Strengths</h4>
                 {collectiveStats.strengths?.length > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                     {collectiveStats.strengths.map((s, i) => (
@@ -670,7 +670,7 @@ export function TeacherScreen({ user, onBack }) {
               </div>
 
               <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.04)', border: '1px solid rgba(248, 113, 113, 0.15)', borderRadius: 'var(--radius-md)' }}>
-                <h4 style={{ color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>Collective Class Weaknesses</h4>
+                <h4 style={{ color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>Class Weaknesses</h4>
                 {collectiveStats.weaknesses?.length > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                     {collectiveStats.weaknesses.map((w, i) => (
