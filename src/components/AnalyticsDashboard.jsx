@@ -532,9 +532,10 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   // Topic mastery horizontal bar
   const topicChartData = useMemo(() => {
     if (!data?.topicMastery?.length) return null;
-    const filtered = selectedSubjectFilter === 'All'
+    const filtered = (selectedSubjectFilter === 'All'
       ? data.topicMastery
-      : data.topicMastery.filter(t => t.subject === selectedSubjectFilter);
+      : data.topicMastery.filter(t => t.subject === selectedSubjectFilter)
+    ).filter(t => t.total_count > 0);
 
     return {
       labels: filtered.map(t => t.sub_category),
