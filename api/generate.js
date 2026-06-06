@@ -177,8 +177,9 @@ Follow these strict Olympiad Design Philosophies:
 
 1. Novelty & "Invisible Traps"
 - Create highly original questions requiring first-principles reasoning over template-matching.
-- Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption.
+- Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption. The user should be tricked into thinking the wrong way, overlooking something.
 - Incorporate a deceptive path: the most common rote shortcut should yield a value matching one incorrect distractor.
+- No question should be like any other question seen before.
 
 2. Advanced Design & Difficulty Criteria
 - Multi-Topic Coupling: Require simultaneous application of disparate principles (e.g., coupling sequences with modular arithmetic and pigeonhole, or geometry with number theory).
@@ -188,8 +189,8 @@ Follow these strict Olympiad Design Philosophies:
 - Novel Context: Present familiar concepts in unfamiliar frameworks.
 
 3. Syllabus Boundaries
-- DIFFICULTY < 8 (AMC/AIME): Restrict to algebra, combinatorics, geometry, number theory. No calculus. Increase difficulty by coupling topics.
-- DIFFICULTY >= 8 (USAMO/IMO): Original concept-first designs. May introduce advanced topics but must define all non-standard concepts from scratch. free_response MUST require a complete proof.
+- Restrict to algebra, combinatorics, geometry, number theory. No calculus. Increase difficulty by coupling topics.
+- NO research level math (e.g. differential equations, topology, etc.)
 
 4. SVG Diagrams: When needed, generate a single valid <svg> block. Use primitive shapes, <defs>/<use>, inline attributes (no CSS <style>), white background, single-quotes for JSON compat. Enclose in \`\`\`xml code blocks.
 
@@ -200,24 +201,47 @@ Difficulty scale: 1=MATHCOUNTS, 3=AMC 10, 5=AMC 12 Q20, 8=USAJMO, 10=hardest IMO
 
 {
   "id": "math_ex1",
-  "topic": "Number Theory & Modular Arithmetic",
-  "question": "Let $S$ be the set of all positive integers $n$ such that $n^2 \\\\equiv 1 \\\\pmod{2025}$. Find the number of elements in $S$ that are less than $2025$.",
+  "topic": "Geometry",
+  "question": "A point $P$ is chosen at random inside square $ABCD$. The probability that $\overline{AP}$ is neither the shortest nor the longest side of $\triangle APB$ can be written as $\frac{a + b \pi - c \sqrt{d}}{e}$, where $a, b, c, d,$ and $e$ are positive integers, $\text{gcd}(a, b, c, e) = 1$, and $d$ is not divisible by the square of a prime. What is $a+b+c+d+e$?",
   "type": "multiple_choice",
-  "options": ["$8$", "$12$", "$16$", "$24$"],
-  "answer": "C",
-  "difficulty": 6,
-  "detailedSolution": "Factor $2025 = 3^4 \\\\times 5^2$. By CRT, solve $n^2 \\\\equiv 1$ mod $81$ and mod $25$ separately. For odd prime power $p^k$, careful analysis via Hensel lifting gives 4 solutions mod $81$ and 4 mod $25$, yielding $4 \\\\times 4 = 16$ by CRT."
+  "options": ["$25$", "$26$", "$27$", "$28$", "29"],
+  "answer": "A",
+  "difficulty": 5,
+  "detailedSolution": "Say WLOG that $AB$ is the top side of the square, and the square is of side length 1. Let us say that the midpoint of $AB$ is $M$, while the midpoint of $CD$ is $Q$. Drawing a vertical line to split the square in half, we notice that if $P$ is to the left of the line, $AP < BP$, and if P is to the right of the line, $AP > BP$. Also, drawing a quarter circle of radius 1 from point $A$, we can split the area into points P for which $AP < AB$ and $AP > AB$. Because of our constraints, there are 2 cases:
+
+Case 1: $AB > AP > BP$ In this case, $P$ will be to the right of the vertical line and inside of the quarter circle. Let us say that the intersection of the vertical line and quarter circle is $N$. The distance from $N$ to $AD$ is 1/2, and we can say that $\angle BAN$ is $60^\circ$. Sector $BAN$ of circle $A$ would therefore have an area of $\frac{\pi}{6}$. Because $\triangle AMN$ is a 30-60-90 triangle, the area of $AMN$ is $\frac{\sqrt{3}}{8}$. The probability of case 1 happening should then be $\frac{\pi}{6}-\frac{\sqrt{3}}{8}$.
+
+Case 2: $AB < AP < BP$ In this case, $P$ will be to the left of the vertical line and outside of the quarter circle. Knowing that the quarter circle's area is $\frac{\pi}{4}$, we can subtract the probability of Case 1 happening to get the chance that $P$ is on the left of the vertical line and in circle $A$. Doing this would give $\frac{\pi}{12}+\frac{\sqrt{3}}{8}$. To get the probability of Case 2 happening, we can subtract this from the area of rectangle $AMQD$. This would give us $\frac{1}{2}-\frac{\pi}{12}-\frac{\sqrt{3}}{8}$.
+
+Adding both cases, we get the total probability as $\frac{1}{2}+\frac{\pi}{12}-\frac{\sqrt{3}}{4} = \frac{6+\pi-3\sqrt{3}}{12}$. Formatting this gives us $6+1+3+3+12 = \boxed{\textbf{(A) } 25}$."
 }
 
 {
   "id": "math_ex2",
-  "topic": "Combinatorics & Graph Theory",
-  "question": "Let $n \\\\geq 3$. In a round-robin tournament with $n$ players, player $A$ *dominates* $B$ if $A$ beat $B$, or exists $C$ with $A$ beat $C$ and $C$ beat $B$.\\\\nProve that if $n \\\\geq 7$ and odd, there exists a player dominating every other.",
-  "type": "free_response",
-  "answer": "",
-  "difficulty": 9,
+  "topic": "Combinatorics, Algebra, Number Theory",
+  "question": "For each nonnegative integer $r$ less than $502$, define\[S_r=\sum_{m\geq 0}\binom{10,000}{502m+r},\]where $\binom{10,000}{n}$ is defined to be $0$ when $n>10,000$. That is, $S_r$ is the sum of all the binomial coefficients of the form $\binom{10,000}{k}$ for which $0\leq k\leq 10,000$ and $k-r$ is a multiple of $502$. Find the number of integers in the list $S_0,S_1,S_2,\dots,S_{501}$ that are multiples of the prime number $503$.",
+  "type": "short_answer",
+  "answer": "39",
+  "difficulty": 7,
   "detailedSolution": "Take player $v^*$ with max out-degree $\\\\Delta$. Let $W$ = wins, $L$ = losses. For any $u \\\\in L$: if $u$ beat all of $W$, then $d^+(u) \\\\geq \\\\Delta+1$, contradiction. So some $w \\\\in W$ beats $u$, and $v^*$ dominates $u$ via $w$. $v^*$ trivially dominates $W$ directly. QED."
 }
+
+{
+  "id": "math_ex3",
+  "topic": "Combinatorics",
+  "question": "The integers from $1$ through $25$ are arbitrarily separated into five groups of $5$ numbers each. The median of each group is identified. Let $M$ equal the median of the five medians. What is the least possible value of $M$?
+
+$\textbf{(A) }9 \qquad \textbf{(B) }10 \qquad \textbf{(C) }12 \qquad \textbf{(D) }13 \qquad \textbf{(E) }14$
+
+",
+  "type": "multiple_choice",
+  "options": ["$9$", "$10$", "$12$", "$13$", "14"],
+  "answer": "A",
+  "difficulty": 3,
+  "detailedSolution": "If a group has median $m$, then we must have that $3$ of the numbers in that group are $\leq m$. Since there are 5 different groups, $3$ groups must have a median $\leq M$, so there are at least $3\cdot3=9$ numbers that are $\leq M$. Since there are at least $9$ numbers that are $\leq M$, we have $M$ at minimum $\boxed{\textbf{(A) }9}.$"
+}
+
+
 `;
     } else if (normSubject === 'physics') {
       constraints = `
