@@ -33,19 +33,8 @@ export async function executeWithRetry(modelId, apiCallFn, req) {
     throw new Error('GEMINI_API_KEYs are missing');
   }
 
-  // Parse gemini_key_index from cookie
-  let selectedIndex = 0;
-  if (req && req.headers && req.headers.cookie) {
-    const match = req.headers.cookie.match(/gemini_key_index=(\d+)/);
-    if (match) {
-      selectedIndex = parseInt(match[1], 10);
-    }
-  }
-
-  // Ensure index is within bounds
-  if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= keys.length) {
-    selectedIndex = 0;
-  }
+  // Use Math.random to pick a starting index for rotation
+  const selectedIndex = Math.floor(Math.random() * keys.length);
 
   // Build the rotation order starting from selectedIndex
   const keysOrder = [];
