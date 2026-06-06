@@ -19,7 +19,16 @@ if (typeof sessionStorage !== 'undefined') {
   const keysCount = [
     import.meta.env.GEMINI_API_KEY,
     import.meta.env.GEMINI_API_KEY_2,
-    import.meta.env.GEMINI_API_KEY_3
+    import.meta.env.GEMINI_API_KEY_3,
+    import.meta.env.GEMINI_API_KEY_4,
+    import.meta.env.GEMINI_API_KEY_5,
+    import.meta.env.GEMINI_API_KEY_6,
+    import.meta.env.GEMINI_API_KEY_7,
+    import.meta.env.GEMINI_API_KEY_8,
+    import.meta.env.GEMINI_API_KEY_9,
+    import.meta.env.GEMINI_API_KEY_10,
+    import.meta.env.GEMINI_API_KEY_11,
+    import.meta.env.GEMINI_API_KEY_12
   ].filter(Boolean).length;
 
   if (keysCount > 0) {
@@ -143,40 +152,40 @@ function extractCompleteObjects(jsonStr) {
  * Returns a promise that resolves with the full array of questions.
  */
 async function readSSEStream(response, onQuestion) {
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    const questions = [];
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  const questions = [];
 
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
+    buffer += decoder.decode(value, { stream: true });
 
-        // Split on double-newlines to isolate complete SSE frames
-        const frames = buffer.split('\n\n');
-        buffer = frames.pop(); // keep any trailing incomplete frame
+    // Split on double-newlines to isolate complete SSE frames
+    const frames = buffer.split('\n\n');
+    buffer = frames.pop(); // keep any trailing incomplete frame
 
-        for (const frame of frames) {
-            const trimmed = frame.trim();
-            if (!trimmed.startsWith('data: ')) continue;
+    for (const frame of frames) {
+      const trimmed = frame.trim();
+      if (!trimmed.startsWith('data: ')) continue;
 
-            try {
-                const event = JSON.parse(trimmed.slice(6));
+      try {
+        const event = JSON.parse(trimmed.slice(6));
 
-                if (event.type === 'question' && event.data) {
-                    questions.push(event.data);
-                    if (onQuestion) onQuestion(event.data, questions.length - 1);
-                }
-                // 'done' and 'error' events are handled implicitly by the loop ending
-            } catch {
-                // skip malformed SSE event
-            }
+        if (event.type === 'question' && event.data) {
+          questions.push(event.data);
+          if (onQuestion) onQuestion(event.data, questions.length - 1);
         }
+        // 'done' and 'error' events are handled implicitly by the loop ending
+      } catch {
+        // skip malformed SSE event
+      }
     }
+  }
 
-    return questions;
+  return questions;
 }
 
 /**
@@ -191,97 +200,97 @@ async function readSSEStream(response, onQuestion) {
  * @returns {Promise<Array>} Resolves with the complete array of question objects.
  */
 export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix', lessonTitle = null, lessonDescription = null) {
-    // Attempt to call Vercel Serverless Function first in production or if VITE_USE_VERCEL_API is enabled
-    if (import.meta.env.PROD || import.meta.env.VITE_USE_VERCEL_API) {
-        try {
-            const response = await fetch('/api/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    count,
-                    startingDifficulty,
-                    subject,
-                    targetUserId: username,
-                    freeResponseMode,
-                    examFormat,
-                    lessonTitle,
-                    lessonDescription
-                }),
-            });
+  // Attempt to call Vercel Serverless Function first in production or if VITE_USE_VERCEL_API is enabled
+  if (import.meta.env.PROD || import.meta.env.VITE_USE_VERCEL_API) {
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          count,
+          startingDifficulty,
+          subject,
+          targetUserId: username,
+          freeResponseMode,
+          examFormat,
+          lessonTitle,
+          lessonDescription
+        }),
+      });
 
-            if (!response.ok) {
-                console.warn(`Vercel API returned status ${response.status}. Falling back to direct Gemini client.`);
-            } else {
-                const contentType = response.headers.get('content-type') || '';
+      if (!response.ok) {
+        console.warn(`Vercel API returned status ${response.status}. Falling back to direct Gemini client.`);
+      } else {
+        const contentType = response.headers.get('content-type') || '';
 
-                if (contentType.includes('text/event-stream')) {
-                    // SSE streaming path
-                    const wrappedOnQuestion = onQuestion
-                        ? (q, idx) => {
-                              if (idx < count) {
-                                  onQuestion(q, idx);
-                              }
-                          }
-                        : null;
-                    const resQuestions = await readSSEStream(response, wrappedOnQuestion);
-                    return resQuestions.slice(0, count);
-                } else {
-                    // Legacy non-streaming JSON fallback
-                    const data = await response.json();
-                    const questions = (Array.isArray(data) ? data : [data]).slice(0, count);
-                    if (onQuestion) questions.forEach((q, i) => onQuestion(q, i));
-                    return questions;
-                }
+        if (contentType.includes('text/event-stream')) {
+          // SSE streaming path
+          const wrappedOnQuestion = onQuestion
+            ? (q, idx) => {
+              if (idx < count) {
+                onQuestion(q, idx);
+              }
             }
-        } catch (error) {
-            console.error("Failed to connect to Vercel API, falling back to direct Gemini client:", error);
+            : null;
+          const resQuestions = await readSSEStream(response, wrappedOnQuestion);
+          return resQuestions.slice(0, count);
+        } else {
+          // Legacy non-streaming JSON fallback
+          const data = await response.json();
+          const questions = (Array.isArray(data) ? data : [data]).slice(0, count);
+          if (onQuestion) questions.forEach((q, i) => onQuestion(q, i));
+          return questions;
         }
+      }
+    } catch (error) {
+      console.error("Failed to connect to Vercel API, falling back to direct Gemini client:", error);
     }
+  }
 
-    if (!hasKeys) {
-        // Fallback for missing API key to allow UI testing
-        console.warn("Using fallback mock data due to missing API key.");
-        const mockProblems = [];
-        for (let i = 0; i < count; i++) {
-            const diff = Math.min(10, Math.max(1, startingDifficulty + (i % 2 === 0 ? 1 : -1) * Math.floor(i / 2)));
-            const format = examFormat || (freeResponseMode ? 'free_response' : 'mix');
-            
-            if (format === 'free_response' || (format === 'mix' && i % 3 === 2)) {
-                mockProblems.push({
-                    id: `${Date.now()}-${i}`,
-                    question: `Mock ${subject} FRQ Problem ${i + 1} (Difficulty: ${diff}): Explain and solve for $x$ in the equation $${diff}x + ${i + 1} = ${diff * 2 + i + 1}$.`,
-                    type: "free_response",
-                    answer: `Subtract ${i + 1} from both sides to get $${diff}x = ${diff * 2}$. Then divide by $${diff}$ to get $x = 2$.`,
-                    difficulty: diff
-                });
-            } else if (format === 'multiple_choice' || (format === 'mix' && i % 3 === 0)) {
-                mockProblems.push({
-                    id: `${Date.now()}-${i}`,
-                    question: `Mock ${subject} MCQ Problem ${i + 1} (Difficulty: ${diff}): What is ${i + 1} + ${diff}?`,
-                    type: "multiple_choice",
-                    options: [`${i + 1 + diff}`, `${i + 2 + diff}`, `${i + 3 + diff}`, `${i + 4 + diff}`],
-                    answer: `${i + 1 + diff}`,
-                    difficulty: diff
-                });
-            } else {
-                mockProblems.push({
-                    id: `${Date.now()}-${i}`,
-                    question: `Mock ${subject} Short Answer Problem ${i + 1} (Difficulty: ${diff}): What is ${i + 1} + ${diff}?`,
-                    type: "short_answer",
-                    answer: `${i + 1 + diff}`,
-                    difficulty: diff
-                });
-            }
-        }
-        if (onQuestion) mockProblems.forEach((q, i) => onQuestion(q, i));
-        return mockProblems;
+  if (!hasKeys) {
+    // Fallback for missing API key to allow UI testing
+    console.warn("Using fallback mock data due to missing API key.");
+    const mockProblems = [];
+    for (let i = 0; i < count; i++) {
+      const diff = Math.min(10, Math.max(1, startingDifficulty + (i % 2 === 0 ? 1 : -1) * Math.floor(i / 2)));
+      const format = examFormat || (freeResponseMode ? 'free_response' : 'mix');
+
+      if (format === 'free_response' || (format === 'mix' && i % 3 === 2)) {
+        mockProblems.push({
+          id: `${Date.now()}-${i}`,
+          question: `Mock ${subject} FRQ Problem ${i + 1} (Difficulty: ${diff}): Explain and solve for $x$ in the equation $${diff}x + ${i + 1} = ${diff * 2 + i + 1}$.`,
+          type: "free_response",
+          answer: `Subtract ${i + 1} from both sides to get $${diff}x = ${diff * 2}$. Then divide by $${diff}$ to get $x = 2$.`,
+          difficulty: diff
+        });
+      } else if (format === 'multiple_choice' || (format === 'mix' && i % 3 === 0)) {
+        mockProblems.push({
+          id: `${Date.now()}-${i}`,
+          question: `Mock ${subject} MCQ Problem ${i + 1} (Difficulty: ${diff}): What is ${i + 1} + ${diff}?`,
+          type: "multiple_choice",
+          options: [`${i + 1 + diff}`, `${i + 2 + diff}`, `${i + 3 + diff}`, `${i + 4 + diff}`],
+          answer: `${i + 1 + diff}`,
+          difficulty: diff
+        });
+      } else {
+        mockProblems.push({
+          id: `${Date.now()}-${i}`,
+          question: `Mock ${subject} Short Answer Problem ${i + 1} (Difficulty: ${diff}): What is ${i + 1} + ${diff}?`,
+          type: "short_answer",
+          answer: `${i + 1 + diff}`,
+          difficulty: diff
+        });
+      }
     }
-    let subjectContext = '';
-    const normSubject = String(subject).trim().toLowerCase();
-    if (normSubject === 'math') {
-        subjectContext = `
+    if (onQuestion) mockProblems.forEach((q, i) => onQuestion(q, i));
+    return mockProblems;
+  }
+  let subjectContext = '';
+  const normSubject = String(subject).trim().toLowerCase();
+  if (normSubject === 'math') {
+    subjectContext = `
 Follow these strict Olympiad Design Philosophies:
 
 1. Novelty & "Invisible Traps"
@@ -327,8 +336,8 @@ Difficulty scale: 1=MATHCOUNTS, 3=AMC 10, 5=AMC 12 Q20, 8=USAJMO, 10=hardest IMO
   "detailedSolution": "Take player $v^*$ with max out-degree $\\\\Delta$. Let $W$ = wins, $L$ = losses. For any $u \\\\in L$: if $u$ beat all of $W$, then $d^+(u) \\\\geq \\\\Delta+1$, contradiction. So some $w \\\\in W$ beats $u$, and $v^*$ dominates $u$ via $w$. $v^*$ trivially dominates $W$ directly. QED."
 }
 `;
-    } else if (normSubject === 'physics') {
-        subjectContext = `
+  } else if (normSubject === 'physics') {
+    subjectContext = `
 Follow these strict Olympiad Design Philosophies:
 
 1. Novelty & "Invisible Traps"
@@ -374,8 +383,8 @@ Difficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest I
   "detailedSolution": "(a) Flux $\\\\Phi = \\\\mu_0 n I(t) \\\\pi b^2$. EMF from time-varying current: $\\\\mathcal{E}_1 = \\\\mu_0 n \\\\pi b^2 I_0/\\\\tau \\\\cdot e^{-t/\\\\tau}$. (b) Circuit: $L di/dt + Ri = \\\\mathcal{E}$. Motion: $m dv/dt = mg - F_{drag}$. (c) When $L \\\\ll R\\\\tau$, $i \\\\approx \\\\mathcal{E}/R$. At terminal velocity $mg = F_{drag}$, solve for $v_{term}$."
 }
 `;
-    } else if (normSubject === 'chemistry') {
-        subjectContext = `
+  } else if (normSubject === 'chemistry') {
+    subjectContext = `
 Follow these strict Olympiad Design Philosophies:
 
 1. Novelty & "Invisible Traps"
@@ -423,37 +432,37 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
   "detailedSolution": "(a) Moles OH- = 0.0125, so M = 80.0 g/mol. (b) PV=nRT gives 0.0375 mol total gas. (c) 0.0125 mol dry gas. (d) 1:3 total gas ratio, 1:2 water ratio → $\\\\ce{NH4NO3}$ (M=80.04), decomposing to $\\\\ce{N2O + 2H2O}$. (e) $\\\\ce{NH4+}$: tetrahedral N with +1 charge. $\\\\ce{NO3-}$: trigonal planar with resonance. $\\\\ce{N2O}$: two resonance structures ($\\\\ce{N#[N+][O-]}$ and $\\\\ce{[N-]=[N+]=O}$)."
 }
 `;
-    }
+  }
 
-    const allowedTypes = Array.isArray(examFormat) 
-      ? examFormat 
-      : (typeof examFormat === 'string' && examFormat.trim() 
-          ? (examFormat.includes(',') ? examFormat.split(',') : [examFormat])
-          : ['multiple_choice', 'short_answer', 'free_response']);
-    
-    const parsedTypes = allowedTypes.map(t => t.trim()).filter(Boolean);
-    
-    let typeSchemaDesc = parsedTypes.map(t => `"${t}"`).join(' | ');
-    let optionsSchemaDesc = parsedTypes.includes('multiple_choice') 
-      ? `\n    "options": ["Option A", "Option B", "Option C", "Option D"], // MUST be provided if type is multiple_choice` 
-      : ``;
-    let keywordExpressionSchemaDesc = parsedTypes.includes('short_answer')
-      ? `\n    "keywordExpression": "A logical boolean expression representing answer correctness (e.g., 'gravity AND newton' or 'O2 OR oxygen' or \"'carbon dioxide' OR CO2\"). Use AND, OR, NOT, parentheses, and single quotes for multi-word phrases. Required ONLY if type is short_answer.",`
-      : ``;
-    let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
+  const allowedTypes = Array.isArray(examFormat)
+    ? examFormat
+    : (typeof examFormat === 'string' && examFormat.trim()
+      ? (examFormat.includes(',') ? examFormat.split(',') : [examFormat])
+      : ['multiple_choice', 'short_answer', 'free_response']);
 
-    let lessonInstructions = '';
-    if (lessonTitle || lessonDescription) {
-        lessonInstructions = `
+  const parsedTypes = allowedTypes.map(t => t.trim()).filter(Boolean);
+
+  let typeSchemaDesc = parsedTypes.map(t => `"${t}"`).join(' | ');
+  let optionsSchemaDesc = parsedTypes.includes('multiple_choice')
+    ? `\n    "options": ["Option A", "Option B", "Option C", "Option D"], // MUST be provided if type is multiple_choice`
+    : ``;
+  let keywordExpressionSchemaDesc = parsedTypes.includes('short_answer')
+    ? `\n    "keywordExpression": "A logical boolean expression representing answer correctness (e.g., 'gravity AND newton' or 'O2 OR oxygen' or \"'carbon dioxide' OR CO2\"). Use AND, OR, NOT, parentheses, and single quotes for multi-word phrases. Required ONLY if type is short_answer.",`
+    : ``;
+  let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
+
+  let lessonInstructions = '';
+  if (lessonTitle || lessonDescription) {
+    lessonInstructions = `
 Additionally, this exam is a homework assignment for the lesson "${lessonTitle || ''}".
 The teacher set the following lesson plan/content:
 "${lessonDescription || ''}"
 
 You MUST generate questions that are directly related to the content and concepts outlined in this lesson plan/content.
 `;
-    }
+  }
 
-    const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
+  const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
 
 ${subjectContext}
 ${lessonInstructions}
@@ -481,70 +490,70 @@ The output must be a pure JSON array containing exactly the requested number of 
 }
 Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
 
-    const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+  const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
 Follow these strict rules:
 1. Question Style: Provide a balanced mix of standard and tricky questions. Standard questions should only be generated for difficulty levels 1-4. For difficulty levels 5-10, make questions either tricky with conceptual traps, or standard but highly difficult in their own right. Do NOT use obscure, highly specialized research-level details.
 2. The exam must span a wide, diverse range of standard topics in ${subject}. Do NOT let any single topic dominate the entire exam. Distribute the questions across a broad variety of core topics in the standard syllabus.
 3. Detailed Solutions: For every question generated, you MUST provide a thorough, detailed step-by-step correct solution and proof in the "detailedSolution" field.
 4. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
 
-    const safetySettings = [
-      {
-        category: 'HARM_CATEGORY_HATE_SPEECH',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      },
-      {
-        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      },
-      {
-        category: 'HARM_CATEGORY_HARASSMENT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      },
-      {
-        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      }
-    ];
-
-    try {
-        const stream = await executeWithRetry('gemini-3.5-flash', (aiClient) => aiClient.models.generateContentStream({
-            model: 'gemini-3.5-flash',
-            contents: prompt,
-            safety_settings: safetySettings,
-            safetySettings: safetySettings,
-            config: {
-                systemInstruction,
-                responseMimeType: "application/json",
-                temperature: 0.7,
-                safety_settings: safetySettings,
-                safetySettings: safetySettings,
-            }
-        }));
-
-        let accumulated = '';
-        let questionsSent = 0;
-        const questions = [];
-
-        for await (const chunk of stream) {
-            const text = chunk.text;
-            if (text) {
-                accumulated += text;
-                const parsed = extractCompleteObjects(accumulated);
-                while (questionsSent < parsed.length) {
-                    const q = parsed[questionsSent];
-                    if (questionsSent < count) {
-                        questions.push(q);
-                        if (onQuestion) onQuestion(q, questionsSent);
-                    }
-                    questionsSent++;
-                }
-            }
-        }
-
-        return questions;
-    } catch (error) {
-        console.error("Error generating problems:", error);
-        throw error;
+  const safetySettings = [
+    {
+      category: 'HARM_CATEGORY_HATE_SPEECH',
+      threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+    },
+    {
+      category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+      threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+    },
+    {
+      category: 'HARM_CATEGORY_HARASSMENT',
+      threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+    },
+    {
+      category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+      threshold: 'BLOCK_MEDIUM_AND_ABOVE'
     }
+  ];
+
+  try {
+    const stream = await executeWithRetry('gemini-3.5-flash', (aiClient) => aiClient.models.generateContentStream({
+      model: 'gemini-3.5-flash',
+      contents: prompt,
+      safety_settings: safetySettings,
+      safetySettings: safetySettings,
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        temperature: 0.7,
+        safety_settings: safetySettings,
+        safetySettings: safetySettings,
+      }
+    }));
+
+    let accumulated = '';
+    let questionsSent = 0;
+    const questions = [];
+
+    for await (const chunk of stream) {
+      const text = chunk.text;
+      if (text) {
+        accumulated += text;
+        const parsed = extractCompleteObjects(accumulated);
+        while (questionsSent < parsed.length) {
+          const q = parsed[questionsSent];
+          if (questionsSent < count) {
+            questions.push(q);
+            if (onQuestion) onQuestion(q, questionsSent);
+          }
+          questionsSent++;
+        }
+      }
+    }
+
+    return questions;
+  } catch (error) {
+    console.error("Error generating problems:", error);
+    throw error;
+  }
 }
