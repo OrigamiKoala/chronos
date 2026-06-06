@@ -296,8 +296,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
 
   return (
     <div className="glass-panel" style={{ padding: 'var(--panel-padding)', maxWidth: '600px', margin: '0 auto', height: '100%', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'left', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        <Settings size={28} className="text-gradient" />
+      <div style={{ marginBottom: '1.5rem' }}>
         <h2>Start New Test</h2>
       </div>
 
