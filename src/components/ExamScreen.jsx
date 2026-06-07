@@ -1020,13 +1020,14 @@ export function ExamScreen({ config, onFinish, resumeState }) {
               <button 
                 className="btn btn-outline" 
                 style={{ marginRight: '0.75rem' }}
+                disabled={currentQuestionIndex + 1 >= problems.length}
                 onClick={() => {
                   recordActiveInterval(currentQuestionIndex);
                   clearInterval(timerRef.current);
                   setCurrentQuestionIndex(prev => prev + 1);
                 }}
               >
-                Next
+                {currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next'}
               </button>
             )}
 
