@@ -542,13 +542,10 @@ Follow these strict rules:
     const stream = await executeWithRetry('gemini-3.5-flash', (aiClient) => aiClient.models.generateContentStream({
       model: 'gemini-3.5-flash',
       contents: prompt,
-      safety_settings: safetySettings,
-      safetySettings: safetySettings,
       config: {
         systemInstruction,
         responseMimeType: "application/json",
-        safety_settings: safetySettings,
-        safetySettings: safetySettings,
+        safetySettings,
       }
     }));
 

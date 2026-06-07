@@ -191,8 +191,8 @@ export default async function handler(req, res) {
         LEFT JOIN seen_questions sq ON pq.question_id = sq.question_id
         WHERE pq.subject = @subject AND sq.question_id IS NULL
         ORDER BY 
-          CASE WHEN pq.topic IN (SELECT topic FROM weak_topics) THEN 0 ELSE 1 END,
           ABS(pq.difficulty - @startingDifficulty) ASC,
+          CASE WHEN pq.topic IN (SELECT topic FROM weak_topics) THEN 0 ELSE 1 END,
           RAND()
         LIMIT 1
       `;
@@ -733,39 +733,42 @@ Follow these strict rules:
     ];
 
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    console.log(`[generate.js] Initiating stream with modelId: ${modelId}, remainingCount: ${remainingCount}`);
     const stream = await executeWithRetry(modelId, (ai) => ai.models.generateContentStream({
       model: modelId,
       contents: prompt,
-      safety_settings: safetySettings,
-      safetySettings: safetySettings,
       config: {
         systemInstruction,
         responseMimeType: "application/json",
-        safety_settings: safetySettings,
-        safetySettings: safetySettings,
+        safetySettings,
       },
     }), req);
+    console.log(`[generate.js] Stream connection opened successfully`);
 
     let accumulated = '';
     let questionsSent = 0;
 
     for await (const chunk of stream) {
       const text = chunk.text;
+      console.log(`[generate.js] Received chunk of length: ${text ? text.length : 0}`);
       if (text) {
         accumulated += text;
 
         // Extract all fully-formed question objects so far
         const parsed = extractCompleteObjects(accumulated);
+        console.log(`[generate.js] parsed questions count so far: ${parsed.length}`);
 
         // Emit any newly completed questions
         while (questionsSent < parsed.length) {
           if (questionsSent < remainingCount) {
+            console.log(`[generate.js] Streaming question ${questionsSent + 1} to client`);
             res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[questionsSent] })}\n\n`);
           }
           questionsSent++;
         }
       }
     }
+    console.log(`[generate.js] Stream processing loop finished`);
 
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
     res.end();
