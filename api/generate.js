@@ -4,40 +4,6 @@ import { executeWithRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
-let generationCacheState = { name: null, expiry: 0, failedUntil: 0 };
-const CACHE_TTL_SECONDS = 3600; // 1 hour
-const CACHE_FAIL_COOLDOWN_MS = 300000; // 5 min cooldown
-
-async function ensureCache(modelId, systemInstruction, state, ai) {
-  const now = Date.now();
-  if (state.name && now < state.expiry - 60000) return state.name;
-  if (state.failedUntil && now < state.failedUntil) return null;
-
-  try {
-    const cache = await ai.caches.create({
-      model: modelId,
-      contents: [],
-      config: {
-        displayName: `gen_cache_${modelId}`,
-        systemInstruction: {
-          parts: [{ text: systemInstruction }]
-        },
-        ttl: `${CACHE_TTL_SECONDS}s`
-      }
-    });
-    state.name = cache.name;
-    state.expiry = now + CACHE_TTL_SECONDS * 1000;
-    state.failedUntil = 0;
-    return state.name;
-  } catch (err) {
-    console.warn(`[ensureCache] failed for ${modelId}:`, err.message);
-    state.failedUntil = now + CACHE_FAIL_COOLDOWN_MS;
-    state.name = null;
-    state.expiry = 0;
-    return null;
-  }
-}
-
 const bq = new BigQuery({
   projectId,
   credentials: {
@@ -715,39 +681,15 @@ Follow these strict rules:
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
     console.log(`[generate.js] Initiating stream with modelId: ${modelId}, remainingCount: ${remainingCount}`);
 
-    let cacheName = null;
-    try {
-      cacheName = await executeWithRetry(modelId, (ai) => ensureCache(modelId, systemInstruction, generationCacheState, ai), req);
-    } catch (cacheErr) {
-      console.warn('[generate.js] ensureCache threw:', cacheErr.message);
-    }
-
-    const config = {
-      responseMimeType: "application/json",
-      safetySettings,
-    };
-    if (cacheName) {
-      config.cachedContent = cacheName;
-    } else {
-      config.systemInstruction = systemInstruction;
-    }
-
-    let stream;
-    try {
-      stream = await executeWithRetry(modelId, (ai) => ai.models.generateContentStream({
-        model: modelId,
-        contents: prompt,
-        config,
-      }), req);
-    } catch (err) {
-      if (cacheName) {
-        console.warn('[generate.js] Stream call with cache failed. Resetting cache state.');
-        generationCacheState.name = null;
-        generationCacheState.expiry = 0;
-        generationCacheState.failedUntil = Date.now() + CACHE_FAIL_COOLDOWN_MS;
-      }
-      throw err;
-    }
+    const stream = await executeWithRetry(modelId, (ai) => ai.models.generateContentStream({
+      model: modelId,
+      contents: prompt,
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        safetySettings,
+      },
+    }), req);
     console.log(`[generate.js] Stream connection opened successfully`);
 
     let accumulated = '';
