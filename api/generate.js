@@ -544,90 +544,52 @@ All questions generated MUST adhere to these critical design directives:
 4. QUESTION TYPES MIX: You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.
 
 ###Steps:###
-1. Brainstorm potential concepts for each question.
-2. Narrow down each concept into a particular topic for each question, as well as the subtle conceptual trap the user might fall into.
-3. Decide on a difficulty level for each question.
-4. For each question, generate the question text, taking into account the topic, trap, and difficulty level.
-5. Test-solve each of the questions to ensure they satisfy each of the constraints. Write feedback for each of the problems for how to improve them.
-6. Improve the questions based on the feedback. Fix all questions that do not adhere to the constraints, and ones you can easily solve.
-7. Solve each question. Double check that the answers generated are the only valid solutions. If the answer is not the only valid solution, change the problem, repeating steps 4 and 5. Explain the trick in the problem. If the trick is not a trap students are likely to fall into, or there is no trick, redo the question (add a trick).
-8. Double check that all constraints and output requirements have been met. If they have not, change the format and/or problem so that all constraints and output requirements are met.
+1. Overall Plan: Before writing any question content, decide on the topic, difficulty level, and subtle conceptual trap/challenge for each question in the test to ensure a balanced, diverse exam.
+2. For each question sequentially:
+   a. Generate the question text.
+   b. Test-solve the question. Write critical feedback on how to improve it, check constraints, and check for any ambiguities.
+   c. Revise and improve the question text based on the feedback.
+   d. Solve the revised question and verify the answer is mathematically/scientifically unique and correct. Explain the trick/trap.
+   e. Immediately output/stream the finalized question object to the JSON array, before starting the next question.
 
 For example, your thought process might look like:
 
-Step 1: The user wants me to generate 2 chemistry olympiad questions with starting difficulty 5. The user struggles with remembering to balance equations in stoichiometry and electrochemistry.
+Overall Plan: The user wants me to generate 2 chemistry olympiad questions with starting difficulty 5. The user struggles with remembering to balance equations in stoichiometry and electrochemistry.
+- Question 1: Topic: Stoichiometry (empirical formula from combustion gases), target difficulty 5, trap: forgetting to balance.
+- Question 2: Topic: Electrochemistry (galvanic cell mass change), target difficulty 6, trap: copper mass decrease (anode) vs increase (cathode).
 
-Step 2, 3: For the first question, I will test stoichiometry (identifying an unknown compound based on resulting gases), with difficulty level 5. For the second question, I will test electrochemistry (overpotential), with difficulty level 6. I will tailor these questions to target the user's weaknesses.
-
-Step 4: Now I will generate the problem texts.
-
-1. A compound M reacts in the following reaction. $\ce{M + 5 O_2 -> 3 C O_2 + 4 H_2 O}. How many grams of $\ce{M}$ are required to form $14.4$ liters of $\ce{C O_2}$ at STP? The trap is to forget to balance out the chemical equation.
-
-2. A reaction has a standard exchange current density ($j_0$) of $1.0$ A/cm$^2$ at $25$ °C. What is the current density ($j$) when the overpotential ($\eta$) is $0.1$ V? The trap is to forget to multiply the exchange current density by 2 when taking the absolute value.
-
-Step 5: Test-solve and feedback
-
-Question 1 Test-Solve:
-Equation given: M + 5 O2 -> 3 CO2 + 4 H2O.
-Equation is balanced; M = C3H8 (molar mass = 44.1 g/mol).
-Moles of CO2 = 14.4 L / 22.4 L/mol = 0.643 mol.
-Moles of M = 0.643 / 3 = 0.214 mol.
-Mass of M = 0.214 mol * 44.1 g/mol = 9.44 g.
-Question 1 Feedback: Problem is too easy and too standard for difficulty level 5. Make it more challenging by removing the equation and giving how much of each gas is produced when a given amount of M is burned.
-
-Question 2 Test-Solve:
-Using Butler-Volmer equation: j = j0 * (exp(alpha_a * n * F * eta / RT) - exp(-alpha_c * n * F * eta / RT)).
-Parameters n and alpha are missing.
-Question 2 Feedback: Butler-Volmer equation is beyond the scope of the USNCO, and beyond difficulty level 6. Replace the entire question.
-
-Step 6: Improve the questions
-
-Question 1 Revision: A 4.41 g sample of a gaseous hydrocarbon M is completely combusted in excess oxygen to produce 13.20 g of CO2 and 7.21 g of H2O. Determine the molecular formula of M if its density at STP is 1.97 g/L.
-Question 2 Revision: A galvanic cell consists of a silver electrode in 1.0 M AgNO3 and a copper electrode in 1.0 M Cu(NO3)2. If the cell operates at 25 degrees C under a constant current of 2.0 A for 45 minutes, calculate the change in mass of the copper electrode. (E0 Ag+/Ag = +0.80 V, E0 Cu2+/Cu = +0.34 V, F = 96485 C/mol).
-
-Step 7: Solve and verify uniqueness
-
-Question 1 Solution:
-Moles C = 13.20 g / 44.01 g/mol = 0.300 mol.
-Moles H = 2 * (7.21 g / 18.02 g/mol) = 0.800 mol.
-Empirical formula = C3H8.
-Molar mass = 1.97 g/L * 22.4 L/mol = 44.1 g/mol.
-Molecular formula = C3H8.
-Uniqueness: Single hydrocarbon identity fits elemental mass ratios and molar mass.
-
-Question 2 Solution:
-Anode reaction: Cu -> Cu2+ + 2e-.
-Charge Q = 2.0 A * 45 min * 60 s/min = 5400 C.
-Moles e- = 5400 C / 96485 C/mol = 0.0560 mol.
-Moles Cu = 0.0560 mol / 2 = 0.0280 mol.
-Mass decrease = 0.0280 mol * 63.55 g/mol = 1.78 g.
-Uniqueness: Standard reduction potentials confirm copper is the anode. Faraday's law yields one precise value.
-
-Step 8: Double check constraints
-
-Target difficulties (5 and 6) met. Traps appropriate for USNCO. Formatting constraints followed. No bold text used.
-
-Final Output JSON:
-[
+Question 1:
+- Draft Question 1 text: A compound M reacts in the following reaction... How many grams of M are required to form 14.4 liters of CO2 at STP?
+- Test-solve and feedback: Moles of CO2 = 14.4 / 22.4 = 0.643 mol. Mass of M = ... Feedback: Problem is too standard for difficulty 5. Make it more challenging by removing the equation and giving combustion product masses.
+- Revise Question 1: A 4.41 g sample of a gaseous hydrocarbon M is completely combusted in excess oxygen to produce 13.20 g of CO2 and 7.21 g of H2O. Determine the molecular formula of M if its density at STP is 1.97 g/L.
+- Solve and verify uniqueness: Moles C = 0.300 mol, Moles H = 0.800 mol. Empirical = C3H8. Molar mass = 44.1 g/mol. Formula = C3H8. Only one valid molecular formula matches.
+- Output/stream Question 1:
   {
     "id": "chem_prob1",
     "topic": "Stoichiometry & Hydrocarbons",
-    "question": "A $4.41$ g sample of a gaseous hydrocarbon M is completely combusted in excess oxygen to produce $13.20$ g of $\\ce{CO_2}$ and $7.21$ g of $\\ce{H_2O}$. Determine the molecular formula of M if its density at STP is $1.97$ g/L.",
+    "question": "A $4.41$ g sample of a gaseous hydrocarbon M is completely combusted in excess oxygen to produce $13.20$ g of \\ce{CO_2} and $7.21$ g of \\ce{H_2O}. Determine the molecular formula of M if its density at STP is $1.97$ g/L.",
     "type": "multiple_choice",
-    "options": ["$\\ce{CH_4}$", "$\\ce{C_2H_6}$", "$\\ce{C_3H_8}$", "$\\ce{C_4H_{10}}$"],
+    "options": ["\\ce{CH_4}", "\\ce{C_2H_6}", "\\ce{C_3H_8}", "\\ce{C_4H_{10}}"],
     "answer": "C",
     "difficulty": 5,
-    "detailedSolution": "1. Find moles of C: $13.20\\text{ g } \\ce{CO_2} / 44.01\\text{ g/mol} = 0.300\\text{ mol } \\ce{CO_2}$, which corresponds to $0.300\\text{ mol}$ of C.\\n2. Find moles of H: $2 \\times (7.21\\text{ g } \\ce{H_2O} / 18.02\\text{ g/mol}) = 0.800\\text{ mol}$ of H.\\n3. Empirical formula: $\\ce{C_{0.300}H_{0.800}} = \\ce{C_3H_8}$.\\n4. Molar mass of M: $1.97\\text{ g/L} \\times 22.4\\text{ L/mol} = 44.1\\text{ g/mol}$.\\n5. Since the molar mass of $\\ce{C_3H_8}$ is $44.1\\text{ g/mol}$, the molecular formula is $\\ce{C_3H_8}$."
-  },
+    "detailedSolution": "1. Find moles of C: $13.20\\text{ g } \\ce{CO_2} / 44.01\\text{ g/mol} = 0.300\\text{ mol } \\ce{CO_2}$, which corresponds to $0.300\\text{ mol}$ of C.\\n2. Find moles of H: $2 \\times (7.21\\text{ g } \\ce{H_2O} / 18.02\\text{ g/mol}) = 0.800\\text{ mol}$ of H.\\n3. Empirical formula: \\ce{C_{0.300}H_{0.800}} = \\ce{C_3H_8}.\\n4. Molar mass of M: $1.97\\text{ g/L} \\times 22.4\\text{ L/mol} = 44.1\\text{ g/mol}.\\n5. Since the molar mass of \\ce{C_3H_8} is $44.1\\text{ g/mol}$, the molecular formula is \\ce{C_3H_8}."
+  }
+
+Question 2:
+- Draft Question 2 text: A reaction has a standard exchange current density... What is the current density when the overpotential is 0.1 V?
+- Test-solve and feedback: Using Butler-Volmer equation. Feedback: Butler-Volmer is college-level and beyond USNCO difficulty 6. Replace entirely.
+- Revise Question 2: A galvanic cell consists of a silver electrode in 1.0 M AgNO3 and a copper electrode in 1.0 M Cu(NO3)2. If the cell operates at 25 degrees C under a constant current of 2.0 A for 45 minutes, calculate the change in mass of the copper electrode. (E0 Ag+/Ag = +0.80 V, E0 Cu2+/Cu = +0.34 V, F = 96485 C/mol).
+- Solve and verify uniqueness: Cu -> Cu2+ + 2e-. Charge = 5400 C. Moles e- = 0.0560 mol. Moles Cu reacted = 0.0280 mol. Mass change = 1.78 g decrease. Standard potentials confirm Cu is anode.
+- Output/stream Question 2:
   {
     "id": "chem_prob2",
     "topic": "Electrochemistry",
-    "question": "A galvanic cell consists of a silver electrode in $1.0$ M $\\ce{AgNO_3}$ and a copper electrode in $1.0$ M $\\ce{Cu(NO_3)_2}$. If the cell operates at $25$ °C under a constant current of $2.0$ A for $45$ minutes, calculate the change in mass of the copper electrode. ($E^\\circ(\\ce{Ag^+/Ag}) = +0.80$ V, $E^\\circ(\\ce{Cu^{2+}/Cu}) = +0.34$ V, $F = 96485$ C/mol).",
+    "question": "A galvanic cell consists of a silver electrode in $1.0$ M \\ce{AgNO_3} and a copper electrode in $1.0$ M \\ce{Cu(NO_3)_2}. If the cell operates at $25$ °C under a constant current of $2.0$ A for $45$ minutes, calculate the change in mass of the copper electrode. ($E^\\circ(\\ce{Ag^+/Ag}) = +0.80$ V, $E^\\circ(\\ce{Cu^{2+}/Cu}) = +0.34$ V, $F = 96485$ C/mol).",
     "type": "short_answer",
     "answer": "1.78 g",
     "keywordExpression": "'1.78' OR '1.78 g'",
     "difficulty": 6,
-    "detailedSolution": "1. Identify the anode: Since $E^\\circ(\\ce{Ag^+/Ag}) = +0.80\\text{ V}$ is greater than $E^\\circ(\\ce{Cu^{2+}/Cu}) = +0.34\\text{ V}$, silver is reduced (cathode) and copper is oxidized (anode).\\n2. Anode reaction: $\\ce{Cu -> Cu^{2+} + 2e^-}$.\\n3. Total charge $Q$: $2.0\\text{ A} \\times 45\\text{ min} \\times 60\\text{ s/min} = 5400\\text{ C}$.\\n4. Moles of electrons: $5400\\text{ C} / 96485\\text{ C/mol} = 0.0560\\text{ mol } e^-$.\\n5. Moles of Cu reacted: $0.0560\\text{ mol } e^- / 2 = 0.0280\\text{ mol } \\ce{Cu}$.\\n6. Mass change of Cu: $0.0280\\text{ mol } \\ce{Cu} \\times 63.55\\text{ g/mol} = 1.78\\text{ g}$ decrease."
+    "detailedSolution": "1. Identify the anode: Since $E^\\circ(\\ce{Ag^+/Ag}) = +0.80\\text{ V}$ is greater than $E^\\circ(\\ce{Cu^{2+}/Cu}) = +0.34\\text{ V}$, silver is reduced (cathode) and copper is oxidized (anode).\\n2. Anode reaction: \\ce{Cu -> Cu^{2+} + 2e^-}.\\n3. Total charge $Q$: $2.0\\text{ A} \\times 45\\text{ min} \\times 60\\text{ s/min} = 5400\\text{ C}.\\n4. Moles of electrons: $5400\\text{ C} / 96485\\text{ C/mol} = 0.0560\\text{ mol } e^-$.\\n5. Moles of Cu reacted: $0.0560\\text{ mol } e^- / 2 = 0.0280\\text{ mol } \\ce{Cu}.\\n6. Mass change of Cu: $0.0280\\text{ mol } \\ce{Cu} \\times 63.55\\text{ g/mol} = 1.78\\text{ g}$ decrease."
   }
 ]
 
