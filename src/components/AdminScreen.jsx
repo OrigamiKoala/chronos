@@ -406,6 +406,7 @@ export function AdminScreen({ user, onBack }) {
           </div>
 
           {/* System Scripts Panel */}
+          {/*
           <div className="glass-panel" style={{ padding: 'var(--panel-padding)' }}>
             <h3 style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem' }}>
               <Database size={20} color="var(--accent-primary)" /> System Scripts
@@ -433,6 +434,7 @@ export function AdminScreen({ user, onBack }) {
               )}
             </button>
           </div>
+          */}
         </div>
       </div>
     </div>
