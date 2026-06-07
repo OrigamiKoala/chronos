@@ -178,6 +178,8 @@ async function readSSEStream(response, onQuestion) {
   const decoder = new TextDecoder();
   let buffer = '';
   const questions = [];
+  let accumulatedText = '';
+  let liveQuestionsSent = 0;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -193,16 +195,29 @@ async function readSSEStream(response, onQuestion) {
       const trimmed = frame.trim();
       if (!trimmed.startsWith('data: ')) continue;
 
-      try {
-        const event = JSON.parse(trimmed.slice(6));
+      const rawData = trimmed.slice(6);
+      if (rawData === '[DONE]') continue;
 
-        if (event.type === 'question' && event.data) {
+      try {
+        const event = JSON.parse(rawData);
+
+        if (event.type === 'pregenerated' && event.data) {
           questions.push(event.data);
           if (onQuestion) onQuestion(event.data, questions.length - 1);
+        } else if (event.candidates && event.candidates[0]?.content?.parts?.[0]?.text) {
+          const textChunk = event.candidates[0].content.parts[0].text;
+          accumulatedText += textChunk;
+
+          const parsed = extractCompleteObjects(accumulatedText);
+          while (liveQuestionsSent < parsed.length) {
+            const q = parsed[liveQuestionsSent];
+            questions.push(q);
+            if (onQuestion) onQuestion(q, questions.length - 1);
+            liveQuestionsSent++;
+          }
         }
-        // 'done' and 'error' events are handled implicitly by the loop ending
       } catch {
-        // skip malformed SSE event
+        // skip malformed SSE event or fragmented JSON
       }
     }
   }

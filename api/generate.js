@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry } from './_gemini.js';
+
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -12,51 +12,6 @@ const bq = new BigQuery({
   },
 });
 
-
-/**
- * Parse complete JSON objects from a partially streamed JSON array string.
- * Tracks brace depth and string boundaries to extract finished {...} objects.
- */
-function extractCompleteObjects(jsonStr) {
-  const objects = [];
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-  let objStart = -1;
-
-  for (let i = 0; i < jsonStr.length; i++) {
-    const ch = jsonStr.charAt(i);
-
-    if (escape) {
-      escape = false;
-      continue;
-    }
-
-    if (inString) {
-      if (ch === '\\') escape = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-
-    // Outside string
-    if (ch === '"') {
-      inString = true;
-    } else if (ch === '{') {
-      if (depth === 0) objStart = i;
-      depth++;
-    } else if (ch === '}') {
-      depth--;
-      if (depth === 0 && objStart !== -1) {
-        try {
-          objects.push(JSON.parse(jsonStr.substring(objStart, i + 1)));
-        } catch (e) { /* incomplete, skip */ }
-        objStart = -1;
-      }
-    }
-  }
-
-  return objects;
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -644,12 +599,12 @@ Output the result strictly as a raw, valid JSON array, keeping it free of any ma
 
     let remainingCount = count;
     if (pregeneratedQuestion) {
-      res.write(`data: ${JSON.stringify({ type: 'question', data: pregeneratedQuestion })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'pregenerated', data: pregeneratedQuestion })}\n\n`);
       remainingCount = count - 1;
     }
 
     if (remainingCount <= 0) {
-      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+      res.write(`data: [DONE]\n\n`);
       res.end();
       return;
     }
@@ -681,44 +636,86 @@ Follow these strict rules:
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
     console.log(`[generate.js] Initiating stream with modelId: ${modelId}, remainingCount: ${remainingCount}`);
 
-    const stream = await executeWithRetry(modelId, (ai) => ai.models.generateContentStream({
-      model: modelId,
-      contents: prompt,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        safetySettings,
+    const payload = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json"
       },
-    }), req);
-    console.log(`[generate.js] Stream connection opened successfully`);
+      systemInstruction: {
+        parts: [{ text: systemInstruction }]
+      },
+      safetySettings
+    };
 
-    let accumulated = '';
-    let questionsSent = 0;
+    const keys = [
+      process.env.GEMINI_API_KEY,
+      process.env.GEMINI_API_KEY_2,
+      process.env.GEMINI_API_KEY_3,
+      process.env.GEMINI_API_KEY_4,
+      process.env.GEMINI_API_KEY_5,
+      process.env.GEMINI_API_KEY_6,
+      process.env.GEMINI_API_KEY_7,
+      process.env.GEMINI_API_KEY_8,
+      process.env.GEMINI_API_KEY_9,
+      process.env.GEMINI_API_KEY_10,
+      process.env.GEMINI_API_KEY_11,
+      process.env.GEMINI_API_KEY_12
+    ].filter(Boolean);
 
-    for await (const chunk of stream) {
-      const text = chunk.text;
-      console.log(`[generate.js] Received chunk of length: ${text ? text.length : 0}`);
-      if (text) {
-        accumulated += text;
+    if (keys.length === 0) {
+      throw new Error('GEMINI_API_KEYs are missing');
+    }
 
-        // Extract all fully-formed question objects so far
-        const parsed = extractCompleteObjects(accumulated);
-        console.log(`[generate.js] parsed questions count so far: ${parsed.length}`);
+    let success = false;
+    let lastError = null;
 
-        // Emit any newly completed questions
-        while (questionsSent < parsed.length) {
-          if (questionsSent < remainingCount) {
-            console.log(`[generate.js] Streaming question ${questionsSent + 1} to client`);
-            res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[questionsSent] })}\n\n`);
+    const startIndex = Math.floor(Math.random() * keys.length);
+    const keysOrder = [];
+    for (let i = 0; i < keys.length; i++) {
+      const idx = (startIndex + i) % keys.length;
+      keysOrder.push(keys[idx]);
+    }
+
+    for (let i = 0; i < keysOrder.length; i++) {
+      const apiKey = keysOrder[i];
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?alt=sse&key=${apiKey}`;
+
+      try {
+        console.log(`[generate.js] Trying model ${modelId} with key index ${(startIndex + i) % keys.length}`);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          success = true;
+          const reader = response.body.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              res.write(value);
+            }
+          } finally {
+            reader.releaseLock();
+            res.end();
           }
-          questionsSent++;
+          break;
+        } else {
+          const errBody = await response.json().catch(() => ({}));
+          console.warn(`[generate.js] Key failed with status ${response.status}:`, errBody);
+          lastError = new Error(errBody?.error?.message || `API returned status ${response.status}`);
         }
+      } catch (err) {
+        console.warn(`[generate.js] Exception with key:`, err.message);
+        lastError = err;
       }
     }
-    console.log(`[generate.js] Stream processing loop finished`);
 
-    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-    res.end();
+    if (!success) {
+      throw lastError || new Error('All API keys failed');
+    }
 
   } catch (err) {
     console.error('Streaming generation error:', err);
