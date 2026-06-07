@@ -339,7 +339,8 @@ Difficulty scale: 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 
 
 {
   "id": "math_ex1",
-  "topic": "Number Theory & Modular Arithmetic",
+  "thoughtProcess": "Thought process string detailing the plan/verifications (extremely concise)",
+    "topic": "Number Theory & Modular Arithmetic",
   "question": "Let $S$ be the set of all positive integers $n$ such that $n^2 \\\\equiv 1 \\\\pmod{2025}$. Find the number of elements in $S$ that are less than $2025$.",
   "type": "multiple_choice",
   "options": ["$8$", "$12$", "$16$", "$24$"],
@@ -350,7 +351,8 @@ Difficulty scale: 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 
 
 {
   "id": "math_ex2",
-  "topic": "Combinatorics & Graph Theory",
+  "thoughtProcess": "Thought process string detailing the plan/verifications (extremely concise)",
+    "topic": "Combinatorics & Graph Theory",
   "question": "Let $n \\\\geq 3$. In a round-robin tournament with $n$ players, player $A$ *dominates* $B$ if $A$ beat $B$, or exists $C$ with $A$ beat $C$ and $C$ beat $B$.\\\\nProve that if $n \\\\geq 7$ and odd, there exists a player dominating every other.",
   "type": "free_response",
   "answer": "",
@@ -386,7 +388,8 @@ Difficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest I
 
 {
   "id": "phys_ex1",
-  "topic": "Mechanics & Rotational Dynamics",
+  "thoughtProcess": "Thought process string detailing the plan/verifications (extremely concise)",
+    "topic": "Mechanics & Rotational Dynamics",
   "question": "A uniform solid cylinder of mass $M$ and radius $R$ is on a rough incline at angle $\\\\theta$. A horizontal force $\\\\vec{F}$ is applied to the center, perpendicular to the surface (into the incline). Coefficient of static friction is $\\\\mu_s$. Determine $\\\\theta_{\\\\max}$ for static equilibrium without slipping.",
   "type": "multiple_choice",
   "options": ["$\\\\tan^{-1}\\\\left(\\\\frac{3\\\\mu_s(Mg + F)}{Mg}\\\\right)$", "$\\\\tan^{-1}\\\\left(\\\\frac{3\\\\mu_s(Mg\\\\cos\\\\theta + F)}{Mg}\\\\right)$", "$\\\\tan^{-1}(3\\\\mu_s)$", "$\\\\tan^{-1}\\\\left(\\\\frac{\\\\mu_s(Mg + F)}{Mg}\\\\right)$"],
@@ -397,7 +400,8 @@ Difficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest I
 
 {
   "id": "phys_ex2",
-  "topic": "Electromagnetism & Induction",
+  "thoughtProcess": "Thought process string detailing the plan/verifications (extremely concise)",
+    "topic": "Electromagnetism & Induction",
   "question": "A thin conducting ring (radius $a$, resistance $R$, self-inductance $L$) is coaxial with a solenoid (radius $b<a$, $n$ turns/length, current $I(t)=I_0 e^{-t/\\\\tau}$). At $t=0$ the ring is released from rest under gravity.\\\\n(a) Derive the induced EMF.\\\\n(b) Write the coupled ODEs for induced current $i(t)$ and velocity $v(t)$.\\\\n(c) For $L \\\\ll R\\\\tau$, find the approximate terminal velocity.",
   "type": "free_response",
   "answer": "",
@@ -435,7 +439,8 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
 
 {
   "id": "chem_ex1",
-  "topic": "Chemical Bonding & Bond Order",
+  "thoughtProcess": "Thought process string detailing the plan/verifications (extremely concise)",
+    "topic": "Chemical Bonding & Bond Order",
   "question": "Which species has the longest carbon-oxygen bond?",
   "type": "multiple_choice",
   "options": ["$\\\\ce{HCO2^-}$", "$\\\\ce{CO3^{2-}}$", "$\\\\ce{CO2}$", "$\\\\ce{COS}$"],
@@ -446,7 +451,8 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
 
 {
   "id": "chem_ex2",
-  "topic": "Acid-Base Titration & Gas Laws",
+  "thoughtProcess": "Thought process string detailing the plan/verifications (extremely concise)",
+    "topic": "Acid-Base Titration & Gas Laws",
   "question": "A is an ionic compound containing only H, N, and O.\\\\n(a) A 1.000-g sample titrated with 0.5000 M NaOH reaches equivalence at 25.0 mL. Find the molar mass.\\\\n(b) Heating 1.000 g at 230°C in 1.50 L gives 784 mmHg. Find moles of gas.\\\\n(c) After drying with $\\\\ce{Mg(ClO4)2}$, 308 mL at 755 mmHg, 25°C. Find moles of dry gas.\\\\n(d) Determine the formula of A.\\\\n(e) Draw Lewis structures for cation, anion, and decomposition products.",
   "type": "free_response",
   "answer": "",
@@ -500,9 +506,17 @@ All questions generated MUST adhere to these critical design directives:
 3. OPTIONS FORMATTING (LaTeX Delimiters): For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Simple, purely qualitative text options that do not contain mathematical or chemical terms must NOT be wrapped in LaTeX.
 4. QUESTION TYPES MIX: You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array. For example, if the allowed types are multiple_choice and short_answer, you MUST generate at least one multiple_choice and at least one short_answer question.
 
+###Steps:###
+To ensure high question quality while streaming incrementally:
+- Place your thought process for each question inside the \`"thoughtProcess"\` JSON field of that question object.
+- **For the first question object in the array**: Start the \`"thoughtProcess"\` value with your "Overall Plan" (deciding the topics, difficulties, and traps for all questions to get an overall sense for the test), followed by the sequential steps for the first question.
+- **For each question object sequentially**: Inside its \`"thoughtProcess"\` field, perform the draft, test-solving, feedback, and revision steps. Keep these explanations extremely concise (e.g. 1 short sentence per step) to minimize generation latency.
+- Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with \`[\`.
+
 The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
     "id": "A unique string ID",
+    "thoughtProcess": "Thought process string detailing the plan/verifications (extremely concise)",
     "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
     "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format.",
     "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
