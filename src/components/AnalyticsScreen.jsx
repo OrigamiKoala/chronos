@@ -181,6 +181,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const [tagsSaved, setTagsSaved] = useState(true);
   const latestTagsRef = useRef(null);
   const isSavingRef = useRef(false);
+  const debounceTimerRef = useRef(null);
 
   const autoSaveTags = async (updatedTags) => {
     if (!user || !examId) return;
@@ -188,8 +189,6 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     if (isSavingRef.current) return;
 
     isSavingRef.current = true;
-    setTagsSaving(true);
-    setTagsSaved(false);
 
     try {
       while (latestTagsRef.current !== null) {
@@ -221,14 +220,15 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         });
       }
       setTagsSaved(true);
+      setTagsSaving(false);
       if (onRefreshData) {
         onRefreshData();
       }
     } catch (err) {
       console.error('Auto-save tags error:', err);
+      setTagsSaving(false);
     } finally {
       isSavingRef.current = false;
-      setTagsSaving(false);
     }
   };
 
@@ -242,9 +242,17 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       } else {
         next = { ...prev, [index]: tag };
       }
-      setTimeout(() => {
+      
+      setTagsSaving(true);
+      setTagsSaved(false);
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
         autoSaveTags(next);
-      }, 0);
+      }, 2000);
+
       return next;
     });
   }, [user, examId, results, onRefreshData]);

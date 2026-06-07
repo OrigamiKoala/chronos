@@ -115,6 +115,17 @@ export default async function handler(req, res) {
               progress_status STRING NOT NULL,
               created_at TIMESTAMP NOT NULL
             )
+          `),
+          bq.query(`
+            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` (
+              question_id STRING NOT NULL,
+              subject STRING NOT NULL,
+              topic STRING NOT NULL,
+              difficulty INT64 NOT NULL,
+              type STRING NOT NULL,
+              question_json STRING NOT NULL,
+              created_at TIMESTAMP NOT NULL
+            )
           `)
         ]);
       } catch (e) {
@@ -222,16 +233,20 @@ export default async function handler(req, res) {
           { topic: 'Electrochemistry', subject: 'Chemistry' }
         ];
 
-        for (const t of topics) {
-          const insertMastery = `
-            INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
-            VALUES (@username, @topic, @subject, 3, 5, 0.60)
-          `;
-          await bq.query({
-            query: insertMastery,
-            params: { username: sanitizedUser, topic: t.topic, subject: t.subject }
-          });
-        }
+        const valuesPlaceholder = topics.map((t, idx) => `(@username, @topic_${idx}, @subject_${idx}, 3, 5, 0.60)`).join(',\n');
+        const insertMastery = `
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+          VALUES ${valuesPlaceholder}
+        `;
+        const params = { username: sanitizedUser };
+        topics.forEach((t, idx) => {
+          params[`topic_${idx}`] = t.topic;
+          params[`subject_${idx}`] = t.subject;
+        });
+        await bq.query({
+          query: insertMastery,
+          params
+        });
 
         userData = {
           user_id: sanitizedUser,
@@ -251,61 +266,72 @@ export default async function handler(req, res) {
     const currentEloVersion = userData.elo_version;
     const needsRecalculation = currentEloVersion === null || currentEloVersion === undefined || currentEloVersion < ELO_ALGORITHM_VERSION;
 
-    const allHistoryQuery = `
-      SELECT h.exam_id, h.subject, h.accuracy, h.avg_time, h.rating_change, h.new_rating, h.created_at,
-             r.results_json
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
-      LEFT JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
-      ON h.exam_id = r.exam_id AND h.user_id = r.user_id
-      WHERE h.user_id = @username
-      ORDER BY h.created_at ASC
-    `;
-    const masteryQuery = `
-      SELECT sub_category, subject, accuracy_rate, total_count
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-      WHERE user_id = @username
-    `;
-    const analysisQuery = `
-      SELECT subject, detailed_analysis
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
-      WHERE user_id = @username
-    `;
-    const breakdownQuery = `
-      SELECT topic, good_at, not_good_at
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-      WHERE user_id = @username
-    `;
-    const activeExamQuery = `
-      SELECT exam_id, subject, config_json, problems_json, answers_json, frq_submissions_json, current_question_index, created_at
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
-      WHERE user_id = @username
-      LIMIT 1
+    const combinedQuery = `
+      SELECT
+        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at, results_json)))
+         FROM (
+           SELECT h.exam_id, h.subject, h.accuracy, h.avg_time, h.rating_change, h.new_rating, h.created_at, r.results_json
+           FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
+           LEFT JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
+           ON h.exam_id = r.exam_id AND h.user_id = r.user_id
+           WHERE h.user_id = @username
+           ORDER BY h.created_at ASC
+         )
+        ) AS history_json,
+        
+        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(sub_category, subject, accuracy_rate, total_count)))
+         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+         WHERE user_id = @username
+        ) AS mastery_json,
+        
+        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(subject, detailed_analysis)))
+         FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
+         WHERE user_id = @username
+        ) AS analysis_json,
+        
+        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(topic, good_at, not_good_at)))
+         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+         WHERE user_id = @username
+        ) AS breakdown_json,
+        
+        (SELECT TO_JSON_STRING(STRUCT(exam_id, subject, config_json, problems_json, answers_json, frq_submissions_json, current_question_index, created_at))
+         FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
+         WHERE user_id = @username
+         LIMIT 1
+        ) AS active_exam_json
     `;
 
-    const [historyResult, masteryResult, analysisResult, breakdownResult, activeExamResult] = await Promise.allSettled([
-      bq.query({ query: allHistoryQuery, params: { username: sanitizedUser } }),
-      bq.query({ query: masteryQuery, params: { username: sanitizedUser } }),
-      bq.query({ query: analysisQuery, params: { username: sanitizedUser } }),
-      bq.query({ query: breakdownQuery, params: { username: sanitizedUser } }),
-      bq.query({ query: activeExamQuery, params: { username: sanitizedUser } })
-    ]);
+    const [rows] = await bq.query({
+      query: combinedQuery,
+      params: { username: sanitizedUser }
+    });
 
-    const allHistory = historyResult.status === 'fulfilled' ? historyResult.value[0] : [];
-    const mastery = masteryResult.status === 'fulfilled' ? masteryResult.value[0] : [];
-    const analyses = analysisResult.status === 'fulfilled' ? analysisResult.value[0] : [];
-    const breakdowns = breakdownResult.status === 'fulfilled' ? breakdownResult.value[0] : [];
+    const resultRow = rows[0] || {};
+    const allHistory = resultRow.history_json ? JSON.parse(resultRow.history_json) : [];
+    const mastery = resultRow.mastery_json ? JSON.parse(resultRow.mastery_json) : [];
+    const analyses = resultRow.analysis_json ? JSON.parse(resultRow.analysis_json) : [];
+    const breakdowns = resultRow.breakdown_json ? JSON.parse(resultRow.breakdown_json) : [];
 
-    const activeExamRows = activeExamResult && activeExamResult.status === 'fulfilled' ? activeExamResult.value[0] : [];
-    const activeExam = activeExamRows.length > 0 ? {
-      exam_id: activeExamRows[0].exam_id,
-      subject: activeExamRows[0].subject,
-      config: JSON.parse(activeExamRows[0].config_json),
-      problems: JSON.parse(activeExamRows[0].problems_json),
-      answers: JSON.parse(activeExamRows[0].answers_json),
-      frqSubmissions: activeExamRows[0].frq_submissions_json ? JSON.parse(activeExamRows[0].frq_submissions_json) : [],
-      currentQuestionIndex: Number(activeExamRows[0].current_question_index),
-      created_at: activeExamRows[0].created_at?.value || activeExamRows[0].created_at
-    } : null;
+    let activeExam = null;
+    if (resultRow.active_exam_json) {
+      try {
+        const parsedActive = JSON.parse(resultRow.active_exam_json);
+        if (parsedActive && parsedActive.exam_id) {
+          activeExam = {
+            exam_id: parsedActive.exam_id,
+            subject: parsedActive.subject,
+            config: parsedActive.config_json ? JSON.parse(parsedActive.config_json) : {},
+            problems: parsedActive.problems_json ? JSON.parse(parsedActive.problems_json) : [],
+            answers: parsedActive.answers_json ? JSON.parse(parsedActive.answers_json) : [],
+            frqSubmissions: parsedActive.frq_submissions_json ? JSON.parse(parsedActive.frq_submissions_json) : [],
+            currentQuestionIndex: Number(parsedActive.current_question_index),
+            created_at: parsedActive.created_at?.value || parsedActive.created_at
+          };
+        }
+      } catch (err) {
+        console.error('Error parsing active exam:', err);
+      }
+    }
 
     if (needsRecalculation) {
       const subjectRatings = { Math: 100, Physics: 100, Chemistry: 100 };
@@ -415,23 +441,24 @@ export default async function handler(req, res) {
       }
 
       if (updatesToMake.length > 0) {
-        const updatePromises = updatesToMake.map(update => {
-          const query = `
-            UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-            SET rating_change = @rating_change, new_rating = @new_rating
-            WHERE user_id = @username AND exam_id = @exam_id
-          `;
-          return bq.query({
-            query,
-            params: {
-              username: sanitizedUser,
-              exam_id: update.exam_id,
-              rating_change: update.rating_change,
-              new_rating: update.new_rating
-            }
-          });
+        const unionBlocks = updatesToMake.map((u, idx) => `SELECT @examId_${idx} AS exam_id, @ratingChange_${idx} AS rating_change, @newRating_${idx} AS new_rating`).join(' UNION ALL ');
+        const mergeHistoryQuery = `
+          MERGE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` T
+          USING (${unionBlocks}) S
+          ON T.user_id = @username AND T.exam_id = S.exam_id
+          WHEN MATCHED THEN
+            UPDATE SET T.rating_change = S.rating_change, T.new_rating = S.new_rating
+        `;
+        const params = { username: sanitizedUser };
+        updatesToMake.forEach((u, idx) => {
+          params[`examId_${idx}`] = u.exam_id;
+          params[`ratingChange_${idx}`] = Number(u.rating_change);
+          params[`newRating_${idx}`] = Number(u.new_rating);
         });
-        await Promise.all(updatePromises);
+        await bq.query({
+          query: mergeHistoryQuery,
+          params
+        });
       }
 
       // Update users table with final ratings and ELO version

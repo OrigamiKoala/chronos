@@ -486,7 +486,7 @@ You MUST generate questions that are directly related to the content and concept
 
   const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
 
-${subjectContext}
+${subjectContext.replace(/"detailedSolution":\s*"[\s\S]*?"/g, '"detailedSolution": ""')}
 ${lessonInstructions}
 
 For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
@@ -508,7 +508,7 @@ The output must be a pure JSON array containing exactly the requested number of 
     "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
     "answer": ${answerSchemaDesc},
     "difficulty": a number between 1 and 10 representing difficulty,
-    "detailedSolution": "A thorough, detailed step-by-step solution to the question"
+    "detailedSolution": "An empty string \"\""
 }
 Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
 
@@ -516,7 +516,7 @@ Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
 Follow these strict rules:
 1. Question Style: Provide a balanced mix of standard and tricky questions. Standard questions should only be generated for difficulty levels 1-4. For difficulty levels 5-10, make questions either tricky with conceptual traps, or standard but highly difficult in their own right. Do NOT use obscure, highly specialized research-level details.
 2. The exam must span a wide, diverse range of standard topics in ${subject}. Do NOT let any single topic dominate the entire exam. Distribute the questions across a broad variety of core topics in the standard syllabus.
-3. Detailed Solutions: For every question generated, you MUST provide a thorough, detailed step-by-step correct solution and proof in the "detailedSolution" field.
+3. Detailed Solutions: Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 4. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
 
   const safetySettings = [
@@ -547,7 +547,6 @@ Follow these strict rules:
       config: {
         systemInstruction,
         responseMimeType: "application/json",
-        temperature: 0.7,
         safety_settings: safetySettings,
         safetySettings: safetySettings,
       }

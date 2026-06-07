@@ -166,6 +166,51 @@ export default async function handler(req, res) {
       console.error('Parallel fetch error:', err);
     }
 
+    // 1b. Fetch 1 pregenerated question
+    let pregeneratedQuestion = null;
+    try {
+      const lookupQuery = `
+        WITH weak_topics AS (
+          SELECT sub_category AS topic
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+          WHERE accuracy_rate < 0.65 AND user_id = @targetUserId AND subject = @subject
+        ),
+        seen_questions AS (
+          SELECT DISTINCT JSON_VALUE(q, '$.id') AS question_id
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`,
+          UNNEST(JSON_QUERY_ARRAY(results_json)) AS q
+          WHERE user_id = @targetUserId
+          UNION DISTINCT
+          SELECT DISTINCT JSON_VALUE(p, '$.id') AS question_id
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`,
+          UNNEST(JSON_QUERY_ARRAY(problems_json)) AS p
+          WHERE user_id = @targetUserId
+        )
+        SELECT pq.question_id, pq.topic, pq.difficulty, pq.type, pq.question_json
+        FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` pq
+        LEFT JOIN seen_questions sq ON pq.question_id = sq.question_id
+        WHERE pq.subject = @subject AND sq.question_id IS NULL
+        ORDER BY 
+          CASE WHEN pq.topic IN (SELECT topic FROM weak_topics) THEN 0 ELSE 1 END,
+          ABS(pq.difficulty - @startingDifficulty) ASC,
+          RAND()
+        LIMIT 1
+      `;
+      const [rows] = await bq.query({
+        query: lookupQuery,
+        params: {
+          targetUserId: sanitizedUser,
+          subject,
+          startingDifficulty: Number(startingDifficulty) || 5
+        }
+      });
+      if (rows && rows.length > 0) {
+        pregeneratedQuestion = JSON.parse(rows[0].question_json);
+      }
+    } catch (err) {
+      console.error('Error fetching pregenerated question:', err);
+    }
+
     // 2. Build the Gemini generation prompt
     let constraints = '';
     let examples = '';
@@ -522,7 +567,7 @@ ${constraints}
 
 ###Examples:###
 
-${examples}
+${examples.replace(/"detailedSolution":\s*"[\s\S]*?"/g, '"detailedSolution": ""')}
 
 For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 
@@ -537,7 +582,7 @@ All questions generated MUST adhere to these critical design directives:
       - In Math: You must select from algebra, geometry, counting/probability, number theory.
    If a user's weak concepts are provided, allocate a minority of the questions (~30%, e.g., 1 out of 3, or 2 out of 5) to target those weaknesses, and dedicate the remaining majority (~70%) to a diverse selection of other core topics in the subject's standard syllabus, ensuring a balanced distribution of topics across the exam. If weaknesses are "None", distribute questions evenly across all core topics.
 
-3. Detailed Solutions: For every question generated, you MUST provide a thorough, detailed step-by-step correct solution and proof in the "detailedSolution" field
+3. Detailed Solutions: Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 4. QUESTION TYPES MIX: You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.
 
 ###Steps:###
@@ -640,21 +685,33 @@ The output must be a pure JSON array containing exactly the requested number of 
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
   "answer": ${answerSchemaDesc},
   "difficulty": a number between 1 and 10 representing difficulty,
-  "detailedSolution": "A thorough, detailed step-by-step solution to the question"
+  "detailedSolution": "An empty string \"\""
 }
 
 Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.`;
-
-    console.log("System instruction byte size:", Buffer.byteLength(systemInstruction, 'utf8'));
-
-    const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
-You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
 
     // 3. Set SSE headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
+
+    let remainingCount = count;
+    if (pregeneratedQuestion) {
+      res.write(`data: ${JSON.stringify({ type: 'question', data: pregeneratedQuestion })}\n\n`);
+      remainingCount = count - 1;
+    }
+
+    if (remainingCount <= 0) {
+      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+      res.end();
+      return;
+    }
+
+    const prompt = `Generate exactly ${remainingCount} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+Follow these strict rules:
+1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
+2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
 
     const safetySettings = [
       {
@@ -702,7 +759,7 @@ You MUST ensure that the generated questions contain a mix of all requested ques
 
         // Emit any newly completed questions
         while (questionsSent < parsed.length) {
-          if (questionsSent < count) {
+          if (questionsSent < remainingCount) {
             res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[questionsSent] })}\n\n`);
           }
           questionsSent++;

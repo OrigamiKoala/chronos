@@ -271,20 +271,23 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
   useEffect(() => {
     if (config.timeLimitStyle === 'none' && problems.length > 0 && !loading && config.username && config.username !== 'default_user') {
-      fetch('/api/exams?route=save-active-exam', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: config.username,
-          examId: config.examId,
-          subject: config.subject,
-          config,
-          problems,
-          answers,
-          frqSubmissions,
-          currentQuestionIndex
-        })
-      }).catch(err => console.error("Error auto-saving active exam to BigQuery:", err));
+      const delayDebounce = setTimeout(() => {
+        fetch('/api/exams?route=save-active-exam', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: config.username,
+            examId: config.examId,
+            subject: config.subject,
+            config,
+            problems,
+            answers,
+            frqSubmissions,
+            currentQuestionIndex
+          })
+        }).catch(err => console.error("Error auto-saving active exam to BigQuery:", err));
+      }, 3000);
+      return () => clearTimeout(delayDebounce);
     }
   }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config]);
 
@@ -618,7 +621,20 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
         <h3>Loading next question...</h3>
-        <p style={{ color: 'var(--text-secondary)' }}>Streaming question {currentQuestionIndex + 1} of {config.numQuestions}</p>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Streaming question {currentQuestionIndex + 1} of {config.numQuestions}</p>
+        {config.stressMode !== 'strict' && (
+          <button 
+            className="btn btn-outline" 
+            style={{ margin: '0 auto' }}
+            onClick={() => {
+              recordActiveInterval(currentQuestionIndex);
+              clearInterval(timerRef.current);
+              setCurrentQuestionIndex(prev => prev - 1);
+            }}
+          >
+            <ArrowLeft size={18} style={{ marginRight: '0.5rem' }} /> Go Back
+          </button>
+        )}
       </div>
     );
   }
@@ -628,6 +644,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   const isLowTime = activeTimeLeft <= 10;
   const isHidden = config.stressMode === 'hidden' && !isLowTime;
   const isDynamicStress = config.stressMode === 'dynamic' && isLowTime;
+  const allLoaded = problems.length === config.numQuestions;
 
   const totalTime = isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion;
   const percentage = Math.max(0, Math.min(100, (activeTimeLeft / totalTime) * 100));
@@ -1013,23 +1030,36 @@ export function ExamScreen({ config, onFinish, resumeState }) {
               </button>
             )}
 
-            <button 
-              className="btn btn-primary" 
-              disabled={config.stressMode === 'strict' && !activeAnswer.trim()}
-              onClick={() => {
-                if (config.stressMode === 'strict') {
-                  submitStrictAnswer();
-                } else {
-                  handleFinishExam();
-                }
-              }}
-            >
-              {config.stressMode === 'strict' 
-                ? (currentQuestionIndex + 1 === config.numQuestions ? 'Finish Exam' : 'Next Question')
-                : 'Finish Exam'
-              } 
-              <ArrowRight size={18} />
-            </button>
+            {config.stressMode === 'strict' ? (
+              currentQuestionIndex + 1 === config.numQuestions ? (
+                allLoaded && (
+                  <button 
+                    className="btn btn-primary" 
+                    disabled={!activeAnswer.trim()}
+                    onClick={() => submitStrictAnswer()}
+                  >
+                    Finish Exam <ArrowRight size={18} />
+                  </button>
+                )
+              ) : (
+                <button 
+                  className="btn btn-primary" 
+                  disabled={!activeAnswer.trim() || currentQuestionIndex + 1 >= problems.length}
+                  onClick={() => submitStrictAnswer()}
+                >
+                  Next Question <ArrowRight size={18} />
+                </button>
+              )
+            ) : (
+              allLoaded && (
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => handleFinishExam()}
+                >
+                  Finish Exam <ArrowRight size={18} />
+                </button>
+              )
+            )}
           </div>
         </>
       )}
