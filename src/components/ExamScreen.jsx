@@ -1051,7 +1051,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 </button>
               )
             ) : (
-              allLoaded && currentQuestionIndex + 1 === config.numQuestions && (
+              allLoaded && (
                 <button 
                   className="btn btn-primary" 
                   onClick={() => handleFinishExam()}

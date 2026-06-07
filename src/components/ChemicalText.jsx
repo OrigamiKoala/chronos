@@ -285,8 +285,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
         // If this part is a LaTeX math block, render it directly as text so MathJax can process it
         if (part.startsWith('$')) {
-          const processedPart = part.replace(/\\(\s)/g, '\\\\$1');
-          return <span key={partIndex}>{processedPart}</span>;
+          return <span key={partIndex}>{part}</span>;
         }
 
         // If this part is markdown bold (**...**), render as <strong>

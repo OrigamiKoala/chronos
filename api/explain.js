@@ -80,6 +80,7 @@ Return strictly a valid JSON object with the following schema:
       ],
       config: {
         responseMimeType: "application/json",
+        temperature: 0.3,
         safety_settings: [
           {
             category: 'HARM_CATEGORY_HATE_SPEECH',

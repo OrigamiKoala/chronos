@@ -445,7 +445,8 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
             model: modelId,
             contents: geminiPrompt,
             config: {
-              responseMimeType: "application/json"
+              responseMimeType: "application/json",
+              temperature: 0.3
             }
           }), req);
 
