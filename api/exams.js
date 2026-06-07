@@ -674,7 +674,6 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
             ],
             config: {
               responseMimeType: "application/json",
-              temperature: 0.2,
               safety_settings: [
                 {
                   category: 'HARM_CATEGORY_HATE_SPEECH',
@@ -1057,7 +1056,6 @@ Incorrect questions: ${wrongProblemsString}`;
       ],
       config: {
         responseMimeType: "application/json",
-        temperature: 0.2,
         safety_settings: [
           {
             category: 'HARM_CATEGORY_HATE_SPEECH',
@@ -1299,7 +1297,6 @@ Be direct, supportive, and pedagogical. Do not include markdown headers or greet
         }
       ],
       config: {
-        temperature: 0.3,
         safety_settings: [
           {
             category: 'HARM_CATEGORY_HATE_SPEECH',

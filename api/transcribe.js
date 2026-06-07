@@ -81,7 +81,6 @@ STRICT RULE: ONLY output the user's response/work/process based on the image. Do
         }
       ],
       config: {
-        temperature: 0.3,
         safety_settings: [
           {
             category: 'HARM_CATEGORY_HATE_SPEECH',
