@@ -197,6 +197,15 @@ export default async function handler(req, res) {
             eloVersion: ELO_ALGORITHM_VERSION,
             userRole: userRole || null,
             userOrganization: userOrganization || null
+          },
+          types: {
+            username: 'STRING',
+            password: 'STRING',
+            recoveryQuestion: 'STRING',
+            recoveryAnswer: 'STRING',
+            eloVersion: 'INT64',
+            userRole: 'STRING',
+            userOrganization: 'STRING'
           }
         });
 

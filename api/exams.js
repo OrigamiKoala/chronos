@@ -836,13 +836,15 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
             (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at, assignment_id)
             VALUES (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP(), @assignmentId)`,
-          params: { username: sanitizedUser, examId, subject, accuracy: finalAccuracy, avgTime, ratingChange: finalRatingChange, newRating: finalNewRating, assignmentId: assignmentId || null }
+          params: { username: sanitizedUser, examId, subject, accuracy: finalAccuracy, avgTime, ratingChange: finalRatingChange, newRating: finalNewRating, assignmentId: assignmentId || null },
+          types: { assignmentId: 'STRING' }
         }),
         bq.query({
           query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
             (user_id, exam_id, results_json, created_at, assignment_id)
             VALUES (@username, @examId, @resultsJson, CURRENT_TIMESTAMP(), @assignmentId)`,
-          params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(gradedResults), assignmentId: assignmentId || null }
+          params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(gradedResults), assignmentId: assignmentId || null },
+          types: { assignmentId: 'STRING' }
         }),
         bq.query({
           query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`

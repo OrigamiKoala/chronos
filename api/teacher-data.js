@@ -73,6 +73,9 @@ export default async function handler(req, res) {
                 contentBased: hw.contentBased !== false,
                 dueDate,
                 sharedQuestionsJson: sharedQJson
+              },
+              types: {
+                sharedQuestionsJson: 'STRING'
               }
             });
           });
@@ -165,6 +168,9 @@ export default async function handler(req, res) {
                 contentBased: hw.contentBased !== false,
                 dueDate,
                 sharedQuestionsJson: sharedQJson
+              },
+              types: {
+                sharedQuestionsJson: 'STRING'
               }
             });
           } else {
@@ -190,6 +196,9 @@ export default async function handler(req, res) {
                 contentBased: hw.contentBased !== false,
                 dueDate,
                 sharedQuestionsJson: sharedQJson
+              },
+              types: {
+                sharedQuestionsJson: 'STRING'
               }
             });
           }

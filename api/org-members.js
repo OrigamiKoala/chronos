@@ -109,6 +109,10 @@ export default async function handler(req, res) {
           role: cleanRole,
           org: cleanOrg,
           foundUserIds
+        },
+        types: {
+          role: 'STRING',
+          org: 'STRING'
         }
       });
 
