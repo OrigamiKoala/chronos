@@ -530,7 +530,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { username, subject, examId, accuracy, avgTime, ratingChange, newRating, results, assignmentId } = req.body;
+  const { username, subject, examId, accuracy, avgTime, ratingChange, newRating, results, assignmentId, isRated } = req.body;
 
   if (!username || !subject || !examId || accuracy === undefined || !results) {
     return res.status(400).json({ error: 'Missing required parameters' });
@@ -742,7 +742,27 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
     let finalRatingChange = ratingChange;
     let finalNewRating = newRating;
 
-    if (hasFRQ) {
+    if (isRated === false) {
+      finalRatingChange = 0;
+      if (sanitizedUser !== 'default_user') {
+        let ratingColumn = 'math_rating';
+        if (subject === 'Physics') ratingColumn = 'physics_rating';
+        else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
+
+        try {
+          const [userRows] = await bq.query({
+            query: `SELECT ${ratingColumn} FROM \`${projectId}\`.\`chronos_users\`.\`users\` WHERE user_id = @username`,
+            params: { username: sanitizedUser }
+          });
+          if (userRows && userRows.length > 0) {
+            finalNewRating = userRows[0][ratingColumn] || 100;
+          }
+        } catch (e) {
+          console.error('Failed to fetch user rating for unrated exam:', e);
+          finalNewRating = newRating;
+        }
+      }
+    } else if (hasFRQ) {
       const totalQuestions = gradedResults.length;
       const totalScore = gradedResults.reduce((acc, r) => acc + (r.score !== undefined ? r.score : (r.isCorrect ? 1 : 0)), 0);
       finalAccuracy = totalScore / totalQuestions;
@@ -831,7 +851,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       if (subject === 'Physics') ratingColumn = 'physics_rating';
       else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
 
-      await Promise.all([
+      const updatePromises = [
         bq.query({
           query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
             (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at, assignment_id)
@@ -847,17 +867,24 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           types: { assignmentId: 'STRING' }
         }),
         bq.query({
-          query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
-            SET ${ratingColumn} = @newRating, elo_version = @eloVersion
-            WHERE user_id = @username`,
-          params: { username: sanitizedUser, newRating: finalNewRating, eloVersion: ELO_ALGORITHM_VERSION }
-        }),
-        bq.query({
           query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
             WHERE user_id = @username AND exam_id = @examId`,
           params: { username: sanitizedUser, examId }
         })
-      ]);
+      ];
+
+      if (isRated !== false) {
+        updatePromises.push(
+          bq.query({
+            query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+              SET ${ratingColumn} = @newRating, elo_version = @eloVersion
+              WHERE user_id = @username`,
+            params: { username: sanitizedUser, newRating: finalNewRating, eloVersion: ELO_ALGORITHM_VERSION }
+          })
+        );
+      }
+
+      await Promise.all(updatePromises);
 
       // 2. Record wrong problems + update topic mastery
       const topicStats = {};

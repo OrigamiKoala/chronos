@@ -89,6 +89,13 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     resumeState ? (resumeState.problems[resumeState.currentQuestionIndex]?.difficulty || config.startingDifficulty) : config.startingDifficulty
   );
   const [isPaused, setIsPaused] = useState(false);
+  const [isRated, setIsRated] = useState(() => {
+    if (resumeState && resumeState.config) {
+      return resumeState.config.isRated !== false;
+    }
+    return config.isRated !== false;
+  });
+  const [saving, setSaving] = useState(false);
   const [totalTimeLeft, setTotalTimeLeft] = useState(() => config.timeLimitWholeTest * 60);
   const [questionTimesLeft, setQuestionTimesLeft] = useState(() => 
     Array(config.numQuestions).fill(isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion)
@@ -269,27 +276,40 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     return () => clearInterval(timerRef.current);
   }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft, isPaused]);
 
+  const saveActiveExam = async (showLoader = false, updatedConfig = config) => {
+    if (!config.username || config.username === 'default_user') return;
+    if (showLoader) setSaving(true);
+    try {
+      await fetch('/api/exams?route=save-active-exam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: config.username,
+          examId: config.examId,
+          subject: config.subject,
+          config: updatedConfig,
+          problems,
+          answers,
+          frqSubmissions,
+          currentQuestionIndex
+        })
+      });
+    } catch (err) {
+      console.error("Error saving active exam:", err);
+    } finally {
+      if (showLoader) setSaving(false);
+    }
+  };
+
   useEffect(() => {
-    if (config.timeLimitStyle === 'none' && problems.length > 0 && !loading && config.username && config.username !== 'default_user') {
+    const isUnrated = !isRated || config.timeLimitStyle === 'none';
+    if (isUnrated && problems.length > 0 && !loading) {
       const delayDebounce = setTimeout(() => {
-        fetch('/api/exams?route=save-active-exam', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: config.username,
-            examId: config.examId,
-            subject: config.subject,
-            config,
-            problems,
-            answers,
-            frqSubmissions,
-            currentQuestionIndex
-          })
-        }).catch(err => console.error("Error auto-saving active exam to BigQuery:", err));
+        saveActiveExam(false, { ...config, isRated });
       }, 3000);
       return () => clearTimeout(delayDebounce);
     }
-  }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config]);
+  }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config, isRated]);
 
   const handleTimeUp = () => {
     if (problem && problem.type === 'free_response') {
@@ -551,6 +571,43 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     });
   };
 
+  const handlePause = async () => {
+    const isTimed = config.timeLimitStyle !== 'none';
+    let updatedConfig = config;
+    if (isTimed && isRated) {
+      const confirmPause = confirm("Are you sure? If you pause, this will not count toward your ELO");
+      if (!confirmPause) return;
+
+      setIsRated(false);
+      config.isRated = false;
+      updatedConfig = { ...config, isRated: false };
+    }
+
+    setIsPaused(true);
+    await saveActiveExam(true, updatedConfig);
+  };
+
+  if (saving) {
+    return (
+      <div className="glass-panel animate-fade-in" style={{ 
+        padding: 'var(--panel-padding-lg)', 
+        textAlign: 'center', 
+        maxWidth: '600px', 
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '300px',
+        gap: '1.5rem'
+      }}>
+        <Loader2 className="animate-spin text-gradient" size={48} />
+        <h3>Saving exam progress...</h3>
+        <p style={{ color: 'var(--text-secondary)' }}>Please wait while we save your questions and answers to BigQuery.</p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
@@ -680,8 +737,24 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="glass-panel" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.4rem 0.8rem',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.9rem'
+          }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>ELO:</span>
+            <strong style={{ color: isRated ? 'var(--success)' : 'var(--text-muted)' }}>
+              {isRated ? '🏆 Rated' : ' practice Unrated'}
+            </strong>
+          </div>
+
           <button
-            onClick={() => setIsPaused(true)}
+            onClick={handlePause}
             className="btn btn-outline"
             style={{
               padding: '0.4rem 0.8rem',

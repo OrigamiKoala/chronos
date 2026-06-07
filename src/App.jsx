@@ -392,6 +392,7 @@ function App() {
   const finishExam = (results) => {
     const subject = examConfig.subject;
     const currentRating = ratings[subject] || 100;
+    const isRated = examConfig.isRated !== false;
 
     const getQuestionRating = (sub, diff) => {
       const d = Math.max(1, Math.min(10, diff));
@@ -439,10 +440,12 @@ function App() {
     }
     const hasBeenChallenged = isChallenged || consecutiveFailCount >= 2;
     const K = hasBeenChallenged ? 32 : 250;
-    const ratingChange = Math.round(K * (score - expectedScore));
-    const newRating = Math.max(100, currentRating + ratingChange);
+    const ratingChange = isRated ? Math.round(K * (score - expectedScore)) : 0;
+    const newRating = isRated ? Math.max(100, currentRating + ratingChange) : currentRating;
 
-    setRatings(prev => ({ ...prev, [subject]: newRating }));
+    if (isRated) {
+      setRatings(prev => ({ ...prev, [subject]: newRating }));
+    }
 
     // Send result to DB
     const examIdStr = `${Date.now()}`;
@@ -475,6 +478,7 @@ function App() {
         avgTime: avgQuestionRating,
         ratingChange,
         newRating,
+        isRated,
         assignmentId: examConfig?.assignmentId || null,
         results: results.map(r => ({
           id: r.id,
@@ -506,7 +510,7 @@ function App() {
             ratingChange: submitData.ratingChange ?? ratingChange,
             mistakePatterns: submitData.mistakePatterns
           });
-          if (submitData.newRating !== undefined) {
+          if (isRated && submitData.newRating !== undefined) {
             setRatings(prev => ({ ...prev, [subject]: submitData.newRating }));
           }
         } else {

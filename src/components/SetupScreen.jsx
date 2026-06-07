@@ -47,6 +47,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       timeLimitWholeTest: parsed?.timeLimitWholeTest || 30,
       timeLimitStyle: parsed?.timeLimitStyle || 'per_question',
       examFormat: formatVal,
+      isRated: parsed?.isRated !== false,
     };
   });
 
@@ -390,6 +391,17 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             <option value="Math">Math</option>
             <option value="Physics">Physics</option>
             <option value="Chemistry">Chemistry</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Rating Mode</label>
+          <select name="isRated" value={config.isRated === false ? 'false' : 'true'} onChange={(e) => {
+            const val = e.target.value === 'true';
+            setConfig(prev => ({ ...prev, isRated: val }));
+          }} className="input-field">
+            <option value="true">🏆 Rated (Counts toward ELO)</option>
+            <option value="false">practice Unrated (Won't affect ELO)</option>
           </select>
         </div>
 
