@@ -12,7 +12,7 @@ const bq = new BigQuery({
 });
 
 const ELO_ALGORITHM_VERSION = 3;
-let schemaEnsured = false;
+let schemaEnsured = process.env.ENSURE_SCHEMA !== 'true';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

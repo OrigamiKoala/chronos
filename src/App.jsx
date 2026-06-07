@@ -1052,6 +1052,17 @@ function App() {
         )}
       </main>
 
+      <footer style={{
+        textAlign: 'center',
+        padding: '1.5rem',
+        color: 'var(--text-muted)',
+        fontSize: '0.85rem',
+        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+        marginTop: '2rem'
+      }}>
+        Contact: Discord @origamikoala
+      </footer>
+
       {/* Sign-In Conversion Warning Modal */}
       {showConversionPrompt && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>

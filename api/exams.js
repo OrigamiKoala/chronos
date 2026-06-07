@@ -4,8 +4,8 @@ import { executeWithRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const ELO_ALGORITHM_VERSION = 3;
-let tablesEnsured = false;
-let tagsTableEnsured = false;
+let tablesEnsured = process.env.ENSURE_SCHEMA !== 'true';
+let tagsTableEnsured = process.env.ENSURE_SCHEMA !== 'true';
 
 const bq = new BigQuery({
   projectId: projectId,
