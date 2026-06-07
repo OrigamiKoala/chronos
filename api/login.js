@@ -307,10 +307,10 @@ export default async function handler(req, res) {
     });
 
     const resultRow = rows[0] || {};
-    const allHistory = resultRow.history_json ? JSON.parse(resultRow.history_json) : [];
-    const mastery = resultRow.mastery_json ? JSON.parse(resultRow.mastery_json) : [];
-    const analyses = resultRow.analysis_json ? JSON.parse(resultRow.analysis_json) : [];
-    const breakdowns = resultRow.breakdown_json ? JSON.parse(resultRow.breakdown_json) : [];
+    const allHistory = resultRow.history_json ? (JSON.parse(resultRow.history_json) || []) : [];
+    const mastery = resultRow.mastery_json ? (JSON.parse(resultRow.mastery_json) || []) : [];
+    const analyses = resultRow.analysis_json ? (JSON.parse(resultRow.analysis_json) || []) : [];
+    const breakdowns = resultRow.breakdown_json ? (JSON.parse(resultRow.breakdown_json) || []) : [];
 
     let activeExam = null;
     if (resultRow.active_exam_json) {
@@ -404,7 +404,7 @@ export default async function handler(req, res) {
             console.error('Failed to parse results_json in login recalculation:', e);
           }
         }
-        
+
         const questionMultiplier = Math.sqrt(totalQuestions / 5);
         const avgQuestionRating = sumQuestionRatings > 0 ? (sumQuestionRatings / totalQuestions) : 1000;
 
@@ -412,7 +412,7 @@ export default async function handler(req, res) {
         if (avgQuestionRating < currentRating) {
           expectedScore = Math.max(expectedScore, 0.75);
         }
-        
+
         if (score < 0.75) {
           subjectConsecutiveFailCount[sub]++;
         } else {
@@ -422,7 +422,7 @@ export default async function handler(req, res) {
         if (subjectConsecutiveFailCount[sub] >= 2) {
           subjectChallenged[sub] = true;
         }
-        
+
         const K = subjectChallenged[sub] ? 32 : 250;
         const ratingChange = Math.round(K * questionMultiplier * (score - expectedScore));
         const newRating = Math.max(100, currentRating + ratingChange);
