@@ -154,43 +154,7 @@ export default async function handler(req, res) {
       console.error('Parallel fetch error:', err);
     }
 
-    // 1b. Fetch 1 pregenerated question
-    let pregeneratedQuestion = null;
-    try {
-      const lookupQuery = `
-        WITH weak_topics AS (
-          SELECT sub_category AS topic
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-          WHERE accuracy_rate < 0.65 AND user_id = @targetUserId AND subject = @subject
-        ),
-        seen_questions AS (
-          SELECT DISTINCT JSON_VALUE(q, '$.id') AS question_id
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`,
-          UNNEST(JSON_QUERY_ARRAY(results_json)) AS q
-          WHERE user_id = @targetUserId
-          UNION DISTINCT
-          SELECT DISTINCT JSON_VALUE(p, '$.id') AS question_id
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`,
-          UNNEST(JSON_QUERY_ARRAY(problems_json)) AS p
-          WHERE user_id = @targetUserId
-        )
-        SELECT pq.question_id, pq.topic, pq.difficulty, pq.type, pq.question_json
-        FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` pq
-        LEFT JOIN seen_questions sq ON pq.question_id = sq.question_id
-        WHERE pq.subject = @subject AND pq.difficulty = @startingDifficulty AND sq.question_id IS NULL
-        ORDER BY 
-          CASE WHEN pq.topic IN (SELECT topic FROM weak_topics) THEN 0 ELSE 1 END,
-          RAND()
-        LIMIT 1
-      `;
-      const [rows] = await bq.query({
-        query: lookupQuery,
-        params: { targetUserId: sanitizedUser, subject, startingDifficulty: Number(startingDifficulty) || 5 }
-      });
-      if (rows && rows.length > 0) pregeneratedQuestion = JSON.parse(rows[0].question_json);
-    } catch (err) {
-      console.error('Error fetching pregenerated question:', err);
-    }
+
 
     // 2. Define Constraints & Examples (Kept exactly as requested)
     let constraints = '';
@@ -627,10 +591,7 @@ The output must be a pure JSON array containing exactly the requested number of 
     res.setHeader('X-Accel-Buffering', 'no');
 
     let remainingCount = count;
-    if (pregeneratedQuestion) {
-      res.write(`data: ${JSON.stringify({ type: 'pregenerated', data: pregeneratedQuestion })}\n\n`);
-      remainingCount = count - 1;
-    }
+
 
     if (remainingCount <= 0) {
       res.write(`data: [DONE]\n\n`);

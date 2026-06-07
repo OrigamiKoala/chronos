@@ -191,10 +191,7 @@ async function readSSEStream(response, onQuestion) {
     try {
       const event = JSON.parse(rawData);
 
-      if (event.type === 'pregenerated' && event.data) {
-        questions.push(event.data);
-        if (onQuestion) onQuestion(event.data, questions.length - 1);
-      } else if (event.candidates && event.candidates[0]?.content?.parts?.[0]?.text) {
+      if (event.candidates && event.candidates[0]?.content?.parts?.[0]?.text) {
         const textChunk = event.candidates[0].content.parts[0].text;
         accumulatedText += textChunk;
 
