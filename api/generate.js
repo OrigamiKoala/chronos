@@ -4,6 +4,8 @@ import { executeWithRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
+const disabledCachesForModel = new Set();
+
 const bq = new BigQuery({
   projectId,
   credentials: {
@@ -682,18 +684,25 @@ Follow these strict rules:
     console.log(`[generate.js] Initiating stream with modelId: ${modelId}, remainingCount: ${remainingCount}`);
 
     let cache = null;
-    try {
-      cache = await executeWithRetry(modelId, (ai) => ai.caches.create({
-        model: modelId,
-        config: {
-          displayName: `gen_cache_${sanitizedUser}_${Date.now()}`,
-          systemInstruction: systemInstruction,
-          ttl: '300s'
+    if (!disabledCachesForModel.has(modelId)) {
+      try {
+        cache = await executeWithRetry(modelId, (ai) => ai.caches.create({
+          model: modelId,
+          config: {
+            displayName: `gen_cache_${sanitizedUser}_${Date.now()}`,
+            systemInstruction: systemInstruction,
+            ttl: '300s'
+          }
+        }), req);
+        console.log(`[generate.js] Context cache created successfully: ${cache.name}`);
+      } catch (cacheErr) {
+        console.warn('[generate.js] Context caching failed or is not supported. Falling back to normal systemInstruction:', cacheErr.message);
+        const errMsg = cacheErr.message || '';
+        if (errMsg.includes('limit=0') || errMsg.includes('FreeTier') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('limit exceeded')) {
+          console.warn(`[generate.js] Disabling context caching for model ${modelId} due to quota limits.`);
+          disabledCachesForModel.add(modelId);
         }
-      }), req);
-      console.log(`[generate.js] Context cache created successfully: ${cache.name}`);
-    } catch (cacheErr) {
-      console.warn('[generate.js] Context caching failed or is not supported. Falling back to normal systemInstruction:', cacheErr.message);
+      }
     }
 
     const config = {
