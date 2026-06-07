@@ -8,12 +8,12 @@
     <script>
       window.MathJax = {
         loader: {
-          load: ['[tex]/mhchem']
+          load: ['[tex]/mhchem', '[tex]/align', '[tex]/tabular']
         },
         tex: {
           inlineMath: [['$', '$'], ['\\(', '\\)']],
           displayMath: [['$$', '$$'], ['\\[', '\\]']],
-          packages: {'[+]': ['mhchem']}
+          packages: {'[+]': ['mhchem', 'align', 'tabular']}
         },
         svg: {
           fontCache: 'global'

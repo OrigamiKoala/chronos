@@ -520,6 +520,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
               <div><strong>1:</strong> MATHCOUNTS school/chapter</div>
+              <div><strong>2:</strong> MATHCOUNTS States</div>
+              <div><strong>3:</strong> MATHCOUNTS National Sprint</div>
               <div><strong>5:</strong> AMC 12 question 20-ish</div>
               <div><strong>8:</strong> Average USAJMO problem</div>
               <div><strong>10:</strong> Hardest IMO problems</div>
