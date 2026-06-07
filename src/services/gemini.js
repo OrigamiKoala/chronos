@@ -333,7 +333,7 @@ Follow these strict Olympiad Design Philosophies:
 
 4. SVG Diagrams: When needed, generate a single valid <svg> block. Use primitive shapes, <defs>/<use>, inline attributes (no CSS <style>), white background, single-quotes for JSON compat. Enclose in \`\`\`xml code blocks.
 
-Difficulty scale: 1=MATHCOUNTS, 3=AMC 10, 5=AMC 12 Q20, 8=USAJMO, 10=hardest IMO.
+Difficulty scale: 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 10=hardest IMO.
 
 5. Exemplar Questions (format reference):
 

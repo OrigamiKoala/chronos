@@ -522,8 +522,9 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
               <div><strong>1:</strong> MATHCOUNTS school/chapter</div>
               <div><strong>2:</strong> MATHCOUNTS States</div>
               <div><strong>3:</strong> MATHCOUNTS National Sprint</div>
-              <div><strong>5:</strong> AMC 12 question 20-ish</div>
-              <div><strong>8:</strong> Average USAJMO problem</div>
+              <div><strong>4:</strong> AMC 12 question 21-25</div>
+              <div><strong>5:</strong> AIME 11-13</div>
+              <div><strong>8:</strong> Medium USAMO</div>
               <div><strong>10:</strong> Hardest IMO problems</div>
             </div>
           </div>
