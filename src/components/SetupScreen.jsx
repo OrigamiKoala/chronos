@@ -400,8 +400,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             const val = e.target.value === 'true';
             setConfig(prev => ({ ...prev, isRated: val }));
           }} className="input-field">
-            <option value="true">🏆 Rated (Counts toward ELO)</option>
-            <option value="false">practice Unrated (Won't affect ELO)</option>
+            <option value="true">Rated</option>
+            <option value="false">Unrated</option>
           </select>
         </div>
 

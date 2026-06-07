@@ -22,23 +22,23 @@ export function normalizeAnswer(str) {
 export function evaluateKeywordExpression(expression, userAnswer) {
   if (!expression) return false;
   const normalizedAnswer = normalizeAnswer(userAnswer);
-  
+
   // Support single quotes/double quotes and words, retaining parenthesis and logical operators
   const tokens = expression.match(/'[^']+'|"[^"]+"|\(|\)|AND|OR|NOT|[a-zA-Z0-9_.-]+/gi) || [];
-  
+
   const processedTokens = tokens.map(token => {
     const upper = token.toUpperCase();
     if (upper === 'AND') return '&&';
     if (upper === 'OR') return '||';
     if (upper === 'NOT') return '!';
     if (token === '(' || token === ')') return token;
-    
+
     const cleanTerm = token.replace(/^['"]|['"]$/g, '');
     const normTerm = normalizeAnswer(cleanTerm);
     const present = normalizedAnswer.includes(normTerm);
     return present ? 'true' : 'false';
   });
-  
+
   const jsExpression = processedTokens.join(' ');
   try {
     const safeRegex = /^(?:true|false|&&|\|\||!|\(|\)|\s)+$/;
@@ -72,20 +72,20 @@ function isAnswerCorrect(prob, ans) {
 
 export function ExamScreen({ config, onFinish, resumeState }) {
   const isWholeTestMode = config.timeLimitStyle === 'whole_test';
-  const recommendedQuestionTime = isWholeTestMode 
-    ? Math.floor((config.timeLimitWholeTest * 60) / config.numQuestions) 
+  const recommendedQuestionTime = isWholeTestMode
+    ? Math.floor((config.timeLimitWholeTest * 60) / config.numQuestions)
     : config.timeLimitPerQuestion;
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(() => 
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(() =>
     resumeState ? resumeState.currentQuestionIndex : 0
   );
-  const [problems, setProblems] = useState(() => 
+  const [problems, setProblems] = useState(() =>
     resumeState ? resumeState.problems : []
   );
-  const [loading, setLoading] = useState(() => 
+  const [loading, setLoading] = useState(() =>
     resumeState ? false : true
   );
-  const [currentDifficulty, setCurrentDifficulty] = useState(() => 
+  const [currentDifficulty, setCurrentDifficulty] = useState(() =>
     resumeState ? (resumeState.problems[resumeState.currentQuestionIndex]?.difficulty || config.startingDifficulty) : config.startingDifficulty
   );
   const [isPaused, setIsPaused] = useState(false);
@@ -97,10 +97,10 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   });
   const [saving, setSaving] = useState(false);
   const [totalTimeLeft, setTotalTimeLeft] = useState(() => config.timeLimitWholeTest * 60);
-  const [questionTimesLeft, setQuestionTimesLeft] = useState(() => 
+  const [questionTimesLeft, setQuestionTimesLeft] = useState(() =>
     Array(config.numQuestions).fill(isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion)
   );
-  const [answers, setAnswers] = useState(() => 
+  const [answers, setAnswers] = useState(() =>
     resumeState ? resumeState.answers : Array(config.numQuestions).fill('')
   );
   const [results, setResults] = useState([]);
@@ -114,7 +114,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [whiteboardPreview, setWhiteboardPreview] = useState('');
   const [transcribing, setTranscribing] = useState(false);
-  const [frqSubmissions, setFrqSubmissions] = useState(() => 
+  const [frqSubmissions, setFrqSubmissions] = useState(() =>
     resumeState ? resumeState.frqSubmissions : Array(config.numQuestions).fill(null)
   );
 
@@ -353,12 +353,12 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       const intervals = questionIntervalsRef.current[idx] || [];
       const timeSpent = intervals.length > 0
         ? intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0)
-        : (isWholeTestMode 
-            ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
-            : config.timeLimitPerQuestion - questionTimesLeft[idx]);
+        : (isWholeTestMode
+          ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
+          : config.timeLimitPerQuestion - questionTimesLeft[idx]);
       const isTimeout = idx === currentQuestionIndex || !userAnswer;
       const isCorrect = prob.type !== 'free_response' && !isTimeout && isAnswerCorrect(prob, userAnswer);
-      
+
       return {
         ...prob,
         userAnswer: userAnswer || '[Time Out]',
@@ -437,11 +437,11 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     setAnswers(updatedAnswers);
 
     const isLast = currentQuestionIndex + 1 >= config.numQuestions;
-    
+
     if (config.stressMode === 'strict') {
       clearInterval(timerRef.current);
       const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[currentQuestionIndex];
-      
+
       const questionResult = {
         ...problem,
         userAnswer: finalValue,
@@ -477,7 +477,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   const handleFinishExam = (strictResults = null, overrideAnswers = null, overrideSubmissions = null) => {
     recordActiveInterval(currentQuestionIndex);
     clearInterval(timerRef.current);
-    
+
     let finalResults;
     if (strictResults) {
       finalResults = strictResults;
@@ -488,13 +488,13 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         const userAnswer = activeAnswers[idx] || '';
         const intervals = questionIntervalsRef.current[idx] || [];
         const timeSpent = intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0);
-        const isTimeout = isWholeTestMode 
+        const isTimeout = isWholeTestMode
           ? (totalTimeLeft <= 0)
           : (questionTimesLeft[idx] <= 0);
-        const isCorrect = prob.type === 'free_response' 
-          ? false 
+        const isCorrect = prob.type === 'free_response'
+          ? false
           : (!isTimeout && isAnswerCorrect(prob, userAnswer));
-        
+
         return {
           ...prob,
           userAnswer: isTimeout && !userAnswer ? '[Time Out]' : userAnswer,
@@ -507,7 +507,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         };
       });
     }
-    
+
     onFinish(finalResults);
   };
 
@@ -589,10 +589,10 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
   if (saving) {
     return (
-      <div className="glass-panel animate-fade-in" style={{ 
-        padding: 'var(--panel-padding-lg)', 
-        textAlign: 'center', 
-        maxWidth: '600px', 
+      <div className="glass-panel animate-fade-in" style={{
+        padding: 'var(--panel-padding-lg)',
+        textAlign: 'center',
+        maxWidth: '600px',
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
@@ -631,10 +631,10 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
   if (isPaused) {
     return (
-      <div className="glass-panel animate-fade-in" style={{ 
-        padding: 'var(--panel-padding-lg)', 
-        textAlign: 'center', 
-        maxWidth: '600px', 
+      <div className="glass-panel animate-fade-in" style={{
+        padding: 'var(--panel-padding-lg)',
+        textAlign: 'center',
+        maxWidth: '600px',
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
@@ -662,8 +662,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
             The exam timers have been suspended and the test content is hidden. Click below to resume your test.
           </p>
         </div>
-        <button 
-          className="btn btn-primary" 
+        <button
+          className="btn btn-primary"
           onClick={() => setIsPaused(false)}
           style={{ padding: '0.75rem 2rem', fontSize: '1.1rem', marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}
         >
@@ -680,8 +680,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         <h3>Loading next question...</h3>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Streaming question {currentQuestionIndex + 1} of {config.numQuestions}</p>
         {config.stressMode !== 'strict' && (
-          <button 
-            className="btn btn-outline" 
+          <button
+            className="btn btn-outline"
             style={{ margin: '0 auto' }}
             onClick={() => {
               recordActiveInterval(currentQuestionIndex);
@@ -723,7 +723,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
   return (
     <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', maxWidth: '800px', margin: '0 auto' }}>
-      
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -749,7 +749,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
           }}>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>ELO:</span>
             <strong style={{ color: isRated ? 'var(--success)' : 'var(--text-muted)' }}>
-              {isRated ? '🏆 Rated' : ' practice Unrated'}
+              {isRated ? 'Rated' : 'Unrated'}
             </strong>
           </div>
 
@@ -787,7 +787,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
               </strong>
             </div>
           )}
-          
+
           <div className="glass-panel" style={{
             display: 'flex',
             alignItems: 'center',
@@ -811,7 +811,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 {isEditingLocked ? <AlertTriangle size={14} color="var(--danger)" /> : <Clock size={14} color="var(--accent-primary)" />}
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Question:</span>
                 <strong style={{ color: isEditingLocked ? 'var(--danger)' : 'var(--text-primary)' }}>
-                  {isWholeTestMode 
+                  {isWholeTestMode
                     ? `${formatTime(activeTimeLeft)} ${isTimeOut ? '(Overrun)' : ''}`
                     : (isTimeOut ? 'Time Out' : formatTime(activeTimeLeft))
                   }
@@ -824,18 +824,18 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
       {/* Timer Progress Bar */}
       {config.timeLimitStyle !== 'none' && !isHidden && (
-        <div style={{ 
-          height: '6px', 
-          background: 'rgba(255, 255, 255, 0.05)', 
-          borderRadius: '3px', 
-          overflow: 'hidden', 
+        <div style={{
+          height: '6px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '3px',
+          overflow: 'hidden',
           marginBottom: '2rem',
           boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)'
         }}>
-          <div style={{ 
-            height: '100%', 
-            width: `${percentage}%`, 
-            background: progressColor, 
+          <div style={{
+            height: '100%',
+            width: `${percentage}%`,
+            background: progressColor,
             transition: 'width 1s linear, background-color 0.5s ease',
             boxShadow: `0 0 10px ${progressColor}`
           }} />
@@ -843,13 +843,13 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       )}
 
       {isEditingLocked && (
-        <div style={{ 
-          background: 'var(--danger-glass)', 
-          border: '1px solid var(--danger)', 
-          borderRadius: 'var(--radius-sm)', 
-          padding: 'var(--input-padding)', 
-          marginBottom: '1.5rem', 
-          color: 'var(--danger)', 
+        <div style={{
+          background: 'var(--danger-glass)',
+          border: '1px solid var(--danger)',
+          borderRadius: 'var(--radius-sm)',
+          padding: 'var(--input-padding)',
+          marginBottom: '1.5rem',
+          color: 'var(--danger)',
           fontSize: '0.9rem',
           display: 'flex',
           alignItems: 'center',
@@ -860,13 +860,13 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       )}
 
       {!isEditingLocked && isTimeOut && isWholeTestMode && (
-        <div style={{ 
-          background: 'rgba(245, 158, 11, 0.1)', 
-          border: '1px solid var(--warning)', 
-          borderRadius: 'var(--radius-sm)', 
-          padding: 'var(--input-padding)', 
-          marginBottom: '1.5rem', 
-          color: 'var(--warning)', 
+        <div style={{
+          background: 'rgba(245, 158, 11, 0.1)',
+          border: '1px solid var(--warning)',
+          borderRadius: 'var(--radius-sm)',
+          padding: 'var(--input-padding)',
+          marginBottom: '1.5rem',
+          color: 'var(--warning)',
           fontSize: '0.9rem',
           display: 'flex',
           alignItems: 'center',
@@ -918,10 +918,10 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 <div style={{ textAlign: 'center' }}>
                   <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>Your whiteboard drawing preview:</p>
                   {whiteboardPreview ? (
-                    <img 
-                      src={whiteboardPreview} 
-                      alt="Whiteboard Preview" 
-                      style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }} 
+                    <img
+                      src={whiteboardPreview}
+                      alt="Whiteboard Preview"
+                      style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }}
                     />
                   ) : (
                     <p style={{ color: 'var(--text-muted)' }}>No drawing detected.</p>
@@ -932,9 +932,9 @@ export function ExamScreen({ config, onFinish, resumeState }) {
               {submitType === 'image' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div style={{ border: '2px dashed var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: 'var(--panel-padding)', textAlign: 'center', cursor: 'pointer', position: 'relative' }}>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
+                    <input
+                      type="file"
+                      accept="image/*"
                       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
                       onChange={(e) => {
                         const file = e.target.files[0];
@@ -954,10 +954,10 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                   {uploadedImage && (
                     <div style={{ textAlign: 'center' }}>
                       <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Image Preview:</p>
-                      <img 
-                        src={uploadedImage} 
-                        alt="Uploaded Preview" 
-                        style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }} 
+                      <img
+                        src={uploadedImage}
+                        alt="Uploaded Preview"
+                        style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }}
                       />
                     </div>
                   )}
@@ -979,15 +979,15 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
             {/* Buttons */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button 
-                className="btn btn-outline" 
+              <button
+                className="btn btn-outline"
                 onClick={() => setWorkSubmitted(false)}
               >
                 <ArrowLeft size={18} /> Edit Drawing
               </button>
-              
-              <button 
-                className="btn btn-primary" 
+
+              <button
+                className="btn btn-primary"
                 onClick={handleConfirmFRQSubmit}
                 disabled={
                   isEditingLocked ||
@@ -1010,9 +1010,9 @@ export function ExamScreen({ config, onFinish, resumeState }) {
               <Whiteboard ref={whiteboardRef} />
             </div>
 
-            <button 
-              className="btn btn-primary" 
-              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} 
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}
               onClick={handleReadyToSubmit}
               disabled={isEditingLocked}
             >
@@ -1032,12 +1032,12 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 const letter = ['A', 'B', 'C', 'D'][i];
                 const isSelected = activeAnswer === opt;
                 return (
-                  <button 
-                    key={i} 
+                  <button
+                    key={i}
                     className={`btn btn-outline ${isSelected ? 'selected' : ''}`}
-                    style={{ 
-                      justifyContent: 'flex-start', 
-                      background: isSelected ? 'var(--bg-tertiary)' : 'transparent', 
+                    style={{
+                      justifyContent: 'flex-start',
+                      background: isSelected ? 'var(--bg-tertiary)' : 'transparent',
                       borderColor: isSelected ? 'var(--accent-primary)' : '',
                       display: 'flex',
                       alignItems: 'center',
@@ -1060,10 +1060,10 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
           {problem.type === 'short_answer' && (
             <div style={{ marginBottom: '2rem' }}>
-              <input 
-                type="text" 
-                placeholder="Type your answer here..." 
-                className="input-field" 
+              <input
+                type="text"
+                placeholder="Type your answer here..."
+                className="input-field"
                 value={activeAnswer}
                 onChange={(e) => handleAnswerSelect(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && activeAnswer.trim() && (config.stressMode === 'strict' ? submitStrictAnswer() : handleFinishExam())}
@@ -1074,8 +1074,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             {config.stressMode !== 'strict' && (
-              <button 
-                className="btn btn-outline" 
+              <button
+                className="btn btn-outline"
                 disabled={currentQuestionIndex === 0}
                 onClick={() => {
                   recordActiveInterval(currentQuestionIndex);
@@ -1086,12 +1086,12 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 Previous
               </button>
             )}
-            
+
             <div style={{ flex: 1 }} />
 
             {config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
-              <button 
-                className="btn btn-outline" 
+              <button
+                className="btn btn-outline"
                 style={{ marginRight: '0.75rem' }}
                 disabled={currentQuestionIndex + 1 >= problems.length}
                 onClick={() => {
@@ -1107,8 +1107,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
             {config.stressMode === 'strict' ? (
               currentQuestionIndex + 1 === config.numQuestions ? (
                 allLoaded && (
-                  <button 
-                    className="btn btn-primary" 
+                  <button
+                    className="btn btn-primary"
                     disabled={!activeAnswer.trim()}
                     onClick={() => submitStrictAnswer()}
                   >
@@ -1116,8 +1116,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                   </button>
                 )
               ) : (
-                <button 
-                  className="btn btn-primary" 
+                <button
+                  className="btn btn-primary"
                   disabled={!activeAnswer.trim() || currentQuestionIndex + 1 >= problems.length}
                   onClick={() => submitStrictAnswer()}
                 >
@@ -1126,8 +1126,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
               )
             ) : (
               allLoaded && (
-                <button 
-                  className="btn btn-primary" 
+                <button
+                  className="btn btn-primary"
                   onClick={() => handleFinishExam()}
                 >
                   Finish Exam <ArrowRight size={18} />
@@ -1137,12 +1137,12 @@ export function ExamScreen({ config, onFinish, resumeState }) {
           </div>
         </>
       )}
-      
+
       {/* Progress Bar */}
       <div style={{ marginTop: '2rem', height: '4px', background: 'var(--bg-tertiary)', borderRadius: '2px', overflow: 'hidden' }}>
-        <div style={{ 
-          height: '100%', 
-          background: 'var(--accent-primary)', 
+        <div style={{
+          height: '100%',
+          background: 'var(--accent-primary)',
           width: `${((currentQuestionIndex) / config.numQuestions) * 100}%`,
           transition: 'width 0.3s ease'
         }} />
