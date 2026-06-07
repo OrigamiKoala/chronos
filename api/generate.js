@@ -589,11 +589,13 @@ All questions generated MUST adhere to these critical design directives:
 1. Brainstorm potential concepts for each question.
 2. Narrow down each concept into a particular topic for each question, as well as the subtle conceptual trap the user might fall into.
 3. Decide on a difficulty level for each question.
-4. For each question, generate the question text, taking into account the topic, trap, and difficulty level.
-5. Test-solve each of the questions to ensure they satisfy each of the constraints. Write feedback for each of the problems for how to improve them.
-6. Improve the questions based on the feedback. Fix all questions that do not adhere to the constraints, and ones you can easily solve.
-7. Solve each question. Double check that the answers generated are the only valid solutions. If the answer is not the only valid solution, change the problem, repeating steps 4 and 5. Explain the trick in the problem. If the trick is not a trap students are likely to fall into, or there is no trick, redo the question (add a trick).
+4. For the first question, generate the question text, taking into account the topic, trap, and difficulty level.
+5. Test-solve the first question to ensure it satisfies each of the constraints. Write feedback for the first problem for how to improve it.
+6. Improve the first question based on the feedback. Fix it if it does not adhere to the constraints, and is one you can easily solve.
+7. Solve the first question. Double check that the answer generated is the only valid solution. If the answer is not the only valid solution, change the problem, repeating steps 4 and 5. Explain the trick in the problem. If the trick is not a trap students are likely to fall into, or there is no trick, redo the question (add a trick).
 8. Double check that all constraints and output requirements have been met. If they have not, change the format and/or problem so that all constraints and output requirements are met.
+9. Stream the first question to the user.
+10. Repeat steps 4 to 9 for the rest of the questions, doing them one by one and streaming when done.
 
 For example, your thought process might look like:
 
