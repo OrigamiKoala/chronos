@@ -823,50 +823,10 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       finalNewRating = Math.max(100, currentRating + finalRatingChange);
     }
 
-    let mergePromise = Promise.resolve();
-    if (gradedResults && gradedResults.length > 0) {
-      const unionBlocks = gradedResults.map((_, idx) => 
-        `SELECT @id_${idx} AS question_id, @sub_${idx} AS subject, @topic_${idx} AS topic, @diff_${idx} AS difficulty, @type_${idx} AS type, @json_${idx} AS question_json`
-      ).join(' UNION ALL ');
-
-      const mergeQuery = `
-        MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
-        USING (${unionBlocks}) S
-        ON T.question_id = S.question_id
-        WHEN NOT MATCHED THEN
-          INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
-          VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())
-      `;
-
-      const params = {};
-      gradedResults.forEach((r, idx) => {
-        const cleanQ = {
-          id: r.id,
-          topic: r.topic || 'General',
-          question: r.question,
-          type: r.type,
-          options: r.options || null,
-          answer: r.answer,
-          difficulty: Number(r.difficulty) || 5,
-          detailedSolution: ""
-        };
-        params[`id_${idx}`] = r.id;
-        params[`sub_${idx}`] = subject;
-        params[`topic_${idx}`] = r.topic || 'General';
-        params[`diff_${idx}`] = Number(r.difficulty) || 5;
-        params[`type_${idx}`] = r.type;
-        params[`json_${idx}`] = JSON.stringify(cleanQ);
-      });
-
-      mergePromise = bq.query({ query: mergeQuery, params }).catch(err => {
-        console.error('Error inserting into pregenerated_questions:', err);
-      });
-    }
-
     const isGuest = sanitizedUser === 'default_user';
 
     if (!isGuest) {
-      // 1. Fire history insert, results insert, rating update, and pregenerated merge in parallel
+      // 1. Fire history insert, results insert, and rating update in parallel
       let ratingColumn = 'math_rating';
       if (subject === 'Physics') ratingColumn = 'physics_rating';
       else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
@@ -896,8 +856,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
             WHERE user_id = @username AND exam_id = @examId`,
           params: { username: sanitizedUser, examId }
-        }),
-        mergePromise
+        })
       ]);
 
       // 2. Record wrong problems + update topic mastery
@@ -1000,7 +959,6 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       });
     } else {
       // For Guest user: run mistake analysis via Gemini without BigQuery insert, return detailedAnalysis as null
-      await mergePromise;
       const freshMistakePatterns = isOnlyMCQ ? '' : await analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req);
       return res.status(200).json({ 
         success: true, 

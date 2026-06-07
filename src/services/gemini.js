@@ -539,8 +539,8 @@ Follow these strict rules:
   ];
 
   try {
-    const stream = await executeWithRetry('gemini-3.1-flash-lite', (aiClient) => aiClient.models.generateContentStream({
-      model: 'gemini-3.1-flash-lite',
+    const stream = await executeWithRetry('gemini-3.5-flash', (aiClient) => aiClient.models.generateContentStream({
+      model: 'gemini-3.5-flash',
       contents: prompt,
       safety_settings: safetySettings,
       safetySettings: safetySettings,
