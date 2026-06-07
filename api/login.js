@@ -307,10 +307,10 @@ export default async function handler(req, res) {
     });
 
     const resultRow = rows[0] || {};
-    const allHistory = resultRow.history_json ? JSON.parse(resultRow.history_json) : [];
-    const mastery = resultRow.mastery_json ? JSON.parse(resultRow.mastery_json) : [];
-    const analyses = resultRow.analysis_json ? JSON.parse(resultRow.analysis_json) : [];
-    const breakdowns = resultRow.breakdown_json ? JSON.parse(resultRow.breakdown_json) : [];
+    const allHistory = resultRow.history_json ? (JSON.parse(resultRow.history_json) || []) : [];
+    const mastery = resultRow.mastery_json ? (JSON.parse(resultRow.mastery_json) || []) : [];
+    const analyses = resultRow.analysis_json ? (JSON.parse(resultRow.analysis_json) || []) : [];
+    const breakdowns = resultRow.breakdown_json ? (JSON.parse(resultRow.breakdown_json) || []) : [];
 
     let activeExam = null;
     if (resultRow.active_exam_json) {
