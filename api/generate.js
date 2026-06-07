@@ -1,6 +1,62 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
 
+// --- Rate limit memory registry to remember 429 keys for the rest of the day ---
+let rateLimitRegistry = new Map();
+
+function isKeyRateLimitedForModel(modelId, apiKey) {
+  const today = new Date().toDateString();
+  return rateLimitRegistry.get(`${modelId}:${apiKey}`) === today;
+}
+
+function markKeyRateLimitedForModel(modelId, apiKey) {
+  const today = new Date().toDateString();
+  rateLimitRegistry.set(`${modelId}:${apiKey}`, today);
+}
+
+// --- Explicit Context Caching for Generation ---
+// Separate caches by subject to prevent cross-contamination of constraints/examples
+let cacheStates = {
+  math: { name: null, expiry: 0, failedUntil: 0 },
+  physics: { name: null, expiry: 0, failedUntil: 0 },
+  chemistry: { name: null, expiry: 0, failedUntil: 0 },
+  default: { name: null, expiry: 0, failedUntil: 0 }
+};
+
+const CACHE_TTL_SECONDS = 3600; // 1 hour
+const CACHE_FAIL_COOLDOWN_MS = 300000; // 5 min cooldown after cache creation failure
+
+async function ensureCache(label, modelId, apiKey, systemText, state) {
+  const now = Date.now();
+  if (state.name && now < state.expiry - 60000) return state.name;
+
+  // Skip if cache creation recently failed (avoids wasted API call)
+  if (state.failedUntil && now < state.failedUntil) return null;
+
+  const cacheResponse = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/cachedContents?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: `models/${modelId}`,
+        systemInstruction: { parts: [{ text: systemText }] },
+        ttl: `${CACHE_TTL_SECONDS}s`
+      })
+    }
+  );
+
+  if (!cacheResponse.ok) {
+    state.failedUntil = now + CACHE_FAIL_COOLDOWN_MS;
+    return null;
+  }
+
+  const cacheData = await cacheResponse.json();
+  state.name = cacheData.name;
+  state.expiry = now + CACHE_TTL_SECONDS * 1000;
+  state.failedUntil = 0;
+  return state.name;
+}
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -11,7 +67,6 @@ const bq = new BigQuery({
     private_key: process.env.BIGQUERY_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   },
 });
-
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -49,14 +104,9 @@ export default async function handler(req, res) {
               FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
               WHERE accuracy_rate < 0.65 AND user_id = @targetUserId AND subject = @subject
             `;
-            const [rows] = await bq.query({
-              query: weaknessesQuery,
-              params: { targetUserId: sanitizedUser, subject },
-            });
+            const [rows] = await bq.query({ query: weaknessesQuery, params: { targetUserId: sanitizedUser, subject } });
             weaknesses = rows[0]?.weaknesses || 'None (excellent performance across all topics)';
-          } catch (err) {
-            console.error('Error fetching user weaknesses:', err);
-          }
+          } catch (err) { console.error('Error fetching user weaknesses:', err); }
         })(),
         (async () => {
           try {
@@ -67,16 +117,9 @@ export default async function handler(req, res) {
               ORDER BY updated_at DESC
               LIMIT 1
             `;
-            const [rows] = await bq.query({
-              query: weaknessAnalysisQuery,
-              params: { targetUserId: sanitizedUser, subject },
-            });
-            if (rows && rows.length > 0) {
-              weaknessAnalysis = rows[0].detailed_analysis;
-            }
-          } catch (err) {
-            console.error('Error fetching user weakness analysis:', err);
-          }
+            const [rows] = await bq.query({ query: weaknessAnalysisQuery, params: { targetUserId: sanitizedUser, subject } });
+            if (rows && rows.length > 0) weaknessAnalysis = rows[0].detailed_analysis;
+          } catch (err) { console.error('Error fetching user weakness analysis:', err); }
         })(),
         (async () => {
           try {
@@ -85,16 +128,11 @@ export default async function handler(req, res) {
               FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
               WHERE user_id = @targetUserId AND subject = @subject
             `;
-            const [rows] = await bq.query({
-              query: topicBreakdownQuery,
-              params: { targetUserId: sanitizedUser, subject },
-            });
+            const [rows] = await bq.query({ query: topicBreakdownQuery, params: { targetUserId: sanitizedUser, subject } });
             if (rows && rows.length > 0) {
               topicBreakdown = rows.map(row => `Topic: ${row.topic} | Good at: ${row.good_at} | Not good at: ${row.not_good_at}`).join('\n');
             }
-          } catch (err) {
-            console.error('Error fetching user topic breakdown:', err);
-          }
+          } catch (err) { console.error('Error fetching user topic breakdown:', err); }
         })(),
         (async () => {
           try {
@@ -105,16 +143,11 @@ export default async function handler(req, res) {
               ORDER BY created_at DESC
               LIMIT 3
             `;
-            const [rows] = await bq.query({
-              query: mistakeAnalysisQuery,
-              params: { targetUserId: sanitizedUser, subject },
-            });
+            const [rows] = await bq.query({ query: mistakeAnalysisQuery, params: { targetUserId: sanitizedUser, subject } });
             if (rows && rows.length > 0) {
               mistakeAnalysis = rows.map((row, idx) => `Mistake Pattern ${idx + 1}: ${row.mistake_patterns}`).join('\n');
             }
-          } catch (err) {
-            console.error('Error fetching user mistake analysis:', err);
-          }
+          } catch (err) { console.error('Error fetching user mistake analysis:', err); }
         })()
       ]);
     } catch (err) {
@@ -152,21 +185,14 @@ export default async function handler(req, res) {
       `;
       const [rows] = await bq.query({
         query: lookupQuery,
-        params: {
-          targetUserId: sanitizedUser,
-          subject,
-          startingDifficulty: Number(startingDifficulty) || 5
-        }
+        params: { targetUserId: sanitizedUser, subject, startingDifficulty: Number(startingDifficulty) || 5 }
       });
-      if (rows && rows.length > 0) {
-        pregeneratedQuestion = JSON.parse(rows[0].question_json);
-      }
+      if (rows && rows.length > 0) pregeneratedQuestion = JSON.parse(rows[0].question_json);
     } catch (err) {
       console.error('Error fetching pregenerated question:', err);
     }
 
-
-    // 2. Build the Gemini generation prompt
+    // 2. Define Constraints & Examples (Kept exactly as requested)
     let constraints = '';
     let examples = '';
     const normSubject = String(subject).trim().toLowerCase();
@@ -202,28 +228,28 @@ Difficulty scale: 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 
 {
   "id": "math_ex1",
   "topic": "Geometry",
-  "question": "A point $P$ is chosen at random inside square $ABCD$. The probability that $\\\\overline{AP}$ is neither the shortest nor the longest side of $\\\\triangle APB$ can be written as $\\\\frac{a + b \\\\pi - c \\\\sqrt{d}}{e}$, where $a, b, c, d,$ and $e$ are positive integers, $\\\\text{gcd}(a, b, c, e) = 1$, and $d$ is not divisible by the square of a prime. What is $a+b+c+d+e$?",
+  "question": "A point $P$ is chosen at random inside square $ABCD$. The probability that \\\\overline{AP} is neither the shortest nor the longest side of \\\\triangle APB can be written as \\\\frac{a + b \\\\pi - c \\\\sqrt{d}}{e}, where $a, b, c, d,$ and $e$ are positive integers, \\\\text{gcd}(a, b, c, e) = 1, and $d$ is not divisible by the square of a prime. What is $a+b+c+d+e$?",
   "type": "multiple_choice",
   "options": ["$25$", "$26$", "$27$", "$28$", "29"],
   "answer": "A",
   "difficulty": 5,
   "detailedSolution": "Say WLOG that $AB$ is the top side of the square, and the square is of side length 1. Let us say that the midpoint of $AB$ is $M$, while the midpoint of $CD$ is $Q$. Drawing a vertical line to split the square in half, we notice that if $P$ is to the left of the line, $AP < BP$, and if P is to the right of the line, $AP > BP$. Also, drawing a quarter circle of radius 1 from point $A$, we can split the area into points P for which $AP < AB$ and $AP > AB$. Because of our constraints, there are 2 cases:
 
-Case 1: $AB > AP > BP$ In this case, $P$ will be to the right of the vertical line and inside of the quarter circle. Let us say that the intersection of the vertical line and quarter circle is $N$. The distance from $N$ to $AD$ is 1/2, and we can say that $\\\\angle BAN$ is $60^\\circ$. Sector $BAN$ of circle $A$ would therefore have an area of $\\\\frac{\\\\pi}{6}$. Because $\\\\triangle AMN$ is a 30-60-90 triangle, the area of $AMN$ is $\\\\frac{\\\\sqrt{3}}{8}$. The probability of case 1 happening should then be $\\\\frac{\\\\pi}{6}-\\\\frac{\\\\sqrt{3}}{8}$.
+Case 1: $AB > AP > BP$ In this case, $P$ will be to the right of the vertical line and inside of the quarter circle. Let us say that the intersection of the vertical line and quarter circle is $N$. The distance from $N$ to $AD$ is 1/2, and we can say that \\\\angle BAN is $60^\\\\circ$. Sector $BAN$ of circle $A$ would therefore have an area of \\\\frac{\\\\pi}{6}. Because \\\\triangle AMN is a 30-60-90 triangle, the area of $AMN$ is \\\\frac{\\\\sqrt{3}}{8}$. The probability of case 1 happening should then be \\\\frac{\\\\pi}{6}-\\\\frac{\\\\sqrt{3}}{8}.
 
-Case 2: $AB < AP < BP$ In this case, $P$ will be to the left of the vertical line and outside of the quarter circle. Knowing that the quarter circle's area is $\\\\frac{\\\\pi}{4}$, we can subtract the probability of Case 1 happening to get the chance that $P$ is on the left of the vertical line and in circle $A$. Doing this would give $\\\\frac{\\\\pi}{12}+\\\\\frac{\\\\sqrt{3}}{8}$. To get the probability of Case 2 happening, we can subtract this from the area of rectangle $AMQD$. This would give us $\\\\frac{1}{2}-\\\\frac{\\\\pi}{12}-\\\\frac{\\\\sqrt{3}}{8}$.
+Case 2: $AB < AP < BP$ In this case, $P$ will be to the left of the vertical line and outside of the quarter circle. Knowing that the quarter circle's area is \\\\frac{\\\\pi}{4}, we can subtract the probability of Case 1 happening to get the chance that $P$ is on the left of the vertical line and in circle $A$. Doing this would give \\\\frac{\\\\pi}{12}+\\\\frac{\\\\sqrt{3}}{8}. To get the probability of Case 2 happening, we can subtract this from the area of rectangle $AMQD$. This would give us \\\\frac{1}{2}-\\\\frac{\\\\pi}{12}-\\\\frac{\\\\sqrt{3}}{8}$.
 
-Adding both cases, we get the total probability as $\\\\frac{1}{2}+\\\\frac{\\\\pi}{12}-\\\\frac{\\\\sqrt{3}}{4} = \\\\frac{6+\\\\pi-3\\\\sqrt{3}}{12}$. Formatting this gives us $6+1+3+3+12 = \\\\boxed{\\\\textbf{(A) } 25}$."
+Adding both cases, we get the total probability as \\\\frac{1}{2}+\\\\frac{\\\\pi}{12}-\\\\frac{\\\\sqrt{3}}{4} = \\\\frac{6+\\\\pi-3\\\\sqrt{3}}{12}. Formatting this gives us $6+1+3+3+12 = \\\\boxed{\\\\textbf{(A) } 25}."
 }
 
 {
   "id": "math_ex2",
   "topic": "Combinatorics, Algebra, Number Theory",
-  "question": "For each nonnegative integer $r$ less than $502$, define\\\\[S_r=\\\\sum_{m\\\\geq 0}\\\\binom{10,000}{502m+r},\\\\]where $\\\\binom{10,000}{n}$ is defined to be $0$ when $n>10,000$. That is, $S_r$ is the sum of all the binomial coefficients of the form $\\\\binom{10,000}{k}$ for which $0\\\\leq k\\\\leq 10,000$ and $k-r$ is a multiple of $502$. Find the number of integers in the list $S_0,S_1,S_2,\\\\dots,S_{501}$ that are multiples of the prime number $503$.",
+  "question": "For each nonnegative integer $r$ less than $502$, define\\\\[S_r=\\\\sum_{m\\\\geq 0}\\\\binom{10,000}{502m+r},\\\\]where \\\\binom{10,000}{n} is defined to be $0$ when $n>10,000$. That is, $S_r$ is the sum of all the binomial coefficients of the form \\\\binom{10,000}{k} for which $0\\\\leq k\\\\leq 10,000$ and $k-r$ is a multiple of $502$. Find the number of integers in the list $S_0,S_1,S_2,\\\\dots,S_{501}$ that are multiples of the prime number $503$.",
   "type": "short_answer",
   "answer": "39",
   "difficulty": 7,
-  "detailedSolution": "Take player $v^*$ with max out-degree $\\\\Delta$. Let $W$ = wins, $L$ = losses. For any $u \\\\in L$: if $u$ beat all of $W$, then $d^+(u) \\\\geq \\\\Delta+1$, contradiction. So some $w \\\\in W$ beats $u$, and $v^*$ dominates $u$ via $w$. $v^*$ trivially dominates $W$ directly. QED."
+  "detailedSolution": "Take player $v^*$ with max out-degree \\\\Delta$. Let $W$ = wins, $L$ = losses. For any $u \\\\in L$: if $u$ beat all of $W$, then $d^+(u) \\\\geq \\\\Delta+1$, contradiction. So some $w \\\\in W$ beats $u$, and $v^*$ dominates $u$ via $w$. $v^*$ trivially dominates $W$ directly. QED."
 }
 
 {
@@ -231,24 +257,24 @@ Adding both cases, we get the total probability as $\\\\frac{1}{2}+\\\\frac{\\\\
   "topic": "Combinatorics",
   "question": "The integers from $1$ through $25$ are arbitrarily separated into five groups of $5$ numbers each. The median of each group is identified. Let $M$ equal the median of the five medians. What is the least possible value of $M$?
 
-$\\\\textbf{(A) }9 \\\\qquad \\\\textbf{(B) }10 \\\\qquad \\\\textbf{(C) }12 \\\\qquad \\\\textbf{(D) }13 \\\\qquad \\\\textbf{(E) }14$
+\\\\textbf{(A) }9 \\\\qquad \\\\textbf{(B) }10 \\\\qquad \\\\textbf{(C) }12 \\\\qquad \\\\textbf{(D) }13 \\\\qquad \\\\textbf{(E) }14
 
 ",
   "type": "multiple_choice",
   "options": ["$9$", "$10$", "$12$", "$13$", "14"],
   "answer": "A",
   "difficulty": 3,
-  "detailedSolution": "If a group has median $m$, then we must have that $3$ of the numbers in that group are $\\\\leq m$. Since there are 5 different groups, $3$ groups must have a median $\\\\leq M$, so there are at least $3\\\\cdot3=9$ numbers that are $\\\\leq M$. Since there are at least $9$ numbers that are $\\\\leq M$, we have $M$ at minimum $\\\\boxed{\\\\textbf{(A) }9}.$"
+  "detailedSolution": "If a group has median $m$, then we must have that $3$ of the numbers in that group are \\\\leq m$. Since there are 5 different groups, $3$ groups must have a median \\\\leq M$, so there are at least $3\\\\cdot3=9$ numbers that are \\\\leq M$. Since there are at least $9$ numbers that are \\\\leq M$, we have $M$ at minimum \\\\boxed{\\\\textbf{(A) }9}."
 }
 
 {
   "id": "math_ex4",
   "topic": "Number Theory",
-  "question": "Let $a$ and $b$ be positive integers such that $ab + 1$ divides $a^{2} + b^{2}$. Show that $\\\\frac {a^{2} + b^{2}}{ab + 1}$ is the square of an integer.",
+  "question": "Let $a$ and $b$ be positive integers such that $ab + 1$ divides $a^{2} + b^{2}$. Show that \\\\frac {a^{2} + b^{2}}{ab + 1} is the square of an integer.",
   "type": "free_response",
   "answer": "",
   "difficulty": 10,
-  "detailedSolution": "Choose integers $a,b,k$ such that $a^2+b^2=k(ab+1)$ Now, for fixed $k$, out of all pairs $(a,b)$ choose the one with the lowest value of $\\\\min(a,b)$. Label $b'=\\\\min(a,b), a'=\\\\max(a,b)$. Thus, $a'^2-kb'a'+b'^2-k=0$ is a quadratic in $a'$. Should there be another root, $c'$, the root would satisfy: $b'c'\\\\leq a'c'=b'^2-k<b'^2\\\\implies c'<b'$ Thus, $c'$ isn't a positive integer (if it were, it would contradict the minimality condition). But $c'=kb'-a'$, so $c'$ is an integer; hence, $c'\\\\leq 0$. In addition, $(a'+1)(c'+1)=a'c'+a'+c'+1=b'^2-k+b'k+1=b'^2+(b'-1)k+1\\\\geq 1$ so that $c'>-1$. We conclude that $c'=0$ so that $b'^2=k$.
+  "detailedSolution": "Choose integers $a,b,k$ such that $a^2+b^2=k(ab+1)$ Now, for fixed $k$, out of all pairs $(a,b)$ choose the one with the lowest value of \\\\min(a,b). Label $b'=\\\\min(a,b), a'=\\\\max(a,b)$. Thus, $a'^2-kb'a'+b'^2-k=0$ is a quadratic in $a'$. Should there be another root, $c'$, the root would satisfy: $b'c'\\\\leq a'c'=b'^2-k<b'^2\\\\implies c'<b'$ Thus, $c'$ isn't a positive integer (if it were, it would contradict the minimality condition). But $c'=kb'-a'$, so $c'$ is an integer; hence, $c'\\\\leq 0$. In addition, $(a'+1)(c'+1)=a'c'+a'+c'+1=b'^2-k+b'k+1=b'^2+(b'-1)k+1\\\\geq 1$ so that $c'>-1$. We conclude that $c'=0$ so that $b'^2=k$.
 
 This construction works whenever there exists a solution $(a,b)$ for a fixed $k$, hence $k$ is always a perfect square."
 }
@@ -473,48 +499,9 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
 `;
     }
 
-    const allowedTypes = Array.isArray(examFormat)
-      ? examFormat
-      : (typeof examFormat === 'string' && examFormat.trim()
-        ? (examFormat.includes(',') ? examFormat.split(',') : [examFormat])
-        : ['multiple_choice', 'short_answer', 'free_response']);
-
-    const parsedTypes = allowedTypes.map(t => t.trim()).filter(Boolean);
-
-    let typeSchemaDesc = parsedTypes.map(t => `"${t}"`).join(' | ');
-    let optionsSchemaDesc = parsedTypes.includes('multiple_choice')
-      ? `\n  "options": ["Option A", "Option B", "Option C", "Option D"], // MUST be provided if type is multiple_choice`
-      : ``;
-    let keywordExpressionSchemaDesc = parsedTypes.includes('short_answer')
-      ? `\n  "keywordExpression": "A logical boolean expression representing answer correctness (e.g., 'gravity AND newton' or 'O2 OR oxygen' or \"'carbon dioxide' OR CO2\"). Use AND, OR, NOT, parentheses, and single quotes for multi-word phrases. Required ONLY if type is short_answer.",`
-      : ``;
-    let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
-
-    let lessonInstructions = '';
-    if (lessonTitle || lessonDescription) {
-      lessonInstructions = `
-Additionally, this exam is a homework assignment for the lesson "${lessonTitle || ''}".
-The teacher set the following lesson plan/content:
-"${lessonDescription || ''}"
-
-You MUST generate questions that are directly related to the content and concepts outlined in this lesson plan/content.
-`;
-    }
-
-    const systemInstruction = `###Role:### You are a professional olympiad question writer for high school olympiad-level tests. You want to write tricky problems that challenges students in their understanding of [subject] concepts, rather than their breadth of knowledge.
-
-###Goal:### Write questions for a user's practice tests that mirror the style of actual olympiad exams and challenge the user to think deeply about the material. Target the user's weak areas ( ${weaknesses} ).
-${lessonInstructions}
-Additionally, utilize the following diagnostic information about the user to tailor the test:
-- User Weakness Analysis: ${weaknessAnalysis}
-- User Topic Breakdown:
-${topicBreakdown}
-- Recent Mistake Patterns (thinking / test-taking style):
-${mistakeAnalysis}
-
-Tailor the questions to target the user's weaknesses:
-1. In knowledge base and skill set (using the User Weakness Analysis and User Topic Breakdown).
-2. In thinking and test-taking style (using the Recent Mistake Patterns). Craft questions that specifically test or trigger their common mistake patterns (such as conceptual traps, calculation errors, panic, or edge case negligence) to help them overcome these pitfalls.
+    // 3. Build the STATIC (Cacheable) System Instruction
+    // This perfectly encapsulates your unchanged formatting rules and step-by-step thinking requirements.
+    const staticSystemInstruction = `###Role:### You are a professional olympiad question writer for high school olympiad-level tests. You want to write tricky problems that challenges students in their understanding of the subject concepts, rather than their breadth of knowledge.
 
 ###Constraints:###
 
@@ -538,7 +525,6 @@ All questions generated MUST adhere to these critical design directives:
    If a user's weak concepts are provided, allocate a minority of the questions (~30%, e.g., 1 out of 3, or 2 out of 5) to target those weaknesses, and dedicate the remaining majority (~70%) to a diverse selection of other core topics in the subject's standard syllabus, ensuring a balanced distribution of topics across the exam. If weaknesses are "None", distribute questions evenly across all core topics.
 
 3. Detailed Solutions: Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
-4. QUESTION TYPES MIX: You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.
 
 ###Steps:###
 To ensure high question quality while streaming incrementally:
@@ -553,9 +539,9 @@ For example, your output must look like this:
     "id": "chem_prob1",
     "thoughtProcess": "Overall Plan: Q1 stoichiometry (difficulty 5, balance trap), Q2 electrochemistry cell change (difficulty 6). Q1 Draft: M + 5 O2 -> 3 CO2... Q1 Test-solve: Moles CO2 = 14.4 / 22.4 = 0.643 mol... Q1 Feedback: Too easy. Q1 Revise: hydrocarbon combustion masses. Q1 Solve: Empirical = C3H8, Molar mass = 44.1. Formula C3H8.",
     "topic": "Stoichiometry & Hydrocarbons",
-    "question": "A $4.41$ g sample of a gaseous hydrocarbon M is completely combusted in excess oxygen to produce $13.20$ g of \\\ce{CO_2} and $7.21$ g of \\\ce{H_2O}. Determine the molecular formula of M if its density at STP is $1.97$ g/L.",
+    "question": "A $4.41$ g sample of a gaseous hydrocarbon M is completely combusted in excess oxygen to produce $13.20$ g of \\\\ce{CO_2} and $7.21$ g of \\\\ce{H_2O}. Determine the molecular formula of M if its density at STP is $1.97$ g/L.",
     "type": "multiple_choice",
-    "options": ["\\\ce{CH_4}", "\\\ce{C_2H_6}", "\\\ce{C_3H_8}", "\\\ce{C_4H_{10}}"],
+    "options": ["\\\\ce{CH_4}", "\\\\ce{C_2H_6}", "\\\\ce{C_3H_8}", "\\\\ce{C_4H_{10}}"],
     "answer": "C",
     "difficulty": 5,
     "detailedSolution": ""
@@ -564,7 +550,7 @@ For example, your output must look like this:
     "id": "chem_prob2",
     "thoughtProcess": "Q2 Draft: Butler-Volmer overpotential. Q2 Test-solve: Butler-Volmer is too advanced for USNCO. Q2 Feedback: Replace with standard galvanic cell. Q2 Revise: Silver/copper cell mass change. Q2 Solve: Cu -> Cu2+ + 2e-. Q = 5400 C. Moles e- = 0.0560. Moles Cu = 0.0280. Mass change = 1.78 g decrease.",
     "topic": "Electrochemistry",
-    "question": "A galvanic cell consists of a silver electrode in $1.0$ M \\\ce{AgNO_3} and a copper electrode in $1.0$ M \\\ce{Cu(NO_3)_2}. If the cell operates at $25$ °C under a constant current of $2.0$ A for $45$ minutes, calculate the change in mass of the copper electrode. ($E^\\circ(\\\ce{Ag^+/Ag}) = +0.80$ V, $E^\\circ(\\\ce{Cu^{2+}/Cu}) = +0.34$ V, $F = 96485$ C/mol).",
+    "question": "A galvanic cell consists of a silver electrode in $1.0$ M \\\\ce{AgNO_3} and a copper electrode in $1.0$ M \\\\ce{Cu(NO_3)_2}. If the cell operates at $25$ °C under a constant current of $2.0$ A for $45$ minutes, calculate the change in mass of the copper electrode. ($E^\\\\circ(\\\\ce{Ag^+/Ag}) = +0.80$ V, $E^\\\\circ(\\\\ce{Cu^{2+}/Cu}) = +0.34$ V, $F = 96485$ C/mol).",
     "type": "short_answer",
     "answer": "1.78 g",
     "keywordExpression": "'1.78' OR '1.78 g'",
@@ -576,6 +562,51 @@ For example, your output must look like this:
 ###Output Requirements:###
 
 OPTIONS FORMATTING (LaTeX Delimiters): For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Keep simple, purely qualitative text options that do not contain mathematical or chemical terms in plain, un-delimited text format.
+Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.`;
+
+    // 4. Build the DYNAMIC (Non-Cacheable) Context for prepending
+    const allowedTypes = Array.isArray(examFormat)
+      ? examFormat
+      : (typeof examFormat === 'string' && examFormat.trim()
+        ? (examFormat.includes(',') ? examFormat.split(',') : [examFormat])
+        : ['multiple_choice', 'short_answer', 'free_response']);
+
+    const parsedTypes = allowedTypes.map(t => t.trim()).filter(Boolean);
+
+    let typeSchemaDesc = parsedTypes.map(t => `"${t}"`).join(' | ');
+    let optionsSchemaDesc = parsedTypes.includes('multiple_choice')
+      ? `\n  "options": ["Option A", "Option B", "Option C", "Option D"], // MUST be provided if type is multiple_choice`
+      : ``;
+    let keywordExpressionSchemaDesc = parsedTypes.includes('short_answer')
+      ? `\n  "keywordExpression": "A logical boolean expression representing answer correctness (e.g., 'gravity AND newton' or 'O2 OR oxygen' or \\"'carbon dioxide' OR CO2\\"). Use AND, OR, NOT, parentheses, and single quotes for multi-word phrases. Required ONLY if type is short_answer.",`
+      : ``;
+    let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
+
+    let lessonInstructions = '';
+    if (lessonTitle || lessonDescription) {
+      lessonInstructions = `
+Additionally, this exam is a homework assignment for the lesson "${lessonTitle || ''}".
+The teacher set the following lesson plan/content:
+"${lessonDescription || ''}"
+
+You MUST generate questions that are directly related to the content and concepts outlined in this lesson plan/content.
+`;
+    }
+
+    const dynamicPromptContext = `###Goal:### Write questions for a user's practice tests that mirror the style of actual olympiad exams and challenge the user to think deeply about the material. Target the user's weak areas ( ${weaknesses} ).
+${lessonInstructions}
+Additionally, utilize the following diagnostic information about the user to tailor the test:
+- User Weakness Analysis: ${weaknessAnalysis}
+- User Topic Breakdown:
+${topicBreakdown}
+- Recent Mistake Patterns (thinking / test-taking style):
+${mistakeAnalysis}
+
+Tailor the questions to target the user's weaknesses:
+1. In knowledge base and skill set (using the User Weakness Analysis and User Topic Breakdown).
+2. In thinking and test-taking style (using the Recent Mistake Patterns). Craft questions that specifically test or trigger their common mistake patterns (such as conceptual traps, calculation errors, panic, or edge case negligence) to help them overcome these pitfalls.
+
+4. QUESTION TYPES MIX: You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.
 
 The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
@@ -586,12 +617,10 @@ The output must be a pure JSON array containing exactly the requested number of 
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
   "answer": ${answerSchemaDesc},
   "difficulty": a number between 1 and 10 representing difficulty,
-  "detailedSolution": "An empty string \"\""
-}
+  "detailedSolution": "An empty string \\"\\""
+}`;
 
-Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.`;
-
-    // 3. Set SSE headers for streaming
+    // 5. Set SSE headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -609,113 +638,144 @@ Output the result strictly as a raw, valid JSON array, keeping it free of any ma
       return;
     }
 
-    const prompt = `Generate exactly ${remainingCount} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+    const finalUserPrompt = `${dynamicPromptContext}\n\nGenerate exactly ${remainingCount} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
 Follow these strict rules:
 1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
 
-    const safetySettings = [
-      {
-        category: 'HARM_CATEGORY_HATE_SPEECH',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      },
-      {
-        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      },
-      {
-        category: 'HARM_CATEGORY_HARASSMENT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      },
-      {
-        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      }
-    ];
-
-    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-    console.log(`[generate.js] Initiating stream with modelId: ${modelId}, remainingCount: ${remainingCount}`);
-
-    const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: "application/json"
-      },
-      systemInstruction: {
-        parts: [{ text: systemInstruction }]
-      },
-      safetySettings
-    };
-
-    const keys = [
-      process.env.GEMINI_API_KEY,
-      process.env.GEMINI_API_KEY_2,
-      process.env.GEMINI_API_KEY_3,
-      process.env.GEMINI_API_KEY_4,
-      process.env.GEMINI_API_KEY_5,
-      process.env.GEMINI_API_KEY_6,
-      process.env.GEMINI_API_KEY_7,
-      process.env.GEMINI_API_KEY_8,
-      process.env.GEMINI_API_KEY_9,
-      process.env.GEMINI_API_KEY_10,
-      process.env.GEMINI_API_KEY_11,
-      process.env.GEMINI_API_KEY_12
+    let keys = [
+      process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2, process.env.GEMINI_API_KEY_3,
+      process.env.GEMINI_API_KEY_4, process.env.GEMINI_API_KEY_5, process.env.GEMINI_API_KEY_6,
+      process.env.GEMINI_API_KEY_7, process.env.GEMINI_API_KEY_8, process.env.GEMINI_API_KEY_9,
+      process.env.GEMINI_API_KEY_10, process.env.GEMINI_API_KEY_11, process.env.GEMINI_API_KEY_12
     ].filter(Boolean);
 
     if (keys.length === 0) {
-      throw new Error('GEMINI_API_KEYs are missing');
+      res.write(`data: ${JSON.stringify({ type: 'error', error: 'All GEMINI_API_KEY variants missing' })}\n\n`);
+      return res.end();
     }
 
-    let success = false;
+    // Start with a random key, keep the rest as fallbacks
+    const startIndex = Math.floor(Math.random() * keys.length);
+    const selectedKey = keys[startIndex];
+    const remainingKeys = keys.filter((_, idx) => idx !== startIndex);
+    const shuffledRemaining = remainingKeys.sort(() => Math.random() - 0.5);
+    keys = [selectedKey, ...shuffledRemaining];
+
+    const GENERATION_MODELS = ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-3.1-flash-lite"];
+    const genConfig = { responseMimeType: "application/json", temperature: 1.5, topP: 0.95 };
+
+    // Select the right cache tracker based on subject
+    const cacheStateTracker = cacheStates[normSubject] || cacheStates.default;
     let lastError = null;
 
-    const startIndex = Math.floor(Math.random() * keys.length);
-    const keysOrder = [];
-    for (let i = 0; i < keys.length; i++) {
-      const idx = (startIndex + i) % keys.length;
-      keysOrder.push(keys[idx]);
-    }
+    // 6. Gemini Generation Loop
+    for (let attemptIndex = 0; attemptIndex < GENERATION_MODELS.length; attemptIndex++) {
+      const modelId = GENERATION_MODELS[attemptIndex];
+      const isFallback = attemptIndex > 0;
 
-    for (let i = 0; i < keysOrder.length; i++) {
-      const apiKey = keysOrder[i];
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?alt=sse&key=${apiKey}`;
+      for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+        const apiKey = keys[keyIndex];
 
-      try {
-        console.log(`[generate.js] Trying model ${modelId} with key index ${(startIndex + i) % keys.length}`);
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-          success = true;
-          const reader = response.body.getReader();
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              res.write(value);
-            }
-          } finally {
-            reader.releaseLock();
-            res.end();
-          }
-          break;
-        } else {
-          const errBody = await response.json().catch(() => ({}));
-          console.warn(`[generate.js] Key failed with status ${response.status}:`, errBody);
-          lastError = new Error(errBody?.error?.message || `API returned status ${response.status}`);
+        if (isKeyRateLimitedForModel(modelId, apiKey)) {
+          console.warn(`[generate.js] Key #${keyIndex + 1} is already rate limited for ${modelId}. Skipping.`);
+          continue;
         }
-      } catch (err) {
-        console.warn(`[generate.js] Exception with key:`, err.message);
-        lastError = err;
+
+        console.log(`[generate.js] Trying model ${attemptIndex + 1}/${GENERATION_MODELS.length}: ${modelId}${isFallback ? ' (fallback)' : ''} with key #${keyIndex + 1}`);
+
+        try {
+          // Attempt to get or create a cache for the STATIC system prompt
+          let cacheName = null;
+          try {
+            cacheName = await ensureCache(`cache-${normSubject}`, modelId, apiKey, staticSystemInstruction, cacheStateTracker);
+          } catch (cacheErr) {
+            console.warn(`[cache-${normSubject}] ensureCache threw for ${modelId}:`, cacheErr.message);
+          }
+
+          const payload = {
+            contents: [{ parts: [{ text: finalUserPrompt }] }],
+            generationConfig: genConfig,
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
+            ]
+          };
+
+          if (cacheName) {
+            // Apply Cache
+            payload.cachedContent = cacheName;
+          } else {
+            // Fallback if caching system fails: inline the static system instruction
+            payload.systemInstruction = { parts: [{ text: staticSystemInstruction }] };
+          }
+
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?alt=sse&key=${apiKey}`;
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (response.ok) {
+            console.log(`[generate.js] Success with ${modelId} (key #${keyIndex + 1})`);
+            const reader = response.body.getReader();
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                res.write(value);
+              }
+            } finally {
+              reader.releaseLock();
+              res.end();
+            }
+            return;
+          }
+
+          const status = response.status;
+          const errBody = await response.json().catch(() => ({}));
+          const isBusy = status === 503 || (errBody?.error?.message && /busy|overloaded/i.test(errBody.error.message));
+
+          if (isBusy) {
+            console.warn(`[generate.js] ${modelId} busy on key #${keyIndex + 1}.`, errBody);
+            lastError = { status, data: errBody };
+            if (cacheName) {
+              cacheStateTracker.name = null;
+              cacheStateTracker.expiry = 0;
+              cacheStateTracker.failedUntil = Date.now() + CACHE_FAIL_COOLDOWN_MS;
+            }
+          } else if (status === 429) {
+            console.warn(`[429] Rate limit hit for ${modelId} on key #${keyIndex + 1}.`);
+            markKeyRateLimitedForModel(modelId, apiKey);
+            lastError = { status, data: errBody };
+            if (cacheName) {
+              cacheStateTracker.name = null;
+              cacheStateTracker.expiry = 0;
+              cacheStateTracker.failedUntil = Date.now() + CACHE_FAIL_COOLDOWN_MS;
+            }
+          } else {
+            console.warn(`[generate.js] ${modelId} failed on key #${keyIndex + 1} with status ${status}.`, errBody);
+            lastError = { status, data: errBody };
+            if (cacheName) {
+              cacheStateTracker.name = null;
+              cacheStateTracker.expiry = 0;
+              cacheStateTracker.failedUntil = Date.now() + CACHE_FAIL_COOLDOWN_MS;
+            }
+          }
+
+        } catch (error) {
+          console.error(`[generate.js] Exception with ${modelId}:`, error.message);
+          lastError = { status: 500, data: { error: { message: error.message } } };
+        }
       }
     }
 
-    if (!success) {
-      throw lastError || new Error('All API keys failed');
-    }
+    console.error(`[generate.js] All ${GENERATION_MODELS.length} models exhausted.`);
+    res.write(`data: ${JSON.stringify({ type: 'error', error: lastError?.data?.error?.message || 'All models are currently at capacity. Please try again later.' })}\n\n`);
+    res.end();
 
   } catch (err) {
     console.error('Streaming generation error:', err);
