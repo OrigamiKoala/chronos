@@ -592,7 +592,9 @@ The output must be a pure JSON array containing exactly the requested number of 
   "detailedSolution": "An empty string \"\""
 }
 
-Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.`;
+Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.
+
+CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (applying a single standard formula to given values). These plug-and-chug applications can ONLY happen for difficulty level 1.`;
 
     // 3. Set SSE headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');

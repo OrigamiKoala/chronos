@@ -524,7 +524,9 @@ The output must be a pure JSON array containing exactly the requested number of 
     "difficulty": a number between 1 and 10 representing difficulty,
     "detailedSolution": "An empty string \"\""
 }
-Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.`;
+Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.
+
+CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (applying a single standard formula to given values). These plug-and-chug applications can ONLY happen for difficulty level 1.`;
 
   const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
 Follow these strict rules:
