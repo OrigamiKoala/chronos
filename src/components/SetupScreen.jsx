@@ -265,6 +265,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       assignmentId: hw.assignment_id,
       sharedQuestions: sharedQs,
       topics: '',
+      isRated: true,
       ...(isContentBased ? { lessonTitle: hw.lesson_title, lessonDescription: hw.lesson_description } : {}),
     });
     setSelectedPreset('custom');

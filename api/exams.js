@@ -532,7 +532,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { username, subject, examId, accuracy, avgTime, ratingChange, newRating, results, assignmentId, isRated } = req.body;
+  const { username, subject, examId, accuracy, avgTime, ratingChange, newRating, results, assignmentId } = req.body;
+  const isRated = req.body.isRated !== false;
 
   if (!username || !subject || !examId || accuracy === undefined || !results) {
     return res.status(400).json({ error: 'Missing required parameters' });
