@@ -200,7 +200,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         config.examFormat === 'free_response',
         config.examFormat || 'mix',
         config.lessonTitle,
-        config.lessonDescription
+        config.lessonDescription,
+        config.topics
       );
 
       if (generated && generated.length > 0) {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Play, ShieldAlert, Timer, ClipboardList } from 'lucide-react';
+import { Play, ShieldAlert, Timer, ClipboardList } from 'lucide-react';
 
 const getSubjectLevelName = (subject, rating) => {
   if (subject === 'Math') {
@@ -48,6 +48,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       timeLimitStyle: parsed?.timeLimitStyle || 'per_question',
       examFormat: formatVal,
       isRated: parsed?.isRated !== false,
+      topics: parsed?.topics || '',
     };
   });
 
@@ -263,6 +264,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       examFormat: formatVal,
       assignmentId: hw.assignment_id,
       sharedQuestions: sharedQs,
+      topics: '',
       ...(isContentBased ? { lessonTitle: hw.lesson_title, lessonDescription: hw.lesson_description } : {}),
     });
     setSelectedPreset('custom');
@@ -448,6 +450,23 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Difficulty (1-10)</label>
             <input type="number" name="startingDifficulty" min="1" max="10" value={config.startingDifficulty} onChange={handleChange} className="input-field" />
           </div>
+        </div>
+
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+            Target Topics (Optional)
+          </label>
+          <input
+            type="text"
+            name="topics"
+            placeholder="e.g. Geometry, Number Theory, Kinematics"
+            value={config.topics || ''}
+            onChange={handleChange}
+            className="input-field"
+          />
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem', display: 'block' }}>
+            Specify topics or concepts to focus on. Leave blank to target your weaknesses and syllabus.
+          </span>
         </div>
 
         <div>

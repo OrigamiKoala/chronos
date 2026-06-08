@@ -221,7 +221,7 @@ async function readSSEStream(response, onQuestion) {
  *                                for each question the moment it fully arrives.
  * @returns {Promise<Array>} Resolves with the complete array of question objects.
  */
-export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix', lessonTitle = null, lessonDescription = null) {
+export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix', lessonTitle = null, lessonDescription = null, topics = '') {
   // Attempt to call Vercel Serverless Function first in production or if VITE_USE_VERCEL_API is enabled
   if (import.meta.env.PROD || import.meta.env.VITE_USE_VERCEL_API) {
     try {
@@ -238,7 +238,8 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
           freeResponseMode,
           examFormat,
           lessonTitle,
-          lessonDescription
+          lessonDescription,
+          topics
         }),
       });
 
@@ -490,10 +491,19 @@ You MUST generate questions that are directly related to the content and concept
 `;
   }
 
+  let topicsInstructions = '';
+  if (topics && typeof topics === 'string' && topics.trim()) {
+    topicsInstructions = `
+Additionally, the user has explicitly requested that this exam focus on the following topics: "${topics.trim()}".
+You MUST prioritize generating questions that are directly related to these specified topics.
+`;
+  }
+
   const systemInstruction = `You are an expert examiner creating questions for high-stakes competitive olympiad exams.
 
 ${subjectContext.replace(/"detailedSolution":\s*"[\s\S]*?"/g, '"detailedSolution": ""')}
 ${lessonInstructions}
+${topicsInstructions}
 
 For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 
@@ -528,12 +538,16 @@ Do not wrap the JSON in markdown code blocks. Return ONLY valid JSON.
 
 CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (applying a single standard formula to given values). These plug-and-chug applications can ONLY happen for difficulty level 1.`;
 
-  const prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+  let prompt = `Generate exactly ${count} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
 Follow these strict rules:
 1. Question Style: Provide a balanced mix of standard and tricky questions. Standard questions should only be generated for difficulty levels 1-4. For difficulty levels 5-10, make questions either tricky with conceptual traps, or standard but highly difficult in their own right. Do NOT use obscure, highly specialized research-level details.
 2. The exam must span a wide, diverse range of standard topics in ${subject}. Do NOT let any single topic dominate the entire exam. Distribute the questions across a broad variety of core topics in the standard syllabus.
 3. Detailed Solutions: Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 4. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
+
+  if (topics && typeof topics === 'string' && topics.trim()) {
+    prompt += `\n5. The generated questions MUST be about the following topics: ${topics.trim()}.`;
+  }
 
   const safetySettings = [
     {

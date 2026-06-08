@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode, examFormat, lessonTitle, lessonDescription } = req.body;
+  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode, examFormat, lessonTitle, lessonDescription, topics } = req.body;
 
   if (!count || !startingDifficulty || !subject) {
     return res.status(400).json({ error: 'Missing required parameters: count, startingDifficulty, subject' });
@@ -504,10 +504,19 @@ You MUST generate questions that are directly related to the content and concept
 `;
     }
 
+    let topicsInstructions = '';
+    if (topics && typeof topics === 'string' && topics.trim()) {
+      topicsInstructions = `
+Additionally, the user has explicitly requested that this exam focus on the following topics: "${topics.trim()}".
+You MUST prioritize generating questions that are directly related to these specified topics.
+`;
+    }
+
     const systemInstruction = `###Role:### You are a professional olympiad question writer for high school olympiad-level tests. You want to write tricky problems that challenges students in their understanding of [subject] concepts, rather than their breadth of knowledge.
 
 ###Goal:### Write questions for a user's practice tests that mirror the style of actual olympiad exams and challenge the user to think deeply about the material. Target the user's weak areas ( ${weaknesses} ).
 ${lessonInstructions}
+${topicsInstructions}
 Additionally, utilize the following diagnostic information about the user to tailor the test:
 - User Weakness Analysis: ${weaknessAnalysis}
 - User Topic Breakdown:
@@ -614,10 +623,14 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
       return;
     }
 
-    const prompt = `Generate exactly ${remainingCount} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+    let prompt = `Generate exactly ${remainingCount} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
 Follow these strict rules:
 1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
+
+    if (topics && typeof topics === 'string' && topics.trim()) {
+      prompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
+    }
 
     const safetySettings = [
       {
