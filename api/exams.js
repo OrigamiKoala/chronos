@@ -20,6 +20,8 @@ function normalizeAnswer(str) {
   return str
     .replace(/\$\$([\s\S]*?)\$\$/g, '$1')   // strip $$...$$
     .replace(/\$([\s\S]*?)\$/g, '$1')        // strip $...$
+    .replace(/\\\[([\s\S]*?)\\\]/g, '$1')   // strip \[...\]
+    .replace(/\\\(([\s\S]*?)\\\)/g, '$1')   // strip \(...\)
     .replace(/\\(text|mathrm|mathbf|mathit|rm|bf)\{([^}]*)\}/g, '$2') // \text{X} -> X
     .replace(/~/g, ' ')                      // LaTeX thin-space -> space
     .replace(/\s+/g, ' ')                    // collapse whitespace

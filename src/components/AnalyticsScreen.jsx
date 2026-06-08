@@ -677,7 +677,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             <BrainCircuit size={20} /> Overall Analysis
           </h3>
           <p style={{ fontSize: '0.9rem', lineHeight: '1.65', color: 'var(--text-secondary)', marginTop: '0.75rem', marginBottom: 0, whiteSpace: 'pre-line' }}>
-            {subjectDiagnosis}
+            <ChemicalText text={subjectDiagnosis} theme="dark" />
           </p>
         </div>
       )}
@@ -695,7 +695,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             <BrainCircuit size={20} /> Mistake Analysis
           </h3>
           <p style={{ fontSize: '0.925rem', lineHeight: '1.6', color: 'var(--text-secondary)', marginTop: '0.75rem', marginBottom: 0, whiteSpace: 'pre-line' }}>
-            {resultsObj.mistakePatterns}
+            <ChemicalText text={resultsObj.mistakePatterns} theme="dark" />
           </p>
         </div>
       )}
@@ -790,7 +790,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                       <BrainCircuit size={16} /> Grading & Partial Credit Feedback:
                     </div>
                     <p style={{ margin: 0, color: 'var(--text-secondary)', whiteSpace: 'pre-line', lineHeight: '1.5' }}>
-                      {r.feedback}
+                      <ChemicalText text={r.feedback} theme="dark" />
                     </p>
                   </div>
                 )}

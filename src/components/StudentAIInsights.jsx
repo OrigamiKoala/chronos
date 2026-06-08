@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { useState, useEffect } from 'react';
 import { Sparkles, Calendar, BookOpen, AlertCircle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { ChemicalText } from './ChemicalText';
 
 export function StudentAIInsights({ studentId, teacherId }) {
   const [insights, setInsights] = useState([]);
@@ -150,7 +151,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
               <AlertCircle size={14} /> Practice Summary
             </span>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-              {latest.summary}
+              <ChemicalText text={latest.summary} theme="dark" />
             </p>
           </div>
 
@@ -160,7 +161,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
               <BookOpen size={14} /> Coaching Next Steps
             </span>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-              {latest.suggestions}
+              <ChemicalText text={latest.suggestions} theme="dark" />
             </p>
           </div>
         </div>
@@ -206,19 +207,19 @@ export function StudentAIInsights({ studentId, teacherId }) {
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>Practice Summary:</span>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
-                          {ins.summary}
+                          <ChemicalText text={ins.summary} theme="dark" />
                         </p>
                       </div>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>Suggestions:</span>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
-                          {ins.suggestions}
+                          <ChemicalText text={ins.suggestions} theme="dark" />
                         </p>
                       </div>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>Progress Detail:</span>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
-                          {ins.progress_status}
+                          <ChemicalText text={ins.progress_status} theme="dark" />
                         </p>
                       </div>
                     </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users, BookOpen, Plus, Loader2, Award, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { StudentAIInsights } from './StudentAIInsights';
+import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 
 export function TeacherScreen({ user, onBack }) {
   const [data, setData] = useState(null);
@@ -705,7 +706,7 @@ export function TeacherScreen({ user, onBack }) {
                   <ShieldAlert size={16} /> AI mistake analysis / Pattern gaps:
                 </h4>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-                  {reviewExam.mistakePatterns}
+                  <ChemicalText text={reviewExam.mistakePatterns} theme="dark" />
                 </p>
               </div>
             )}
@@ -724,23 +725,47 @@ export function TeacherScreen({ user, onBack }) {
                   </div>
 
                   <p style={{ color: 'var(--text-primary)', fontSize: '0.9rem', marginBottom: '0.75rem', whiteSpace: 'pre-wrap' }}>
-                    {r.question}
+                    <ChemicalText text={r.question} theme="dark" />
                   </p>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', background: 'rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', borderRadius: '4px' }}>
                     <div>
                       <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.15rem' }}>Student Answer:</span>
-                      <strong style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)' }}>{r.userAnswer || '(none)'}</strong>
+                      <span style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold' }}>
+                        {(() => {
+                          const ans = r.userAnswer;
+                          if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
+                            const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
+                            if (letterIdx !== -1 && r.options[letterIdx]) {
+                              const opt = r.options[letterIdx];
+                              return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                            }
+                          }
+                          return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                        })()}
+                      </span>
                     </div>
                     <div>
                       <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.15rem' }}>Correct Answer:</span>
-                      <strong style={{ color: 'var(--success)' }}>{r.answer}</strong>
+                      <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>
+                        {(() => {
+                          const ans = r.answer;
+                          if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
+                            const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
+                            if (letterIdx !== -1 && r.options[letterIdx]) {
+                              const opt = r.options[letterIdx];
+                              return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                            }
+                          }
+                          return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                        })()}
+                      </span>
                     </div>
                   </div>
 
                   {r.feedback && (
                     <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', borderLeft: '3px solid var(--accent-primary)', paddingLeft: '0.75rem', color: 'var(--text-secondary)' }}>
-                      <strong>AI Grading Note:</strong> {r.feedback}
+                      <strong>AI Grading Note:</strong> <ChemicalText text={r.feedback} theme="dark" />
                     </div>
                   )}
                 </div>

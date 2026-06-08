@@ -254,9 +254,9 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
   if (!text) return null;
 
-  // Split by LaTeX blocks ($...$ or $$...$$), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
+  // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\]), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
   // and markdown bold (**...**) / italic (*...*) to keep them intact.
-  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$|```xml[\s\S]*?<\/svg>[\s\S]*?```|<svg[\s\S]*?<\/svg>|\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|```xml[\s\S]*?<\/svg>[\s\S]*?```|<svg[\s\S]*?<\/svg>|\*\*[^*]+\*\*|\*[^*]+\*)/g);
 
   return (
     <span ref={containerRef} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -284,7 +284,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         }
 
         // If this part is a LaTeX math block, render it directly as text so MathJax can process it
-        if (part.startsWith('$')) {
+        if (part.startsWith('$') || part.startsWith('\\(') || part.startsWith('\\[')) {
           return <span key={partIndex}>{part}</span>;
         }
 
