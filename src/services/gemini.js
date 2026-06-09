@@ -38,7 +38,6 @@ if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem('gemini_key_index', selectedKeyIndex);
     }
     document.cookie = `gemini_key_index=${selectedKeyIndex}; path=/; SameSite=Strict`;
-    console.log(`[API Rotation] Selected key index ${selectedKeyIndex} for this session.`);
   }
 }
 
