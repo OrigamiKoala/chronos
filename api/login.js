@@ -151,17 +151,9 @@ export default async function handler(req, res) {
 
       // Password logic:
       if (!dbUser.password) {
-        // If an existing user doesn't have a password stored, whatever they put in the password container will become the new password
-        const updatePasswordQuery = `
-          UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
-          SET password = @password
-          WHERE user_id = @username
-        `;
-        await bq.query({
-          query: updatePasswordQuery,
-          params: { username: sanitizedUser, password }
-        });
-        dbUser.password = password;
+        // If an existing user doesn't have a password stored, they need to reset their password
+        // as we should not arbitrarily accept any password input as the new password.
+        return res.status(401).json({ error: 'Account requires password setup or reset' });
       } else {
         // Verify password
         if (dbUser.password !== password) {
