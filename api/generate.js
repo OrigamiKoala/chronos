@@ -653,7 +653,6 @@ Follow these strict rules:
 
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
     const models = modelId === 'gemini-3-flash' ? [modelId] : [modelId, 'gemini-3-flash'];
-    console.log(`[generate.js] Initiating stream with models: ${models.join(', ')}, remainingCount: ${remainingCount}`);
     const stream = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContentStream({
       model: currentModel,
       contents: prompt,
@@ -663,7 +662,6 @@ Follow these strict rules:
         safetySettings,
       },
     }), req);
-    console.log(`[generate.js] Stream connection opened successfully`);
 
     let accumulated = '';
     let questionsSent = 0;
@@ -676,12 +674,10 @@ Follow these strict rules:
 
         // Extract all fully-formed question objects so far
         const parsed = extractCompleteObjects(accumulated);
-        console.log(`[generate.js] parsed questions count so far: ${parsed.length}`);
 
         // Emit any newly completed questions
         while (questionsSent < parsed.length) {
           if (questionsSent < remainingCount) {
-            console.log(`[generate.js] Streaming question ${questionsSent + 1} to client`);
             res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[questionsSent] })}\n\n`);
           }
           questionsSent++;
