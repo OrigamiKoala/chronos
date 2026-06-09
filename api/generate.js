@@ -674,12 +674,10 @@ Follow these strict rules:
 
         // Extract all fully-formed question objects so far
         const parsed = extractCompleteObjects(accumulated);
-        console.log(`[generate.js] parsed questions count so far: ${parsed.length}`);
 
         // Emit any newly completed questions
         while (questionsSent < parsed.length) {
           if (questionsSent < remainingCount) {
-            console.log(`[generate.js] Streaming question ${questionsSent + 1} to client`);
             res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[questionsSent] })}\n\n`);
           }
           questionsSent++;
