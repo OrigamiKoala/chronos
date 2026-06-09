@@ -676,7 +676,6 @@ Follow these strict rules:
 
         // Extract all fully-formed question objects so far
         const parsed = extractCompleteObjects(accumulated);
-        console.log(`[generate.js] parsed questions count so far: ${parsed.length}`);
 
         // Emit any newly completed questions
         while (questionsSent < parsed.length) {
