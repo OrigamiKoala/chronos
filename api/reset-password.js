@@ -57,7 +57,7 @@ export default async function handler(req, res) {
       const cleanDbAnswer = String(user.recovery_answer || '').trim().toLowerCase();
       const cleanUserAnswer = String(answer).trim().toLowerCase();
 
-      if (cleanDbAnswer !== cleanUserAnswer) {
+      if (!cleanDbAnswer || !cleanUserAnswer || cleanDbAnswer !== cleanUserAnswer) {
         return res.status(400).json({ error: 'Incorrect answer to recovery question' });
       }
 
