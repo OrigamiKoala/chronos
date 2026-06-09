@@ -77,8 +77,8 @@ function App() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [autoLoginLoading, setAutoLoginLoading] = useState(() => {
     const savedUser = typeof window !== 'undefined' ? localStorage.getItem('chronos_logged_user') : null;
-    const savedPass = typeof window !== 'undefined' ? localStorage.getItem('chronos_logged_password') : null;
-    return !!(savedUser && savedPass);
+    const savedToken = typeof window !== 'undefined' ? localStorage.getItem('chronos_logged_token') : null;
+    return !!(savedUser && savedToken);
   });
   const [loadingExamId, setLoadingExamId] = useState(null);
   const [currentExamId, setCurrentExamId] = useState(null);
@@ -129,12 +129,12 @@ function App() {
   // Auto-login on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('chronos_logged_user');
-    const savedPass = localStorage.getItem('chronos_logged_password');
-    if (savedUser && savedPass) {
+    const savedToken = localStorage.getItem('chronos_logged_token');
+    if (savedUser && savedToken) {
       fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: savedUser, password: savedPass })
+        body: JSON.stringify({ username: savedUser, token: savedToken })
       })
         .then(res => {
           if (res.ok) return res.json();
@@ -232,7 +232,9 @@ function App() {
           });
           setActiveExam(data.activeExam || null);
           localStorage.setItem('chronos_logged_user', data.user.user_id);
-          localStorage.setItem('chronos_logged_password', loginPassword);
+          if (data.token) {
+            localStorage.setItem('chronos_logged_token', data.token);
+          }
           localStorage.removeItem('chronos_guest_history');
           localStorage.removeItem('chronos_guest_strengths');
           localStorage.removeItem('chronos_guest_weaknesses');
@@ -342,16 +344,16 @@ function App() {
     setSelectedTopicDetail(null);
     setActiveExam(null);
     localStorage.removeItem('chronos_logged_user');
-    localStorage.removeItem('chronos_logged_password');
+    localStorage.removeItem('chronos_logged_token');
   };
 
   const refreshUserData = () => {
     if (!user) return;
-    const password = localStorage.getItem('chronos_logged_password') || '';
+    const token = localStorage.getItem('chronos_logged_token') || '';
     fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: user.user_id, password })
+      body: JSON.stringify({ username: user.user_id, token })
     })
       .then(res => res.json())
       .then(loginData => {
@@ -540,11 +542,11 @@ function App() {
 
         // Then re-login to refresh all state (history, strengths, weaknesses, etc.) if logged in
         if (user) {
-          const password = localStorage.getItem('chronos_logged_password') || '';
+          const token = localStorage.getItem('chronos_logged_token') || '';
           fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user.user_id, password })
+            body: JSON.stringify({ username: user.user_id, token })
           })
             .then(res2 => res2.json())
             .then(data => {
