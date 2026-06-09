@@ -668,7 +668,6 @@ Follow these strict rules:
 
     for await (const chunk of stream) {
       const text = chunk.text;
-      console.log(`[generate.js] Received chunk of length: ${text ? text.length : 0}`);
       if (text) {
         accumulated += text;
 
