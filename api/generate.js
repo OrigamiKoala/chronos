@@ -663,7 +663,6 @@ Follow these strict rules:
         safetySettings,
       },
     }), req);
-    console.log(`[generate.js] Stream connection opened successfully`);
 
     let accumulated = '';
     let questionsSent = 0;
