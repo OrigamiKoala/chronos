@@ -14,20 +14,59 @@ const bq = new BigQuery({
 const ELO_ALGORITHM_VERSION = 3;
 let schemaEnsured = process.env.ENSURE_SCHEMA !== 'true';
 
+import crypto from 'crypto';
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+function generateToken(username) {
+  if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
+  const payload = Buffer.from(JSON.stringify({ username, exp: Date.now() + 1000 * 60 * 60 * 24 * 30 })).toString('base64url');
+  const signature = crypto.createHmac('sha256', JWT_SECRET).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyToken(token) {
+  if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
+  try {
+    const [payload, signature] = token.split('.');
+    const expectedSignature = crypto.createHmac('sha256', JWT_SECRET).update(payload).digest('base64url');
+
+    // Constant time comparison
+    const sigBuf = Buffer.from(signature, 'base64url');
+    const expectedSigBuf = Buffer.from(expectedSignature, 'base64url');
+    if (sigBuf.length !== expectedSigBuf.length || !crypto.timingSafeEqual(sigBuf, expectedSigBuf)) {
+      return null;
+    }
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (data.exp < Date.now()) return null;
+    return data.username;
+  } catch (e) {
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { username, password, recoveryQuestion, recoveryAnswer, isSettingRecovery, userRole, userOrganization } = req.body;
-  if (!username || username.trim() === '') {
-    return res.status(400).json({ error: 'Username is required' });
-  }
-  if (!password || password.trim() === '') {
-    return res.status(400).json({ error: 'Password is required' });
+  const { username, password, token, recoveryQuestion, recoveryAnswer, isSettingRecovery, userRole, userOrganization } = req.body;
+
+  let validTokenUsername = null;
+  if (token) {
+    validTokenUsername = verifyToken(token);
   }
 
-  const sanitizedUser = username.trim().toLowerCase();
+  if (!validTokenUsername) {
+    if (!username || username.trim() === '') {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+    if (!password || password.trim() === '') {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+  }
+
+  const sanitizedUser = validTokenUsername ? validTokenUsername.toLowerCase() : username.trim().toLowerCase();
 
   try {
     // 0. Ensure recovery and password columns exist (once per cold start)
@@ -149,23 +188,25 @@ export default async function handler(req, res) {
     if (existingUsers.length > 0) {
       const dbUser = existingUsers[0];
 
-      // Password logic:
-      if (!dbUser.password) {
-        // If an existing user doesn't have a password stored, whatever they put in the password container will become the new password
-        const updatePasswordQuery = `
-          UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
-          SET password = @password
-          WHERE user_id = @username
-        `;
-        await bq.query({
-          query: updatePasswordQuery,
-          params: { username: sanitizedUser, password }
-        });
-        dbUser.password = password;
-      } else {
-        // Verify password
-        if (dbUser.password !== password) {
-          return res.status(401).json({ error: 'Incorrect password' });
+      // Password logic (skip if logging in via valid token):
+      if (!validTokenUsername) {
+        if (!dbUser.password) {
+          // If an existing user doesn't have a password stored, whatever they put in the password container will become the new password
+          const updatePasswordQuery = `
+            UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+            SET password = @password
+            WHERE user_id = @username
+          `;
+          await bq.query({
+            query: updatePasswordQuery,
+            params: { username: sanitizedUser, password }
+          });
+          dbUser.password = password;
+        } else {
+          // Verify password
+          if (dbUser.password !== password) {
+            return res.status(401).json({ error: 'Incorrect password' });
+          }
         }
       }
 
@@ -513,7 +554,10 @@ export default async function handler(req, res) {
       }
     }
 
+    const newToken = generateToken(sanitizedUser);
+
     return res.status(200).json({
+      token: newToken,
       user: userData,
       history,
       strengths,
