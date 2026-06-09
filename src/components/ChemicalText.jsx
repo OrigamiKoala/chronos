@@ -3,7 +3,8 @@ import SmilesDrawer from 'smiles-drawer';
 
 // Helper to determine if a token is a SMILES string
 export function isSmiles(word) {
-  if (!word || word.length < 2) return false;
+  if (!word || typeof word !== 'string') return false;
+  if (word.length < 2 && !/^[CONPSFIconps]$/.test(word)) return false;
   // Reject H-containing words ONLY when they lack SMILES structural markers (brackets, parens, bonds).
   // This allows inorganic SMILES like [OH2], [NH3], [NH4+], OS(=O)(=O)O while
   // still rejecting plain English words like "the", "have", "he".
@@ -21,12 +22,12 @@ export function isSmiles(word) {
 
   // Clean the word to check against English dictionary
   const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").toLowerCase();
-  if (englishWords.has(cleanWord)) {
+  if (englishWords.has(cleanWord) && !/^[CONPSFIconps]$/.test(word)) {
     return false;
   }
 
-  // Must contain organic/aromatic atoms (C, O, N, S, P, F, Cl, Br, I, H)
-  if (!/[conpsfclbri]/i.test(word)) {
+  // Must contain organic/aromatic atoms (C, O, N, S, P, F, Cl, Br, I, H) or be an inorganic element in brackets
+  if (!/[conpsfclbri]/i.test(word) && !/\[[A-Za-z0-9+-]+\]/.test(word)) {
     return false;
   }
 
@@ -46,7 +47,7 @@ export function isSmiles(word) {
   const remainingAfterOrganic = outsideBrackets
     .replace(/cl/gi, "")
     .replace(/br/gi, "")
-    .replace(/[chonspfib]/gi, "");
+    .replace(/[chonspfbi]/gi, "");
 
   if (/[a-z]/i.test(remainingAfterOrganic)) {
     return false;
@@ -60,7 +61,7 @@ export function isSmiles(word) {
 
   // If it has no indicators, it might be a simple chain like CCO, CCC, CCCCC, CO, etc.
   const organicOnlyRegex = /^(C|O|N|P|S|F|H|Cl|Br|I|c|o|n|s|p)+$/;
-  if (organicOnlyRegex.test(word) && word.length >= 2) {
+  if (organicOnlyRegex.test(word)) {
     // Avoid matching typical words like "In", "No", "On", "So", "He", etc.
     if (word.length === 2 && ['no', 'in', 'on', 'so', 'he', 'cl'].includes(word.toLowerCase())) {
       return word.toLowerCase() === 'cl'; // Cl is Chlorine
