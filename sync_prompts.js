@@ -14,9 +14,8 @@ const chemPrompt = match[1];
 let geminiContent = fs.readFileSync('src/services/gemini.js', 'utf8');
 
 // There are two occurrences in src/services/gemini.js (one for generate, one for batch)
-const regex = /if \(normSubject === 'chemistry'\) \{\s+subjectContext = `[\s\S]*?`;\n    \}/g;
+const regex = /if \(normSubject === 'chemistry'\) \{\s+subjectContext = `[\s\S]*?`;\n {4}\}/g;
 
 geminiContent = geminiContent.replace(regex, () => `if (normSubject === 'chemistry') {\n        subjectContext = \`${chemPrompt}\`;\n    }`);
 
 fs.writeFileSync('src/services/gemini.js', geminiContent);
-console.log("Updated gemini.js successfully");
