@@ -652,9 +652,10 @@ Follow these strict rules:
     ];
 
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-    console.log(`[generate.js] Initiating stream with modelId: ${modelId}, remainingCount: ${remainingCount}`);
-    const stream = await executeWithRetry(modelId, (ai) => ai.models.generateContentStream({
-      model: modelId,
+    const models = modelId === 'gemini-3-flash' ? [modelId] : [modelId, 'gemini-3-flash'];
+    console.log(`[generate.js] Initiating stream with models: ${models.join(', ')}, remainingCount: ${remainingCount}`);
+    const stream = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContentStream({
+      model: currentModel,
       contents: prompt,
       config: {
         systemInstruction,

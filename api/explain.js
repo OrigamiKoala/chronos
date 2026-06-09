@@ -39,8 +39,9 @@ Return strictly a valid JSON object with the following schema:
 }`;
 
     const modelId = 'gemini-3.1-flash-lite';
-    const response = await executeWithRetry(modelId, (ai) => ai.models.generateContent({
-      model: modelId,
+    const models = [modelId, 'gemini-3-flash'];
+    const response = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
+      model: currentModel,
       contents: prompt,
       safety_settings: [
         {

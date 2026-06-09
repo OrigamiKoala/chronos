@@ -13,7 +13,8 @@ function markKeyRateLimited(modelId, apiKey) {
   console.warn(`[API Rotation] Key marked rate-limited for model ${modelId} today.`);
 }
 
-export async function executeWithRetry(modelId, apiCallFn, req) {
+export async function executeWithRetry(models, apiCallFn, req) {
+  const modelList = Array.isArray(models) ? models : [models];
   const keys = [
     process.env.GEMINI_API_KEY,
     process.env.GEMINI_API_KEY_2,
@@ -44,29 +45,50 @@ export async function executeWithRetry(modelId, apiCallFn, req) {
   }
 
   let lastError;
+  let all503 = true;
 
-  for (let i = 0; i < keysOrder.length; i++) {
-    const apiKey = keysOrder.at(i);
-    if (isKeyRateLimited(modelId, apiKey)) {
-      continue;
+  for (const currentModel of modelList) {
+    let modelFailedDueTo503 = false;
+
+    for (let i = 0; i < keysOrder.length; i++) {
+      const apiKey = keysOrder.at(i);
+      if (isKeyRateLimited(currentModel, apiKey)) {
+        continue;
+      }
+
+      try {
+        if (i > 0) {
+          console.warn(`[API Rotation] Selected key failed. Rotating to backup key ${i + 1} for model ${currentModel}.`);
+        }
+        const ai = new GoogleGenAI({ apiKey });
+        return await apiCallFn(ai, currentModel);
+      } catch (err) {
+        lastError = err;
+        const status = err.status || err.statusCode || (err.message && err.message.includes('429') ? 429 : (err.message && err.message.includes('503') ? 503 : null));
+
+        if (status !== 503) {
+          all503 = false;
+        }
+
+        if (status === 503) {
+          console.warn(`[503] Model overloaded for ${currentModel}. Breaking out of key loop to try next model.`);
+          modelFailedDueTo503 = true;
+          break; // Model overloaded, trying other keys for the SAME model won't help
+        } else if (status === 429) {
+          console.warn(`[429] Rate limit hit for ${currentModel} on key.`);
+          markKeyRateLimited(currentModel, apiKey);
+        } else {
+          console.warn(`[API Rotation] Error for ${currentModel}: ${err.message}. Trying next key...`);
+        }
+      }
     }
 
-    try {
-      if (i > 0) {
-        console.warn(`[API Rotation] Selected key failed. Rotating to backup key ${i + 1} for model ${modelId}.`);
-      }
-      const ai = new GoogleGenAI({ apiKey });
-      return await apiCallFn(ai);
-    } catch (err) {
-      lastError = err;
-      const status = err.status || err.statusCode || (err.message && err.message.includes('429') ? 429 : null);
-      if (status === 429) {
-        console.warn(`[429] Rate limit hit for ${modelId} on key.`);
-        markKeyRateLimited(modelId, apiKey);
-      } else {
-        console.warn(`[API Rotation] Error for ${modelId}: ${err.message}. Trying next key...`);
-      }
-    }
+    // If we broke out of the keys loop due to 503, proceed to the next model.
+    // If we exhausted all keys without success, also proceed to the next model.
+  }
+
+  if (all503 && lastError) {
+    throw new Error('Models are currently experiencing high demand. Please try again later.');
   }
 
   throw lastError || new Error('All API keys failed or are rate limited');
