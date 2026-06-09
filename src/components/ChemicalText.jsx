@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import SmilesDrawer from 'smiles-drawer';
+import DOMPurify from 'dompurify';
 
 // Helper to determine if a token is a SMILES string
 export function isSmiles(word) {
@@ -274,11 +275,12 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
         // If this part is an SVG block, render it inline
         if (isSvg) {
+          const sanitizedSvgContent = DOMPurify.sanitize(svgContent, { USE_PROFILES: { svg: true, svgFilters: true } });
           return (
             <span
               key={partIndex}
               style={{ display: 'block', margin: '16px auto', maxWidth: '100%', textAlign: 'center' }}
-              dangerouslySetInnerHTML={{ __html: svgContent }}
+              dangerouslySetInnerHTML={{ __html: sanitizedSvgContent }}
             />
           );
         }
