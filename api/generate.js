@@ -688,7 +688,6 @@ Follow these strict rules:
         }
       }
     }
-    console.log(`[generate.js] Stream processing loop finished`);
 
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
     res.end();
