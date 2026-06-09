@@ -653,7 +653,6 @@ Follow these strict rules:
 
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
     const models = modelId === 'gemini-3-flash' ? [modelId] : [modelId, 'gemini-3-flash'];
-    console.log(`[generate.js] Initiating stream with models: ${models.join(', ')}, remainingCount: ${remainingCount}`);
     const stream = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContentStream({
       model: currentModel,
       contents: prompt,
@@ -663,7 +662,6 @@ Follow these strict rules:
         safetySettings,
       },
     }), req);
-    console.log(`[generate.js] Stream connection opened successfully`);
 
     let accumulated = '';
     let questionsSent = 0;
