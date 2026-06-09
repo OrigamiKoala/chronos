@@ -18,4 +18,3 @@ const regex = /if \(normSubject === 'chemistry'\) \{\s+subjectContext = `[\s\S]*
 geminiContent = geminiContent.replace(regex, () => `if (normSubject === 'chemistry') {\n        subjectContext = \`${chemPrompt}\`;\n    }`);
 
 fs.writeFileSync('src/services/gemini.js', geminiContent);
-console.log("Updated gemini.js successfully");
