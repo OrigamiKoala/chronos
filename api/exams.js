@@ -636,7 +636,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           }
           contents.push(gradingPrompt);
 
-          const models = ['gemini-3.1-flash-lite', 'gemini-3-flash'];
+          const models = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
           const gradingResponse = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
             model: currentModel,
             contents: contents,
@@ -1047,7 +1047,7 @@ Do NOT include markdown formatting, backticks, or any conversational text. Retur
 Incorrect questions: ${wrongProblemsString}`;
 
     const modelId = 'gemini-3.1-flash-lite';
-    const models = [modelId, 'gemini-3-flash'];
+    const models = [modelId, 'gemini-3-flash-preview'];
     const response = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
       model: currentModel,
       contents: prompt,
@@ -1291,7 +1291,7 @@ Provide a professional, diagnostic summary of their mistake patterns and concret
 Be direct, supportive, and pedagogical. Do not include markdown headers or greetings.`;
 
     const modelId = 'gemini-3.1-flash-lite';
-    const models = [modelId, 'gemini-3-flash'];
+    const models = [modelId, 'gemini-3-flash-preview'];
     const response = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
       model: currentModel,
       contents: prompt,
