@@ -50,11 +50,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { username, password, token, recoveryQuestion, recoveryAnswer, isSettingRecovery, userRole, userOrganization } = req.body;
+  const { username, password, token, autoLogin, recoveryQuestion, recoveryAnswer, isSettingRecovery, userRole, userOrganization } = req.body;
 
   let validTokenUsername = null;
   if (token) {
     validTokenUsername = verifyToken(token);
+  }
+
+  if (!validTokenUsername && autoLogin) {
+    return res.status(401).json({ error: 'Auto login failed response' });
   }
 
   if (!validTokenUsername) {

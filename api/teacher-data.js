@@ -441,7 +441,7 @@ Return strictly a valid JSON object with the following schema:
 Do NOT include markdown headers, backticks, or any conversational text. Return ONLY the raw JSON object.`;
 
           const modelId = 'gemini-3.1-flash-lite';
-          const models = [modelId, 'gemini-3-flash'];
+          const models = [modelId, 'gemini-3-flash-preview'];
           const response = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
             model: currentModel,
             contents: geminiPrompt,

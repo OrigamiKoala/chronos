@@ -134,7 +134,7 @@ function App() {
       fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: savedUser, token: savedToken })
+        body: JSON.stringify({ username: savedUser, token: savedToken, autoLogin: true })
       })
         .then(res => {
           if (res.ok) return res.json();
@@ -1132,7 +1132,7 @@ function App() {
                     style={{ textAlign: 'center' }}
                   />
                   <input
-                    type="password"
+                    type="password" autocomplete="current-password"
                     placeholder="Enter Password"
                     className="input-field"
                     value={loginPassword}
@@ -1263,7 +1263,7 @@ function App() {
                     required
                   />
                   <input
-                    type="password"
+                    type="password" autocomplete="current-password"
                     placeholder="Enter New Password"
                     className="input-field"
                     value={resetNewPassword}

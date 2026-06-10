@@ -166,8 +166,26 @@ export default async function handler(req, res) {
       console.error('Parallel fetch error:', err);
     }
 
-    // 1b. Fetch 1 pregenerated question disabled by user instruction
+    // 1b. Fetch 1 pregenerated question
     let pregeneratedQuestion = null;
+    try {
+      const pregenQuery = `
+        SELECT question_json
+        FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
+        WHERE subject = @subject AND difficulty = @difficulty
+        ORDER BY RAND()
+        LIMIT 1
+      `;
+      const [rows] = await bq.query({
+        query: pregenQuery,
+        params: { subject: normSubject || subject, difficulty: startingDifficulty },
+      });
+      if (rows && rows.length > 0) {
+        pregeneratedQuestion = JSON.parse(rows[0].question_json);
+      }
+    } catch (err) {
+      console.error('Error fetching pregenerated question:', err);
+    }
 
     // 2. Build the Gemini generation prompt
     let constraints = '';
@@ -652,7 +670,7 @@ Follow these strict rules:
     ];
 
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-    const models = modelId === 'gemini-3-flash' ? [modelId] : [modelId, 'gemini-3-flash'];
+    const models = modelId === 'gemini-3-flash-preview' ? [modelId] : [modelId, 'gemini-3-flash-preview'];
     const stream = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContentStream({
       model: currentModel,
       contents: prompt,
