@@ -74,9 +74,7 @@ function isAnswerCorrect(prob, ans) {
 
 export function ExamScreen({ config, onFinish, resumeState }) {
   const isWholeTestMode = config.timeLimitStyle === 'whole_test';
-  const recommendedQuestionTime = isWholeTestMode
-    ? Math.floor((config.timeLimitWholeTest * 60) / config.numQuestions)
-    : config.timeLimitPerQuestion;
+  // dynamic recommended time will be calculated when navigating to questions
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(() =>
     resumeState ? resumeState.currentQuestionIndex : 0
@@ -100,7 +98,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   const [saving, setSaving] = useState(false);
   const [totalTimeLeft, setTotalTimeLeft] = useState(() => config.timeLimitWholeTest * 60);
   const [questionTimesLeft, setQuestionTimesLeft] = useState(() =>
-    Array(config.numQuestions).fill(isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion)
+    Array(config.numQuestions).fill(isWholeTestMode ? null : config.timeLimitPerQuestion)
   );
   const [answers, setAnswers] = useState(() =>
     resumeState ? resumeState.answers : Array(config.numQuestions).fill('')
@@ -260,8 +258,15 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
       setQuestionTimesLeft((prevTimes) => {
         const next = [...prevTimes];
-        const currentVal = next[currentQuestionIndex];
+        let currentVal = next[currentQuestionIndex];
         if (isWholeTestMode) {
+          if (currentVal === null || currentVal === undefined) {
+            const unansweredCount = answers.filter((a, idx) => {
+              if (problems[idx]?.type === 'free_response') return !frqSubmissions[idx];
+              return !a || a.toString().trim() === '';
+            }).length;
+            currentVal = Math.floor(totalTimeLeft / (unansweredCount || 1));
+          }
           next[currentQuestionIndex] = currentVal - 1;
         } else {
           if (currentVal <= 1) {
@@ -354,11 +359,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     const finalResults = problems.map((prob, idx) => {
       const userAnswer = finalAnswers[idx] || '';
       const intervals = questionIntervalsRef.current[idx] || [];
-      const timeSpent = intervals.length > 0
-        ? intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0)
-        : (isWholeTestMode
-          ? recommendedQuestionTime - (questionTimesLeft[idx] || 0)
-          : config.timeLimitPerQuestion - questionTimesLeft[idx]);
+      const timeSpent = intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0);
       const isTimeout = idx === currentQuestionIndex || !userAnswer;
       const isCorrect = prob.type !== 'free_response' && !isTimeout && isAnswerCorrect(prob, userAnswer);
 
@@ -443,7 +444,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
     if (config.stressMode === 'strict') {
       clearInterval(timerRef.current);
-      const timeSpent = config.timeLimitPerQuestion - questionTimesLeft[currentQuestionIndex];
+      const intervals = questionIntervalsRef.current[currentQuestionIndex] || [];
+      const timeSpent = intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0);
 
       const questionResult = {
         ...problem,
@@ -725,14 +727,27 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     );
   }
 
-  const activeTimeLeft = questionTimesLeft[currentQuestionIndex] ?? (isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion);
+  let activeTimeLeft = questionTimesLeft[currentQuestionIndex];
+  if (activeTimeLeft === null || activeTimeLeft === undefined) {
+    if (isWholeTestMode) {
+      const unansweredCount = answers.filter((a, idx) => {
+        if (problems[idx]?.type === 'free_response') return !frqSubmissions[idx];
+        return !a || a.toString().trim() === '';
+      }).length;
+      activeTimeLeft = Math.floor(totalTimeLeft / (unansweredCount || 1));
+    } else {
+      activeTimeLeft = config.timeLimitPerQuestion;
+    }
+  }
   const isTimeOut = activeTimeLeft <= 0;
   const isLowTime = activeTimeLeft <= 10;
   const isHidden = config.stressMode === 'hidden' && !isLowTime;
   const isDynamicStress = config.stressMode === 'dynamic' && isLowTime;
   const allLoaded = problems.length === config.numQuestions;
 
-  const totalTime = isWholeTestMode ? recommendedQuestionTime : config.timeLimitPerQuestion;
+  const intervalsForCurrent = questionIntervalsRef.current[currentQuestionIndex] || [];
+  const timeSpentOnCurrent = intervalsForCurrent.reduce((acc, inv) => acc + (inv.end - inv.start), 0) + (elapsedSecondsRef.current - currentQuestionEntryTimeRef.current);
+  const totalTime = isWholeTestMode ? (activeTimeLeft + timeSpentOnCurrent) : config.timeLimitPerQuestion;
   const percentage = Math.max(0, Math.min(100, (activeTimeLeft / totalTime) * 100));
 
   let progressColor = 'var(--success)';
