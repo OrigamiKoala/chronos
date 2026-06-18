@@ -85,8 +85,8 @@ export function TeacherScreen({ user, onBack }) {
     setChatMessages(updatedMessages);
     setChatLoading(true);
 
-    // If scope is 'class', pass empty array so sendChatMessage handles it as null
-    const selectedIds = chatScope === 'class' ? [] : chatSelectedStudents.map(s => s.user_id || s);
+    // If scope is 'class', pass all claimed student IDs
+    const selectedIds = chatScope === 'class' ? (data?.claimedStudentIds || []) : chatSelectedStudents.map(s => s.user_id || s);
 
     try {
       const aiResponse = await sendChatMessage({
