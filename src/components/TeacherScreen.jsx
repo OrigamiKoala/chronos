@@ -1,12 +1,109 @@
-import { useState, useEffect } from 'react';
-import { Users, BookOpen, Plus, Loader2, Award, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Users, BookOpen, Plus, Loader2, Award, ShieldAlert, CheckCircle, XCircle, Sparkles, Send, Trash2 } from 'lucide-react';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { StudentAIInsights } from './StudentAIInsights';
 import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 
+// Chatbot worker function
+async function sendChatMessage({ message, teacherId, selectedStudentIds, sessionId, accessToken }) {
+  // Use environment variable if available, otherwise default to correct URL
+  const WORKER_URL = import.meta.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message: message,
+        teacherId: teacherId,
+        // If no students are explicitly selected, pass null so the worker triggers class aggregation
+        studentId: selectedStudentIds.length > 0 ? selectedStudentIds : null,
+        sessionId: sessionId
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.response; // This is the text response from the LLM
+  } catch (error) {
+    console.error('Error communicating with chatbot worker:', error);
+    return 'Sorry, I encountered an error processing that data request.';
+  }
+}
+
 export function TeacherScreen({ user, onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Chatbot states
+  const [chatMessages, setChatMessages] = useState([
+    { sender: 'ai', text: 'Hello! I am your AI student advisor. Ask me anything about your class or select specific students to analyze their performance, strengths, or weaknesses.', timestamp: new Date() }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatScope, setChatScope] = useState('class'); // 'class' or 'students'
+  const [chatSelectedStudents, setChatSelectedStudents] = useState([]);
+  const [chatSessionId, setChatSessionId] = useState(() => 'sess_' + Math.random().toString(36).substring(2, 9));
+  const [isMobile, setIsMobile] = useState(false);
+  const [accessToken, setAccessToken] = useState('');
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userMsg = chatInput.trim();
+    setChatInput('');
+    
+    // Add user message to chat history
+    const updatedMessages = [...chatMessages, { sender: 'user', text: userMsg, timestamp: new Date() }];
+    setChatMessages(updatedMessages);
+    setChatLoading(true);
+
+    // If scope is 'class', pass empty array so sendChatMessage handles it as null
+    const selectedIds = chatScope === 'class' ? [] : chatSelectedStudents;
+
+    try {
+      const aiResponse = await sendChatMessage({
+        message: userMsg,
+        teacherId: user.user_id,
+        selectedStudentIds: selectedIds,
+        sessionId: chatSessionId,
+        accessToken
+      });
+
+      setChatMessages(prev => [...prev, { sender: 'ai', text: aiResponse, timestamp: new Date() }]);
+    } catch (err) {
+      console.error(err);
+      setChatMessages(prev => [...prev, { sender: 'ai', text: 'Sorry, I encountered an error processing that request.', timestamp: new Date() }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   const parseDate = (d) => {
     if (!d) return null;
@@ -180,6 +277,9 @@ export function TeacherScreen({ user, onBack }) {
       })
       .then(d => {
         setData(d);
+        if (d.accessToken) {
+          setAccessToken(d.accessToken);
+        }
         setLoading(false);
       })
       .catch(e => {
@@ -622,6 +722,322 @@ export function TeacherScreen({ user, onBack }) {
           </div>
         </div>
       )}
+
+      {/* AI Student Advisor Chatbot */}
+      <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Sparkles size={24} style={{ color: 'var(--accent-primary)' }} />
+            <div>
+              <h3 className="text-gradient" style={{ margin: 0, fontSize: '1.5rem' }}>AI Student Advisor</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>Ask questions about student performance, study recommendations, or trends.</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success)' }}></span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Ready</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 2.5fr', gap: '1.5rem', alignItems: 'stretch' }}>
+          
+          {/* Left panel: Scope and selection */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.05)',
+            borderBottom: isMobile ? '1px solid rgba(255,255,255,0.05)' : 'none',
+            paddingRight: isMobile ? '0' : '1.5rem',
+            paddingBottom: isMobile ? '1.5rem' : '0'
+          }}>
+            <div>
+              <h4 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>Query Scope</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setChatScope('class')}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    padding: '0.75rem 1rem',
+                    background: chatScope === 'class' ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-tertiary)',
+                    border: chatScope === 'class' ? '1px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.05)',
+                    borderRadius: 'var(--radius-md)',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: chatScope === 'class' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>Whole Class</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Analyze trends across all claimed students</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setChatScope('students')}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    padding: '0.75rem 1rem',
+                    background: chatScope === 'students' ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-tertiary)',
+                    border: chatScope === 'students' ? '1px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.05)',
+                    borderRadius: 'var(--radius-md)',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: chatScope === 'students' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>Specific Students</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Select specific students to query</span>
+                </button>
+              </div>
+            </div>
+
+            {chatScope === 'students' && (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: '600' }}>Select Students ({chatSelectedStudents.length})</h4>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setChatSelectedStudents(myStudentsList.map(s => s.user_id))}
+                      style={{ fontSize: '0.7rem', color: 'var(--accent-primary)' }}
+                    >
+                      Select All
+                    </button>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>|</span>
+                    <button
+                      type="button"
+                      onClick={() => setChatSelectedStudents([])}
+                      style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '0.5rem',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem'
+                }}>
+                  {myStudentsList.length === 0 ? (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '0.5rem', textAlign: 'center', fontStyle: 'italic' }}>
+                      No claimed students.
+                    </span>
+                  ) : (
+                    myStudentsList.map(student => {
+                      const isChecked = chatSelectedStudents.includes(student.user_id);
+                      return (
+                        <label
+                          key={student.user_id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            cursor: 'pointer',
+                            padding: '0.3rem 0.5rem',
+                            borderRadius: '4px',
+                            background: isChecked ? 'rgba(255,255,255,0.02)' : 'transparent',
+                            transition: 'background 0.2s'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            value={student.user_id}
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setChatSelectedStudents(prev =>
+                                checked ? [...prev, student.user_id] : prev.filter(id => id !== student.user_id)
+                              );
+                            }}
+                            style={{
+                              width: '15px',
+                              height: '15px',
+                              accentColor: 'var(--accent-primary)',
+                              cursor: 'pointer'
+                            }}
+                          />
+                          <span style={{ fontSize: '0.8rem', color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                            {student.user_id}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {chatScope === 'class' && (
+              <div style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.03)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '1rem',
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                lineHeight: '1.4',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                flex: 1
+              }}>
+                <div>
+                  <Users size={24} style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', opacity: 0.7 }} />
+                  <p>Analyzing entire class aggregates.</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>No individual student checkboxes will be sent.</p>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setChatMessages([{ sender: 'ai', text: 'Hello! I am your AI student advisor. Ask me anything about your class or select specific students to analyze their performance, strengths, or weaknesses.', timestamp: new Date() }]);
+                  setChatSessionId('sess_' + Math.random().toString(36).substring(2, 9));
+                }}
+                className="btn btn-outline"
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  borderRadius: 'var(--radius-md)'
+                }}
+              >
+                <Trash2 size={14} /> Clear Chat History
+              </button>
+            </div>
+          </div>
+
+          {/* Right panel: Chat messages and input */}
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '380px' }}>
+            
+            {/* Messages box */}
+            <div style={{
+              flex: 1,
+              background: 'rgba(0,0,0,0.15)',
+              border: '1px solid rgba(255,255,255,0.03)',
+              borderRadius: 'var(--radius-md)',
+              padding: '1rem',
+              overflowY: 'auto',
+              maxHeight: '300px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              {chatMessages.map((msg, index) => {
+                const isUser = msg.sender === 'user';
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      display: 'flex',
+                      justifyContent: isUser ? 'flex-end' : 'flex-start',
+                      width: '100%'
+                    }}
+                  >
+                    <div style={{
+                      maxWidth: '80%',
+                      padding: '0.75rem 1rem',
+                      borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                      background: isUser
+                        ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))'
+                        : 'var(--bg-tertiary)',
+                      border: isUser ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                      boxShadow: isUser ? '0 2px 8px rgba(99,102,241,0.2)' : 'none',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.88rem',
+                      lineHeight: '1.4',
+                      wordBreak: 'break-word',
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      {!isUser ? (
+                        <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'flex-start' }}>
+                          <Sparkles size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: '2px' }} />
+                          <ChemicalText text={msg.text} theme="dark" />
+                        </div>
+                      ) : (
+                        msg.text
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {chatLoading && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start', width: '100%' }}>
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    borderRadius: '16px 16px 16px 4px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <Loader2 size={14} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
+                    <span>AI is analyzing data...</span>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input form */}
+            <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="text"
+                placeholder={chatScope === 'class' ? "Ask AI about class-wide performance..." : "Ask AI about selected students..."}
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                className="input-field"
+                disabled={chatLoading}
+                style={{
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.9rem',
+                  flex: 1
+                }}
+              />
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={chatLoading || !chatInput.trim()}
+                style={{
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.75rem 1.25rem',
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                {chatLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                <span>Send</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
 
       {/* Overall Class Averages section */}
       <div className="glass-panel" style={{ padding: 'var(--panel-padding)' }}>

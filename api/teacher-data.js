@@ -1,6 +1,32 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
 import { executeWithRetry } from './_gemini.js';
+import crypto from 'crypto';
+
+// Helper function to generate HS256 JWT
+function generateJWT(payload, secret) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const base64UrlEncode = (obj) => {
+    return Buffer.from(JSON.stringify(obj))
+      .toString('base64')
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+  };
+
+  const headerEncoded = base64UrlEncode(header);
+  const payloadEncoded = base64UrlEncode(payload);
+
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${headerEncoded}.${payloadEncoded}`)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  return `${headerEncoded}.${payloadEncoded}.${signature}`;
+}
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const bq = new BigQuery({
@@ -532,6 +558,12 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
       }
 
       const organization = user.user_organization;
+      const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
+      const accessToken = generateJWT({
+        teacherId: sanitizedUser,
+        exp: Math.floor(Date.now() / 1000) + 7200 // 2-hour short-lived token
+      }, jwtSecret);
+
       if (!organization) {
         return res.status(200).json({
           orgStudents: [],
@@ -539,7 +571,8 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
           lessons: [],
           assignments: [],
           submissions: [],
-          collectiveStats: { avgMath: 100, avgPhys: 100, avgChem: 100, overallAvg: 100, totalExams: 0, avgAccuracy: 0, strengths: [], weaknesses: [] }
+          collectiveStats: { avgMath: 100, avgPhys: 100, avgChem: 100, overallAvg: 100, totalExams: 0, avgAccuracy: 0, strengths: [], weaknesses: [] },
+          accessToken
         });
       }
 
@@ -680,7 +713,8 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
         lessons,
         assignments,
         submissions,
-        collectiveStats
+        collectiveStats,
+        accessToken
       });
     } catch (err) {
       console.error('Error fetching teacher data:', err);
