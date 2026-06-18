@@ -22,9 +22,10 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
       headers,
       body: JSON.stringify({
         message: message,
-        teacherId: teacherId,
+        // FORCE LOWERCASE AND TRIM TO MATCH VERCEL'S SANITIZED ACCESS TOKEN CLAIM
+        teacherId: teacherId ? teacherId.trim().toLowerCase() : teacherId,
         // If no students are explicitly selected, pass null so the worker triggers class aggregation
-        studentId: selectedStudentIds.length > 0 ? selectedStudentIds : null,
+        studentId: selectedStudentIds && selectedStudentIds.length > 0 ? selectedStudentIds : null,
         sessionId: sessionId
       }),
     });
@@ -78,7 +79,7 @@ export function TeacherScreen({ user, onBack }) {
 
     const userMsg = chatInput.trim();
     setChatInput('');
-    
+
     // Add user message to chat history
     const updatedMessages = [...chatMessages, { sender: 'user', text: userMsg, timestamp: new Date() }];
     setChatMessages(updatedMessages);
@@ -740,7 +741,7 @@ export function TeacherScreen({ user, onBack }) {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 2.5fr', gap: '1.5rem', alignItems: 'stretch' }}>
-          
+
           {/* Left panel: Scope and selection */}
           <div style={{
             display: 'flex',
@@ -752,7 +753,6 @@ export function TeacherScreen({ user, onBack }) {
             paddingBottom: isMobile ? '1.5rem' : '0'
           }}>
             <div>
-              <h4 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>Query Scope</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <button
                   type="button"
@@ -928,7 +928,7 @@ export function TeacherScreen({ user, onBack }) {
 
           {/* Right panel: Chat messages and input */}
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '380px' }}>
-            
+
             {/* Messages box */}
             <div style={{
               flex: 1,
