@@ -121,6 +121,14 @@ export default async function handler(req, res) {
         bq.query(`
           ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
           ADD COLUMN IF NOT EXISTS assignment_id STRING
+        `),
+        bq.query(`
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` (
+            assignment_id STRING NOT NULL,
+            student_id STRING NOT NULL,
+            questions_json STRING NOT NULL,
+            created_at TIMESTAMP NOT NULL
+          )
         `)
       ]);
       tablesEnsured = true;

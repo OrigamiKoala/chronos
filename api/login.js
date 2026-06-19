@@ -169,6 +169,14 @@ export default async function handler(req, res) {
               question_json STRING NOT NULL,
               created_at TIMESTAMP NOT NULL
             )
+          `),
+          bq.query(`
+            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` (
+              assignment_id STRING NOT NULL,
+              student_id STRING NOT NULL,
+              questions_json STRING NOT NULL,
+              created_at TIMESTAMP NOT NULL
+            )
           `)
         ]);
       } catch (e) {

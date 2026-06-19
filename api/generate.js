@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode, examFormat, lessonTitle, lessonDescription, topics } = req.body;
+  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode, examFormat, lessonTitle, lessonDescription, topics, assignmentId } = req.body;
 
   if (!count || !startingDifficulty || !subject) {
     return res.status(400).json({ error: 'Missing required parameters: count, startingDifficulty, subject' });
@@ -71,6 +71,36 @@ export default async function handler(req, res) {
 
   const sanitizedUser = String(targetUserId).replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
   const normSubject = String(subject).trim().toLowerCase();
+
+  if (assignmentId && sanitizedUser !== 'default_user') {
+    try {
+      const getQuestionsQuery = `
+        SELECT questions_json
+        FROM \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\`
+        WHERE assignment_id = @assignmentId AND student_id = @targetUserId
+        LIMIT 1
+      `;
+      const [rows] = await bq.query({
+        query: getQuestionsQuery,
+        params: { assignmentId, targetUserId: sanitizedUser }
+      });
+      if (rows && rows.length > 0) {
+        const questionsList = JSON.parse(rows[0].questions_json);
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        for (const q of questionsList) {
+          res.write(`data: ${JSON.stringify({ type: 'question', data: q })}\n\n`);
+        }
+        res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+        res.end();
+        return;
+      }
+    } catch (err) {
+      console.error('Error fetching student homework questions:', err);
+    }
+  }
 
   try {
     // 1. Fetch user weaknesses and diagnostic data from BigQuery in parallel

@@ -211,7 +211,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         config.examFormat || 'mix',
         config.lessonTitle,
         config.lessonDescription,
-        config.topics
+        config.topics,
+        config.assignmentId
       );
 
       if (generated && generated.length > 0) {

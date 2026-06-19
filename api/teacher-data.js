@@ -37,6 +37,84 @@ const bq = new BigQuery({
   },
 });
 
+async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homeworks, bq, projectId) {
+  try {
+    const tId = teacherId.trim().toLowerCase();
+    const [claimedRows] = await bq.query({
+      query: `SELECT student_id FROM \`${projectId}\`.\`chronos_users\`.\`teacher_students\` WHERE teacher_id = @teacherId`,
+      params: { teacherId: tId }
+    });
+    const studentIds = claimedRows.map(r => r.student_id);
+
+    if (studentIds.length === 0) return;
+
+    const WORKER_URL = process.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
+    const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
+    
+    // Helper function to generate HS256 JWT
+    function generateJWT(payload, secret) {
+      const header = { alg: 'HS256', typ: 'JWT' };
+      const base64UrlEncode = (obj) => {
+        return Buffer.from(JSON.stringify(obj))
+          .toString('base64')
+          .replace(/=/g, '')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_');
+      };
+
+      const headerEncoded = base64UrlEncode(header);
+      const payloadEncoded = base64UrlEncode(payload);
+
+      const signature = crypto
+        .createHmac('sha256', secret)
+        .update(`${headerEncoded}.${payloadEncoded}`)
+        .digest('base64')
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+
+      return `${headerEncoded}.${payloadEncoded}.${signature}`;
+    }
+
+    const accessToken = generateJWT({
+      teacherId: tId,
+      exp: Math.floor(Date.now() / 1000) + 7200 // 2-hour short-lived token
+    }, jwtSecret);
+
+    fetch(WORKER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        action: 'generate_homework',
+        teacherId: tId,
+        lessonId: lessonId,
+        studentIds: studentIds,
+        homeworks: homeworks,
+        geminiApiKeys: [
+          process.env.GEMINI_API_KEY,
+          process.env.GEMINI_API_KEY_2,
+          process.env.GEMINI_API_KEY_3,
+          process.env.GEMINI_API_KEY_4,
+          process.env.GEMINI_API_KEY_5,
+          process.env.GEMINI_API_KEY_6,
+          process.env.GEMINI_API_KEY_7,
+          process.env.GEMINI_API_KEY_8,
+          process.env.GEMINI_API_KEY_9,
+          process.env.GEMINI_API_KEY_10,
+          process.env.GEMINI_API_KEY_11,
+          process.env.GEMINI_API_KEY_12
+        ].filter(Boolean)
+      })
+    }).catch(err => console.error("Worker fetch failed in trigger:", err));
+
+  } catch (err) {
+    console.error("Error in triggerBackgroundHomeworkGeneration:", err);
+  }
+}
+
 export default async function handler(req, res) {
   const { route } = req.query;
 
@@ -70,12 +148,28 @@ export default async function handler(req, res) {
         });
 
         // Insert homework assignments if provided
+        const assignmentsPayload = [];
         if (Array.isArray(homework) && homework.length > 0) {
           const assignmentPromises = homework.map((hw, index) => {
             const assignmentId = `assign_${Date.now()}_${index}`;
             const formatsStr = Array.isArray(hw.examFormat) ? hw.examFormat.join(',') : String(hw.examFormat || 'multiple_choice');
             const dueDate = hw.dueDate ? hw.dueDate : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
             const sharedQJson = hw.sharedQuestions ? JSON.stringify(hw.sharedQuestions) : null;
+
+            assignmentsPayload.push({
+              assignmentId,
+              title: hw.title ? hw.title.trim() : `Homework for ${title}`,
+              subject: hw.subject || 'Math',
+              numQuestions: Number(hw.numQuestions) || 5,
+              startingDifficulty: Number(hw.startingDifficulty) || 5,
+              examFormat: formatsStr,
+              timeLimitStyle: hw.timeLimitStyle || 'per_question',
+              timeLimitValue: Number(hw.timeLimitValue) || 60,
+              stressMode: hw.stressMode || 'none',
+              contentBased: hw.contentBased !== false,
+              dueDate,
+              sharedQuestions: hw.sharedQuestions || []
+            });
 
             const insertAssignmentQuery = `
               INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
@@ -109,16 +203,22 @@ export default async function handler(req, res) {
           await Promise.all(assignmentPromises);
         }
 
+        if (assignmentsPayload.length > 0) {
+          triggerBackgroundHomeworkGeneration(tId, lessonId, assignmentsPayload, bq, projectId);
+        }
+
         return res.status(200).json({ success: true, lessonId });
       } catch (err) {
         console.error('Error creating lesson/homework:', err);
         return res.status(500).json({ error: err.message || 'Internal Server Error' });
       }
     } else if (req.method === 'PUT') {
-      const { lessonId, title, description, homework } = req.body;
+      const { lessonId, title, description, homework, teacherId } = req.body;
       if (!lessonId || !title || !description) {
         return res.status(400).json({ error: 'Missing required parameters (lessonId, title, description)' });
       }
+
+      const tId = teacherId ? teacherId.trim().toLowerCase() : '';
 
       try {
         // Update lesson plan
@@ -164,12 +264,34 @@ export default async function handler(req, res) {
         }
 
         // Upsert assignments
+        const assignmentsPayload = [];
         const assignmentPromises = updatedHomework.map((hw, index) => {
           const formatsStr = Array.isArray(hw.examFormat) ? hw.examFormat.join(',') : String(hw.examFormat || 'multiple_choice');
           const dueDate = hw.dueDate ? hw.dueDate : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
           const sharedQJson = hw.sharedQuestions ? JSON.stringify(hw.sharedQuestions) : null;
 
-          if (hw.assignment_id && existingIds.includes(hw.assignment_id)) {
+          let assignmentId = hw.assignment_id;
+          const isNew = !assignmentId || !existingIds.includes(assignmentId);
+          if (isNew) {
+            assignmentId = `assign_${Date.now()}_${index}`;
+          }
+
+          assignmentsPayload.push({
+            assignmentId,
+            title: hw.title ? hw.title.trim() : `Homework for ${title}`,
+            subject: hw.subject || 'Math',
+            numQuestions: Number(hw.numQuestions) || 5,
+            startingDifficulty: Number(hw.startingDifficulty) || 5,
+            examFormat: formatsStr,
+            timeLimitStyle: hw.timeLimitStyle || 'per_question',
+            timeLimitValue: Number(hw.timeLimitValue) || 60,
+            stressMode: hw.stressMode || 'none',
+            contentBased: hw.contentBased !== false,
+            dueDate,
+            sharedQuestions: hw.sharedQuestions || []
+          });
+
+          if (!isNew) {
             const updateAssignmentQuery = `
               UPDATE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
               SET title = @title, subject = @subject, num_questions = @numQuestions, 
@@ -182,7 +304,7 @@ export default async function handler(req, res) {
             return bq.query({
               query: updateAssignmentQuery,
               params: {
-                assignmentId: hw.assignment_id,
+                assignmentId,
                 title: hw.title ? hw.title.trim() : `Homework for ${title}`,
                 subject: hw.subject || 'Math',
                 numQuestions: Number(hw.numQuestions) || 5,
@@ -200,7 +322,6 @@ export default async function handler(req, res) {
               }
             });
           } else {
-            const assignmentId = `assign_${Date.now()}_${index}`;
             const insertAssignmentQuery = `
               INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
                 (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json)
@@ -231,6 +352,11 @@ export default async function handler(req, res) {
         });
 
         await Promise.all(assignmentPromises);
+
+        if (assignmentsPayload.length > 0 && tId) {
+          triggerBackgroundHomeworkGeneration(tId, lessonId, assignmentsPayload, bq, projectId);
+        }
+
         return res.status(200).json({ success: true });
       } catch (err) {
         console.error('Error updating lesson:', err);
@@ -525,6 +651,68 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
       console.error('Error fetching/generating student insights:', err);
       return res.status(500).json({ error: err.message || 'Internal Server Error' });
     }
+  }
+
+  // 2c. Homework questions route (view/edit pre-generated student homework questions)
+  if (route === 'homework-questions') {
+    if (req.method === 'GET') {
+      const { assignmentId } = req.query;
+      if (!assignmentId) {
+        return res.status(400).json({ error: 'assignmentId is required' });
+      }
+
+      try {
+        const query = `
+          SELECT student_id, questions_json
+          FROM \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\`
+          WHERE assignment_id = @assignmentId
+        `;
+        const [rows] = await bq.query({
+          query,
+          params: { assignmentId }
+        });
+
+        const questions = rows.map(r => ({
+          studentId: r.student_id,
+          questions: JSON.parse(r.questions_json)
+        }));
+
+        return res.status(200).json({ questions });
+      } catch (err) {
+        console.error('Error fetching homework questions:', err);
+        return res.status(500).json({ error: err.message || 'Internal Server Error' });
+      }
+    }
+
+    if (req.method === 'POST') {
+      const { assignmentId, studentId, questions } = req.body;
+      if (!assignmentId || !studentId || !Array.isArray(questions)) {
+        return res.status(400).json({ error: 'Missing required parameters (assignmentId, studentId, questions)' });
+      }
+
+      try {
+        const query = `
+          UPDATE \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\`
+          SET questions_json = @questionsJson
+          WHERE assignment_id = @assignmentId AND student_id = @studentId
+        `;
+        await bq.query({
+          query,
+          params: {
+            assignmentId,
+            studentId: studentId.trim().toLowerCase(),
+            questionsJson: JSON.stringify(questions)
+          }
+        });
+
+        return res.status(200).json({ success: true });
+      } catch (err) {
+        console.error('Error updating student homework questions:', err);
+        return res.status(500).json({ error: err.message || 'Internal Server Error' });
+      }
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   // 3. Default teacher portal data / Claimed student actions route

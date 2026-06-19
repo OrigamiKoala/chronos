@@ -4,11 +4,8 @@ import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { StudentAIInsights } from './StudentAIInsights';
 import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
 
-// Chatbot worker function
-async function sendChatMessage({ message, teacherId, selectedStudentIds, sessionId, accessToken }) {
-  // Use environment variable if available, otherwise default to correct URL
-  const WORKER_URL = import.meta.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
-
+// Chatbot Vercel function
+async function sendChatMessage({ message, teacherId, selectedStudentIds, sessionId, accessToken, history }) {
   try {
     const headers = {
       'Content-Type': 'application/json',
@@ -17,7 +14,7 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    const response = await fetch(WORKER_URL, {
+    const response = await fetch('/api/chat', {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -26,23 +23,24 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
         teacherId: teacherId ? teacherId.trim().toLowerCase() : teacherId,
         // If no students are explicitly selected, pass null so the worker triggers class aggregation
         studentId: selectedStudentIds && selectedStudentIds.length > 0 ? selectedStudentIds : null,
-        sessionId: sessionId
+        sessionId: sessionId,
+        history: history
       }),
     });
 
     if (!response.ok) {
       const errBody = await response.text();
-      console.error('Worker error response:', response.status, errBody);
+      console.error('Chat API error response:', response.status, errBody);
       throw new Error(`HTTP error! status: ${response.status} body: ${errBody}`);
     }
 
-    const data = await response.json();
+    const data = await response.ok ? await response.json() : {};
     if (data._debug) {
-      console.log('[Worker Debug]', data._debug);
+      console.log('[Chat API Debug]', data._debug);
     }
-    return data.response; // This is the text response from the LLM
+    return data.response; // This is the text response from the Gemini API
   } catch (error) {
-    console.error('Error communicating with chatbot worker:', error);
+    console.error('Error communicating with chatbot API:', error);
     return 'Sorry, I encountered an error processing that data request.';
   }
 }
@@ -99,7 +97,8 @@ export function TeacherScreen({ user, onBack }) {
         teacherId: user.user_id,
         selectedStudentIds: selectedIds,
         sessionId: chatSessionId,
-        accessToken
+        accessToken,
+        history: chatMessages
       });
 
       setChatMessages(prev => [...prev, { sender: 'ai', text: aiResponse, timestamp: new Date() }]);
@@ -281,8 +280,96 @@ export function TeacherScreen({ user, onBack }) {
   const [sharedQDifficulty, setSharedQDifficulty] = useState(5);
   const [sharedQSolution, setSharedQSolution] = useState('');
 
-  const [lessonLoading, setLessonLoading] = useState(false);
   const [lessonError, setLessonError] = useState('');
+  const [lessonLoading, setLessonLoading] = useState(false);
+
+  // Tailored homework questions state & handlers
+  const [tailoredQuestionsMap, setTailoredQuestionsMap] = useState({});
+  const [editingStudentHwKey, setEditingStudentHwKey] = useState(null); // "assignmentId:studentId"
+  const [editingQuestions, setEditingQuestions] = useState([]);
+  const [loadingTailoredHwKey, setLoadingTailoredHwKey] = useState(null);
+
+  const handleLoadTailoredQuestions = async (assignmentId, studentId) => {
+    const key = `${assignmentId}:${studentId}`;
+    setLoadingTailoredHwKey(key);
+    try {
+      const res = await fetch(`/api/teacher-data?route=homework-questions&assignmentId=${assignmentId}`);
+      if (!res.ok) throw new Error('Failed to fetch tailored questions');
+      const d = await res.json();
+      
+      const studentEntry = d.questions.find(q => q.studentId === studentId);
+      if (studentEntry) {
+        setTailoredQuestionsMap(prev => ({
+          ...prev,
+          [key]: studentEntry.questions
+        }));
+      } else {
+        setTailoredQuestionsMap(prev => ({
+          ...prev,
+          [key]: [] // empty or not generated yet
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error loading tailored questions.');
+    } finally {
+      setLoadingTailoredHwKey(null);
+    }
+  };
+
+  const handleStartEditTailoredQuestions = (assignmentId, studentId, currentQs) => {
+    setEditingStudentHwKey(`${assignmentId}:${studentId}`);
+    setEditingQuestions(JSON.parse(JSON.stringify(currentQs)));
+  };
+
+  const handleSaveTailoredQuestions = async (assignmentId, studentId) => {
+    const key = `${assignmentId}:${studentId}`;
+    try {
+      const res = await fetch('/api/teacher-data?route=homework-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignmentId,
+          studentId,
+          questions: editingQuestions
+        })
+      });
+      if (res.ok) {
+        setTailoredQuestionsMap(prev => ({
+          ...prev,
+          [key]: editingQuestions
+        }));
+        setEditingStudentHwKey(null);
+        alert('Tailored questions saved successfully!');
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to save tailored questions.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error saving tailored questions.');
+    }
+  };
+
+  const handleUpdateEditingQuestionField = (qIdx, field, val) => {
+    setEditingQuestions(prev => {
+      const next = [...prev];
+      next[qIdx] = { ...next[qIdx], [field]: val };
+      return next;
+    });
+  };
+
+  const handleUpdateEditingQuestionOption = (qIdx, optIdx, val) => {
+    setEditingQuestions(prev => {
+      const next = [...prev];
+      const q = { ...next[qIdx] };
+      const opts = [...(q.options || ['', '', '', ''])];
+      opts[optIdx] = val;
+      q.options = opts;
+      next[qIdx] = q;
+      return next;
+    });
+  };
 
   const fetchTeacherData = () => {
     if (!user) return;
@@ -1374,6 +1461,203 @@ export function TeacherScreen({ user, onBack }) {
                               ))}
                             </div>
                           )}
+                        </div>
+
+                        {/* Student Tailored Questions editor */}
+                        <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>
+                            Student-Specific Tailored Questions
+                          </span>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {myStudentsList.map(student => {
+                              const key = `${hw.assignment_id}:${student.user_id}`;
+                              const questions = tailoredQuestionsMap[key];
+                              const isLoading = loadingTailoredHwKey === key;
+                              const isEditing = editingStudentHwKey === key;
+
+                              return (
+                                <div key={student.user_id} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{student.user_id}</strong>
+                                    
+                                    {!questions && !isLoading && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-outline"
+                                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto' }}
+                                        onClick={() => handleLoadTailoredQuestions(hw.assignment_id, student.user_id)}
+                                      >
+                                        Load Questions
+                                      </button>
+                                    )}
+
+                                    {isLoading && (
+                                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Loading...</span>
+                                    )}
+
+                                    {questions && !isEditing && (
+                                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                          type="button"
+                                          className="btn btn-outline"
+                                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto' }}
+                                          onClick={() => handleStartEditTailoredQuestions(hw.assignment_id, student.user_id, questions)}
+                                        >
+                                          Edit Questions
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="btn btn-outline"
+                                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto', color: 'var(--text-muted)' }}
+                                          onClick={() => setTailoredQuestionsMap(prev => {
+                                            const next = { ...prev };
+                                            delete next[key];
+                                            return next;
+                                          })}
+                                        >
+                                          Collapse
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {isEditing && (
+                                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                          type="button"
+                                          className="btn btn-primary"
+                                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto' }}
+                                          onClick={() => handleSaveTailoredQuestions(hw.assignment_id, student.user_id)}
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="btn btn-outline"
+                                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto' }}
+                                          onClick={() => setEditingStudentHwKey(null)}
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {questions && !isEditing && (
+                                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                      {questions.length === 0 ? (
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Questions are still generating in the background or failed to generate. Please try again in a few seconds.</span>
+                                      ) : (
+                                        questions.map((q, idx) => (
+                                          <div key={q.id || idx} style={{ background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '4px', fontSize: '0.8rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.75rem' }}>
+                                              <span>Q{idx + 1} ({q.topic || 'General'})</span>
+                                              <span>Difficulty: {q.difficulty || 'N/A'} | Type: {q.type}</span>
+                                            </div>
+                                            <p style={{ margin: '0.25rem 0', color: 'var(--text-primary)' }}>{q.question}</p>
+                                            {q.type === 'multiple_choice' && q.options && (
+                                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                {q.options.map((opt, oIdx) => (
+                                                  <span key={oIdx}><strong>{['A', 'B', 'C', 'D'][oIdx]}:</strong> {opt}</span>
+                                                ))}
+                                              </div>
+                                            )}
+                                            <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--success)' }}>
+                                              <strong>Correct Answer:</strong> {q.answer}
+                                            </div>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {isEditing && (
+                                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                      {editingQuestions.map((q, idx) => (
+                                        <div key={q.id || idx} style={{ background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>Question {idx + 1}</span>
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Diff:</label>
+                                              <input
+                                                type="number"
+                                                min="1"
+                                                max="10"
+                                                value={q.difficulty || 5}
+                                                onChange={(e) => handleUpdateEditingQuestionField(idx, 'difficulty', Number(e.target.value))}
+                                                style={{ width: '45px', padding: '0.1rem 0.25rem', background: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.75rem' }}
+                                              />
+                                            </div>
+                                          </div>
+
+                                          <div style={{ marginBottom: '0.5rem' }}>
+                                            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.15rem' }}>Topic</label>
+                                            <input
+                                              type="text"
+                                              value={q.topic || ''}
+                                              onChange={(e) => handleUpdateEditingQuestionField(idx, 'topic', e.target.value)}
+                                              style={{ width: '100%', padding: '0.2rem 0.4rem', background: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.75rem' }}
+                                            />
+                                          </div>
+
+                                          <div style={{ marginBottom: '0.5rem' }}>
+                                            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.15rem' }}>Question Text</label>
+                                            <textarea
+                                              value={q.question || ''}
+                                              onChange={(e) => handleUpdateEditingQuestionField(idx, 'question', e.target.value)}
+                                              style={{ width: '100%', minHeight: '60px', padding: '0.2rem 0.4rem', background: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.75rem', resize: 'vertical' }}
+                                            />
+                                          </div>
+
+                                          {q.type === 'multiple_choice' && (
+                                            <div style={{ marginBottom: '0.5rem' }}>
+                                              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Options</label>
+                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                {(q.options || ['', '', '', '']).map((opt, oIdx) => (
+                                                  <div key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', width: '15px' }}>{['A', 'B', 'C', 'D'][oIdx]}:</span>
+                                                    <input
+                                                      type="text"
+                                                      value={opt}
+                                                      onChange={(e) => handleUpdateEditingQuestionOption(idx, oIdx, e.target.value)}
+                                                      style={{ flex: 1, padding: '0.2rem 0.4rem', background: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.75rem' }}
+                                                    />
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          <div>
+                                            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.15rem' }}>Correct Answer</label>
+                                            {q.type === 'multiple_choice' ? (
+                                              <select
+                                                value={q.answer}
+                                                onChange={(e) => handleUpdateEditingQuestionField(idx, 'answer', e.target.value)}
+                                                style={{ width: '100%', padding: '0.2rem 0.4rem', background: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.75rem' }}
+                                              >
+                                                <option value="A">A</option>
+                                                <option value="B">B</option>
+                                                <option value="C">C</option>
+                                                <option value="D">D</option>
+                                              </select>
+                                            ) : (
+                                              <input
+                                                type="text"
+                                                value={q.answer}
+                                                onChange={(e) => handleUpdateEditingQuestionField(idx, 'answer', e.target.value)}
+                                                style={{ width: '100%', padding: '0.2rem 0.4rem', background: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.75rem' }}
+                                              />
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
 
                       </div>

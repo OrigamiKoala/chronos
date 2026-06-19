@@ -238,7 +238,7 @@ async function readSSEStream(response, onQuestion) {
  *                                for each question the moment it fully arrives.
  * @returns {Promise<Array>} Resolves with the complete array of question objects.
  */
-export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix', lessonTitle = null, lessonDescription = null, topics = '') {
+export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix', lessonTitle = null, lessonDescription = null, topics = '', assignmentId = null) {
   try {
     const response = await fetch('/api/generate', {
       method: 'POST',
@@ -254,7 +254,8 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
         examFormat,
         lessonTitle,
         lessonDescription,
-        topics
+        topics,
+        assignmentId
       }),
     });
 
