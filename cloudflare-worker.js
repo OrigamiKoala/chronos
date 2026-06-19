@@ -4,7 +4,7 @@ async function GoogleAuthToken(serviceAccount) {
   const now = Math.floor(Date.now() / 1000);
   const jwtClaim = btoa(JSON.stringify({
     iss: serviceAccount.client_email,
-    scope: 'https://www.googleapis.com/auth/bigquery',
+    scope: 'https://www.googleapis.com/auth/bigquery', // <-- Change this line
     aud: 'https://oauth2.googleapis.com/token',
     exp: now + 3600,
     iat: now
@@ -12,14 +12,14 @@ async function GoogleAuthToken(serviceAccount) {
 
   const message = `${jwtHeader}.${jwtClaim}`;
   const enc = new TextEncoder();
-  
+
   const pemHeader = "-----BEGIN PRIVATE KEY-----";
   const pemFooter = "-----END PRIVATE KEY-----";
   const pemContents = serviceAccount.private_key
     .replace(pemHeader, "")
     .replace(pemFooter, "")
     .replace(/\s+/g, "");
-  
+
   const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
   const cryptoKey = await crypto.subtle.importKey(
     "pkcs8",
@@ -104,7 +104,7 @@ export default {
       // 1. Token Check
       const authHeader = request.headers.get('Authorization');
       const tokenClaims = await verifyTeacherJwt(authHeader, env.JWT_SECRET);
-      
+
       if (!tokenClaims) {
         return new Response(JSON.stringify({ error: 'Unauthorized token.' }), {
           status: 401,
@@ -119,9 +119,9 @@ export default {
       }
 
       if (tokenClaims.teacherId !== teacherId) {
-        return new Response(JSON.stringify({ error: `Forbidden authorization payload mismatch.` }), { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        return new Response(JSON.stringify({ error: `Forbidden authorization payload mismatch.` }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -142,7 +142,7 @@ export default {
       const accessToken = tokenData.access_token;
 
       if (!accessToken) {
-        return new Response(JSON.stringify({ 
+        return new Response(JSON.stringify({
           error: 'OAuth token generation failed',
           debug: { tokenError: tokenData.error, tokenDesc: tokenData.error_description }
         }), {
@@ -166,26 +166,26 @@ export default {
           v.student_id as user_id,
           
           (SELECT ARRAY_AGG(STRUCT(h.exam_id, h.subject, h.accuracy, h.avg_time, h.rating_change, h.new_rating, h.created_at)) 
-           FROM \`${serviceAccount.project_id}.chronos_users.user_exam_history\` h
+           FROM \`${serviceAccount.project_id}\`.\`chronos_users\`.\`user_exam_history\` h
            WHERE h.user_id = v.student_id) as exams,
            
           (SELECT ARRAY_AGG(STRUCT(m.exam_id, m.subject, m.mistake_patterns)) 
-           FROM \`${serviceAccount.project_id}.chronos_users.user_mistake_analysis\` m
+           FROM \`${serviceAccount.project_id}\`.\`chronos_users\`.\`user_mistake_analysis\` m
            WHERE m.user_id = v.student_id) as mistakes,
            
           (SELECT ARRAY_AGG(STRUCT(t.subject, t.topic, t.good_at, t.not_good_at)) 
-           FROM \`${serviceAccount.project_id}.chronos_users.user_topic_breakdown\` t
+           FROM \`${serviceAccount.project_id}\`.\`chronos_users\`.\`user_topic_breakdown\` t
            WHERE t.user_id = v.student_id) as topics,
            
           (SELECT ARRAY_AGG(STRUCT(w.subject, w.detailed_analysis)) 
-           FROM \`${serviceAccount.project_id}.chronos_users.user_weakness_analysis\` w
+           FROM \`${serviceAccount.project_id}\`.\`chronos_users\`.\`user_weakness_analysis\` w
            WHERE w.user_id = v.student_id) as weaknesses,
            
           (SELECT ARRAY_AGG(STRUCT(i.lesson_id, i.summary, i.suggestions, i.progress_status)) 
-           FROM \`${serviceAccount.project_id}.chronos_users.student_insights\` i
+           FROM \`${serviceAccount.project_id}\`.\`chronos_users\`.\`student_insights\` i
            WHERE i.student_id = v.student_id) as insights
         )) as json_row
-        FROM \`${serviceAccount.project_id}.chronos_users.teacher_students\` v
+        FROM \`${serviceAccount.project_id}\`.\`chronos_users\`.\`teacher_students\` v
         WHERE v.teacher_id = '${teacherId}' ${studentFilterClause}
       `;
 
@@ -199,9 +199,9 @@ export default {
 
       // Surface BQ errors directly instead of burying them in LLM context
       if (bqData.error) {
-        return new Response(JSON.stringify({ 
+        return new Response(JSON.stringify({
           error: 'BigQuery query failed',
-          debug: { 
+          debug: {
             bqError: bqData.error.message,
             bqStatus: bqData.error.status,
             teacherId,
@@ -226,17 +226,17 @@ export default {
       // 8. Inference Engine
       const kvKey = `chat:${teacherId}:${sessionId}`;
       let history = await env.CHAT_KV.get(kvKey, { type: 'json' }) || [];
-      
+
       const hasData = contextData && contextData !== "[]" && contextData !== "[{}]";
 
       const systemPrompt = `You are a diagnostic assistant for the stress-sandbox app.
 Contextual Performance Dataset: ${contextData}
 
 ANTI-HALLUCINATION PROTOCOL:
-- ${hasData ? 
-    "Synthesize observations strictly from metrics populated in the JSON payload above. Do not invent missing data blocks." : 
-    "CRITICAL: The context string contains no valid database entries. Explicitly notify the user that no active table records were found for this selection in BigQuery."
-  }
+- ${hasData ?
+          "Synthesize observations strictly from metrics populated in the JSON payload above. Do not invent missing data blocks." :
+          "CRITICAL: The context string contains no valid database entries. Explicitly notify the user that no active table records were found for this selection in BigQuery."
+        }
 Keep answers clear, highly metric-accurate, and under 3 sentences.`;
 
       if (message.toLowerCase().includes('audit') || message.toLowerCase().includes('last exam')) {
@@ -244,9 +244,9 @@ Keep answers clear, highly metric-accurate, and under 3 sentences.`;
       }
 
       const messages = [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: message }];
-      const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', { 
-        messages, 
-        max_tokens: 256 
+      const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', {
+        messages,
+        max_tokens: 256
       });
 
       // 9. Synchronize Dialog Logs
@@ -255,7 +255,7 @@ Keep answers clear, highly metric-accurate, and under 3 sentences.`;
       if (history.length > 8) history = history.slice(-8);
       await env.CHAT_KV.put(kvKey, JSON.stringify(history), { expirationTtl: 86400 });
 
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         response: aiResponse.response,
         _debug: { rowCount: bqData.rows?.length || 0, studentIdReceived: studentId, teacherId }
       }), {
@@ -263,9 +263,9 @@ Keep answers clear, highly metric-accurate, and under 3 sentences.`;
       });
 
     } catch (err) {
-      return new Response(JSON.stringify({ 
-        error: "Worker Exception", 
-        details: err.message 
+      return new Response(JSON.stringify({
+        error: "Worker Exception",
+        details: err.message
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
