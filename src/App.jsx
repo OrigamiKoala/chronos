@@ -825,7 +825,7 @@ function App() {
                 {user && (
                   <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
                     <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Award size={24} /> {user.user_id}'s {selectedSubject} Dashboard
+                      {user.user_id}'s {selectedSubject} Dashboard
                     </h3>
 
                     {activeExam && (

@@ -130,6 +130,10 @@ export default async function handler(req, res) {
             ADD COLUMN IF NOT EXISTS shared_questions_json STRING
           `),
           bq.query(`
+            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+            ADD COLUMN IF NOT EXISTS questions_per_set INT64
+          `),
+          bq.query(`
             ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
             ADD COLUMN IF NOT EXISTS assignment_id STRING
           `),

@@ -74,7 +74,31 @@ function isAnswerCorrect(prob, ans) {
 
 export function ExamScreen({ config, onFinish, resumeState }) {
   const isWholeTestMode = config.timeLimitStyle === 'whole_test';
-  // dynamic recommended time will be calculated when navigating to questions
+  const isSetTimedMode = config.timeLimitStyle === 'per_set';
+  const questionsPerSet = config.questionsPerSet || 2;
+  const timeLimitPerSet = config.timeLimitPerSet || config.timeLimitValue || 10; // in minutes
+  const totalSets = Math.ceil(config.numQuestions / questionsPerSet);
+
+  const [activeSetIndex, setActiveSetIndex] = useState(() => {
+    if (resumeState && resumeState.config && resumeState.config.activeSetIndex !== undefined) {
+      return resumeState.config.activeSetIndex;
+    }
+    return 0;
+  });
+
+  const [setTimesLeft, setSetTimesLeft] = useState(() => {
+    if (resumeState && resumeState.config && resumeState.config.setTimesLeft) {
+      return resumeState.config.setTimesLeft;
+    }
+    return Array(totalSets).fill(timeLimitPerSet * 60);
+  });
+
+  const [setsTimedOut, setSetsTimedOut] = useState(() => {
+    if (resumeState && resumeState.config && resumeState.config.setsTimedOut) {
+      return resumeState.config.setsTimedOut;
+    }
+    return Array(totalSets).fill(false);
+  });
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(() =>
     resumeState ? resumeState.currentQuestionIndex : 0
@@ -253,8 +277,13 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       return;
     }
 
+    if (isSetTimedMode && setTimesLeft[activeSetIndex] <= 0) {
+      handleSetTimeUp();
+      return;
+    }
+
     const timeForThisQuestion = questionTimesLeft[currentQuestionIndex];
-    if (!isWholeTestMode && timeForThisQuestion <= 0) return;
+    if (!isWholeTestMode && !isSetTimedMode && timeForThisQuestion <= 0) return;
 
     timerRef.current = setInterval(() => {
       elapsedSecondsRef.current += 1;
@@ -269,37 +298,58 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         });
       }
 
-      setQuestionTimesLeft((prevTimes) => {
-        const next = [...prevTimes];
-        let currentVal = next[currentQuestionIndex];
-        if (isWholeTestMode) {
-          if (currentVal === null || currentVal === undefined) {
-            const unansweredCount = answers.filter((a, idx) => {
-              if (problems[idx]?.type === 'free_response') return !frqSubmissions[idx];
-              return !a || a.toString().trim() === '';
-            }).length;
-            currentVal = Math.floor(totalTimeLeft / (unansweredCount || 1));
-          }
-          next[currentQuestionIndex] = currentVal - 1;
-        } else {
+      if (isSetTimedMode) {
+        setSetTimesLeft((prevTimes) => {
+          const next = [...prevTimes];
+          const currentVal = next[activeSetIndex];
           if (currentVal <= 1) {
             clearInterval(timerRef.current);
-            handleTimeUp();
-            next[currentQuestionIndex] = 0;
+            handleSetTimeUp();
+            next[activeSetIndex] = 0;
           } else {
-            next[currentQuestionIndex] = currentVal - 1;
+            next[activeSetIndex] = currentVal - 1;
           }
-        }
-        return next;
-      });
+          return next;
+        });
+      } else {
+        setQuestionTimesLeft((prevTimes) => {
+          const next = [...prevTimes];
+          let currentVal = next[currentQuestionIndex];
+          if (isWholeTestMode) {
+            if (currentVal === null || currentVal === undefined) {
+              const unansweredCount = answers.filter((a, idx) => {
+                if (problems[idx]?.type === 'free_response') return !frqSubmissions[idx];
+                return !a || a.toString().trim() === '';
+              }).length;
+              currentVal = Math.floor(totalTimeLeft / (unansweredCount || 1));
+            }
+            next[currentQuestionIndex] = currentVal - 1;
+          } else {
+            if (currentVal <= 1) {
+              clearInterval(timerRef.current);
+              handleTimeUp();
+              next[currentQuestionIndex] = 0;
+            } else {
+              next[currentQuestionIndex] = currentVal - 1;
+            }
+          }
+          return next;
+        });
+      }
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft, isPaused]);
+  }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft, isPaused, activeSetIndex, setTimesLeft[activeSetIndex]]);
 
   const saveActiveExam = async (showLoader = false, updatedConfig = config) => {
     if (!config.username || config.username === 'default_user') return;
     if (showLoader) setSaving(true);
+    const finalConfig = {
+      ...updatedConfig,
+      activeSetIndex,
+      setTimesLeft,
+      setsTimedOut
+    };
     try {
       await fetch('/api/exams?route=save-active-exam', {
         method: 'POST',
@@ -308,7 +358,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
           username: config.username,
           examId: config.examId,
           subject: config.subject,
-          config: updatedConfig,
+          config: finalConfig,
           problems,
           answers,
           frqSubmissions,
@@ -330,7 +380,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       }, 3000);
       return () => clearTimeout(delayDebounce);
     }
-  }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config, isRated]);
+  }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config, isRated, activeSetIndex, setTimesLeft, setsTimedOut]);
 
   const saveCurrentFRQState = () => {
     if (!problem || problem.type !== 'free_response') return;
@@ -428,6 +478,61 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     });
 
     onFinish(finalResults);
+  };
+
+  const handleSetTimeUp = () => {
+    recordActiveInterval(currentQuestionIndex);
+    clearInterval(timerRef.current);
+
+    if (problem && problem.type === 'free_response') {
+      saveCurrentFRQState();
+    }
+
+    // Lock the current set
+    setSetTimesLeft(prev => {
+      const next = [...prev];
+      next[activeSetIndex] = 0;
+      return next;
+    });
+
+    setSetsTimedOut(prev => {
+      const next = [...prev];
+      next[activeSetIndex] = true;
+      return next;
+    });
+
+    const isLastSet = activeSetIndex + 1 >= totalSets;
+    if (isLastSet) {
+      alert("Time is up for the final set! Submitting your exam.");
+      const updatedTimedOut = [...setsTimedOut];
+      updatedTimedOut[activeSetIndex] = true;
+      handleFinishExam(null, null, null, updatedTimedOut);
+    } else {
+      alert("Time is up for this set! Moving to the next set.");
+      const nextSet = activeSetIndex + 1;
+      setActiveSetIndex(nextSet);
+      setCurrentQuestionIndex(nextSet * questionsPerSet);
+    }
+  };
+
+  const handleNextSet = () => {
+    recordActiveInterval(currentQuestionIndex);
+    clearInterval(timerRef.current);
+
+    if (problem && problem.type === 'free_response') {
+      saveCurrentFRQState();
+    }
+
+    // Set time left for current set to 0, which locks it
+    setSetTimesLeft(prev => {
+      const next = [...prev];
+      next[activeSetIndex] = 0;
+      return next;
+    });
+
+    const nextSet = activeSetIndex + 1;
+    setActiveSetIndex(nextSet);
+    setCurrentQuestionIndex(nextSet * questionsPerSet);
   };
 
   const handleAutoTimeoutSubmit = () => {
@@ -531,7 +636,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     }
   };
 
-  const handleFinishExam = (strictResults = null, overrideAnswers = null, overrideSubmissions = null) => {
+  const handleFinishExam = (strictResults = null, overrideAnswers = null, overrideSubmissions = null, overrideSetsTimedOut = null) => {
     recordActiveInterval(currentQuestionIndex);
     clearInterval(timerRef.current);
 
@@ -541,13 +646,17 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     } else {
       const activeAnswers = overrideAnswers || answers;
       const activeSubmissions = overrideSubmissions || frqSubmissions;
+      const activeSetsTimedOut = overrideSetsTimedOut || setsTimedOut;
       finalResults = problems.map((prob, idx) => {
         const userAnswer = activeAnswers[idx] || '';
         const intervals = questionIntervalsRef.current[idx] || [];
         const timeSpent = intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0);
-        const isTimeout = isWholeTestMode
-          ? (totalTimeLeft <= 0)
-          : (questionTimesLeft[idx] <= 0);
+        const setIdx = Math.floor(idx / questionsPerSet);
+        const isTimeout = isSetTimedMode
+          ? (activeSetsTimedOut[setIdx] && !userAnswer)
+          : (isWholeTestMode
+              ? (totalTimeLeft <= 0)
+              : (questionTimesLeft[idx] <= 0));
         const isCorrect = prob.type === 'free_response'
           ? false
           : (!isTimeout && isAnswerCorrect(prob, userAnswer));
@@ -780,7 +889,9 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   }
 
   let activeTimeLeft = questionTimesLeft[currentQuestionIndex];
-  if (activeTimeLeft === null || activeTimeLeft === undefined) {
+  if (isSetTimedMode) {
+    activeTimeLeft = setTimesLeft[activeSetIndex];
+  } else if (activeTimeLeft === null || activeTimeLeft === undefined) {
     if (isWholeTestMode) {
       const unansweredCount = answers.filter((a, idx) => {
         if (problems[idx]?.type === 'free_response') return !frqSubmissions[idx];
@@ -799,7 +910,9 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
   const intervalsForCurrent = questionIntervalsRef.current[currentQuestionIndex] || [];
   const timeSpentOnCurrent = intervalsForCurrent.reduce((acc, inv) => acc + (inv.end - inv.start), 0) + (elapsedSecondsRef.current - currentQuestionEntryTimeRef.current);
-  const totalTime = isWholeTestMode ? (activeTimeLeft + timeSpentOnCurrent) : config.timeLimitPerQuestion;
+  const totalTime = isSetTimedMode
+    ? (timeLimitPerSet * 60)
+    : (isWholeTestMode ? (activeTimeLeft + timeSpentOnCurrent) : config.timeLimitPerQuestion);
   const percentage = Math.max(0, Math.min(100, (activeTimeLeft / totalTime) * 100));
 
   let progressColor = 'var(--success)';
@@ -810,7 +923,9 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   }
 
   const activeAnswer = answers[currentQuestionIndex] || '';
-  const isEditingLocked = isWholeTestMode ? (totalTimeLeft <= 0) : isTimeOut;
+  const isEditingLocked = isSetTimedMode
+    ? (Math.floor(currentQuestionIndex / questionsPerSet) !== activeSetIndex || setTimesLeft[activeSetIndex] <= 0)
+    : (isWholeTestMode ? (totalTimeLeft <= 0) : isTimeOut);
 
   const formatTime = (seconds) => {
     if (seconds <= 0) return '0:00';
@@ -904,6 +1019,14 @@ export function ExamScreen({ config, onFinish, resumeState }) {
               </>
             ) : isHidden ? (
               <span style={{ color: 'var(--text-muted)' }}>Timer Hidden</span>
+            ) : isSetTimedMode ? (
+              <>
+                {isEditingLocked ? <AlertTriangle size={14} color="var(--danger)" /> : <Clock size={14} color="var(--accent-primary)" />}
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Set {activeSetIndex + 1}:</span>
+                <strong style={{ color: isEditingLocked ? 'var(--danger)' : 'var(--text-primary)' }}>
+                  {isTimeOut ? 'Time Out' : formatTime(activeTimeLeft)}
+                </strong>
+              </>
             ) : (
               <>
                 {isEditingLocked ? <AlertTriangle size={14} color="var(--danger)" /> : <Clock size={14} color="var(--accent-primary)" />}
@@ -953,7 +1076,13 @@ export function ExamScreen({ config, onFinish, resumeState }) {
           alignItems: 'center',
           gap: '0.5rem'
         }}>
-          <AlertTriangle size={18} /> Time limit reached. Edits are locked.
+          <AlertTriangle size={18} /> {
+            isSetTimedMode
+              ? (Math.floor(currentQuestionIndex / questionsPerSet) !== activeSetIndex
+                  ? "This set is locked because you have submitted it."
+                  : "This set is locked because the time limit has expired.")
+              : "Time limit reached. Edits are locked."
+          }
         </div>
       )}
 
@@ -1126,7 +1255,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
               {config.stressMode !== 'strict' && (
                 <button
                   className="btn btn-outline"
-                  disabled={currentQuestionIndex === 0}
+                  disabled={currentQuestionIndex === 0 || (isSetTimedMode && currentQuestionIndex === activeSetIndex * questionsPerSet)}
                   onClick={() => {
                     saveCurrentFRQState();
                     recordActiveInterval(currentQuestionIndex);
@@ -1140,23 +1269,35 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
               <div style={{ flex: 1 }} />
 
-              {config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
-                <button
-                  className="btn btn-outline"
-                  style={{ marginRight: '0.75rem' }}
-                  disabled={currentQuestionIndex + 1 >= problems.length}
-                  onClick={() => {
-                    saveCurrentFRQState();
-                    recordActiveInterval(currentQuestionIndex);
-                    clearInterval(timerRef.current);
-                    setCurrentQuestionIndex(prev => prev + 1);
-                  }}
-                >
-                  {currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next'}
-                </button>
+              {isSetTimedMode && currentQuestionIndex === Math.min(problems.length, (activeSetIndex + 1) * questionsPerSet) - 1 ? (
+                activeSetIndex + 1 < totalSets && (
+                  <button
+                    className="btn btn-primary"
+                    style={{ marginRight: '0.75rem' }}
+                    onClick={handleNextSet}
+                  >
+                    Submit Set & Next Set <ArrowRight size={18} />
+                  </button>
+                )
+              ) : (
+                config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
+                  <button
+                    className="btn btn-outline"
+                    style={{ marginRight: '0.75rem' }}
+                    disabled={currentQuestionIndex + 1 >= problems.length}
+                    onClick={() => {
+                      saveCurrentFRQState();
+                      recordActiveInterval(currentQuestionIndex);
+                      clearInterval(timerRef.current);
+                      setCurrentQuestionIndex(prev => prev + 1);
+                    }}
+                  >
+                    {currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next'}
+                  </button>
+                )
               )}
 
-              {config.stressMode !== 'strict' && allLoaded && (
+              {config.stressMode !== 'strict' && allLoaded && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions)) && (
                 <button
                   className="btn btn-primary"
                   onClick={() => {
@@ -1226,7 +1367,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
             {config.stressMode !== 'strict' && (
               <button
                 className="btn btn-outline"
-                disabled={currentQuestionIndex === 0}
+                disabled={currentQuestionIndex === 0 || (isSetTimedMode && currentQuestionIndex === activeSetIndex * questionsPerSet)}
                 onClick={() => {
                   recordActiveInterval(currentQuestionIndex);
                   clearInterval(timerRef.current);
@@ -1239,19 +1380,31 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
             <div style={{ flex: 1 }} />
 
-            {config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
-              <button
-                className="btn btn-outline"
-                style={{ marginRight: '0.75rem' }}
-                disabled={currentQuestionIndex + 1 >= problems.length}
-                onClick={() => {
-                  recordActiveInterval(currentQuestionIndex);
-                  clearInterval(timerRef.current);
-                  setCurrentQuestionIndex(prev => prev + 1);
-                }}
-              >
-                {currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next'}
-              </button>
+            {isSetTimedMode && currentQuestionIndex === Math.min(problems.length, (activeSetIndex + 1) * questionsPerSet) - 1 ? (
+              activeSetIndex + 1 < totalSets && (
+                <button
+                  className="btn btn-primary"
+                  style={{ marginRight: '0.75rem' }}
+                  onClick={handleNextSet}
+                >
+                  Submit Set & Next Set <ArrowRight size={18} />
+                </button>
+              )
+            ) : (
+              config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
+                <button
+                  className="btn btn-outline"
+                  style={{ marginRight: '0.75rem' }}
+                  disabled={currentQuestionIndex + 1 >= problems.length}
+                  onClick={() => {
+                    recordActiveInterval(currentQuestionIndex);
+                    clearInterval(timerRef.current);
+                    setCurrentQuestionIndex(prev => prev + 1);
+                  }}
+                >
+                  {currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next'}
+                </button>
+              )
             )}
 
             {config.stressMode === 'strict' ? (
@@ -1275,7 +1428,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 </button>
               )
             ) : (
-              allLoaded && (
+              allLoaded && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions)) && (
                 <button
                   className="btn btn-primary"
                   onClick={() => handleFinishExam()}

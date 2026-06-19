@@ -155,6 +155,7 @@ export function TeacherScreen({ user, onBack }) {
   const [hwFormats, setHwFormats] = useState(['short_answer']);
   const [hwTimeStyle, setHwTimeStyle] = useState('whole_test');
   const [hwTimeValue, setHwTimeValue] = useState(30);
+  const [hwQuestionsPerSet, setHwQuestionsPerSet] = useState(2);
   const [hwStress, setHwStress] = useState('none');
   const [hwDueDate, setHwDueDate] = useState('');
   const [hwContentBased, setHwContentBased] = useState(true);
@@ -192,6 +193,24 @@ export function TeacherScreen({ user, onBack }) {
         timeLimitStyle: 'whole_test',
         timeLimitValue: 75,
       },
+      math_chapter_sprint: {
+        title: 'MATHCOUNTS Chapter Sprint',
+        subject: 'Math',
+        numQuestions: 30,
+        startingDifficulty: 1,
+        examFormat: ['short_answer'],
+        timeLimitStyle: 'whole_test',
+        timeLimitValue: 40,
+      },
+      math_state_sprint: {
+        title: 'MATHCOUNTS State Sprint',
+        subject: 'Math',
+        numQuestions: 30,
+        startingDifficulty: 2,
+        examFormat: ['short_answer'],
+        timeLimitStyle: 'whole_test',
+        timeLimitValue: 40,
+      },
       math_nationals_sprint: {
         title: 'MATHCOUNTS Nationals Sprint',
         subject: 'Math',
@@ -207,8 +226,9 @@ export function TeacherScreen({ user, onBack }) {
         numQuestions: 8,
         startingDifficulty: 2,
         examFormat: ['short_answer'],
-        timeLimitStyle: 'per_question',
-        timeLimitValue: 180,
+        timeLimitStyle: 'per_set',
+        timeLimitValue: 6,
+        questionsPerSet: 2,
       },
       math_state_target: {
         title: 'MATHCOUNTS State Target',
@@ -216,8 +236,9 @@ export function TeacherScreen({ user, onBack }) {
         numQuestions: 8,
         startingDifficulty: 3,
         examFormat: ['short_answer'],
-        timeLimitStyle: 'per_question',
-        timeLimitValue: 180,
+        timeLimitStyle: 'per_set',
+        timeLimitValue: 6,
+        questionsPerSet: 2,
       },
       math_nationals_target: {
         title: 'MATHCOUNTS Nationals Target',
@@ -225,8 +246,9 @@ export function TeacherScreen({ user, onBack }) {
         numQuestions: 8,
         startingDifficulty: 4,
         examFormat: ['short_answer'],
-        timeLimitStyle: 'per_question',
-        timeLimitValue: 180,
+        timeLimitStyle: 'per_set',
+        timeLimitValue: 6,
+        questionsPerSet: 2,
       },
       chem_part_1: {
         title: 'Chemistry Part I Mock Exam',
@@ -266,6 +288,7 @@ export function TeacherScreen({ user, onBack }) {
       setHwFormats(cfg.examFormat);
       setHwTimeStyle(cfg.timeLimitStyle);
       setHwTimeValue(cfg.timeLimitValue);
+      setHwQuestionsPerSet(cfg.questionsPerSet || 2);
     }
   };
 
@@ -450,6 +473,7 @@ export function TeacherScreen({ user, onBack }) {
             examFormat: hwFormats,
             timeLimitStyle: hwTimeStyle,
             timeLimitValue: hwTimeValue,
+            questionsPerSet: hwQuestionsPerSet,
             stressMode: hwStress,
             contentBased: hwContentBased,
             dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -531,6 +555,7 @@ export function TeacherScreen({ user, onBack }) {
         examFormat: (hw.exam_format || hw.examFormat || 'multiple_choice').includes(',') ? (hw.exam_format || hw.examFormat).split(',') : [hw.exam_format || hw.examFormat || 'multiple_choice'],
         timeLimitStyle: hw.time_limit_style || hw.timeLimitStyle || 'whole_test',
         timeLimitValue: hw.time_limit_value !== undefined ? hw.time_limit_value : hw.timeLimitValue || 30,
+        questionsPerSet: hw.questions_per_set !== undefined ? hw.questions_per_set : hw.questionsPerSet || 2,
         stressMode: hw.stress_mode || hw.stressMode || 'none',
         contentBased: (hw.content_based !== undefined ? hw.content_based : hw.contentBased) !== false,
         dueDate: (() => {
@@ -634,6 +659,7 @@ export function TeacherScreen({ user, onBack }) {
       examFormat: hwFormats,
       timeLimitStyle: hwTimeStyle,
       timeLimitValue: hwTimeValue,
+      questionsPerSet: hwQuestionsPerSet,
       stressMode: hwStress,
       contentBased: hwContentBased,
       dueDate: hwDueDate ? new Date(hwDueDate).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -649,6 +675,7 @@ export function TeacherScreen({ user, onBack }) {
     setHwFormats(['short_answer']);
     setHwTimeStyle('whole_test');
     setHwTimeValue(30);
+    setHwQuestionsPerSet(2);
     setHwStress('none');
     setHwContentBased(true);
     setHwDueDate('');
@@ -1731,6 +1758,7 @@ export function TeacherScreen({ user, onBack }) {
                       <select value={hwTimeStyle} onChange={(e) => { setHwTimeStyle(e.target.value); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}>
                         <option value="per_question">Per Question (sec)</option>
                         <option value="whole_test">Whole Test (min)</option>
+                        <option value="per_set">Per Set (min)</option>
                       </select>
                     </div>
                     <div>
@@ -1738,6 +1766,13 @@ export function TeacherScreen({ user, onBack }) {
                       <input type="number" min="1" value={hwTimeValue} onChange={(e) => { setHwTimeValue(Number(e.target.value)); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
                     </div>
                   </div>
+
+                  {hwTimeStyle === 'per_set' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Questions Per Set</label>
+                      <input type="number" min="1" value={hwQuestionsPerSet} onChange={(e) => { setHwQuestionsPerSet(Number(e.target.value)); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
+                    </div>
+                  )}
 
                   {/* Content-based toggle */}
                   <div style={{ background: hwContentBased ? 'rgba(99,102,241,0.06)' : 'rgba(255,255,255,0.03)', border: `1px solid ${hwContentBased ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '6px', padding: '0.6rem 0.75rem' }}>

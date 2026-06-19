@@ -45,6 +45,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       stressMode: parsed?.stressMode || 'dynamic',
       timeLimitPerQuestion: parsed?.timeLimitPerQuestion || 60,
       timeLimitWholeTest: parsed?.timeLimitWholeTest || 30,
+      timeLimitPerSet: parsed?.timeLimitPerSet || 10,
+      questionsPerSet: parsed?.questionsPerSet || 2,
       timeLimitStyle: parsed?.timeLimitStyle || 'per_question',
       examFormat: formatVal,
       isRated: parsed?.isRated !== false,
@@ -131,6 +133,36 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         delete next.lessonDescription;
         return next;
       });
+    } else if (preset === 'math_chapter_sprint') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 30,
+          startingDifficulty: 1,
+          examFormat: ['short_answer'],
+          timeLimitStyle: 'whole_test',
+          timeLimitWholeTest: 40,
+        };
+        delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
+        return next;
+      });
+    } else if (preset === 'math_state_sprint') {
+      setConfig((prev) => {
+        const next = {
+          ...prev,
+          numQuestions: 30,
+          startingDifficulty: 2,
+          examFormat: ['short_answer'],
+          timeLimitStyle: 'whole_test',
+          timeLimitWholeTest: 40,
+        };
+        delete next.assignmentId;
+        delete next.lessonTitle;
+        delete next.lessonDescription;
+        return next;
+      });
     } else if (preset === 'math_nationals_sprint') {
       setConfig((prev) => {
         const next = {
@@ -153,8 +185,9 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           numQuestions: 8,
           startingDifficulty: 2,
           examFormat: ['short_answer'],
-          timeLimitStyle: 'per_question',
-          timeLimitPerQuestion: 180,
+          timeLimitStyle: 'per_set',
+          questionsPerSet: 2,
+          timeLimitPerSet: 6,
         };
         delete next.assignmentId;
         delete next.lessonTitle;
@@ -168,8 +201,9 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           numQuestions: 8,
           startingDifficulty: 3,
           examFormat: ['short_answer'],
-          timeLimitStyle: 'per_question',
-          timeLimitPerQuestion: 180,
+          timeLimitStyle: 'per_set',
+          questionsPerSet: 2,
+          timeLimitPerSet: 6,
         };
         delete next.assignmentId;
         delete next.lessonTitle;
@@ -183,8 +217,9 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           numQuestions: 8,
           startingDifficulty: 4,
           examFormat: ['short_answer'],
-          timeLimitStyle: 'per_question',
-          timeLimitPerQuestion: 180,
+          timeLimitStyle: 'per_set',
+          questionsPerSet: 2,
+          timeLimitPerSet: 6,
         };
         delete next.assignmentId;
         delete next.lessonTitle;
@@ -260,6 +295,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
       stressMode: hw.stress_mode || 'none',
       timeLimitPerQuestion: hw.time_limit_style === 'per_question' ? (Number(hw.time_limit_value) || 60) : 60,
       timeLimitWholeTest: hw.time_limit_style === 'whole_test' ? (Number(hw.time_limit_value) || 30) : 30,
+      timeLimitPerSet: hw.time_limit_style === 'per_set' ? (Number(hw.time_limit_value) || 10) : 10,
+      questionsPerSet: Number(hw.questions_per_set) || 2,
       timeLimitStyle: hw.time_limit_style || 'per_question',
       examFormat: formatVal,
       assignmentId: hw.assignment_id,
@@ -425,10 +462,12 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                   <option value="amc8">AMC 8 (25 MCQ, 40 min, Diff 2-4)</option>
                   <option value="amc10">AMC 10 (25 MCQ, 75 min, Diff 3-5)</option>
                   <option value="amc12">AMC 12 (25 MCQ, 75 min, Diff 4-6)</option>
+                  <option value="math_chapter_sprint">MATHCOUNTS Chapter Sprint (30 SAQ, 40 min, Diff 1)</option>
+                  <option value="math_state_sprint">MATHCOUNTS State Sprint (30 SAQ, 40 min, Diff 2)</option>
                   <option value="math_nationals_sprint">MATHCOUNTS Nationals Sprint (30 SAQ, 40 min, Diff 3)</option>
-                  <option value="math_chapter_target">MATHCOUNTS Chapter Target (8 SAQ, 3 min/q, Diff 1-3)</option>
-                  <option value="math_state_target">MATHCOUNTS State Target (8 SAQ, 3 min/q, Diff 2-4)</option>
-                  <option value="math_nationals_target">MATHCOUNTS Nationals Target (8 SAQ, 3 min/q, Diff 3-5)</option>
+                  <option value="math_chapter_target">MATHCOUNTS Chapter Target (8 SAQ, 4 sets of 2, 6 min/set, Diff 1-3)</option>
+                  <option value="math_state_target">MATHCOUNTS State Target (8 SAQ, 4 sets of 2, 6 min/set, Diff 2-4)</option>
+                  <option value="math_nationals_target">MATHCOUNTS Nationals Target (8 SAQ, 4 sets of 2, 6 min/set, Diff 3-5)</option>
                 </>
               )}
               {config.subject === 'Chemistry' && (
@@ -607,6 +646,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             <select name="timeLimitStyle" value={config.timeLimitStyle} onChange={handleChange} className="input-field">
               <option value="per_question">Time Limit Per Question</option>
               <option value="whole_test">Time Limit For Whole Test</option>
+              <option value="per_set">Time Limit Per Set</option>
               <option value="none">No Timer (Untimed)</option>
             </select>
           </div>
@@ -618,6 +658,21 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                   <Timer size={16} /> Test Time Limit (Minutes)
                 </label>
                 <input type="number" name="timeLimitWholeTest" min="1" max="180" value={config.timeLimitWholeTest} onChange={handleChange} className="input-field" />
+              </div>
+            ) : config.timeLimitStyle === 'per_set' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                    <Timer size={16} /> Time Limit Per Set (Minutes)
+                  </label>
+                  <input type="number" name="timeLimitPerSet" min="1" max="180" value={config.timeLimitPerSet} onChange={handleChange} className="input-field" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                    Questions Per Set
+                  </label>
+                  <input type="number" name="questionsPerSet" min="1" max="20" value={config.questionsPerSet} onChange={handleChange} className="input-field" />
+                </div>
               </div>
             ) : (
               <div>

@@ -173,8 +173,8 @@ export default async function handler(req, res) {
 
             const insertAssignmentQuery = `
               INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
-                (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json)
-              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson)
+                (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
+              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson, @questionsPerSet)
             `;
 
             return bq.query({
@@ -192,7 +192,8 @@ export default async function handler(req, res) {
                 stressMode: hw.stressMode || 'none',
                 contentBased: hw.contentBased !== false,
                 dueDate,
-                sharedQuestionsJson: sharedQJson
+                sharedQuestionsJson: sharedQJson,
+                questionsPerSet: Number(hw.questionsPerSet) || 2
               },
               types: {
                 sharedQuestionsJson: 'STRING'
@@ -298,7 +299,7 @@ export default async function handler(req, res) {
                   starting_difficulty = @startingDifficulty, exam_format = @examFormat, 
                   time_limit_style = @timeLimitStyle, time_limit_value = @timeLimitValue, 
                   stress_mode = @stressMode, content_based = @contentBased, due_date = CAST(@dueDate AS TIMESTAMP),
-                  shared_questions_json = @sharedQuestionsJson
+                  shared_questions_json = @sharedQuestionsJson, questions_per_set = @questionsPerSet
               WHERE assignment_id = @assignmentId
             `;
             return bq.query({
@@ -315,7 +316,8 @@ export default async function handler(req, res) {
                 stressMode: hw.stressMode || 'none',
                 contentBased: hw.contentBased !== false,
                 dueDate,
-                sharedQuestionsJson: sharedQJson
+                sharedQuestionsJson: sharedQJson,
+                questionsPerSet: Number(hw.questionsPerSet) || 2
               },
               types: {
                 sharedQuestionsJson: 'STRING'
@@ -324,8 +326,8 @@ export default async function handler(req, res) {
           } else {
             const insertAssignmentQuery = `
               INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
-                (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json)
-              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson)
+                (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
+              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson, @questionsPerSet)
             `;
             return bq.query({
               query: insertAssignmentQuery,
@@ -342,7 +344,8 @@ export default async function handler(req, res) {
                 stressMode: hw.stressMode || 'none',
                 contentBased: hw.contentBased !== false,
                 dueDate,
-                sharedQuestionsJson: sharedQJson
+                sharedQuestionsJson: sharedQJson,
+                questionsPerSet: Number(hw.questionsPerSet) || 2
               },
               types: {
                 sharedQuestionsJson: 'STRING'
@@ -415,7 +418,7 @@ export default async function handler(req, res) {
 
     try {
       const query = `
-        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.content_based, a.due_date, a.shared_questions_json, l.title as lesson_title, l.description as lesson_description
+        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.content_based, a.due_date, a.shared_questions_json, a.questions_per_set, l.title as lesson_title, l.description as lesson_description
         FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` a
         JOIN \`${projectId}\`.\`chronos_users\`.\`lessons\` l ON a.lesson_id = l.lesson_id
         WHERE l.organization = @organization
@@ -807,7 +810,7 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
 
       if (lessons.length > 0) {
         const getAssignmentsQuery = `
-          SELECT assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json
+          SELECT assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set
           FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
           WHERE lesson_id IN (
             SELECT lesson_id FROM \`${projectId}\`.\`chronos_users\`.\`lessons\` WHERE teacher_id = @username

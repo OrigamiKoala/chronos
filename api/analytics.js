@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
+import { executeWithRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -392,36 +393,80 @@ export default async function handler(req, res) {
     const strengths = finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
     const weaknesses = finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
 
-    const detailedAnalysis = {};
-    for (const a of analyses) {
-      const subject = a.subject;
-      if (typeof subject === 'string' && subject !== '__proto__' && subject !== 'constructor' && subject !== 'prototype') {
-        if (usernames.length > 1) {
-          if (!detailedAnalysis[subject]) {
-            detailedAnalysis[subject] = '';
+    let detailedAnalysis = {};
+    let topicBreakdowns = {};
+
+    if (usernames.length > 1 && (analyses.length > 0 || breakdowns.length > 0)) {
+      try {
+        const inputData = {
+          analyses: analyses.map(a => ({ studentId: a.user_id, subject: a.subject, detailed_analysis: a.detailed_analysis })),
+          breakdowns: breakdowns.map(b => ({ studentId: b.user_id, topic: b.topic, good_at: b.good_at, not_good_at: b.not_good_at }))
+        };
+
+        const prompt = `You are an expert tutor synthesizing student learning analytics. Below is the detailed analysis and topic breakdown for a class of students. Please consolidate this data into a single cohesive dashboard representing the class as a whole.
+Do not reference individual student usernames or student IDs (e.g. do not say "Student user_1 has problem with X" or "user_1 is good at Y"). Synthesize their strengths and weaknesses into general trends for the entire class.
+
+Input Data:
+${JSON.stringify(inputData, null, 2)}
+
+You MUST format your output strictly as a JSON object, with no markdown code blocks wrapping the JSON, matching this schema:
+{
+  "detailedAnalysis": {
+    "Math": "Markdown consolidated summary for Math class-wide performance...",
+    "Physics": "Markdown consolidated summary for Physics class-wide performance...",
+    "Chemistry": "Markdown consolidated summary for Chemistry class-wide performance..."
+  },
+  "topicBreakdowns": {
+    "TopicName": {
+      "good_at": "Markdown bulleted list summarizing what students in the class generally understand well.",
+      "not_good_at": "Markdown bulleted list summarizing what students in the class generally struggle with."
+    }
+  }
+}`;
+
+        const response = await executeWithRetry(
+          ['gemini-2.5-flash', 'gemini-1.5-flash'],
+          (ai, currentModel) => ai.models.generateContent({
+            model: currentModel,
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json"
+            }
+          })
+        );
+
+        const responseText = response.text;
+        const parsed = JSON.parse(responseText);
+        detailedAnalysis = parsed.detailedAnalysis || {};
+        topicBreakdowns = parsed.topicBreakdowns || {};
+      } catch (geminiError) {
+        console.error("Gemini consolidation failed, falling back to local concatenation:", geminiError);
+        for (const a of analyses) {
+          const subject = a.subject;
+          if (subject && typeof subject === 'string' && subject !== '__proto__' && subject !== 'constructor' && subject !== 'prototype') {
+            if (!detailedAnalysis[subject]) detailedAnalysis[subject] = '';
+            detailedAnalysis[subject] += `- ${a.detailed_analysis}\n\n`;
           }
-          detailedAnalysis[subject] += `### Student: ${a.user_id}\n${a.detailed_analysis}\n\n`;
-        } else {
+        }
+        for (const b of breakdowns) {
+          const topic = b.topic;
+          if (topic && typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
+            if (!topicBreakdowns[topic]) topicBreakdowns[topic] = { good_at: '', not_good_at: '' };
+            if (b.good_at) topicBreakdowns[topic].good_at += `- ${b.good_at}\n`;
+            if (b.not_good_at) topicBreakdowns[topic].not_good_at += `- ${b.not_good_at}\n`;
+          }
+        }
+      }
+    } else {
+      for (const a of analyses) {
+        const subject = a.subject;
+        if (typeof subject === 'string' && subject !== '__proto__' && subject !== 'constructor' && subject !== 'prototype') {
           detailedAnalysis[subject] = a.detailed_analysis;
         }
       }
-    }
-
-    const topicBreakdowns = {};
-    for (const b of breakdowns) {
-      const topic = b.topic;
-      if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
-        if (usernames.length > 1) {
-          if (!topicBreakdowns[topic]) {
-            topicBreakdowns[topic] = { good_at: '', not_good_at: '' };
-          }
-          if (b.good_at) {
-            topicBreakdowns[topic].good_at += `- **${b.user_id}**: ${b.good_at}\n`;
-          }
-          if (b.not_good_at) {
-            topicBreakdowns[topic].not_good_at += `- **${b.user_id}**: ${b.not_good_at}\n`;
-          }
-        } else {
+      for (const b of breakdowns) {
+        const topic = b.topic;
+        if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
           topicBreakdowns[topic] = {
             good_at: b.good_at,
             not_good_at: b.not_good_at
