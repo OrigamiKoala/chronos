@@ -70,6 +70,7 @@ export default async function handler(req, res) {
   }
 
   const sanitizedUser = String(targetUserId).replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
+  const normSubject = String(subject).trim().toLowerCase();
 
   try {
     // 1. Fetch user weaknesses and diagnostic data from BigQuery in parallel
@@ -190,7 +191,6 @@ export default async function handler(req, res) {
     // 2. Build the Gemini generation prompt
     let constraints = '';
     let examples = '';
-    const normSubject = String(subject).trim().toLowerCase();
 
     if (normSubject === 'math') {
       constraints = `
@@ -671,33 +671,86 @@ Follow these strict rules:
 
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
     const models = modelId === 'gemini-3-flash-preview' ? [modelId] : [modelId, 'gemini-3-flash-preview'];
-    const stream = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContentStream({
-      model: currentModel,
-      contents: prompt,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        safetySettings,
-      },
-    }), req);
-
-    let accumulated = '';
+    
     let questionsSent = 0;
+    try {
+      const stream = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContentStream({
+        model: currentModel,
+        contents: prompt,
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          safetySettings,
+        },
+      }), req);
 
-    for await (const chunk of stream) {
-      const text = chunk.text;
-      if (text) {
-        accumulated += text;
+      let accumulated = '';
 
-        // Extract all fully-formed question objects so far
-        const parsed = extractCompleteObjects(accumulated);
+      for await (const chunk of stream) {
+        const text = chunk.text;
+        if (text) {
+          accumulated += text;
 
-        // Emit any newly completed questions
-        while (questionsSent < parsed.length) {
-          if (questionsSent < remainingCount) {
-            res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[questionsSent] })}\n\n`);
+          // Extract all fully-formed question objects so far
+          const parsed = extractCompleteObjects(accumulated);
+
+          // Emit any newly completed questions
+          while (questionsSent < parsed.length) {
+            if (questionsSent < remainingCount) {
+              res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[questionsSent] })}\n\n`);
+            }
+            questionsSent++;
           }
-          questionsSent++;
+        }
+      }
+    } catch (streamErr) {
+      const neededCount = remainingCount - questionsSent;
+      if (neededCount > 0) {
+        console.warn(`Model streaming failed or busy. Falling back to BigQuery pregenerated questions. Needed: ${neededCount}`, streamErr);
+        try {
+          const pregenQuery = `
+            SELECT question_json
+            FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
+            WHERE subject = @subject AND difficulty = @difficulty
+            ORDER BY RAND()
+            LIMIT @limit
+          `;
+          let [rows] = await bq.query({
+            query: pregenQuery,
+            params: { subject: subject, difficulty: startingDifficulty, limit: neededCount },
+          });
+
+          // If not enough questions match both subject and difficulty, fetch more with matching subject only
+          if (rows.length < neededCount) {
+            const fetchedCount = rows.length;
+            const remainingNeeded = neededCount - fetchedCount;
+            const fallbackQuery = `
+              SELECT question_json
+              FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
+              WHERE subject = @subject
+              ORDER BY RAND()
+              LIMIT @limit
+            `;
+            const [moreRows] = await bq.query({
+              query: fallbackQuery,
+              params: { subject: subject, limit: remainingNeeded },
+            });
+            rows = [...rows, ...moreRows];
+          }
+
+          if (rows.length === 0) {
+            throw new Error(`No pregenerated questions found in BigQuery for subject: ${subject}`);
+          }
+
+          // Send the pregenerated questions
+          const finalQuestions = rows.slice(0, neededCount);
+          for (const row of finalQuestions) {
+            const qObj = JSON.parse(row.question_json);
+            res.write(`data: ${JSON.stringify({ type: 'question', data: qObj })}\n\n`);
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback query also failed:', fallbackErr);
+          throw streamErr; // Throw original streaming error to avoid hiding it if fallback fails/has no data
         }
       }
     }
