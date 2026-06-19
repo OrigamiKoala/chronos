@@ -569,19 +569,23 @@ All questions generated MUST adhere to these critical design directives:
 
 3. Detailed Solutions: Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 4. QUESTION TYPES MIX: You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.
+5. BACKWARD CHAINING (REVERSE DESIGN): Use a backward-chaining methodology to design questions. ALWAYS start by deciding on a specific "trick" (the problem breakthrough or subtle conceptual bottleneck) first. Once the trick/breakthrough is established, work backwards to construct the starting parameters, reaction pathways, initial conditions, or mathematical/physical constraints that lead uniquely and logically to that target breakthrough. This reverse construction prevents trivial template-matching, ensures absolute logical consistency, and yields creative, non-standard problem setups.
+   Sample of Backward Chaining:
+   - Step 1 (Start with a trick): Design a thermodynamics problem where a gas expansion seems isothermal but is actually adiabatic due to a moveable partition.
+   - Step 2 (Define target end state): Target final equilibrium volume of Compartment A is exactly V_Af = 2.0 L.
+   - Step 3 (Work backward): Solve the energy balance and reversible adiabatic compression equations backward: given initial volumes V_A0 = 1.0 L, V_B0 = 3.0 L and pressures P_A0 = 3.0 atm, P_B0 = 1.0 atm, calculate backward that the required heat input to Compartment A to reach V_Af = 2.0 L is exactly Q = 450 J.
+   - Step 4 (Build question): Ask for the final equilibrium volume of compartment A, given the initial states and 450 J heat input.
 
 ###Steps:###
-To ensure high question quality while streaming incrementally:
-- Place your thought process for each question inside the \`"thoughtProcess"\` JSON field of that question object.
-- **For the first question object in the array**: Start the \`"thoughtProcess"\` value with your "Overall Plan" (deciding the topics, difficulties, and traps for all questions to get an overall sense for the test), followed by the sequential steps for the first question.
-- **For each question object sequentially**: Inside its \`"thoughtProcess"\` field, perform the draft, test-solving, feedback, and revision steps. Keep these explanations extremely concise (e.g. 1 short sentence per step) to minimize generation latency.
+To ensure high question quality:
+- Mentally perform the draft, test-solving, feedback, and revision steps using a backward-chaining methodology.
+- Do NOT output your thought process in any field of the JSON. Only output the final, fully refined question parameters.
 - Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with \`[\`.
 
 For example, your output must look like this:
 [
   {
     "id": "chem_prob1",
-    "thoughtProcess": "Overall Plan: Q1 stoichiometry (difficulty 5, balance trap), Q2 electrochemistry cell change (difficulty 6). Q1 Draft: M + 5 O2 -> 3 CO2... Q1 Test-solve: Moles CO2 = 14.4 / 22.4 = 0.643 mol... Q1 Feedback: Too easy. Q1 Revise: hydrocarbon combustion masses. Q1 Solve: Empirical = C3H8, Molar mass = 44.1. Formula C3H8.",
     "topic": "Stoichiometry & Hydrocarbons",
     "question": "A $4.41$ g sample of a gaseous hydrocarbon M is completely combusted in excess oxygen to produce $13.20$ g of \\\ce{CO_2} and $7.21$ g of \\\ce{H_2O}. Determine the molecular formula of M if its density at STP is $1.97$ g/L.",
     "type": "multiple_choice",
@@ -592,13 +596,21 @@ For example, your output must look like this:
   },
   {
     "id": "chem_prob2",
-    "thoughtProcess": "Q2 Draft: Butler-Volmer overpotential. Q2 Test-solve: Butler-Volmer is too advanced for USNCO. Q2 Feedback: Replace with standard galvanic cell. Q2 Revise: Silver/copper cell mass change. Q2 Solve: Cu -> Cu2+ + 2e-. Q = 5400 C. Moles e- = 0.0560. Moles Cu = 0.0280. Mass change = 1.78 g decrease.",
     "topic": "Electrochemistry",
     "question": "A galvanic cell consists of a silver electrode in $1.0$ M \\\ce{AgNO_3} and a copper electrode in $1.0$ M \\\ce{Cu(NO_3)_2}. If the cell operates at $25$ °C under a constant current of $2.0$ A for $45$ minutes, calculate the change in mass of the copper electrode. ($E^\\circ(\\\ce{Ag^+/Ag}) = +0.80$ V, $E^\\circ(\\\ce{Cu^{2+}/Cu}) = +0.34$ V, $F = 96485$ C/mol).",
     "type": "short_answer",
     "answer": "1.78 g",
     "keywordExpression": "'1.78' OR '1.78 g'",
     "difficulty": 6,
+    "detailedSolution": ""
+  },
+  {
+    "id": "chem_prob3",
+    "topic": "Thermodynamics & Gas Laws",
+    "question": "A horizontal, adiabatic cylinder of total volume $4.0$ L is divided into two compartments by a frictionless, moveable adiabatic piston. Compartment A contains $1.0$ mol of an ideal monoatomic gas at an initial pressure of $3.0$ atm, and compartment B contains $1.0$ mol of the same gas at $1.0$ atm. If $450$ J of heat is slowly supplied to the gas in compartment A via an internal resistive heater, calculate the final equilibrium volume of compartment A.",
+    "type": "free_response",
+    "answer": "",
+    "difficulty": 9,
     "detailedSolution": ""
   }
 ]
@@ -610,7 +622,6 @@ OPTIONS FORMATTING (LaTeX Delimiters): For multiple_choice questions, any mathem
 The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
   "id": "A unique string ID",
-  "thoughtProcess": "Thought process string detailing the plan/verifications (extremely concise)",
   "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
   "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format.",
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}

@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { RotateCcw, Trash2, Edit3, Eraser } from 'lucide-react';
 
-export const Whiteboard = forwardRef(({ height = 1000 }, ref) => {
+export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -43,6 +43,17 @@ export const Whiteboard = forwardRef(({ height = 1000 }, ref) => {
 
     // Save initial blank canvas state to history
     saveState();
+
+    if (initialImage) {
+      const img = new Image();
+      img.onload = () => {
+        context.globalCompositeOperation = 'source-over';
+        context.drawImage(img, 0, 0, rect.width, height);
+        // Save loaded state to history
+        setHistory([canvas.toDataURL()]);
+      };
+      img.src = initialImage;
+    }
 
     // Resize listener
     const handleResize = () => {

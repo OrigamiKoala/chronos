@@ -137,13 +137,25 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   };
 
   useEffect(() => {
-    // Reset question-specific submission states on navigation
-    setWorkSubmitted(false);
-    setSubmitType('whiteboard');
-    setTypedWork('');
-    setUploadedImage(null);
-    setUploadedFileName('');
-    setWhiteboardPreview('');
+    const saved = frqSubmissions[currentQuestionIndex];
+    setWorkSubmitted(false); // Always start in editing mode so they can resume work
+    if (saved) {
+      setSubmitType(saved.type || 'whiteboard');
+      if (saved.type === 'whiteboard') {
+        setWhiteboardPreview(saved.value || '');
+      } else if (saved.type === 'image') {
+        setUploadedImage(saved.value || null);
+        setUploadedFileName('Saved Image');
+      } else if (saved.type === 'text') {
+        setTypedWork(saved.value || '');
+      }
+    } else {
+      setSubmitType('whiteboard');
+      setTypedWork('');
+      setUploadedImage(null);
+      setUploadedFileName('');
+      setWhiteboardPreview('');
+    }
   }, [currentQuestionIndex]);
 
   const problem = problems[currentQuestionIndex];
@@ -318,6 +330,45 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       return () => clearTimeout(delayDebounce);
     }
   }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config, isRated]);
+
+  const saveCurrentFRQState = () => {
+    if (!problem || problem.type !== 'free_response') return;
+
+    let finalValue = '';
+    let imagePayload = null;
+
+    if (submitType === 'whiteboard') {
+      if (whiteboardRef.current) {
+        imagePayload = whiteboardRef.current.getDataURL() || whiteboardPreview;
+      } else {
+        imagePayload = whiteboardPreview;
+      }
+      finalValue = '[Drawing Submission]';
+    } else if (submitType === 'image') {
+      imagePayload = uploadedImage;
+      finalValue = '[Image Submission]';
+    } else {
+      finalValue = typedWork;
+    }
+
+    const hasContent = 
+      (submitType === 'whiteboard' && imagePayload) ||
+      (submitType === 'image' && imagePayload) ||
+      (submitType === 'text' && typedWork.trim());
+
+    if (hasContent) {
+      const updatedSubmissions = [...frqSubmissions];
+      updatedSubmissions[currentQuestionIndex] = {
+        type: submitType,
+        value: imagePayload || finalValue
+      };
+      setFrqSubmissions(updatedSubmissions);
+
+      const updatedAnswers = [...answers];
+      updatedAnswers[currentQuestionIndex] = finalValue;
+      setAnswers(updatedAnswers);
+    }
+  };
 
   const handleTimeUp = () => {
     if (problem && problem.type === 'free_response') {
@@ -797,21 +848,23 @@ export function ExamScreen({ config, onFinish, resumeState }) {
             </strong>
           </div>
 
-          <button
-            onClick={handlePause}
-            className="btn btn-outline"
-            style={{
-              padding: '0.4rem 0.8rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontSize: '0.9rem',
-              borderColor: 'rgba(255, 255, 255, 0.15)',
-              background: 'rgba(255, 255, 255, 0.02)'
-            }}
-          >
-            <Pause size={14} /> Pause
-          </button>
+          {problem?.type !== 'free_response' && (
+            <button
+              onClick={handlePause}
+              className="btn btn-outline"
+              style={{
+                padding: '0.4rem 0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                borderColor: 'rgba(255, 255, 255, 0.15)',
+                background: 'rgba(255, 255, 255, 0.02)'
+              }}
+            >
+              <Pause size={14} /> Pause
+            </button>
+          )}
 
           {isWholeTestMode && (
             <div className="glass-panel" style={{
@@ -1051,17 +1104,69 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
             <div style={{ marginBottom: '2rem' }}>
               <span style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Show Your Process / Explanation:</span>
-              <Whiteboard ref={whiteboardRef} />
+              <Whiteboard 
+                key={currentQuestionIndex} 
+                ref={whiteboardRef} 
+                initialImage={frqSubmissions[currentQuestionIndex]?.type === 'whiteboard' ? frqSubmissions[currentQuestionIndex].value : null} 
+              />
             </div>
 
             <button
               className="btn btn-primary"
-              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}
+              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', marginBottom: '1.5rem' }}
               onClick={handleReadyToSubmit}
               disabled={isEditingLocked}
             >
               Ready to submit
             </button>
+
+            {/* Navigation Buttons for Free Response */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {config.stressMode !== 'strict' && (
+                <button
+                  className="btn btn-outline"
+                  disabled={currentQuestionIndex === 0}
+                  onClick={() => {
+                    saveCurrentFRQState();
+                    recordActiveInterval(currentQuestionIndex);
+                    clearInterval(timerRef.current);
+                    setCurrentQuestionIndex(prev => prev - 1);
+                  }}
+                >
+                  Previous
+                </button>
+              )}
+
+              <div style={{ flex: 1 }} />
+
+              {config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
+                <button
+                  className="btn btn-outline"
+                  style={{ marginRight: '0.75rem' }}
+                  disabled={currentQuestionIndex + 1 >= problems.length}
+                  onClick={() => {
+                    saveCurrentFRQState();
+                    recordActiveInterval(currentQuestionIndex);
+                    clearInterval(timerRef.current);
+                    setCurrentQuestionIndex(prev => prev + 1);
+                  }}
+                >
+                  {currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next'}
+                </button>
+              )}
+
+              {config.stressMode !== 'strict' && allLoaded && (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    saveCurrentFRQState();
+                    handleFinishExam();
+                  }}
+                >
+                  Finish Exam <ArrowRight size={18} />
+                </button>
+              )}
+            </div>
           </div>
         )
       ) : (
