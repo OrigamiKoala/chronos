@@ -572,6 +572,7 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
           assignments: [],
           submissions: [],
           collectiveStats: { avgMath: 100, avgPhys: 100, avgChem: 100, overallAvg: 100, totalExams: 0, avgAccuracy: 0, strengths: [], weaknesses: [] },
+          collectiveTopicBreakdowns: {},
           accessToken
         });
       }
@@ -648,6 +649,7 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
       // Compute collective student stats & aggregate strengths/weaknesses
       const myStudents = orgStudents.filter(s => claimedStudentIds.includes(s.user_id));
       let collectiveStats = { avgMath: 0, avgPhys: 0, avgChem: 0, overallAvg: 0, totalExams: 0, avgAccuracy: 0, strengths: [], weaknesses: [] };
+      let collectiveTopicBreakdowns = {};
 
       if (myStudents.length > 0) {
         const studentIds = myStudents.map(s => s.user_id);
@@ -705,6 +707,39 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
         }
         collectiveStats.strengths = collectiveStrengths;
         collectiveStats.weaknesses = collectiveWeaknesses;
+
+        // Fetch collective topic breakdowns
+        const getCollectiveBreakdownsQuery = `
+          SELECT user_id, topic, good_at, not_good_at
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+          WHERE user_id IN UNNEST(@studentIds)
+        `;
+        try {
+          const [breakdownRows] = await bq.query({
+            query: getCollectiveBreakdownsQuery,
+            params: { studentIds }
+          });
+          
+          for (const row of breakdownRows) {
+            const topic = row.topic;
+            if (!collectiveTopicBreakdowns[topic]) {
+              collectiveTopicBreakdowns[topic] = { good_at: [], not_good_at: [] };
+            }
+            if (row.good_at) {
+              collectiveTopicBreakdowns[topic].good_at.push(`- **${row.user_id}**: ${row.good_at}`);
+            }
+            if (row.not_good_at) {
+              collectiveTopicBreakdowns[topic].not_good_at.push(`- **${row.user_id}**: ${row.not_good_at}`);
+            }
+          }
+          
+          for (const topic in collectiveTopicBreakdowns) {
+            collectiveTopicBreakdowns[topic].good_at = collectiveTopicBreakdowns[topic].good_at.join('\n');
+            collectiveTopicBreakdowns[topic].not_good_at = collectiveTopicBreakdowns[topic].not_good_at.join('\n');
+          }
+        } catch (e) {
+          console.error("Error fetching collective topic breakdowns:", e);
+        }
       }
 
       return res.status(200).json({
@@ -714,6 +749,7 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
         assignments,
         submissions,
         collectiveStats,
+        collectiveTopicBreakdowns,
         accessToken
       });
     } catch (err) {

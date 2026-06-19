@@ -79,7 +79,7 @@ export function TeacherScreen({ user, onBack }) {
   }, [chatMessages]);
 
   const handleSendMessage = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!chatInput.trim() || chatLoading) return;
 
     const userMsg = chatInput.trim();
@@ -111,6 +111,13 @@ export function TeacherScreen({ user, onBack }) {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   const parseDate = (d) => {
     if (!d) return null;
     const val = typeof d === 'object' && d.value ? d.value : d;
@@ -125,6 +132,9 @@ export function TeacherScreen({ user, onBack }) {
 
   // Exam Review Modal state
   const [reviewExam, setReviewExam] = useState(null);
+  
+  // Selected Topic Details state
+  const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
 
   // Create Lesson Modal state
   const [showLessonModal, setShowLessonModal] = useState(false);
@@ -1009,18 +1019,24 @@ export function TeacherScreen({ user, onBack }) {
 
             {/* Input form */}
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="text"
+              <textarea
                 placeholder={chatScope === 'class' ? "Ask AI about class-wide performance..." : "Ask AI about selected students..."}
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="input-field"
                 disabled={chatLoading}
                 style={{
                   borderRadius: 'var(--radius-md)',
                   padding: '0.75rem 1rem',
                   fontSize: '0.9rem',
-                  flex: 1
+                  flex: 1,
+                  resize: 'none',
+                  minHeight: '44px',
+                  maxHeight: '150px',
+                  overflowY: 'auto',
+                  lineHeight: '1.4',
+                  fontFamily: 'inherit'
                 }}
               />
               <button
@@ -1075,13 +1091,27 @@ export function TeacherScreen({ user, onBack }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: selectedTopicDetail ? '0.75rem' : 0 }}>
               <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.04)', border: '1px solid rgba(74, 222, 128, 0.15)', borderRadius: 'var(--radius-md)' }}>
                 <h4 style={{ color: 'var(--success)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>Class Strengths</h4>
                 {collectiveStats.strengths?.length > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                     {collectiveStats.strengths.map((s, i) => (
-                      <span key={i} style={{ background: 'rgba(74, 222, 128, 0.1)', color: 'var(--success)', padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem' }}>
+                      <span
+                        key={i}
+                        onClick={() => setSelectedTopicDetail(prev => prev?.topic === s.topic && prev?.type === 'strength' ? null : { topic: s.topic, subject: s.subject, type: 'strength' })}
+                        style={{
+                          background: 'rgba(74, 222, 128, 0.1)',
+                          color: 'var(--success)',
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          border: selectedTopicDetail?.topic === s.topic && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent',
+                          transition: 'all 0.2s'
+                        }}
+                      >
                         {s.topic} ({s.subject})
                       </span>
                     ))}
@@ -1096,7 +1126,21 @@ export function TeacherScreen({ user, onBack }) {
                 {collectiveStats.weaknesses?.length > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                     {collectiveStats.weaknesses.map((w, i) => (
-                      <span key={i} style={{ background: 'rgba(248, 113, 113, 0.1)', color: 'var(--danger)', padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem' }}>
+                      <span
+                        key={i}
+                        onClick={() => setSelectedTopicDetail(prev => prev?.topic === w.topic && prev?.type === 'weakness' ? null : { topic: w.topic, subject: w.subject, type: 'weakness' })}
+                        style={{
+                          background: 'rgba(248, 113, 113, 0.1)',
+                          color: 'var(--danger)',
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          border: selectedTopicDetail?.topic === w.topic && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent',
+                          transition: 'all 0.2s'
+                        }}
+                      >
                         {w.topic} ({w.subject})
                       </span>
                     ))}
@@ -1106,8 +1150,39 @@ export function TeacherScreen({ user, onBack }) {
                 )}
               </div>
             </div>
+
+            {selectedTopicDetail && (
+              <div style={{ marginTop: '0.75rem', padding: 'var(--card-padding-sm)', background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)', border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: 'var(--radius-md)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                    <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
+                    {selectedTopicDetail.subject && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.4rem' }}>({selectedTopicDetail.subject})</span>}
+                  </h4>
+                  <button className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }} onClick={() => setSelectedTopicDetail(null)}>Close</button>
+                </div>
+                {data?.collectiveTopicBreakdowns?.[selectedTopicDetail.topic] ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                    <div>
+                      <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✓ What they are good at:</span>
+                      <span style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                        <ChemicalText text={data.collectiveTopicBreakdowns[selectedTopicDetail.topic].good_at} theme="dark" />
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✗ What they are not good at:</span>
+                      <span style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                        <ChemicalText text={data.collectiveTopicBreakdowns[selectedTopicDetail.topic].not_good_at} theme="dark" />
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No AI breakdown stored yet for this topic among your claimed students.</span>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        )
+      }
       </div>
 
       {/* Review Past Exam Modal */}
