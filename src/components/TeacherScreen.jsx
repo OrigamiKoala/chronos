@@ -31,10 +31,15 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errBody = await response.text();
+      console.error('Worker error response:', response.status, errBody);
+      throw new Error(`HTTP error! status: ${response.status} body: ${errBody}`);
     }
 
     const data = await response.json();
+    if (data._debug) {
+      console.log('[Worker Debug]', data._debug);
+    }
     return data.response; // This is the text response from the LLM
   } catch (error) {
     console.error('Error communicating with chatbot worker:', error);
