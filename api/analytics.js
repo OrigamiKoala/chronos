@@ -78,50 +78,53 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Username is required' });
   }
 
-  const sanitizedUser = username.trim().toLowerCase();
+  const usernames = username.split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
+  if (usernames.length === 0) {
+    return res.status(400).json({ error: 'At least one username is required' });
+  }
 
   try {
     // Fire all 6 independent reads in parallel
     const eloQuery = `
-      SELECT exam_id, subject, accuracy, new_rating, rating_change, created_at
+      SELECT user_id, exam_id, subject, accuracy, new_rating, rating_change, created_at
       FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-      WHERE user_id = @username
+      WHERE user_id IN UNNEST(@usernames)
       ORDER BY created_at ASC
     `;
     const tagQuery = `
-      SELECT t.exam_id, t.question_index, t.tag, t.is_correct, t.points_value, h.created_at, h.subject
+      SELECT t.user_id, t.exam_id, t.question_index, t.tag, t.is_correct, t.points_value, h.created_at, h.subject
       FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\` t
       JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
         ON t.exam_id = h.exam_id AND t.user_id = h.user_id
-      WHERE t.user_id = @username
+      WHERE t.user_id IN UNNEST(@usernames)
       ORDER BY h.created_at ASC
     `;
     const resultsQuery = `
-      SELECT r.exam_id, r.results_json, h.created_at, h.subject
+      SELECT r.user_id, r.exam_id, r.results_json, h.created_at, h.subject
       FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
       JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
         ON r.exam_id = h.exam_id AND r.user_id = h.user_id
-      WHERE r.user_id = @username
+      WHERE r.user_id IN UNNEST(@usernames)
       ORDER BY h.created_at ASC
     `;
     const masteryQuery = `
-      SELECT sub_category, subject, correct_count, total_count, accuracy_rate
+      SELECT user_id, sub_category, subject, correct_count, total_count, accuracy_rate
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-      WHERE user_id = @username AND total_count > 0
+      WHERE user_id IN UNNEST(@usernames) AND total_count > 0
       ORDER BY subject, accuracy_rate DESC
     `;
     const analysisQuery = `
-      SELECT subject, detailed_analysis
+      SELECT user_id, subject, detailed_analysis
       FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
-      WHERE user_id = @username
+      WHERE user_id IN UNNEST(@usernames)
     `;
     const breakdownQuery = `
-      SELECT topic, good_at, not_good_at
+      SELECT user_id, topic, good_at, not_good_at
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-      WHERE user_id = @username
+      WHERE user_id IN UNNEST(@usernames)
     `;
 
-    const params = { username: sanitizedUser };
+    const params = { usernames };
     const [eloResult, tagResult, resultsResult, masteryResult, analysisResult, breakdownResult] = await Promise.allSettled([
       bq.query({ query: eloQuery, params }),
       bq.query({ query: tagQuery, params }),
@@ -199,44 +202,6 @@ export default async function handler(req, res) {
       };
     });
 
-    // Point efficiency per exam
-    const efficiencyData = resultRows.map(row => {
-      const results = JSON.parse(row.results_json);
-      const totalTimeSeconds = results.reduce((acc, r) => acc + (r.timeSpent || 0), 0);
-      const totalMinutes = Math.max(totalTimeSeconds / 60, 0.1);
-      const rawPointsEarned = results.reduce((acc, r) => {
-        if (r.type === 'free_response') {
-          const difficulty = r.difficulty || r.difficultyAtTime || 1;
-          const score = r.score !== undefined ? Number(r.score) : (r.isCorrect ? 1.0 : 0.0);
-          return acc + (score * difficulty);
-        } else {
-          return acc + (r.isCorrect ? 1 : 0);
-        }
-      }, 0);
-      const pointsEarned = Math.round(rawPointsEarned * 10) / 10;
-
-      const totalPoints = results.reduce((acc, r) => {
-        if (r.type === 'free_response') {
-          return acc + (r.difficulty || r.difficultyAtTime || 1);
-        } else {
-          return acc + 1;
-        }
-      }, 0);
-      const avgTimePerQuestion = results.length > 0 ? Math.round(totalTimeSeconds / results.length) : 0;
-
-      return {
-        exam_id: row.exam_id,
-        subject: row.subject,
-        created_at: row.created_at,
-        pointsEarned,
-        totalPoints,
-        totalMinutes: Math.round(totalMinutes * 10) / 10,
-        efficiency: Math.round((pointsEarned / totalMinutes) * 10) / 10,
-        avgTimePerQuestion,
-        questionCount: results.length
-      };
-    });
-
     // Summary stats
     const totalExams = eloHistory.length;
     const subjectCounts = {};
@@ -253,17 +218,55 @@ export default async function handler(req, res) {
     // Current streak
     let currentStreak = 0;
     let streakType = null;
-    for (let i = eloHistory.length - 1; i >= 0; i--) {
-      const historyItem = eloHistory.at(i);
-      if (!historyItem) break;
-      const passed = historyItem.accuracy >= 0.75;
-      if (streakType === null) {
-        streakType = passed ? 'correct' : 'incorrect';
-        currentStreak = 1;
-      } else if ((streakType === 'correct' && passed) || (streakType === 'incorrect' && !passed)) {
-        currentStreak++;
-      } else {
-        break;
+    if (usernames.length > 1) {
+      const studentExams = {};
+      usernames.forEach(u => {
+        studentExams[u] = [];
+      });
+      for (const h of eloHistory) {
+        if (studentExams[h.user_id]) {
+          studentExams[h.user_id].push(h);
+        }
+      }
+      let totalStreak = 0;
+      let studentsWithExams = 0;
+      for (const u of usernames) {
+        const exams = studentExams[u].sort((a, b) => new Date(a.created_at?.value || a.created_at) - new Date(b.created_at?.value || b.created_at));
+        if (exams.length > 0) {
+          studentsWithExams++;
+          let uStreak = 0;
+          let uStreakType = null;
+          for (let i = exams.length - 1; i >= 0; i--) {
+            const passed = exams[i].accuracy >= 0.75;
+            if (uStreakType === null) {
+              uStreakType = passed ? 'correct' : 'incorrect';
+              uStreak = 1;
+            } else if ((uStreakType === 'correct' && passed) || (uStreakType === 'incorrect' && !passed)) {
+              uStreak++;
+            } else {
+              break;
+            }
+          }
+          if (uStreakType === 'correct') {
+            totalStreak += uStreak;
+          }
+        }
+      }
+      currentStreak = studentsWithExams > 0 ? Math.round(totalStreak / studentsWithExams) : 0;
+      streakType = 'correct';
+    } else {
+      for (let i = eloHistory.length - 1; i >= 0; i--) {
+        const historyItem = eloHistory.at(i);
+        if (!historyItem) break;
+        const passed = historyItem.accuracy >= 0.75;
+        if (streakType === null) {
+          streakType = passed ? 'correct' : 'incorrect';
+          currentStreak = 1;
+        } else if ((streakType === 'correct' && passed) || (streakType === 'incorrect' && !passed)) {
+          currentStreak++;
+        } else {
+          break;
+        }
       }
     }
 
@@ -316,18 +319,91 @@ export default async function handler(req, res) {
       Chemistry: buildTimeline(allExams.filter(e => e.subject === 'Chemistry'), maxDuration, timelineIntervalSeconds)
     };
 
-    const history = [...eloHistory]
+    // Synthesize class average ELO over time for multi-user, or use raw for single user
+    let finalEloHistory = eloHistory;
+    if (usernames.length > 1) {
+      const studentRatings = {};
+      usernames.forEach(u => {
+        studentRatings[u] = { Math: 100, Physics: 100, Chemistry: 100 };
+      });
+
+      const sortedHistory = [...eloHistory].sort((a, b) => {
+        const da = new Date(a.created_at?.value || a.created_at);
+        const db = new Date(b.created_at?.value || b.created_at);
+        return da - db;
+      });
+
+      const synthesizedHistory = [];
+      for (const h of sortedHistory) {
+        if (studentRatings[h.user_id]) {
+          studentRatings[h.user_id][h.subject] = h.new_rating;
+        }
+
+        let mathSum = 0, physSum = 0, chemSum = 0;
+        usernames.forEach(u => {
+          mathSum += studentRatings[u].Math;
+          physSum += studentRatings[u].Physics;
+          chemSum += studentRatings[u].Chemistry;
+        });
+
+        const avgMath = Math.round(mathSum / usernames.length);
+        const avgPhys = Math.round(physSum / usernames.length);
+        const avgChem = Math.round(chemSum / usernames.length);
+
+        let newRating = 100;
+        if (h.subject === 'Math') newRating = avgMath;
+        else if (h.subject === 'Physics') newRating = avgPhys;
+        else if (h.subject === 'Chemistry') newRating = avgChem;
+
+        synthesizedHistory.push({
+          user_id: h.user_id,
+          exam_id: h.exam_id,
+          subject: h.subject,
+          accuracy: h.accuracy,
+          rating_change: h.rating_change,
+          created_at: h.created_at,
+          new_rating: newRating
+        });
+      }
+      finalEloHistory = synthesizedHistory;
+    }
+
+    const history = [...finalEloHistory]
       .sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at))
       .slice(0, 25);
 
-    const strengths = topicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
-    const weaknesses = topicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
+    let finalTopicMastery = topicMastery;
+    if (usernames.length > 1) {
+      const masteryMap = {};
+      for (const row of topicMastery) {
+        const key = `${row.subject}:${row.sub_category}`;
+        if (!masteryMap[key]) {
+          masteryMap[key] = { sub_category: row.sub_category, subject: row.subject, correct_count: 0, total_count: 0 };
+        }
+        masteryMap[key].correct_count += (row.correct_count || 0);
+        masteryMap[key].total_count += (row.total_count || 0);
+      }
+      finalTopicMastery = Object.values(masteryMap).map(m => ({
+        ...m,
+        accuracy_rate: m.total_count > 0 ? m.correct_count / m.total_count : 0
+      })).sort((a, b) => b.accuracy_rate - a.accuracy_rate);
+    }
+
+    const strengths = finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
+    const weaknesses = finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
 
     const detailedAnalysis = {};
     for (const a of analyses) {
       const subject = a.subject;
       if (typeof subject === 'string' && subject !== '__proto__' && subject !== 'constructor' && subject !== 'prototype') {
-        detailedAnalysis[subject] = a.detailed_analysis;
+        if (usernames.length > 1) {
+          if (!detailedAnalysis[subject]) {
+            detailedAnalysis[subject] = '';
+          }
+          detailedAnalysis[subject] += `### Student: ${a.user_id}\n${a.detailed_analysis}\n\n`;
+        } else {
+          detailedAnalysis[subject] = a.detailed_analysis;
+        }
       }
     }
 
@@ -335,19 +411,30 @@ export default async function handler(req, res) {
     for (const b of breakdowns) {
       const topic = b.topic;
       if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
-        topicBreakdowns[topic] = {
-          good_at: b.good_at,
-          not_good_at: b.not_good_at
-        };
+        if (usernames.length > 1) {
+          if (!topicBreakdowns[topic]) {
+            topicBreakdowns[topic] = { good_at: '', not_good_at: '' };
+          }
+          if (b.good_at) {
+            topicBreakdowns[topic].good_at += `- **${b.user_id}**: ${b.good_at}\n`;
+          }
+          if (b.not_good_at) {
+            topicBreakdowns[topic].not_good_at += `- **${b.user_id}**: ${b.not_good_at}\n`;
+          }
+        } else {
+          topicBreakdowns[topic] = {
+            good_at: b.good_at,
+            not_good_at: b.not_good_at
+          };
+        }
       }
     }
 
     return res.status(200).json({
-      eloHistory,
+      eloHistory: finalEloHistory,
       tagTimeSeries,
       intuitionSeries,
-      efficiencyData,
-      topicMastery,
+      topicMastery: finalTopicMastery,
       avgTimePerSubject,
       timelines,
       history,

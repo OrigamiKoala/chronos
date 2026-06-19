@@ -301,7 +301,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
   return (
     <div className="glass-panel" style={{ padding: 'var(--panel-padding)', maxWidth: '600px', margin: '0 auto', height: '100%', boxSizing: 'border-box' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <h2>Start New Test</h2>
+        <h2>New Test</h2>
       </div>
 
       {homeworks.length > 0 && (
@@ -398,7 +398,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Rating Mode</label>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Rated?</label>
           <select name="isRated" value={config.isRated === false ? 'false' : 'true'} onChange={(e) => {
             const val = e.target.value === 'true';
             setConfig(prev => ({ ...prev, isRated: val }));
@@ -465,9 +465,6 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             onChange={handleChange}
             className="input-field"
           />
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem', display: 'block' }}>
-            Specify topics or concepts to focus on. Leave blank to target your weaknesses and syllabus.
-          </span>
         </div>
 
         <div>

@@ -327,29 +327,32 @@ export default async function handler(req, res) {
       ]);
 
       // 6. Update user_topic_mastery
-      const getMasteryQuery = `
-        SELECT correct_count, total_count
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-        WHERE user_id = @username AND sub_category = @topic AND subject = @subject
-        LIMIT 1
-      `;
-      const [masteryRows] = await bq.query({
-        query: getMasteryQuery,
-        params: { username: sanitizedUser, topic, subject }
-      });
-
-      if (masteryRows && masteryRows.length > 0) {
-        const existing = masteryRows[0];
-        const nextCorrect = existing.correct_count + 1;
-        const nextTotal = existing.total_count;
-        const nextAccuracy = nextCorrect / nextTotal;
-
-        await bq.query({
-          query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-            SET correct_count = @nextCorrect, accuracy_rate = @nextAccuracy
-            WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
-          params: { username: sanitizedUser, topic, subject, nextCorrect, nextAccuracy }
+      const topics = topic.split(',').map(t => t.trim()).filter(Boolean);
+      for (const t of topics) {
+        const getMasteryQuery = `
+          SELECT correct_count, total_count
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+          WHERE user_id = @username AND sub_category = @topic AND subject = @subject
+          LIMIT 1
+        `;
+        const [masteryRows] = await bq.query({
+          query: getMasteryQuery,
+          params: { username: sanitizedUser, topic: t, subject }
         });
+
+        if (masteryRows && masteryRows.length > 0) {
+          const existing = masteryRows[0];
+          const nextCorrect = existing.correct_count + 1;
+          const nextTotal = existing.total_count;
+          const nextAccuracy = nextCorrect / nextTotal;
+
+          await bq.query({
+            query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+              SET correct_count = @nextCorrect, accuracy_rate = @nextAccuracy
+              WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
+            params: { username: sanitizedUser, topic: t, subject, nextCorrect, nextAccuracy }
+          });
+        }
       }
 
       return res.status(200).json({ success: true, newAccuracy, newRatingVal, newRatingChange });
@@ -902,14 +905,20 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       const topicStats = {};
       const wrongInsertPromises = [];
       for (const r of gradedResults) {
-        const topic = r.topic || 'General';
-        if (!topicStats[topic]) {
-          topicStats[topic] = { correct: 0, total: 0 };
+        const topicStr = r.topic || 'General';
+        const topics = topicStr.split(',').map(t => t.trim()).filter(Boolean);
+        for (const topic of topics) {
+          if (!topicStats[topic]) {
+            topicStats[topic] = { correct: 0, total: 0 };
+          }
+          topicStats[topic].total += 1;
+          if (r.isCorrect) {
+            topicStats[topic].correct += 1;
+          }
         }
-        topicStats[topic].total += 1;
-        if (r.isCorrect) {
-          topicStats[topic].correct += 1;
-        } else {
+
+        if (!r.isCorrect) {
+          const topic = r.topic || 'General';
           wrongInsertPromises.push(
             bq.query({
               query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`

@@ -64,7 +64,7 @@ function formatDate(dateVal) {
   return isNaN(d.getTime()) ? '?' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = [], topicBreakdowns = {}, detailedAnalysis = {}, history = [], loadingExamId = null, onReviewExam = null }) {
+export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = [], topicBreakdowns = {}, detailedAnalysis = {}, history = [], loadingExamId = null, onReviewExam = null, hideHistory = false }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -617,9 +617,11 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
               {s}
             </button>
           ))}
-          <button className="btn btn-outline" onClick={onBack} style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
-            <ArrowLeft size={14} /> Back
-          </button>
+          {onBack && (
+            <button className="btn btn-outline" onClick={onBack} style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
+              <ArrowLeft size={14} /> Back
+            </button>
+          )}
         </div>
       </div>
 
@@ -935,7 +937,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
           })()}
 
           {/* Past Exam History */}
-          {displayHistory.length > 0 && (
+          {!hideHistory && displayHistory.length > 0 && (
             <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>
               <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
                 <TrendingUp size={18} color="var(--accent-primary)" /> History

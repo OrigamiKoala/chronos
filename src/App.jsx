@@ -825,7 +825,7 @@ function App() {
                 {user && (
                   <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
                     <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Award size={24} /> {user.user_id}'s {selectedSubject} Analytics Dashboard
+                      <Award size={24} /> {user.user_id}'s {selectedSubject} Dashboard
                     </h3>
 
                     {activeExam && (
@@ -841,7 +841,7 @@ function App() {
                         boxSizing: 'border-box'
                       }}>
                         <div>
-                          <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600' }}>In-Progress Exam Found</h4>
+                          <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600' }}>Resume Exam?</h4>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                             {activeExam.subject} • {activeExam.config.numQuestions} Qs • Started {new Date(activeExam.created_at).toLocaleDateString()}
                           </span>
@@ -851,7 +851,7 @@ function App() {
                           style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
                           onClick={handleResumeExam}
                         >
-                          Resume Exam
+                          Resume
                         </button>
                       </div>
                     )}

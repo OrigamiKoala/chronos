@@ -652,7 +652,7 @@ OPTIONS FORMATTING (LaTeX Delimiters): For multiple_choice questions, any mathem
 The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
 {
   "id": "A unique string ID",
-  "topic": "The brief sub-category or topic tested (e.g. 'Algebra', 'Stoichiometry', 'Mechanics')",
+  "topic": "A comma-separated list of brief sub-categories or topics tested (e.g. 'Algebra, Number Theory' or 'Stoichiometry, Kinetics' or 'Mechanics, Rotational Dynamics')",
   "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format.",
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
   "answer": ${answerSchemaDesc},

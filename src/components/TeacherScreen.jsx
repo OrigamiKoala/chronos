@@ -131,7 +131,7 @@ export function TeacherScreen({ user, onBack }) {
 
   // Exam Review Modal state
   const [reviewExam, setReviewExam] = useState(null);
-  
+
   // Selected Topic Details state
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
 
@@ -296,7 +296,7 @@ export function TeacherScreen({ user, onBack }) {
       const res = await fetch(`/api/teacher-data?route=homework-questions&assignmentId=${assignmentId}`);
       if (!res.ok) throw new Error('Failed to fetch tailored questions');
       const d = await res.json();
-      
+
       const studentEntry = d.questions.find(q => q.studentId === studentId);
       if (studentEntry) {
         setTailoredQuestionsMap(prev => ({
@@ -832,8 +832,8 @@ export function TeacherScreen({ user, onBack }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Sparkles size={24} style={{ color: 'var(--accent-primary)' }} />
             <div>
-              <h3 className="text-gradient" style={{ margin: 0, fontSize: '1.5rem' }}>AI Student Advisor</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>Ask questions about student performance, study recommendations, or trends.</p>
+              <h3 className="text-gradient" style={{ margin: 0, fontSize: '1.5rem' }}>AI Teaching Assistant</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>Ask about your students.</p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -873,7 +873,6 @@ export function TeacherScreen({ user, onBack }) {
                   }}
                 >
                   <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: chatScope === 'class' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>Whole Class</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Analyze trends across all claimed students</span>
                 </button>
 
                 <button
@@ -893,7 +892,6 @@ export function TeacherScreen({ user, onBack }) {
                   }}
                 >
                   <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: chatScope === 'students' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>Specific Students</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Select specific students to query</span>
                 </button>
               </div>
             </div>
@@ -1008,7 +1006,7 @@ export function TeacherScreen({ user, onBack }) {
               <button
                 type="button"
                 onClick={() => {
-                  setChatMessages([{ sender: 'ai', text: 'Hello! I am your AI student advisor. Ask me anything about your class or select specific students to analyze their performance, strengths, or weaknesses.', timestamp: new Date() }]);
+                  setChatMessages([{ sender: 'ai', text: 'Hello! I am your AI teaching assistant. Ask me anything about your class or select specific students to analyze their performance, strengths, or weaknesses.', timestamp: new Date() }]);
                   setChatSessionId('sess_' + Math.random().toString(36).substring(2, 9));
                 }}
                 className="btn btn-outline"
@@ -1150,126 +1148,23 @@ export function TeacherScreen({ user, onBack }) {
       {/* Overall Class Averages section */}
       <div className="glass-panel" style={{ padding: 'var(--panel-padding)' }}>
         <h3 className="text-gradient" style={{ fontSize: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Award size={24} /> Class Analytics
+          Class Analytics
         </h3>
 
         {myStudentsList.length === 0 ? (
           <p style={{ color: 'var(--text-muted)' }}>Claim students to view aggregate analytics.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-              <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Avg Math ELO</span>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#6366f1' }}>{collectiveStats.avgMath}</span>
-              </div>
-              <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Avg Physics ELO</span>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b' }}>{collectiveStats.avgPhys}</span>
-              </div>
-              <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Avg Chemistry ELO</span>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>{collectiveStats.avgChem}</span>
-              </div>
-              <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Practice</span>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>
-                  {collectiveStats.totalExams} tests ({collectiveStats.avgAccuracy}% acc)
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: selectedTopicDetail ? '0.75rem' : 0 }}>
-              <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.04)', border: '1px solid rgba(74, 222, 128, 0.15)', borderRadius: 'var(--radius-md)' }}>
-                <h4 style={{ color: 'var(--success)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>Class Strengths</h4>
-                {collectiveStats.strengths?.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                    {collectiveStats.strengths.map((s, i) => (
-                      <span
-                        key={i}
-                        onClick={() => setSelectedTopicDetail(prev => prev?.topic === s.topic && prev?.type === 'strength' ? null : { topic: s.topic, subject: s.subject, type: 'strength' })}
-                        style={{
-                          background: 'rgba(74, 222, 128, 0.1)',
-                          color: 'var(--success)',
-                          padding: '0.25rem 0.6rem',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                          userSelect: 'none',
-                          border: selectedTopicDetail?.topic === s.topic && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {s.topic} ({s.subject})
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Class data is insufficient to identify strengths.</span>
-                )}
-              </div>
-
-              <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.04)', border: '1px solid rgba(248, 113, 113, 0.15)', borderRadius: 'var(--radius-md)' }}>
-                <h4 style={{ color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>Class Weaknesses</h4>
-                {collectiveStats.weaknesses?.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                    {collectiveStats.weaknesses.map((w, i) => (
-                      <span
-                        key={i}
-                        onClick={() => setSelectedTopicDetail(prev => prev?.topic === w.topic && prev?.type === 'weakness' ? null : { topic: w.topic, subject: w.subject, type: 'weakness' })}
-                        style={{
-                          background: 'rgba(248, 113, 113, 0.1)',
-                          color: 'var(--danger)',
-                          padding: '0.25rem 0.6rem',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                          userSelect: 'none',
-                          border: selectedTopicDetail?.topic === w.topic && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {w.topic} ({w.subject})
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Class data is insufficient to identify weaknesses.</span>
-                )}
-              </div>
-            </div>
-
-            {selectedTopicDetail && (
-              <div style={{ marginTop: '0.75rem', padding: 'var(--card-padding-sm)', background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)', border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: 'var(--radius-md)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-                    <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
-                    {selectedTopicDetail.subject && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.4rem' }}>({selectedTopicDetail.subject})</span>}
-                  </h4>
-                  <button className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }} onClick={() => setSelectedTopicDetail(null)}>Close</button>
-                </div>
-                {data?.collectiveTopicBreakdowns?.[selectedTopicDetail.topic] ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
-                    <div>
-                      <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✓ What they are good at:</span>
-                      <span style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
-                        <ChemicalText text={data.collectiveTopicBreakdowns[selectedTopicDetail.topic].good_at} theme="dark" />
-                      </span>
-                    </div>
-                    <div>
-                      <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.15rem' }}>✗ What they are not good at:</span>
-                      <span style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
-                        <ChemicalText text={data.collectiveTopicBreakdowns[selectedTopicDetail.topic].not_good_at} theme="dark" />
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No AI breakdown stored yet for this topic among your claimed students.</span>
-                )}
-              </div>
-            )}
-          </div>
-        )
-      }
+          <AnalyticsDashboard
+            user={{
+              user_id: claimedStudentIds.join(','),
+              math_rating: collectiveStats.avgMath,
+              physics_rating: collectiveStats.avgPhys,
+              chemistry_rating: collectiveStats.avgChem
+            }}
+            hideHistory={true}
+            onReviewExam={handleReviewExam}
+          />
+        )}
       </div>
 
       {/* Review Past Exam Modal */}
@@ -1468,7 +1363,7 @@ export function TeacherScreen({ user, onBack }) {
                           <span style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>
                             Student-Specific Tailored Questions
                           </span>
-                          
+
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             {myStudentsList.map(student => {
                               const key = `${hw.assignment_id}:${student.user_id}`;
@@ -1480,7 +1375,7 @@ export function TeacherScreen({ user, onBack }) {
                                 <div key={student.user_id} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{student.user_id}</strong>
-                                    
+
                                     {!questions && !isLoading && (
                                       <button
                                         type="button"
