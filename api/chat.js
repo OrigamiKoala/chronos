@@ -123,13 +123,13 @@ Contextual Performance Dataset: ${contextData}
 
 ANTI-HALLUCINATION PROTOCOL:
 - ${hasData ?
-    "Synthesize observations strictly from metrics populated in the JSON payload above. Do not invent missing data blocks." :
-    "CRITICAL: The context string contains no valid database entries. Explicitly notify the user that no active table records were found for this selection in BigQuery."
-  }
+        "Synthesize observations strictly from metrics populated in the JSON payload above. Do not invent missing data blocks." :
+        "CRITICAL: The context string contains no valid database entries. Explicitly notify the user that no active table records were found for this selection in BigQuery."
+      }
 Keep answers clear, highly metric-accurate, and under 3 sentences.`;
 
-    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-    const models = [...new Set([modelId, 'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'])];
+    const modelId = process.env.GEMINI_MODEL || 'gemini-3.1-flash';
+    const models = [...new Set([modelId, 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'])];
 
     const contents = [];
     if (Array.isArray(history)) {
