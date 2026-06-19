@@ -970,13 +970,16 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       // 4. Trigger update of user weaknesses using direct Gemini model
       let freshAnalysis = null;
       let freshMistakePatterns = '';
+      
+      const analysisPromises = [updateAIWeaknesses(sanitizedUser, subject, req)];
       if (!isOnlyMCQ) {
-        const [a, m] = await Promise.all([
-          updateAIWeaknesses(sanitizedUser, subject, req),
-          analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req)
-        ]);
-        freshAnalysis = a;
-        freshMistakePatterns = m;
+        analysisPromises.push(analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req));
+      }
+      
+      const analysisResults = await Promise.all(analysisPromises);
+      freshAnalysis = analysisResults[0];
+      if (!isOnlyMCQ) {
+        freshMistakePatterns = analysisResults[1] || '';
       }
 
       return res.status(200).json({ 
@@ -1022,8 +1025,6 @@ async function updateAIWeaknesses(username, subject, req) {
       params: { username, subject }
     });
     
-    if (!wrongProblems || wrongProblems.length === 0) return null;
-
     // B. Fetch student's overall topic mastery statistics
     const fetchMasteryQuery = `
       SELECT sub_category as topic, correct_count, total_count, accuracy_rate
@@ -1035,13 +1036,17 @@ async function updateAIWeaknesses(username, subject, req) {
       params: { username, subject }
     });
 
+    if ((!wrongProblems || wrongProblems.length === 0) && (!masteryRows || masteryRows.length === 0)) {
+      return null;
+    }
+
     const masteryString = masteryRows && masteryRows.length > 0
       ? masteryRows.map(m => `Topic: ${m.topic} | Attempts: ${m.total_count} | Correct: ${m.correct_count} | Accuracy: ${Math.round((m.accuracy_rate || 0) * 100)}%`).join('\n')
       : 'No attempts recorded for any topic yet.';
 
-    const wrongProblemsString = wrongProblems.map(p => 
-      `Topic: ${p.topic} | Question: ${p.question_text} | User Answer: ${p.user_answer || 'None'} | Correct Answer: ${p.correct_answer}`
-    ).join(' ; ');
+    const wrongProblemsString = wrongProblems && wrongProblems.length > 0
+      ? wrongProblems.map(p => `Topic: ${p.topic} | Question: ${p.question_text} | User Answer: ${p.user_answer || 'None'} | Correct Answer: ${p.correct_answer}`).join(' ; ')
+      : 'No incorrect questions recorded.';
 
     const prompt = `Analyze these incorrect ${subject} exam questions and overall topic mastery data attempted by user '${username}'. 
 Provide a thorough diagnostic analysis of their strengths and weaknesses in this subject. 
@@ -1053,12 +1058,16 @@ Incorrect questions:
 ${wrongProblemsString}
 
 Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. 
+For EACH of these identified topics (both strengths and weaknesses), generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at.
+
 CRITICAL RULES:
 1. Don't flag any topic as a weakness if the student has never tested on it (i.e., total attempts is 0, or not present in the mastery list).
 2. Only flag a topic as a weakness if the student gets it wrong constantly (e.g., accuracy is less than 65% across at least 3 attempts).
 3. If they have only attempted a topic 1 or 2 times and got it wrong, do NOT flag it as a weakness, as there is insufficient data to establish that they get it wrong constantly.
+4. For each topic in 'topic_breakdowns', the 'good_at' and 'not_good_at' descriptions MUST be completely distinct and address different aspects of the topic. They MUST NOT be identical, copy each other, or be contradictory.
+5. If the topic is a clear strength (high accuracy, no incorrect questions), specify what makes them strong in 'good_at', and for 'not_good_at' write: "No significant weaknesses observed in recent attempts."
+6. If the topic is a clear weakness (low accuracy, multiple incorrect questions), specify their core struggle in 'not_good_at', and for 'good_at' write: "Requires fundamental instruction on basic concepts before identifying specific strengths." or describe any partial progress they've shown.
 
-For each identified topic, generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at. 
 Return strictly a valid JSON object with the following schema:
 {
   "strengths": ["Topic A", "Topic B"],
