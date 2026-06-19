@@ -670,8 +670,8 @@ Follow these strict rules:
     ];
 
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-    const models = modelId === 'gemini-3-flash-preview' ? [modelId] : [modelId, 'gemini-3-flash-preview'];
-    
+    const models = [...new Set([modelId, 'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'])];
+
     let questionsSent = 0;
     try {
       const stream = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContentStream({
