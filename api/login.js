@@ -528,8 +528,8 @@ export default async function handler(req, res) {
       .sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at))
       .slice(0, 25);
 
-    const strengths = mastery.filter(m => m.total_count > 5 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
-    const weaknesses = mastery.filter(m => m.total_count > 5 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
+    const strengths = mastery.filter(m => m.total_count >= 3 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
+    const weaknesses = mastery.filter(m => m.total_count >= 3 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
 
     const detailedAnalysis = {};
     for (const a of analyses) {

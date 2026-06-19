@@ -601,7 +601,7 @@ function App() {
               const acc = stats.correct / stats.total;
               if (acc >= 0.7) {
                 localStrengths.push(topic);
-              } else if (acc < 0.6) {
+              } else if (stats.total >= 3 && acc < 0.6) {
                 localWeaknesses.push(topic);
               }
             }

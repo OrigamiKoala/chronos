@@ -1024,14 +1024,40 @@ async function updateAIWeaknesses(username, subject, req) {
     
     if (!wrongProblems || wrongProblems.length === 0) return null;
 
+    // B. Fetch student's overall topic mastery statistics
+    const fetchMasteryQuery = `
+      SELECT sub_category as topic, correct_count, total_count, accuracy_rate
+      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+      WHERE user_id = @username AND subject = @subject
+    `;
+    const [masteryRows] = await bq.query({
+      query: fetchMasteryQuery,
+      params: { username, subject }
+    });
+
+    const masteryString = masteryRows && masteryRows.length > 0
+      ? masteryRows.map(m => `Topic: ${m.topic} | Attempts: ${m.total_count} | Correct: ${m.correct_count} | Accuracy: ${Math.round((m.accuracy_rate || 0) * 100)}%`).join('\n')
+      : 'No attempts recorded for any topic yet.';
+
     const wrongProblemsString = wrongProblems.map(p => 
       `Topic: ${p.topic} | Question: ${p.question_text} | User Answer: ${p.user_answer || 'None'} | Correct Answer: ${p.correct_answer}`
     ).join(' ; ');
 
-    const prompt = `Analyze these incorrect ${subject} exam questions attempted by user '${username}'. 
+    const prompt = `Analyze these incorrect ${subject} exam questions and overall topic mastery data attempted by user '${username}'. 
 Provide a thorough diagnostic analysis of their strengths and weaknesses in this subject. 
+
+Student's overall topic mastery statistics (number of attempts, correct answers, and accuracy) in this subject:
+${masteryString}
+
+Incorrect questions:
+${wrongProblemsString}
+
 Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. 
-Note that if a broad topic (like 'Organic Synthesis' or 'Calculus') has areas of both success and failure, list it in BOTH strengths and weaknesses. 
+CRITICAL RULES:
+1. Don't flag any topic as a weakness if the student has never tested on it (i.e., total attempts is 0, or not present in the mastery list).
+2. Only flag a topic as a weakness if the student gets it wrong constantly (e.g., accuracy is less than 65% across at least 3 attempts).
+3. If they have only attempted a topic 1 or 2 times and got it wrong, do NOT flag it as a weakness, as there is insufficient data to establish that they get it wrong constantly.
+
 For each identified topic, generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at. 
 Return strictly a valid JSON object with the following schema:
 {
@@ -1042,9 +1068,7 @@ Return strictly a valid JSON object with the following schema:
     { "topic": "Topic B", "good_at": "What they do well...", "not_good_at": "What they struggle with..." }
   ]
 }
-Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.
-
-Incorrect questions: ${wrongProblemsString}`;
+Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.`;
 
     const modelId = 'gemini-3.1-flash-lite';
     const models = [modelId, 'gemini-3-flash-preview'];
@@ -1133,137 +1157,47 @@ Incorrect questions: ${wrongProblemsString}`;
       const responseText = response.text;
       const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
       const responseObj = JSON.parse(cleanedText);
-      const strengths = responseObj.strengths;
-      const weaknesses = responseObj.weaknesses;
       const detailedAnalysis = responseObj.detailed_analysis;
       const topicBreakdowns = responseObj.topic_breakdowns;
       
-      if (Array.isArray(strengths) || Array.isArray(weaknesses)) {
-        // Fetch all existing mastery rows in one query
-        const allTopics = [...new Set([...(strengths || []), ...(weaknesses || [])])];
-        const masteryMap = new Map();
-        if (allTopics.length > 0) {
-          const [rows] = await bq.query({
-            query: `SELECT sub_category, correct_count, total_count
-              FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-              WHERE user_id = @username AND subject = @subject`,
-            params: { username, subject }
-          });
-          for (const row of rows) {
-            masteryMap.set(row.sub_category, row);
-          }
-        }
+      const upsertPromises = [];
 
-        const upsertPromises = [];
-
-        if (Array.isArray(strengths)) {
-          for (const topic of strengths) {
-            if (masteryMap.has(topic)) {
-              upsertPromises.push(bq.query({
-                query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-                  SET correct_count = 4, total_count = 6, accuracy_rate = 0.80
-                  WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
-                params: { username, topic, subject }
-              }));
-            } else {
-              upsertPromises.push(bq.query({
-                query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-                  (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
-                  VALUES (@username, @topic, @subject, 4, 6, 0.80)`,
-                params: { username, topic, subject }
-              }));
-            }
-          }
-        }
-
-        if (Array.isArray(weaknesses)) {
-          for (const topic of weaknesses) {
-            if (masteryMap.has(topic)) {
-              upsertPromises.push(bq.query({
-                query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-                  SET correct_count = 2, total_count = 6, accuracy_rate = 0.40
-                  WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
-                params: { username, topic, subject }
-              }));
-            } else {
-              upsertPromises.push(bq.query({
-                query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-                  (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
-                  VALUES (@username, @topic, @subject, 2, 6, 0.40)`,
-                params: { username, topic, subject }
-              }));
-            }
-          }
-        }
-
-        // Fire topic breakdowns in parallel too
-        if (Array.isArray(topicBreakdowns)) {
-          for (const b of topicBreakdowns) {
-            upsertPromises.push(bq.query({
-              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
-                USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
-                ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-                WHEN MATCHED THEN
-                  UPDATE SET good_at = @goodAt, not_good_at = @goodAt, updated_at = CURRENT_TIMESTAMP()
-                WHEN NOT MATCHED THEN
-                  INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
-                  VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
-              params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
-            }));
-          }
-        }
-
-        // Fire analysis merge in parallel
-        if (detailedAnalysis) {
+      // Fire topic breakdowns in parallel
+      if (Array.isArray(topicBreakdowns)) {
+        for (const b of topicBreakdowns) {
           upsertPromises.push(bq.query({
-            query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
-              USING (SELECT @username AS user_id, @subject AS subject) S
-              ON T.user_id = S.user_id AND T.subject = S.subject
+            query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+              USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
+              ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
               WHEN MATCHED THEN
-                UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
+                UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
               WHEN NOT MATCHED THEN
-                INSERT (user_id, subject, detailed_analysis, updated_at)
-                VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())`,
-            params: { username, subject, detailedAnalysis }
+                INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
+                VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
+            params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
           }));
         }
-
-        await Promise.all(upsertPromises);
-        return detailedAnalysis || null;
-      } else {
-        // No strengths/weaknesses but may have analysis/breakdowns
-        const miscPromises = [];
-        if (Array.isArray(topicBreakdowns)) {
-          for (const b of topicBreakdowns) {
-            miscPromises.push(bq.query({
-              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
-                USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
-                ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-                WHEN MATCHED THEN
-                  UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
-                WHEN NOT MATCHED THEN
-                  INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
-                  VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
-              params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
-            }));
-          }
-        }
-        if (detailedAnalysis) {
-          miscPromises.push(bq.query({
-            query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
-              USING (SELECT @username AS user_id, @subject AS subject) S
-              ON T.user_id = S.user_id AND T.subject = S.subject
-              WHEN MATCHED THEN
-                UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
-              WHEN NOT MATCHED THEN
-                INSERT (user_id, subject, detailed_analysis, updated_at)
-                VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())`,
-            params: { username, subject, detailedAnalysis }
-          }));
-        }
-        if (miscPromises.length > 0) await Promise.all(miscPromises);
-        return detailedAnalysis || null;
       }
+
+      // Fire analysis merge in parallel
+      if (detailedAnalysis) {
+        upsertPromises.push(bq.query({
+          query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
+            USING (SELECT @username AS user_id, @subject AS subject) S
+            ON T.user_id = S.user_id AND T.subject = S.subject
+            WHEN MATCHED THEN
+              UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
+            WHEN NOT MATCHED THEN
+              INSERT (user_id, subject, detailed_analysis, updated_at)
+              VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())`,
+          params: { username, subject, detailedAnalysis }
+        }));
+      }
+
+      if (upsertPromises.length > 0) {
+        await Promise.all(upsertPromises);
+      }
+      return detailedAnalysis || null;
     }
     return null;
   } catch (err) {

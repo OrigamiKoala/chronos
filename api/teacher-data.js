@@ -698,7 +698,7 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
             const acc = row.correct / row.total;
             if (acc >= 0.70) {
               collectiveStrengths.push({ topic: row.sub_category, subject: row.subject });
-            } else if (acc < 0.65) {
+            } else if (row.total >= 3 && acc < 0.65) {
               collectiveWeaknesses.push({ topic: row.sub_category, subject: row.subject });
             }
           }
