@@ -404,7 +404,28 @@ All questions generated MUST adhere to these critical design directives:
 
 3. Detailed Solutions: Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 4. QUESTION TYPES MIX: You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.
-5. BACKWARD CHAINING (REVERSE DESIGN): Use a backward-chaining methodology to design questions. ALWAYS start by deciding on a specific "trick" (the problem breakthrough or subtle conceptual bottleneck) first. Once the trick/breakthrough is established, work backwards to construct the starting parameters, reaction pathways, initial conditions, or mathematical/physical constraints that lead uniquely and logically to that target breakthrough.
+5. BACKWARD CHAINING (REVERSE DESIGN): Use a backward-chaining methodology to design questions.
+
+***Constraints & Execution Instructions:***
+
+1. **Backward Chaining Generation Methodology (CRITICAL)**
+You must generate every question using a backward chaining thought process before outputting the final problem:
+
+* **Step 1 (The Trap):** Identify a specific, non-obvious conceptual trap, a hidden limiting factor, or a subtle breakdown of a standard textbook assumption.
+* **Step 2 (The System):** Design a chemical system or reaction where this specific trap naturally occurs.
+* **Step 3 (The Distractors):** Calculate or derive the incorrect answers that result directly from falling into the conceptual trap (rote formula shortcut, ignoring the limiting factor, etc.).
+* **Step 4 (The Problem):** Draft the neutral question text that presents the system, masking the trap completely.
+
+Here is an example:
+
+***Step 1***: A common trap is, when investigating the reactivity of nitric acid, to only think of it as a strong protonating acid and failing to realize it is also a strong oxidizing agent.
+
+***Step 2***: This system could be one where a metal (e.g. copper) is selectively reduced by a reducing agent (e.g. H2). The student might not realize the nitric acid competes for the electrons.
+
+***Step 3***: If the student falls for this trap, they could be presented with the reducing agent (H2) and think only copper is reduced by it, when in reality nitric acid is also reduced by it. Perhaps the student thinks adding the reducing agent to react with the copper could determine the amount of copper in a solution, but not realize that excess weight will be added from the various nitrous oxides. 
+
+***Step 4***: The student could be asked, “A weighed sample of a copper-nickel alloy is dissolved in a known volume of nitric acid. Which method is most suitable for determining the mass percent of copper in the alloy?” One of the options, consistent with the trap, should be “Bubbling hydrogen gas through the solution and measuring the mass of the metal that precipitates from the solution.” The other options could test other traps, i.e. that both nickel and copper form insoluble hydroxides, and that they both absorb the same wavelength of light. Thus the final question is: “A weighed sample of a copper-nickel alloy is dissolved in a known volume of nitric acid. Which method is most suitable for determining the mass percent of copper in the alloy?\\n\\n(A) Treatment of an aliquot of the solution with excess iodide, followed by titration of the iodine produced with sodium thiosulfate.\\n(B) Measurement of the absorbance of the solution at a wavelength of light at which both $\\\\ce{Cu^{2+}}$ and $\\\\ce{Ni^{2+}}$ absorb, and comparison with the absorbances of known standards of the two ions.\\n(C) Addition of excess sodium hydroxide to the solution, isolation of the metal hydroxides by filtration, and measurement of the mass of the precipitate.\\n(D) Bubbling hydrogen gas through the solution and measuring the mass of the metal that precipitates from the solution.”
+
 
 ###Output Requirements:###
 
