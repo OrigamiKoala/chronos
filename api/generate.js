@@ -229,6 +229,7 @@ Follow these strict Olympiad Design Philosophies:
 1. Novelty & "Invisible Traps"
 - Create highly original questions requiring first-principles reasoning over template-matching.
 - Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption. The user should be tricked into thinking the wrong way, overlooking something.
+- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C".
 - Incorporate a deceptive path: the most common rote shortcut should yield a value matching one incorrect distractor.
 - No question should be like any other question seen before.
 
@@ -312,7 +313,7 @@ Follow these strict Olympiad Design Philosophies:
 - Create highly original questions requiring first-principles reasoning over memory or template-matching.
 - Questions should reward chemical intuition, not breadth of knowledge, experience grinding previous problems, or computational power.
 - Center every problem on a non-obvious conceptual trick, hidden limiting factor, or subtle breakdown of a standard assumption.
-- Keep question text neutral and objective — no hints, warnings, or clarifying instructions.
+- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C".
 - Incorporate a deceptive path: the most common rote formula shortcut should yield a value matching one incorrect distractor.
 
 2. Advanced Design & Difficulty Criteria
@@ -479,6 +480,7 @@ Follow these strict Olympiad Design Philosophies:
 1. Novelty & "Invisible Traps"
 - Create highly original questions requiring first-principles reasoning over template-matching.
 - Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption.
+- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C".
 - Incorporate a deceptive path: the most common rote shortcut should yield a value matching one incorrect distractor.
 
 2. Advanced Design & Difficulty Criteria
@@ -731,15 +733,19 @@ Follow these strict rules:
 
     let questionsSent = 0;
     try {
-      const stream = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContentStream({
-        model: currentModel,
-        contents: prompt,
-        config: {
-          systemInstruction,
-          responseMimeType: "application/json",
-          safetySettings,
-        },
-      }), req);
+      const stream = await executeWithRetry(models, (ai, currentModel) => {
+        const maxOutputTokens = currentModel.includes('1.5') ? 8192 : 65536;
+        return ai.models.generateContentStream({
+          model: currentModel,
+          contents: prompt,
+          config: {
+            systemInstruction,
+            responseMimeType: "application/json",
+            safetySettings,
+            maxOutputTokens,
+          },
+        });
+      }, req);
 
       let accumulated = '';
 

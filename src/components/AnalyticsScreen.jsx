@@ -93,6 +93,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         initialExplanations[i] = {
           loading: false,
           text: r.aiExplanation,
+          messages: [{ sender: 'bot', text: r.aiExplanation }],
           query: '',
           remarkedCorrect: false
         };
@@ -148,6 +149,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         initial[i] = {
           loading: false,
           text: r.aiExplanation,
+          messages: [{ sender: 'bot', text: r.aiExplanation }],
           query: '',
           remarkedCorrect: false
         };
@@ -156,6 +158,17 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     return initial;
   });
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
+
+  const chatContainersRef = useRef({});
+
+  useEffect(() => {
+    Object.keys(chatContainersRef.current).forEach(key => {
+      const el = chatContainersRef.current[key];
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+  }, [activeExplanations]);
 
   // Problem tagging state
   const [tags, setTags] = useState(() => {
@@ -258,10 +271,16 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   }, [user, examId, results, onRefreshData]);
 
   const handleAskAI = async (index, problemObj, userQuery = '') => {
+    const currentMessages = activeExplanations[index]?.messages || [];
+    const history = userQuery 
+      ? [...currentMessages, { sender: 'user', text: userQuery }]
+      : currentMessages;
+
     setActiveExplanations(prev => ({
       ...prev,
       [index]: {
         ...prev[index],
+        messages: history,
         loading: true,
         error: null
       }
@@ -283,6 +302,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           userAnswer: problemObj.userAnswer,
           isCorrect: problemObj.isCorrect,
           userQuery,
+          history,
           subject
         })
       });
@@ -292,16 +312,20 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       }
 
       const data = await response.json();
-      setActiveExplanations(prev => ({
-        ...prev,
-        [index]: {
-          ...prev[index],
-          loading: false,
-          text: data.explanation,
-          query: '',
-          remarkedCorrect: data.shouldRemarkCorrect || false
-        }
-      }));
+      setActiveExplanations(prev => {
+        const msgs = prev[index]?.messages || [];
+        return {
+          ...prev,
+          [index]: {
+            ...prev[index],
+            loading: false,
+            text: data.explanation,
+            messages: [...msgs, { sender: 'bot', text: data.explanation }],
+            query: '',
+            remarkedCorrect: data.shouldRemarkCorrect || false
+          }
+        };
+      });
 
       setLocalResults(prev => {
         const next = [...prev];
@@ -860,19 +884,57 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                         </div>
                       )}
 
-                      {activeExplanations[i].text && (
-                        <div style={{
-                          background: 'var(--bg-tertiary)',
-                          padding: '1rem',
-                          borderRadius: 'var(--radius-sm)',
-                          fontSize: '0.9rem',
-                          lineHeight: '1.6',
-                          borderLeft: '3px solid var(--accent-secondary)',
-                          color: 'var(--text-secondary)'
-                        }}>
-                          <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
-                            <ChemicalText text={activeExplanations[i].text} theme="dark" defaultWidth={110} defaultHeight={110} />
-                          </p>
+                      {activeExplanations[i].messages && activeExplanations[i].messages.length > 0 && (
+                        <div 
+                          ref={el => { chatContainersRef.current[i] = el; }}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.75rem',
+                            maxHeight: '400px',
+                            overflowY: 'auto',
+                            padding: '0.75rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                          }}
+                        >
+                          {activeExplanations[i].messages.map((msg, msgIdx) => {
+                            const isUser = msg.sender === 'user';
+                            return (
+                              <div
+                                key={msgIdx}
+                                style={{
+                                  alignSelf: isUser ? 'flex-end' : 'flex-start',
+                                  maxWidth: '85%',
+                                  background: isUser ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-tertiary)',
+                                  border: isUser ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid rgba(255, 255, 255, 0.05)',
+                                  borderLeft: isUser ? '1px solid rgba(99, 102, 241, 0.3)' : '3px solid var(--accent-secondary)',
+                                  padding: '0.75rem 1rem',
+                                  borderRadius: 'var(--radius-sm)',
+                                  fontSize: '0.9rem',
+                                  lineHeight: '1.6',
+                                  color: isUser ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                  position: 'relative'
+                                }}
+                              >
+                                <div style={{
+                                  fontSize: '0.75rem',
+                                  color: isUser ? '#a78bfa' : 'var(--accent-secondary)',
+                                  fontWeight: '600',
+                                  marginBottom: '0.25rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}>
+                                  {isUser ? 'You' : 'Tutor Bot'}
+                                </div>
+                                <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
+                                  <ChemicalText text={msg.text} theme="dark" defaultWidth={110} defaultHeight={110} />
+                                </p>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
 

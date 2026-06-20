@@ -937,51 +937,45 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
         }
       }
 
-      // Fetch all existing mastery rows for this user+subject in one query
-      const topicNames = Object.keys(topicStats);
-      const existingMasteryMap = new Map();
-      if (topicNames.length > 0) {
-        const [masteryRows] = await bq.query({
-          query: `SELECT sub_category, correct_count, total_count
-            FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-            WHERE user_id = @username AND subject = @subject`,
-          params: { username: sanitizedUser, subject }
-        });
-        for (const row of masteryRows) {
-          existingMasteryMap.set(row.sub_category, row);
-        }
-      }
-
-      // Build mastery upsert promises
+      // Build and execute a single MERGE query for topic mastery to avoid DML concurrency/serialization errors in BigQuery
+      const topicStatsEntries = Object.entries(topicStats);
       const masteryPromises = [];
-      for (const [topic, stats] of Object.entries(topicStats)) {
-        const existing = existingMasteryMap.get(topic);
-        if (existing) {
-          const nextCorrect = existing.correct_count + stats.correct;
-          const nextTotal = existing.total_count + stats.total;
-          const nextAccuracy = nextCorrect / nextTotal;
-          masteryPromises.push(
-            bq.query({
-              query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-                SET correct_count = @nextCorrect, total_count = @nextTotal, accuracy_rate = @nextAccuracy
-                WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
-              params: { username: sanitizedUser, topic, subject, nextCorrect, nextTotal, nextAccuracy }
-            })
-          );
-        } else {
-          const accuracyRate = stats.correct / stats.total;
-          masteryPromises.push(
-            bq.query({
-              query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` 
-                (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
-                VALUES (@username, @topic, @subject, @correct, @total, @accuracyRate)`,
-              params: { username: sanitizedUser, topic, subject, correct: stats.correct, total: stats.total, accuracyRate }
-            })
-          );
-        }
+      if (topicStatsEntries.length > 0) {
+        const selectClauses = [];
+        const params = { username: sanitizedUser, subject };
+
+        topicStatsEntries.forEach(([topic, stats], idx) => {
+          const topicParam = `topic_${idx}`;
+          const correctParam = `correct_${idx}`;
+          const totalParam = `total_${idx}`;
+
+          params[topicParam] = topic;
+          params[correctParam] = stats.correct;
+          params[totalParam] = stats.total;
+
+          selectClauses.push(`SELECT @${topicParam} AS sub_category, @${correctParam} AS correct_delta, @${totalParam} AS total_delta`);
+        });
+
+        const mergeQuery = `
+          MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T
+          USING (
+            ${selectClauses.join('\n            UNION ALL\n            ')}
+          ) S
+          ON T.user_id = @username AND T.subject = @subject AND T.sub_category = S.sub_category
+          WHEN MATCHED THEN
+            UPDATE SET 
+              correct_count = T.correct_count + S.correct_delta,
+              total_count = T.total_count + S.total_delta,
+              accuracy_rate = SAFE_DIVIDE(T.correct_count + S.correct_delta, T.total_count + S.total_delta)
+          WHEN NOT MATCHED THEN
+            INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+            VALUES (@username, S.sub_category, @subject, S.correct_delta, S.total_delta, SAFE_DIVIDE(S.correct_delta, S.total_delta))
+        `;
+
+        masteryPromises.push(bq.query({ query: mergeQuery, params }));
       }
 
-      // Fire wrong inserts + mastery upserts in parallel
+      // Fire wrong inserts + mastery upsert in parallel
       await Promise.all([...wrongInsertPromises, ...masteryPromises]);
 
       // 4. Trigger update of user weaknesses using direct Gemini model

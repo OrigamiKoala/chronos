@@ -30,13 +30,13 @@ export function isSmiles(word) {
     return false;
   }
 
-  // Reject if the token contains backslashes (likely LaTeX like \text{...})
-  if (word.includes('\\')) {
+  // Reject if the token contains typical LaTeX commands or curly braces
+  if (/\\(text|ce|mathrm|frac|color|style|alpha|beta|gamma|delta|pi|theta|mu|eta|lambda|chi|psi|phi|omega|sigma|tau|zeta|rho|xi|kappa|iota|to|cdot|pm|mp|le|ge|ne|approx|equiv|sim|cong|propto|infty|partial|nabla|sum|prod)/i.test(word) || /[{}]/.test(word)) {
     return false;
   }
 
-  // Check valid SMILES character set (no backslash — "/" covers E/Z stereo)
-  const smilesCharsRegex = /^[A-Za-z0-9@+\-\[\]\(\)\/=#$.%]+$/;
+  // Check valid SMILES character set (including backslash for stereochemistry)
+  const smilesCharsRegex = /^[A-Za-z0-9@+\-\[\]\(\)\/\\=#$.%]+$/;
   if (!smilesCharsRegex.test(word)) {
     return false;
   }
@@ -141,13 +141,11 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
 
   return (
     <span style={{ 
-      display: 'inline-flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      verticalAlign: 'middle',
-      margin: '0 4px'
+      display: 'block', 
+      margin: '8px auto',
+      textAlign: 'center'
     }}>
-      <svg ref={svgRef} data-smiles={smiles} />
+      <svg ref={svgRef} data-smiles={smiles} width={width} height={height} style={{ width, height, display: 'block', margin: '0 auto' }} />
     </span>
   );
 }
