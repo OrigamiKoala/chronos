@@ -431,29 +431,45 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   }, [data, selectedSubjectFilter]);
 
 
-  // Silly vs Concept points lost
+  // Silly vs Concept points lost per day (as percentage)
   const tagChartData = useMemo(() => {
     if (!data?.tagTimeSeries?.length) return null;
 
-    let cumulativeSilly = 0;
-    let cumulativeConcept = 0;
+    const dailyMap = {};
     const labels = [];
+
+    for (const t of data.tagTimeSeries) {
+      const dayStr = formatDate(t.created_at);
+      if (!dailyMap[dayStr]) {
+        dailyMap[dayStr] = { silly: 0, concept: 0 };
+        labels.push(dayStr);
+      }
+      dailyMap[dayStr].silly += t.silly;
+      dailyMap[dayStr].concept += t.concept;
+    }
+
     const sillyData = [];
     const conceptData = [];
 
-    for (const t of data.tagTimeSeries) {
-      cumulativeSilly += t.silly;
-      cumulativeConcept += t.concept;
-      labels.push(formatDate(t.created_at));
-      sillyData.push(cumulativeSilly);
-      conceptData.push(cumulativeConcept);
+    for (const day of labels) {
+      const sillyVal = dailyMap[day].silly;
+      const conceptVal = dailyMap[day].concept;
+      const total = sillyVal + conceptVal;
+
+      if (total > 0) {
+        sillyData.push(Math.round((sillyVal / total) * 100));
+        conceptData.push(Math.round((conceptVal / total) * 100));
+      } else {
+        sillyData.push(0);
+        conceptData.push(0);
+      }
     }
 
     return {
       labels,
       datasets: [
         {
-          label: 'Silly Mistakes (pts lost)',
+          label: 'Silly Mistakes (% of points lost)',
           data: sillyData,
           borderColor: CHART_COLORS.silly.line,
           backgroundColor: CHART_COLORS.silly.bg,
@@ -461,7 +477,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
           tension: 0.3
         },
         {
-          label: 'Concept Gaps (pts lost)',
+          label: 'Concept Gaps (% of points lost)',
           data: conceptData,
           borderColor: CHART_COLORS.concept.line,
           backgroundColor: CHART_COLORS.concept.bg,
@@ -471,6 +487,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       ]
     };
   }, [data]);
+
+
 
   // Intuition accuracy over time
   const intuitionChartData = useMemo(() => {
@@ -778,13 +796,26 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 <div style={{ height: '240px' }}>
                   <Line data={tagChartData} options={{
                     ...baseChartOptions,
-                    plugins: { ...baseChartOptions.plugins, title: { display: false } }
+                    plugins: { ...baseChartOptions.plugins, title: { display: false } },
+                    scales: {
+                      ...baseChartOptions.scales,
+                      y: {
+                        ...baseChartOptions.scales.y,
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                          ...baseChartOptions.scales.y.ticks,
+                          callback: (value) => `${value}%`
+                        }
+                      }
+                    }
                   }} />
                 </div>
               ) : (
                 <p className="analytics-empty">Tag problems during review to track mistake types</p>
               )}
             </div>
+
 
             {/* Intuition */}
             <div className="glass-panel analytics-chart-panel">
