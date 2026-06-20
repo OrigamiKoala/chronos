@@ -79,9 +79,19 @@ export default async function handler(req, res) {
       SELECT TO_JSON_STRING(STRUCT(
         v.student_id as user_id,
         
-        (SELECT ARRAY_AGG(STRUCT(h.exam_id, h.subject, h.accuracy, h.avg_time, h.rating_change, h.new_rating, h.created_at)) 
+        (SELECT ARRAY_AGG(STRUCT(h.exam_id, h.subject, h.accuracy, h.avg_time, h.rating_change, h.new_rating, h.created_at) ORDER BY h.created_at DESC LIMIT 5) 
          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
-         WHERE h.user_id = v.student_id) as exams,
+         WHERE h.user_id = v.student_id) as past_5_exams,
+         
+        (SELECT STRUCT(
+           h.exam_id, h.subject, h.accuracy, h.avg_time, h.rating_change, h.new_rating, h.created_at, h.assignment_id,
+           r.results_json
+         )
+         FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
+         LEFT JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r ON h.exam_id = r.exam_id AND h.user_id = r.user_id
+         WHERE h.user_id = v.student_id AND h.assignment_id IS NOT NULL AND h.assignment_id != ''
+         ORDER BY h.created_at DESC
+         LIMIT 1) as last_homework,
          
         (SELECT ARRAY_AGG(STRUCT(m.exam_id, m.subject, m.mistake_patterns)) 
          FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` m
@@ -120,6 +130,10 @@ export default async function handler(req, res) {
 
     const systemPrompt = `You are a diagnostic assistant for the stress-sandbox app.
 Contextual Performance Dataset: ${contextData}
+
+The dataset includes:
+- "past_5_exams": The student's 5 most recent exam attempts.
+- "last_homework": The student's last submitted homework assignment (if any), including question results.
 
 ANTI-HALLUCINATION PROTOCOL:
 - ${hasData ?
