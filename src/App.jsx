@@ -814,8 +814,7 @@ function App() {
         {gradingLoading ? (
           <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '4rem auto' }}>
             <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
-            <h3>AI Grading Your Exam...</h3>
-            <p style={{ color: 'var(--text-secondary)' }}>Critically deriving correct solutions, analyzing your step-by-step logic, and calculating partial credit.</p>
+            <h3>Checking your work...</h3>
           </div>
         ) : (
           <>

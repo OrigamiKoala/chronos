@@ -126,7 +126,7 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
       const sanitized = smiles.replace(/\\/g, '/');
       SmilesDrawer.parse(sanitized, (tree) => {
         setHasError(false);
-        drawer.draw(tree, svgRef.current, theme, false);
+        drawer.draw(tree, svgRef.current, 'dark', false);
       }, (err) => {
         setHasError(true);
       });
@@ -141,11 +141,23 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
 
   return (
     <span style={{ 
-      display: 'block', 
-      margin: '8px auto',
-      textAlign: 'center'
+      display: 'flex', 
+      justifyContent: 'center',
+      margin: '12px auto'
     }}>
-      <svg ref={svgRef} data-smiles={smiles} width={width} height={height} style={{ width, height, display: 'block', margin: '0 auto' }} />
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#0a0a0c',
+        padding: '10px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        width: 'fit-content'
+      }}>
+        <svg ref={svgRef} data-smiles={smiles} width={width} height={height} style={{ width, height, display: 'block' }} />
+      </span>
     </span>
   );
 }
@@ -208,7 +220,7 @@ export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height
 
       SmilesDrawer.parseReaction(reaction, (rxn) => {
         setHasError(false);
-        reactionDrawer.draw(rxn, svgRef.current, theme);
+        reactionDrawer.draw(rxn, svgRef.current, 'dark');
       }, (err) => {
         setHasError(true);
       });
@@ -222,16 +234,29 @@ export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height
   }
 
   return (
-    <span style={{
-      display: 'inline-block',
-      verticalAlign: 'middle',
-      margin: '0 4px',
-      overflow: 'visible'
+    <span style={{ 
+      display: 'flex', 
+      justifyContent: 'center',
+      margin: '12px auto',
+      width: '100%'
     }}>
-      <svg
-        ref={svgRef}
-        style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
-      />
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#0a0a0c',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        maxWidth: '100%',
+        overflowX: 'auto'
+      }}>
+        <svg
+          ref={svgRef}
+          style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
+        />
+      </span>
     </span>
   );
 }
