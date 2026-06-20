@@ -51,7 +51,7 @@ export function TeacherScreen({ user, onBack }) {
 
   // Chatbot states
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'ai', text: 'Hello! I am your AI student advisor. Ask me anything about your class or select specific students to analyze their performance, strengths, or weaknesses.', timestamp: new Date() }
+    { sender: 'ai', text: 'Hello! I am your AI teaching assistant. Ask me anything about your class or select specific students to analyze their performance, strengths, or weaknesses.', timestamp: new Date() }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
