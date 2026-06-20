@@ -126,12 +126,23 @@ Return strictly a valid JSON object with the following schema:
       },
     }), req);
 
-    try {
-      const parsed = JSON.parse(response.text);
-      return res.status(200).json(parsed);
-    } catch (parseErr) {
-      return res.status(200).json({ explanation: response.text, shouldRemarkCorrect: false });
+    let explanationText = '';
+    let shouldRemarkCorrectVal = false;
+
+    const parsed = parseJSONResponse(response.text);
+    if (parsed) {
+      explanationText = parsed.explanation;
+      shouldRemarkCorrectVal = parsed.shouldRemarkCorrect || false;
+    } else {
+      console.warn('Failed to parse JSON response from Gemini, using robust extractors as fallback.');
+      explanationText = extractExplanationFallback(response.text);
+      shouldRemarkCorrectVal = extractShouldRemarkCorrectFallback(response.text);
     }
+
+    return res.status(200).json({
+      explanation: explanationText,
+      shouldRemarkCorrect: shouldRemarkCorrectVal
+    });
   } catch (err) {
     console.error('Explanation error:', err);
     const isBusyOrRateLimited = err.status === 503 || err.status === 429 || 
@@ -152,3 +163,119 @@ Return strictly a valid JSON object with the following schema:
     return res.status(500).json({ error: err.message || 'Internal Server Error' });
   }
 }
+
+function escapeLiteralNewlines(jsonStr) {
+  let result = '';
+  let inString = false;
+  let escape = false;
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const ch = jsonStr.charAt(i);
+
+    if (inString) {
+      if (escape) {
+        result += ch;
+        escape = false;
+      } else if (ch === '\\') {
+        result += ch;
+        escape = true;
+      } else if (ch === '"') {
+        result += ch;
+        inString = false;
+      } else if (ch === '\n') {
+        result += '\\n';
+      } else if (ch === '\r') {
+        result += '\\r';
+      } else {
+        result += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inString = true;
+      }
+      result += ch;
+    }
+  }
+  return result;
+}
+
+function parseJSONResponse(text) {
+  if (!text) return null;
+  
+  let cleanText = text.trim();
+
+  const tryParse = (str) => {
+    try {
+      const escaped = escapeLiteralNewlines(str.trim());
+      return JSON.parse(escaped);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  let parsed = tryParse(cleanText);
+  if (parsed) return parsed;
+
+  const jsonMatch = cleanText.match(/```json\s*([\s\S]*?)\s*```/i);
+  if (jsonMatch) {
+    parsed = tryParse(jsonMatch[1]);
+    if (parsed) return parsed;
+  }
+
+  const codeMatch = cleanText.match(/```\s*([\s\S]*?)\s*```/i);
+  if (codeMatch) {
+    parsed = tryParse(codeMatch[1]);
+    if (parsed) return parsed;
+  }
+
+  const firstBrace = cleanText.indexOf('{');
+  const lastBrace = cleanText.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = cleanText.substring(firstBrace, lastBrace + 1);
+    parsed = tryParse(candidate);
+    if (parsed) return parsed;
+  }
+
+  return null;
+}
+
+function extractExplanationFallback(text) {
+  const keyIndex = text.indexOf('"explanation"');
+  if (keyIndex === -1) return text;
+
+  const afterKey = text.substring(keyIndex + '"explanation"'.length);
+  const colonIndex = afterKey.indexOf(':');
+  if (colonIndex === -1) return text;
+
+  const afterColon = afterKey.substring(colonIndex + 1).trim();
+  if (!afterColon.startsWith('"')) return text;
+
+  let val = '';
+  let escape = false;
+  for (let i = 1; i < afterColon.length; i++) {
+    const ch = afterColon.charAt(i);
+    if (escape) {
+      if (ch === 'n') val += '\n';
+      else if (ch === 'r') val += '\r';
+      else if (ch === 't') val += '\t';
+      else val += ch;
+      escape = false;
+    } else if (ch === '\\') {
+      escape = true;
+    } else if (ch === '"') {
+      return val;
+    } else {
+      val += ch;
+    }
+  }
+  return val || text;
+}
+
+function extractShouldRemarkCorrectFallback(text) {
+  const match = text.match(/"shouldRemarkCorrect"\s*:\s*(true|false)/i);
+  if (match) {
+    return match[1].toLowerCase() === 'true';
+  }
+  return false;
+}
+
