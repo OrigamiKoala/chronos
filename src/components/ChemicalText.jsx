@@ -76,16 +76,16 @@ const smilesThemes = {
   dark: {
     PRIMARY: '#ffffff',
     BACKGROUND: 'transparent',
-    ACCENT: '#a78bfa',
+    ACCENT: '#ffffff',
     C: '#ffffff',
-    O: '#f87171',
-    N: '#60a5fa',
-    F: '#34d399',
-    CL: '#34d399',
-    BR: '#f59e0b',
-    I: '#ec4899',
-    S: '#fbbf24',
-    P: '#8b5cf6'
+    O: '#ffffff',
+    N: '#ffffff',
+    F: '#ffffff',
+    CL: '#ffffff',
+    BR: '#ffffff',
+    I: '#ffffff',
+    S: '#ffffff',
+    P: '#ffffff'
   },
   light: {
     PRIMARY: '#1e293b',
