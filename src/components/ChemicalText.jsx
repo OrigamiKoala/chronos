@@ -145,19 +145,7 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
       justifyContent: 'center',
       margin: '12px auto'
     }}>
-      <span style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#0a0a0c',
-        padding: '10px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        width: 'fit-content'
-      }}>
-        <svg ref={svgRef} data-smiles={smiles} width={width} height={height} style={{ width, height, display: 'block' }} />
-      </span>
+      <svg ref={svgRef} data-smiles={smiles} width={width} height={height} style={{ width, height, display: 'block' }} />
     </span>
   );
 }
@@ -240,23 +228,10 @@ export function ReactionRenderer({ reaction, theme = 'dark', width = 500, height
       margin: '12px auto',
       width: '100%'
     }}>
-      <span style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#0a0a0c',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        maxWidth: '100%',
-        overflowX: 'auto'
-      }}>
-        <svg
-          ref={svgRef}
-          style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
-        />
-      </span>
+      <svg
+        ref={svgRef}
+        style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
+      />
     </span>
   );
 }
