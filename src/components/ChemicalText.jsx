@@ -85,7 +85,8 @@ const smilesThemes = {
     BR: '#ffffff',
     I: '#ffffff',
     S: '#ffffff',
-    P: '#ffffff'
+    P: '#ffffff',
+    H: '#ffffff'
   },
   light: {
     PRIMARY: '#1e293b',
@@ -99,7 +100,8 @@ const smilesThemes = {
     BR: '#d97706',
     I: '#db2777',
     S: '#f59e0b',
-    P: '#6366f1'
+    P: '#6366f1',
+    H: '#1e293b'
   }
 };
 
