@@ -483,6 +483,32 @@ export default async function handler(req, res) {
     }
   }
 
+  // 4a-2. Delete Active Exam Route
+  if (route === 'delete-active-exam') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { username, examId } = req.body;
+    if (!username || !examId) {
+      return res.status(400).json({ error: 'Username and Exam ID are required' });
+    }
+
+    const sanitizedUser = username.trim().toLowerCase();
+
+    try {
+      await bq.query({
+        query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
+          WHERE user_id = @username AND exam_id = @examId`,
+        params: { username: sanitizedUser, examId }
+      });
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error('Delete active exam error:', err);
+      return res.status(500).json({ error: err.message || 'Internal Server Error' });
+    }
+  }
+
   // 4b. Save Active Exam Route
   if (route === 'save-active-exam') {
     if (req.method !== 'POST') {

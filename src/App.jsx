@@ -391,6 +391,33 @@ function App() {
     setCurrentScreen('exam');
   };
 
+  const handleDeleteExam = async () => {
+    if (!activeExam) return;
+    if (!window.confirm("Are you sure you want to discard this active exam? All in-progress work will be permanently lost.")) return;
+
+    try {
+      const response = await fetch('/api/exams?route=delete-active-exam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: user.user_id,
+          examId: activeExam.exam_id
+        })
+      });
+
+      if (response.ok) {
+        setActiveExam(null);
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        alert(errData.error || 'Failed to delete active exam');
+      }
+    } catch (err) {
+      console.error('Delete active exam failed:', err);
+      alert('Network error. Failed to delete active exam.');
+    }
+  };
+
+
   const finishExam = (results) => {
     const subject = examConfig.subject;
     const currentRating = ratings[subject] || 100;
@@ -851,13 +878,29 @@ function App() {
                             {activeExam.subject} • {activeExam.config.numQuestions} Qs • Started {new Date(activeExam.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <button
-                          className="btn btn-primary"
-                          style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
-                          onClick={handleResumeExam}
-                        >
-                          Resume
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            className="btn btn-primary"
+                            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+                            onClick={handleResumeExam}
+                          >
+                            Resume
+                          </button>
+                          <button
+                            className="btn btn-outline"
+                            style={{
+                              padding: '0.4rem 1rem',
+                              fontSize: '0.85rem',
+                              borderColor: '#ef4444',
+                              color: '#ef4444',
+                              background: 'transparent'
+                            }}
+                            onClick={handleDeleteExam}
+                          >
+                            Delete
+                          </button>
+                        </div>
+
                       </div>
                     )}
 
