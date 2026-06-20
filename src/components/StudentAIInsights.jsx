@@ -102,13 +102,13 @@ export function StudentAIInsights({ studentId, teacherId }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
-      
+
       {/* Latest Insight Card */}
       <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', background: 'rgba(99, 102, 241, 0.03)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem' }}>
           <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
             <Sparkles size={18} style={{ color: 'var(--accent-primary)' }} />
-            Latest AI Insight (gemini-3.1-flash-lite)
+            Latest AI Insight
           </h4>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <button
@@ -178,7 +178,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
               const isExpanded = expandedId === ins.insight_id;
               const dateStr = new Date(ins.created_at?.value || ins.created_at).toLocaleDateString();
               const histProgress = getProgressStyle(ins.progress_status);
-              
+
               return (
                 <div key={ins.insight_id} style={{ border: '1px solid rgba(255,255,255,0.04)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
                   <div

@@ -1113,7 +1113,8 @@ function App() {
         borderTop: '1px solid rgba(255, 255, 255, 0.05)',
         marginTop: '2rem'
       }}>
-        Contact: Discord @origamikoala
+        <div>Contact: Discord @origamikoala</div>
+        <div style={{ marginTop: '0.35rem' }}>Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a></div>
       </footer>
 
       {/* Sign-In Conversion Warning Modal */}
