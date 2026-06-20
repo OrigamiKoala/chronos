@@ -37,7 +37,7 @@ const bq = new BigQuery({
   },
 });
 
-async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homeworks, bq, projectId) {
+async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homeworks, bq, projectId, lessonTitle = '', lessonDescription = '') {
   try {
     const tId = teacherId.trim().toLowerCase();
     const [claimedRows] = await bq.query({
@@ -91,6 +91,8 @@ async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homework
         action: 'generate_homework',
         teacherId: tId,
         lessonId: lessonId,
+        lessonTitle: lessonTitle,
+        lessonDescription: lessonDescription,
         studentIds: studentIds,
         homeworks: homeworks,
         geminiApiKeys: [
@@ -205,7 +207,7 @@ export default async function handler(req, res) {
         }
 
         if (assignmentsPayload.length > 0) {
-          triggerBackgroundHomeworkGeneration(tId, lessonId, assignmentsPayload, bq, projectId);
+          triggerBackgroundHomeworkGeneration(tId, lessonId, assignmentsPayload, bq, projectId, title, description);
         }
 
         return res.status(200).json({ success: true, lessonId });
@@ -357,7 +359,7 @@ export default async function handler(req, res) {
         await Promise.all(assignmentPromises);
 
         if (assignmentsPayload.length > 0 && tId) {
-          triggerBackgroundHomeworkGeneration(tId, lessonId, assignmentsPayload, bq, projectId);
+          triggerBackgroundHomeworkGeneration(tId, lessonId, assignmentsPayload, bq, projectId, title, description);
         }
 
         return res.status(200).json({ success: true });
@@ -430,6 +432,7 @@ export default async function handler(req, res) {
             SELECT 1 FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
             WHERE user_id = @username AND assignment_id = a.assignment_id
           )
+          AND (a.due_date IS NULL OR a.due_date >= CURRENT_TIMESTAMP())
         ORDER BY a.due_date ASC
       `;
 

@@ -1635,7 +1635,7 @@ export function TeacherScreen({ user, onBack }) {
                   style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
                 />
                 <label htmlFor="assignHw" style={{ fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', userSelect: 'none' }}>
-                  Assign Homework Mock Exam?
+                  Assigned Homework
                 </label>
               </div>
 
@@ -1668,7 +1668,7 @@ export function TeacherScreen({ user, onBack }) {
                   )}
 
                   <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--accent-primary)' }}>
-                    {homeworkList.length > 0 ? 'Add Another Mock Exam' : 'Configure Mock Exam'}
+                    {homeworkList.length > 0 ? 'Add Another Exam' : 'Configure Exam'}
                   </h4>
 
                   <div>
@@ -1930,7 +1930,7 @@ export function TeacherScreen({ user, onBack }) {
                     style={{ marginTop: '0.25rem', borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)', fontSize: '0.85rem', padding: '0.4rem' }}
                     onClick={addHomeworkItem}
                   >
-                    + Add Mock Exam to Homework List
+                    + Add Exam
                   </button>
 
                 </div>

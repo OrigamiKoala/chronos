@@ -261,6 +261,22 @@ async function runBackgroundHomeworkGeneration(payload, serviceAccount, accessTo
       const startingDifficulty = hw.startingDifficulty || 5;
       const format = hw.examFormat || 'mix';
 
+      // Check if student has already submitted this homework assignment
+      try {
+        const submissionRows = await executeBq(
+          `SELECT 1 FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
+           WHERE user_id = @studentId AND assignment_id = @assignmentId`,
+          serviceAccount,
+          accessToken,
+          { studentId: sanitizedStudent, assignmentId: hw.assignmentId }
+        );
+        if (submissionRows && submissionRows.length > 0) {
+          continue;
+        }
+      } catch (err) {
+        console.error('Error checking student submission status in worker:', err);
+      }
+
       const sharedQuestionsCount = Array.isArray(hw.sharedQuestions) ? hw.sharedQuestions.length : 0;
       const aiCount = numQuestions - sharedQuestionsCount;
 
