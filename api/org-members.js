@@ -67,7 +67,9 @@ export default async function handler(req, res) {
       }
 
       const opUser = opUsers[0];
-      if (opUser.user_role !== 'admin') {
+      const isSelfUpdate = targets.length === 1 && targets[0] === operator;
+
+      if (opUser.user_role !== 'admin' && !isSelfUpdate) {
         return res.status(403).json({ error: 'Permission denied. Only admins can update user profiles.' });
       }
 
@@ -87,14 +89,14 @@ export default async function handler(req, res) {
       }
 
       for (const targetUser of targetUsers) {
-        if (targetUser.user_organization && targetUser.user_organization !== opUser.user_organization) {
+        if (targetUser.user_organization && targetUser.user_organization !== opUser.user_organization && !isSelfUpdate) {
           return res.status(403).json({ error: `Permission denied. User ${targetUser.user_id} belongs to a different organization.` });
         }
       }
 
       // Perform bulk update
       const cleanRole = userRole ? userRole.trim() : null;
-      const cleanOrg = userOrganization ? userOrganization.trim() : opUser.user_organization;
+      const cleanOrg = userOrganization ? userOrganization.trim() : (isSelfUpdate ? null : opUser.user_organization);
       const foundUserIds = targetUsers.map(u => u.user_id);
 
       const updateQuery = `

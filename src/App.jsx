@@ -794,20 +794,18 @@ function App() {
                         <Shield size={14} /> Admin
                       </button>
                     )}
-                    {user.user_role === 'admin' && (
-                      <button
-                        className="btn btn-outline"
-                        style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
-                        onClick={() => {
-                          setProfileJoinCode(user.user_organization === 'Rancho MATHCOUNTS' ? 'RanchoMC' : '');
-                          setProfileRole(user.user_role || '');
-                          setShowProfileModal(true);
-                          setShowUserDropdown(false);
-                        }}
-                      >
-                        <Settings size={14} /> Settings
-                      </button>
-                    )}
+                     <button
+                       className="btn btn-outline"
+                       style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
+                       onClick={() => {
+                         setProfileJoinCode(user.user_organization === 'Rancho MATHCOUNTS' ? 'RanchoMC' : '');
+                         setProfileRole(user.user_role || '');
+                         setShowProfileModal(true);
+                         setShowUserDropdown(false);
+                       }}
+                     >
+                       <Settings size={14} /> Settings
+                     </button>
                     <button
                       className="btn btn-outline"
                       style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--danger)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
