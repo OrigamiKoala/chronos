@@ -1403,7 +1403,7 @@ function App() {
                     className="input-field"
                     value={profileRole}
                     onChange={(e) => setProfileRole(e.target.value)}
-                    disabled={loginLoading}
+                    disabled={loginLoading || user?.user_role === 'student' || user?.user_role === 'teacher'}
                   >
                     <option value="student">Student (Default)</option>
                     <option value="teacher">Teacher</option>

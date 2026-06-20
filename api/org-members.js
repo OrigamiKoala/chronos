@@ -73,9 +73,9 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Permission denied. Only admins can update user profiles.' });
       }
 
-      // Fetch target users' organization to ensure they belong to the same organization
+      // Fetch target users' organization and role to ensure they belong to the same organization
       const checkTargetQuery = `
-        SELECT user_id, user_organization
+        SELECT user_id, user_role, user_organization
         FROM \`${projectId}\`.\`chronos_users\`.\`users\`
         WHERE user_id IN UNNEST(@targets)
       `;
@@ -95,8 +95,17 @@ export default async function handler(req, res) {
       }
 
       // Perform bulk update
-      const cleanRole = userRole ? userRole.trim() : null;
+      const targetUserMap = new Map(targetUsers.map(u => [u.user_id, u]));
       const cleanOrg = userOrganization ? userOrganization.trim() : (isSelfUpdate ? null : opUser.user_organization);
+      let cleanRole = userRole ? userRole.trim() : null;
+
+      if (isSelfUpdate && cleanOrg) {
+        const currentUserRecord = targetUserMap.get(operator);
+        if (currentUserRecord && (currentUserRecord.user_role === 'student' || currentUserRecord.user_role === 'teacher')) {
+          cleanRole = currentUserRecord.user_role;
+        }
+      }
+
       const foundUserIds = targetUsers.map(u => u.user_id);
 
       const updateQuery = `

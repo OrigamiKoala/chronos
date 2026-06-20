@@ -12,7 +12,7 @@ const bq = new BigQuery({
 });
 
 const ELO_ALGORITHM_VERSION = 3;
-let schemaEnsured = process.env.ENSURE_SCHEMA !== 'true';
+let schemaEnsured = false;
 
 import crypto from 'crypto';
 
