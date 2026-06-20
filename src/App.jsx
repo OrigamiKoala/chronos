@@ -848,6 +848,7 @@ function App() {
           <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '4rem auto' }}>
             <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
             <h3>Checking your work...</h3>
+            <h3 style={{ color: 'var(--danger)', fontWeight: 'bold' }}>Do NOT close this page.</h3>
           </div>
         ) : (
           <>
