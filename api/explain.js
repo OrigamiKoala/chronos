@@ -134,6 +134,21 @@ Return strictly a valid JSON object with the following schema:
     }
   } catch (err) {
     console.error('Explanation error:', err);
+    const isBusyOrRateLimited = err.status === 503 || err.status === 429 || 
+                                (err.message && (err.message.includes('503') || 
+                                                 err.message.includes('429') ||
+                                                 err.message.includes('overloaded') || 
+                                                 err.message.includes('rate limit') ||
+                                                 err.message.includes('busy') ||
+                                                 err.message.includes('demand') ||
+                                                 err.message.includes('limit')));
+    if (isBusyOrRateLimited) {
+      return res.status(503).json({
+        error: "Sorry, the bot is busy right now. Try again later.",
+        explanation: "Sorry, the bot is busy right now. Try again later.",
+        shouldRemarkCorrect: false
+      });
+    }
     return res.status(500).json({ error: err.message || 'Internal Server Error' });
   }
 }

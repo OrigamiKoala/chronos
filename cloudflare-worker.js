@@ -92,7 +92,7 @@ async function executeBq(query, serviceAccount, accessToken, params = null) {
     body.queryParameters = Object.entries(params).map(([name, val]) => {
       let type = 'STRING';
       if (typeof val === 'number') {
-        type = 'INT64';
+        type = Number.isInteger(val) ? 'INT64' : 'FLOAT64';
       } else if (typeof val === 'boolean') {
         type = 'BOOL';
       }
@@ -118,6 +118,133 @@ async function executeBq(query, serviceAccount, accessToken, params = null) {
     throw new Error(`BigQuery query failed: ${data.error.message}`);
   }
   return data.rows || [];
+}
+
+async function runBackgroundGradingRetry(payload, env) {
+  const { username, subject, examId } = payload;
+  while (true) {
+    await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
+    try {
+      console.log(`[Background Grading] Retrying submit-exam for ${username}, exam: ${examId}`);
+      const response = await fetch('https://chronos-bot.vercel.app/api/submit-exam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        console.log(`[Background Grading] Successfully submitted and graded exam ${examId}`);
+        const gradedData = await response.json();
+        
+        try {
+          const serviceAccount = await env.CHAT_KV.get('GCP_SERVICE_ACCOUNT', { type: 'json' });
+          if (serviceAccount) {
+            const assertionJwt = await GoogleAuthToken(serviceAccount);
+            const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${assertionJwt}`
+            });
+            const tokenData = await tokenResponse.json();
+            const accessToken = tokenData.access_token;
+            
+            if (accessToken) {
+              const projectId = serviceAccount.project_id;
+              const sanitizedUser = username.trim().toLowerCase();
+              
+              // Check if already in user_exam_results to avoid duplicates
+              const checkRows = await executeBq(
+                `SELECT exam_id FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` WHERE user_id = @username AND exam_id = @examId`,
+                serviceAccount,
+                accessToken,
+                { username: sanitizedUser, examId }
+              );
+              
+              if (checkRows.length === 0) {
+                console.log(`[Background Grading] Exam not found in BigQuery, inserting history and results...`);
+                
+                const finalAccuracy = typeof gradedData.accuracy === 'number' ? gradedData.accuracy : 0.0;
+                const finalRatingChange = typeof gradedData.ratingChange === 'number' ? gradedData.ratingChange : 0;
+                const finalNewRating = typeof gradedData.newRating === 'number' ? gradedData.newRating : 100;
+                const gradedResults = gradedData.results || [];
+                const isGuest = sanitizedUser === 'default_user';
+                
+                if (!isGuest) {
+                  // Insert history
+                  await executeBq(
+                    `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
+                      (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at, assignment_id)
+                      VALUES (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP(), @assignmentId)`,
+                    serviceAccount,
+                    accessToken,
+                    {
+                      username: sanitizedUser,
+                      examId,
+                      subject,
+                      accuracy: finalAccuracy,
+                      avgTime: payload.avgTime || 0,
+                      ratingChange: finalRatingChange,
+                      newRating: finalNewRating,
+                      assignmentId: payload.assignmentId || ''
+                    }
+                  );
+                  
+                  // Insert results
+                  await executeBq(
+                    `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+                      (user_id, exam_id, results_json, created_at, assignment_id)
+                      VALUES (@username, @examId, @resultsJson, CURRENT_TIMESTAMP(), @assignmentId)`,
+                    serviceAccount,
+                    accessToken,
+                    {
+                      username: sanitizedUser,
+                      examId,
+                      resultsJson: JSON.stringify(gradedResults),
+                      assignmentId: payload.assignmentId || ''
+                    }
+                  );
+                  
+                  // Delete from active exams
+                  await executeBq(
+                    `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
+                      WHERE user_id = @username AND exam_id = @examId`,
+                    serviceAccount,
+                    accessToken,
+                    { username: sanitizedUser, examId }
+                  );
+                  
+                  // Update user rating
+                  let ratingColumn = 'math_rating';
+                  if (subject === 'Physics') ratingColumn = 'physics_rating';
+                  else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
+                  
+                  if (payload.isRated !== false) {
+                    await executeBq(
+                      `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
+                        SET ${ratingColumn} = @newRating, elo_version = @eloVersion
+                        WHERE user_id = @username`,
+                      serviceAccount,
+                      accessToken,
+                      { username: sanitizedUser, newRating: finalNewRating, eloVersion: 3 }
+                    );
+                  }
+                }
+              } else {
+                console.log(`[Background Grading] Exam ${examId} already exists in BigQuery.`);
+              }
+            }
+          }
+        } catch (bqErr) {
+          console.error('[Background Grading] Failed to save graded exam to BigQuery:', bqErr);
+        }
+        
+        break;
+      }
+      const errText = await response.text();
+      console.warn(`[Background Grading] Retry failed with status ${response.status}: ${errText}`);
+    } catch (err) {
+      console.error('[Background Grading] Network/fetch error during retry:', err);
+    }
+  }
 }
 
 async function runBackgroundHomeworkGeneration(payload, serviceAccount, accessToken) {
@@ -655,6 +782,18 @@ export default {
         return new Response(JSON.stringify({
           success: true,
           message: 'Homework generation started in background'
+        }), {
+          status: 202,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (action === 'async_grade_exam') {
+        ctx.waitUntil(runBackgroundGradingRetry(payload.payload, env));
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Background grading scheduled successfully'
         }), {
           status: 202,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }

@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
 import { executeWithRetry } from './_gemini.js';
+import crypto from 'crypto';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const ELO_ALGORITHM_VERSION = 3;
@@ -740,6 +741,21 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
             userAnswer: isImage ? (graded.transcription || r.userAnswer) : r.userAnswer
           };
         } catch (err) {
+          const isOverload = err.status === 503 || 
+                             err.status === 429 ||
+                             (err.message && (err.message.includes('503') || 
+                                              err.message.includes('429') || 
+                                              err.message.includes('overloaded') || 
+                                              err.message.includes('high demand') ||
+                                              err.message.includes('busy') ||
+                                              err.message.includes('rate limit') ||
+                                              err.message.includes('exhausted') ||
+                                              err.message.includes('quota') ||
+                                              err.message.includes('failed or are rate limited') ||
+                                              err.message.includes('currently experiencing high demand')));
+          if (isOverload) {
+            throw err;
+          }
           console.error('Error grading FRQ question:', r.id, err);
           return {
             ...r,
@@ -1018,6 +1034,105 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
 
   } catch (err) {
     console.error('Submit exam error:', err);
+    const isOverload = err.status === 503 || 
+                       err.status === 429 ||
+                       (err.message && (err.message.includes('503') || 
+                                        err.message.includes('429') || 
+                                        err.message.includes('overloaded') || 
+                                        err.message.includes('high demand') ||
+                                        err.message.includes('busy') ||
+                                        err.message.includes('rate limit') ||
+                                        err.message.includes('exhausted') ||
+                                        err.message.includes('quota') ||
+                                        err.message.includes('failed or are rate limited') ||
+                                        err.message.includes('currently experiencing high demand')));
+    if (isOverload) {
+      try {
+        const answers = results.map(r => r.userAnswer || '');
+        const frqSubmissions = results.map(r => r.frqSubmission || null);
+        await bq.query({
+          query: `
+            UPDATE \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
+            SET answers_json = @answersJson,
+                frq_submissions_json = @frqSubmissionsJson,
+                updated_at = CURRENT_TIMESTAMP()
+            WHERE user_id = @username AND exam_id = @examId
+          `,
+          params: {
+            username: sanitizedUser,
+            examId,
+            answersJson: JSON.stringify(answers),
+            frqSubmissionsJson: JSON.stringify(frqSubmissions)
+          }
+        });
+      } catch (saveErr) {
+        console.error('Failed to save active exam during overload fallback:', saveErr);
+      }
+
+      try {
+        const WORKER_URL = process.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
+        const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
+        
+        function generateJWT(payload, secret) {
+          const header = { alg: 'HS256', typ: 'JWT' };
+          const base64UrlEncode = (obj) => {
+            return Buffer.from(JSON.stringify(obj))
+              .toString('base64')
+              .replace(/=/g, '')
+              .replace(/\+/g, '-')
+              .replace(/\//g, '_');
+          };
+
+          const headerEncoded = base64UrlEncode(header);
+          const payloadEncoded = base64UrlEncode(payload);
+
+          const signature = crypto
+            .createHmac('sha256', secret)
+            .update(`${headerEncoded}.${payloadEncoded}`)
+            .digest('base64')
+            .replace(/=/g, '')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_');
+
+          return `${headerEncoded}.${payloadEncoded}.${signature}`;
+        }
+
+        const accessToken = generateJWT({
+          teacherId: 'SYSTEM',
+          exp: Math.floor(Date.now() / 1000) + 7200 // 2 hours
+        }, jwtSecret);
+
+        fetch(WORKER_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            action: 'async_grade_exam',
+            teacherId: 'SYSTEM',
+            payload: {
+              username,
+              subject,
+              examId,
+              accuracy,
+              avgTime,
+              ratingChange,
+              newRating,
+              isRated,
+              assignmentId,
+              results
+            }
+          })
+        }).catch(err => console.error("Worker fetch failed in trigger:", err));
+      } catch (triggerErr) {
+        console.error('Failed to trigger Cloudflare Worker for background grading:', triggerErr);
+      }
+
+      return res.status(503).json({
+        error: "The grading bots are busy right now. We are grading your exam in the background. Please check back later."
+      });
+    }
     return res.status(500).json({ error: err.message || 'Internal Server Error' });
   }
 }

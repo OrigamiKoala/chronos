@@ -501,6 +501,12 @@ function App() {
     })
       .then(res => res.json())
       .then(submitData => {
+        if (submitData.error) {
+          alert(submitData.error);
+          setCurrentScreen('dashboard');
+          setGradingLoading(false);
+          return;
+        }
         setActiveExam(null);
         // Overwrite results, rating, and change with AI-graded values if present
         if (submitData.results) {

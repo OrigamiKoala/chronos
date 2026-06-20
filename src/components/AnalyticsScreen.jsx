@@ -308,7 +308,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch explanation');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch explanation');
       }
 
       const data = await response.json();
