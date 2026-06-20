@@ -284,6 +284,42 @@ async function runBackgroundHomeworkGeneration(payload, serviceAccount, accessTo
         continue;
       }
 
+      // 1. Fetch user ELO rating for the given subject
+      let ratingColumn = 'math_rating';
+      if (subject.toLowerCase() === 'physics') ratingColumn = 'physics_rating';
+      else if (subject.toLowerCase() === 'chemistry') ratingColumn = 'chemistry_rating';
+
+      let studentRating = 100;
+      try {
+        const ratingRows = await executeBq(
+          `SELECT ${ratingColumn} FROM \`${projectId}\`.\`chronos_users\`.\`users\` WHERE user_id = @studentId`,
+          serviceAccount,
+          accessToken,
+          { studentId: sanitizedStudent }
+        );
+        if (ratingRows && ratingRows.length > 0) {
+          studentRating = Number(ratingRows[0]?.f?.[0]?.v) || 100;
+        }
+      } catch (err) {
+        console.error('Error fetching student rating in worker:', err);
+      }
+
+      // 2. Calculate expected rating for teacher's chosen difficulty
+      const baseDiff = Math.max(1, Math.min(10, startingDifficulty));
+      let expectedR = 1000;
+      if (subject.toLowerCase() === 'math') {
+        const mathMap = new Map([[1, 500], [2, 600], [3, 800], [4, 900], [5, 1000], [6, 1250], [7, 1500], [8, 2000], [9, 2500], [10, 3000]]);
+        expectedR = mathMap.get(Math.round(baseDiff)) || 1000;
+      } else {
+        const otherMap = new Map([[1, 100], [2, 300], [3, 500], [4, 750], [5, 1000], [6, 1250], [7, 1500], [8, 2000], [9, 2500], [10, 3000]]);
+        expectedR = otherMap.get(Math.round(baseDiff)) || 1000;
+      }
+
+      // 3. Offset difficulty based on student ELO vs expected ELO, clamp offset to [-1.5, 1.5]
+      const rawOffset = (studentRating - expectedR) / 300;
+      const clampedOffset = Math.max(-1.5, Math.min(1.5, rawOffset));
+      const studentDifficulty = Math.max(1, Math.min(10, Math.round(baseDiff + clampedOffset)));
+
       // Fetch diagnostic metrics for the student
       let weaknesses = 'None (excellent performance across all topics)';
       let weaknessAnalysis = 'None (no previous analysis available)';
@@ -593,7 +629,7 @@ The output must be a pure JSON array containing exactly the requested number of 
 Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.
 `;
 
-      const userPrompt = `Generate exactly ${aiCount} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+      const userPrompt = `Generate exactly ${aiCount} ${subject} problems. The difficulty should start around ${studentDifficulty} out of 10 and can vary slightly to provide a balanced test.
 Follow these strict rules:
 1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
@@ -666,7 +702,7 @@ Follow these strict rules:
             `SELECT question_json FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` WHERE subject = @subject AND difficulty = @difficulty ${queryPart} ORDER BY RAND() LIMIT @limit`,
             serviceAccount,
             accessToken,
-            { subject, difficulty: startingDifficulty, limit: aiCount }
+            { subject, difficulty: studentDifficulty, limit: aiCount }
           );
           questionsList = fallbackRows.map(row => JSON.parse(row.f[0].v));
 
