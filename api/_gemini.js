@@ -64,7 +64,15 @@ export async function executeWithRetry(models, apiCallFn, req) {
         return await apiCallFn(ai, currentModel);
       } catch (err) {
         lastError = err;
-        const status = err.status || err.statusCode || (err.message && err.message.includes('429') ? 429 : (err.message && err.message.includes('503') ? 503 : null));
+        let status = err.status || err.statusCode;
+        if (!status && err.message) {
+          const msg = err.message.toLowerCase();
+          if (msg.includes('429') || msg.includes('exhausted') || msg.includes('rate limit')) {
+            status = 429;
+          } else if (msg.includes('503') || msg.includes('overloaded') || msg.includes('unavailable') || msg.includes('busy') || msg.includes('high demand')) {
+            status = 503;
+          }
+        }
 
         if (status !== 503) {
           all503 = false;

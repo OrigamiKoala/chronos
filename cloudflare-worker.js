@@ -215,6 +215,22 @@ async function runBackgroundHomeworkGeneration(payload, serviceAccount, accessTo
         console.error('Error mistakeAnalysis:', err);
       }
 
+      let doneQuestionIds = [];
+      try {
+        const doneRows = await executeBq(
+          `SELECT DISTINCT JSON_VALUE(q, '$.id') AS qid
+           FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`,
+           UNNEST(JSON_EXTRACT_ARRAY(results_json)) AS q
+           WHERE user_id = @targetUserId`,
+          serviceAccount,
+          accessToken,
+          { targetUserId: sanitizedStudent }
+        );
+        doneQuestionIds = doneRows.map(row => row.f[0].v).filter(Boolean);
+      } catch (err) {
+        console.error('Error fetching done question IDs in worker:', err);
+      }
+
       // Build Gemini generation prompt
       let constraints = '';
       let examples = '';
@@ -379,6 +395,9 @@ ${topicBreakdown}
 - Recent Mistake Patterns (thinking / test-taking style):
 ${mistakeAnalysis}
 
+###CRITICAL UNIQUE & CREATIVE DIRECTIVE:###
+You must be extremely creative and ensure that EVERY question is completely unique and novel. Do NOT repeat, rephrase, or adapt previously used setups, standard textbook scenarios, chemical reactions, physical systems, or mathematical templates. Avoid using similar numerical values, scenarios, or phrasing across different questions or exams. Force yourself to design entirely new contexts, variables, and systems for each problem.
+
 Tailor the questions to target the user's weaknesses:
 1. In knowledge base and skill set (using the User Weakness Analysis and User Topic Breakdown).
 2. In thinking and test-taking style (using the Recent Mistake Patterns). Craft questions that specifically test or trigger their common mistake patterns (such as conceptual traps, calculation errors, panic, or edge case negligence) to help them overcome these pitfalls.
@@ -456,7 +475,7 @@ Follow these strict rules:
       let geminiError = null;
       let success = false;
 
-      for (const model of ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-pro']) {
+      for (const model of ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite']) {
         if (success) break;
         for (const apiKey of geminiApiKeys) {
           try {
@@ -470,7 +489,7 @@ Follow these strict rules:
                 systemInstruction: { parts: [{ text: systemInstruction.replace('[subject]', subject) }] },
                 generationConfig: {
                   responseMimeType: "application/json",
-                  temperature: 0.3,
+                  temperature: 1.5,
                   maxOutputTokens
                 }
               })
@@ -485,6 +504,11 @@ Follow these strict rules:
               }
             } else {
               geminiError = await response.text();
+              const status = response.status;
+              if (status === 503 || (geminiError && geminiError.toLowerCase().includes('overloaded'))) {
+                console.warn(`[503] Model ${model} overloaded. Breaking key loop to try next model.`);
+                break;
+              }
             }
           } catch (err) {
             geminiError = err.message;
@@ -505,8 +529,14 @@ Follow these strict rules:
       // Fallback to pregenerated questions if Gemini generation failed
       if (questionsList.length === 0) {
         try {
+          let queryPart = '';
+          if (doneQuestionIds.length > 0) {
+            const escapedIds = doneQuestionIds.map(id => `'${id.replace(/'/g, "\\'")}'`).join(', ');
+            queryPart = `AND JSON_VALUE(question_json, '$.id') NOT IN (${escapedIds})`;
+          }
+
           const fallbackRows = await executeBq(
-            `SELECT question_json FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` WHERE subject = @subject AND difficulty = @difficulty ORDER BY RAND() LIMIT @limit`,
+            `SELECT question_json FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` WHERE subject = @subject AND difficulty = @difficulty ${queryPart} ORDER BY RAND() LIMIT @limit`,
             serviceAccount,
             accessToken,
             { subject, difficulty: startingDifficulty, limit: aiCount }
@@ -517,7 +547,7 @@ Follow these strict rules:
           if (questionsList.length < aiCount) {
             const neededMore = aiCount - questionsList.length;
             const extraRows = await executeBq(
-              `SELECT question_json FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` WHERE subject = @subject ORDER BY RAND() LIMIT @limit`,
+              `SELECT question_json FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` WHERE subject = @subject ${queryPart} ORDER BY RAND() LIMIT @limit`,
               serviceAccount,
               accessToken,
               { subject, limit: neededMore }

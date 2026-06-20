@@ -108,6 +108,7 @@ export default async function handler(req, res) {
     let weaknessAnalysis = 'None (no previous analysis available)';
     let topicBreakdown = 'None (no previous topic breakdown available)';
     let mistakeAnalysis = 'None (no previous mistake pattern analysis available)';
+    let doneQuestionIds = [];
 
     try {
       await Promise.all([
@@ -191,6 +192,25 @@ export default async function handler(req, res) {
           } catch (err) {
             console.error('Error fetching user mistake analysis:', err);
           }
+        })(),
+        (async () => {
+          if (sanitizedUser !== 'default_user') {
+            try {
+              const doneQuery = `
+                SELECT DISTINCT JSON_VALUE(q, '$.id') AS qid
+                FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`,
+                UNNEST(JSON_EXTRACT_ARRAY(results_json)) AS q
+                WHERE user_id = @targetUserId
+              `;
+              const [doneRows] = await bq.query({
+                query: doneQuery,
+                params: { targetUserId: sanitizedUser }
+              });
+              doneQuestionIds = doneRows.map(row => row.qid).filter(Boolean);
+            } catch (err) {
+              console.error('Error fetching done question IDs:', err);
+            }
+          }
         })()
       ]);
     } catch (err) {
@@ -204,12 +224,14 @@ export default async function handler(req, res) {
         SELECT question_json
         FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
         WHERE subject = @subject AND difficulty = @difficulty
+          AND (ARRAY_LENGTH(@doneIds) = 0 OR JSON_VALUE(question_json, '$.id') NOT IN UNNEST(@doneIds))
         ORDER BY RAND()
         LIMIT 1
       `;
       const [rows] = await bq.query({
         query: pregenQuery,
-        params: { subject: normSubject || subject, difficulty: startingDifficulty },
+        params: { subject: normSubject || subject, difficulty: startingDifficulty, doneIds: doneQuestionIds },
+        types: { doneIds: ['STRING'] }
       });
       if (rows && rows.length > 0) {
         pregeneratedQuestion = JSON.parse(rows[0].question_json);
@@ -574,6 +596,9 @@ ${topicBreakdown}
 - Recent Mistake Patterns (thinking / test-taking style):
 ${mistakeAnalysis}
 
+###CRITICAL UNIQUE & CREATIVE DIRECTIVE:###
+You must be extremely creative and ensure that EVERY question is completely unique and novel. Do NOT repeat, rephrase, or adapt previously used setups, standard textbook scenarios, chemical reactions, physical systems, or mathematical templates. Avoid using similar numerical values, scenarios, or phrasing across different questions or exams. Force yourself to design entirely new contexts, variables, and systems for each problem.
+
 Tailor the questions to target the user's weaknesses:
 1. In knowledge base and skill set (using the User Weakness Analysis and User Topic Breakdown).
 2. In thinking and test-taking style (using the Recent Mistake Patterns). Craft questions that specifically test or trigger their common mistake patterns (such as conceptual traps, calculation errors, panic, or edge case negligence) to help them overcome these pitfalls.
@@ -688,25 +713,10 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
-    let remainingCount = count;
+    let questionsSent = 0;
     if (pregeneratedQuestion) {
       res.write(`data: ${JSON.stringify({ type: 'question', data: pregeneratedQuestion })}\n\n`);
-      remainingCount = count - 1;
-    }
-
-    if (remainingCount <= 0) {
-      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-      res.end();
-      return;
-    }
-
-    let prompt = `Generate exactly ${remainingCount} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
-Follow these strict rules:
-1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
-2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
-
-    if (topics && typeof topics === 'string' && topics.trim()) {
-      prompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
+      questionsSent = 1;
     }
 
     const safetySettings = [
@@ -731,43 +741,57 @@ Follow these strict rules:
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
     const models = [...new Set([modelId, 'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'])];
 
-    let questionsSent = 0;
     try {
-      const stream = await executeWithRetry(models, (ai, currentModel) => {
+      await executeWithRetry(models, async (ai, currentModel) => {
+        const needed = count - questionsSent;
+        if (needed <= 0) return;
+
+        let dynamicPrompt = `Generate exactly ${needed} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+Follow these strict rules:
+1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
+2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
+
+        if (topics && typeof topics === 'string' && topics.trim()) {
+          dynamicPrompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
+        }
+
         const maxOutputTokens = currentModel.includes('1.5') ? 8192 : 65536;
-        return ai.models.generateContentStream({
+        const stream = await ai.models.generateContentStream({
           model: currentModel,
-          contents: prompt,
+          contents: dynamicPrompt,
           config: {
             systemInstruction,
             responseMimeType: "application/json",
             safetySettings,
             maxOutputTokens,
+            temperature: 1.5,
           },
         });
-      }, req);
 
-      let accumulated = '';
+        let accumulated = '';
+        let localQuestionsSent = 0;
 
-      for await (const chunk of stream) {
-        const text = chunk.text;
-        if (text) {
-          accumulated += text;
+        for await (const chunk of stream) {
+          const text = chunk.text;
+          if (text) {
+            accumulated += text;
 
-          // Extract all fully-formed question objects so far
-          const parsed = extractCompleteObjects(accumulated);
+            // Extract all fully-formed question objects so far
+            const parsed = extractCompleteObjects(accumulated);
 
-          // Emit any newly completed questions
-          while (questionsSent < parsed.length) {
-            if (questionsSent < remainingCount) {
-              res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[questionsSent] })}\n\n`);
+            // Emit any newly completed questions
+            while (localQuestionsSent < parsed.length) {
+              if (questionsSent < count) {
+                res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[localQuestionsSent] })}\n\n`);
+                questionsSent++;
+              }
+              localQuestionsSent++;
             }
-            questionsSent++;
           }
         }
-      }
+      }, req);
     } catch (streamErr) {
-      const neededCount = remainingCount - questionsSent;
+      const neededCount = count - questionsSent;
       if (neededCount > 0) {
         console.warn(`Model streaming failed or busy. Falling back to BigQuery pregenerated questions. Needed: ${neededCount}`, streamErr);
         try {
@@ -775,12 +799,14 @@ Follow these strict rules:
             SELECT question_json
             FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
             WHERE subject = @subject AND difficulty = @difficulty
+              AND (ARRAY_LENGTH(@doneIds) = 0 OR JSON_VALUE(question_json, '$.id') NOT IN UNNEST(@doneIds))
             ORDER BY RAND()
             LIMIT @limit
           `;
           let [rows] = await bq.query({
             query: pregenQuery,
-            params: { subject: subject, difficulty: startingDifficulty, limit: neededCount },
+            params: { subject: subject, difficulty: startingDifficulty, limit: neededCount, doneIds: doneQuestionIds },
+            types: { doneIds: ['STRING'] }
           });
 
           // If not enough questions match both subject and difficulty, fetch more with matching subject only
@@ -791,12 +817,14 @@ Follow these strict rules:
               SELECT question_json
               FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
               WHERE subject = @subject
+                AND (ARRAY_LENGTH(@doneIds) = 0 OR JSON_VALUE(question_json, '$.id') NOT IN UNNEST(@doneIds))
               ORDER BY RAND()
               LIMIT @limit
             `;
             const [moreRows] = await bq.query({
               query: fallbackQuery,
-              params: { subject: subject, limit: remainingNeeded },
+              params: { subject: subject, limit: remainingNeeded, doneIds: doneQuestionIds },
+              types: { doneIds: ['STRING'] }
             });
             rows = [...rows, ...moreRows];
           }
