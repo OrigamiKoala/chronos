@@ -100,11 +100,11 @@ export function AdminScreen({ user, onBack }) {
         setLoading(true);
         fetchMembers(user.user_organization);
       } else {
-        setPromoteError(data.error || 'Failed to promote users.');
+        setPromoteError(data.error || 'Failed to update user roles.');
       }
     } catch (err) {
       console.error(err);
-      setPromoteError('Connection error during bulk promotion.');
+      setPromoteError('Connection error during update.');
     } finally {
       setPromoteLoading(false);
     }
