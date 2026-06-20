@@ -490,14 +490,36 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
 
 
-  // Intuition accuracy over time
+  // Intuition accuracy per day (non-cumulative)
   const intuitionChartData = useMemo(() => {
-    if (!data?.intuitionSeries?.length) return null;
+    if (!data?.tagTimeSeries?.length) return null;
+
+    const dailyMap = {};
+    const labels = [];
+
+    for (const t of data.tagTimeSeries) {
+      const dayStr = formatDate(t.created_at);
+      if (!dailyMap[dayStr]) {
+        dailyMap[dayStr] = { unsure_correct: 0, unsure_total: 0 };
+        labels.push(dayStr);
+      }
+      dailyMap[dayStr].unsure_correct += t.unsure_correct || 0;
+      dailyMap[dayStr].unsure_total += t.unsure_total || 0;
+    }
+
+    const filteredLabels = labels.filter(day => dailyMap[day].unsure_total > 0);
+    if (filteredLabels.length === 0) return null;
+
+    const accuracyData = filteredLabels.map(day => {
+      const { unsure_correct, unsure_total } = dailyMap[day];
+      return Math.round((unsure_correct / unsure_total) * 100);
+    });
+
     return {
-      labels: data.intuitionSeries.map(i => formatDate(i.created_at)),
+      labels: filteredLabels,
       datasets: [{
         label: 'Intuition Accuracy (%)',
-        data: data.intuitionSeries.map(i => i.accuracy),
+        data: accuracyData,
         borderColor: CHART_COLORS.intuition.line,
         backgroundColor: CHART_COLORS.intuition.bg,
         fill: true,
@@ -507,6 +529,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       }]
     };
   }, [data]);
+
 
   // Aggregate timeline chart
   const aggregateTimelineChartData = useMemo(() => {
