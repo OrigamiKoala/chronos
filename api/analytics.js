@@ -62,7 +62,8 @@ function buildTimeline(exams, maxDuration, intervalSeconds) {
         }
       }
     }
-    data.push(Math.round(sum * 100) / 100);
+    const avg = exams.length > 0 ? sum / exams.length : 0;
+    data.push(Math.round(avg * 100) / 100);
     const pct = Math.round((end / maxDuration) * 100);
     labels.push(`${pct}%`);
   }

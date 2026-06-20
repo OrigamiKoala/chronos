@@ -540,7 +540,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     return {
       labels: timeline.labels,
       datasets: [{
-        label: 'Cumulative / Active Points',
+        label: 'Average Points Earned',
         data: timeline.data,
         borderColor: CHART_COLORS.efficiency.line,
         backgroundColor: CHART_COLORS.efficiency.bg,
