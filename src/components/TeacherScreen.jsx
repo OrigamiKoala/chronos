@@ -1759,11 +1759,20 @@ export function TeacherScreen({ user, onBack }) {
                         <option value="per_question">Per Question (sec)</option>
                         <option value="whole_test">Whole Test (min)</option>
                         <option value="per_set">Per Set (min)</option>
+                        <option value="none">No Timer (Untimed)</option>
                       </select>
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Timer Value</label>
-                      <input type="number" min="1" value={hwTimeValue} onChange={(e) => { setHwTimeValue(Number(e.target.value)); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
+                      <input 
+                        type={hwTimeStyle === 'none' ? 'text' : 'number'} 
+                        min="1" 
+                        value={hwTimeStyle === 'none' ? 'N/A' : hwTimeValue} 
+                        disabled={hwTimeStyle === 'none'} 
+                        onChange={(e) => { setHwTimeValue(Number(e.target.value)); setHwPreset('custom'); }} 
+                        className="input-field" 
+                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem', opacity: hwTimeStyle === 'none' ? 0.5 : 1, cursor: hwTimeStyle === 'none' ? 'not-allowed' : 'default' }} 
+                      />
                     </div>
                   </div>
 
