@@ -290,7 +290,8 @@ export async function generateProblems(count, difficulty, subject = "Math", user
     console.warn("Using fallback mock data due to API failure.");
     const mockProblems = [];
     for (let i = 0; i < count; i++) {
-      const diff = Math.min(10, Math.max(1, difficulty + (i % 2 === 0 ? 1 : -1) * Math.floor(i / 2)));
+      const offset = (i % 5) - 2; // yields -2, -1, 0, 1, 2
+      const diff = Math.min(10, Math.max(1, difficulty + offset));
       const format = examFormat || (freeResponseMode ? 'free_response' : 'mix');
 
       if (format === 'free_response' || (format === 'mix' && i % 3 === 2)) {

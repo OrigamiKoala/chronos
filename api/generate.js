@@ -688,7 +688,7 @@ The output must be a pure JSON array containing exactly the requested number of 
   "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format.",
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
   "answer": ${answerSchemaDesc},
-  "difficulty": a number between 1 and 10 representing difficulty,
+  "difficulty": a number representing difficulty. This MUST be in the range [${Math.max(1, difficulty - 2)}, ${Math.min(10, difficulty + 2)}] (no question can be more than 2 difficulty units away from the average test difficulty ${difficulty}),
   "detailedSolution": "An empty string \\"\\""
 }
 
