@@ -48,7 +48,7 @@ async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homework
 
     if (studentIds.length === 0) return;
 
-    const WORKER_URL = process.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
+    const WEBHOOK_URL = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL || process.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
     const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
     
     // Helper function to generate HS256 JWT
@@ -81,7 +81,7 @@ async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homework
       exp: Math.floor(Date.now() / 1000) + 7200 // 2-hour short-lived token
     }, jwtSecret);
 
-    fetch(WORKER_URL, {
+    fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

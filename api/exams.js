@@ -1098,7 +1098,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       }
 
       try {
-        const WORKER_URL = process.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
+        const WEBHOOK_URL = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL || process.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
         const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
         
         function generateJWT(payload, secret) {
@@ -1130,7 +1130,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           exp: Math.floor(Date.now() / 1000) + 7200 // 2 hours
         }, jwtSecret);
 
-        fetch(WORKER_URL, {
+        fetch(WEBHOOK_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
