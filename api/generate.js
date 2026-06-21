@@ -111,108 +111,96 @@ export default async function handler(req, res) {
     let doneQuestionIds = [];
 
     try {
-      await Promise.all([
-        (async () => {
-          try {
-            const weaknessesQuery = `
-              SELECT 
-                COALESCE(
-                  STRING_AGG(
-                    FORMAT("Topic: %s (Accuracy: %d%%)", sub_category, CAST(accuracy_rate * 100 AS INT64)), 
-                    "; "
-                  ),
-                  "None (excellent performance across all topics)"
-                ) AS weaknesses
-              FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-              WHERE accuracy_rate < 0.65 AND user_id = @targetUserId AND subject = @subject
-            `;
-            const [rows] = await bq.query({
-              query: weaknessesQuery,
-              params: { targetUserId: sanitizedUser, subject },
-            });
-            weaknesses = rows[0]?.weaknesses || 'None (excellent performance across all topics)';
-          } catch (err) {
-            console.error('Error fetching user weaknesses:', err);
-          }
-        })(),
-        (async () => {
-          try {
-            const weaknessAnalysisQuery = `
-              SELECT detailed_analysis
-              FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
-              WHERE user_id = @targetUserId AND subject = @subject
-              ORDER BY updated_at DESC
-              LIMIT 1
-            `;
-            const [rows] = await bq.query({
-              query: weaknessAnalysisQuery,
-              params: { targetUserId: sanitizedUser, subject },
-            });
-            if (rows && rows.length > 0) {
-              weaknessAnalysis = rows[0].detailed_analysis;
+      const consolidatedQuery = `
+        WITH weaknesses AS (
+          SELECT 'weaknesses' AS type, TO_JSON_STRING(STRUCT(
+            COALESCE(
+              STRING_AGG(
+                FORMAT("Topic: %s (Accuracy: %d%%)", sub_category, CAST(accuracy_rate * 100 AS INT64)), 
+                "; "
+              ),
+              "None (excellent performance across all topics)"
+            ) AS weaknesses
+          )) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+          WHERE accuracy_rate < 0.65 AND user_id = @targetUserId AND subject = @subject
+        ),
+        weaknessAnalysis AS (
+          SELECT 'weaknessAnalysis' AS type, TO_JSON_STRING(STRUCT(detailed_analysis)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
+          WHERE user_id = @targetUserId AND subject = @subject
+          ORDER BY updated_at DESC
+          LIMIT 1
+        ),
+        topicBreakdown AS (
+          SELECT 'topicBreakdown' AS type, TO_JSON_STRING(STRUCT(topic, good_at, not_good_at)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+          WHERE user_id = @targetUserId AND subject = @subject
+        ),
+        mistakeAnalysis AS (
+          SELECT 'mistakeAnalysis' AS type, TO_JSON_STRING(STRUCT(mistake_patterns)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+          WHERE user_id = @targetUserId AND subject = @subject
+          ORDER BY created_at DESC
+          LIMIT 3
+        ),
+        doneQuestions AS (
+          SELECT 'doneQuestions' AS type, TO_JSON_STRING(STRUCT(qid)) AS data
+          FROM (
+            SELECT DISTINCT JSON_VALUE(q, '$.id') AS qid
+            FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`,
+            UNNEST(JSON_EXTRACT_ARRAY(results_json)) AS q
+            WHERE user_id = @targetUserId
+          )
+        )
+        SELECT type, data FROM weaknesses
+        UNION ALL
+        SELECT type, data FROM weaknessAnalysis
+        UNION ALL
+        SELECT type, data FROM topicBreakdown
+        UNION ALL
+        SELECT type, data FROM mistakeAnalysis
+        UNION ALL
+        SELECT type, data FROM doneQuestions
+      `;
+
+      const [rows] = await bq.query({
+        query: consolidatedQuery,
+        params: { targetUserId: sanitizedUser, subject }
+      });
+
+      const topicBreakdownRows = [];
+      const mistakeAnalysisRows = [];
+
+      for (const r of rows) {
+        try {
+          const parsed = JSON.parse(r.data);
+          if (r.type === 'weaknesses') {
+            weaknesses = parsed.weaknesses || 'None (excellent performance across all topics)';
+          } else if (r.type === 'weaknessAnalysis') {
+            if (parsed.detailed_analysis) {
+              weaknessAnalysis = parsed.detailed_analysis;
             }
-          } catch (err) {
-            console.error('Error fetching user weakness analysis:', err);
-          }
-        })(),
-        (async () => {
-          try {
-            const topicBreakdownQuery = `
-              SELECT topic, good_at, not_good_at
-              FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-              WHERE user_id = @targetUserId AND subject = @subject
-            `;
-            const [rows] = await bq.query({
-              query: topicBreakdownQuery,
-              params: { targetUserId: sanitizedUser, subject },
-            });
-            if (rows && rows.length > 0) {
-              topicBreakdown = rows.map(row => `Topic: ${row.topic} | Good at: ${row.good_at} | Not good at: ${row.not_good_at}`).join('\n');
-            }
-          } catch (err) {
-            console.error('Error fetching user topic breakdown:', err);
-          }
-        })(),
-        (async () => {
-          try {
-            const mistakeAnalysisQuery = `
-              SELECT mistake_patterns
-              FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
-              WHERE user_id = @targetUserId AND subject = @subject
-              ORDER BY created_at DESC
-              LIMIT 3
-            `;
-            const [rows] = await bq.query({
-              query: mistakeAnalysisQuery,
-              params: { targetUserId: sanitizedUser, subject },
-            });
-            if (rows && rows.length > 0) {
-              mistakeAnalysis = rows.map((row, idx) => `Mistake Pattern ${idx + 1}: ${row.mistake_patterns}`).join('\n');
-            }
-          } catch (err) {
-            console.error('Error fetching user mistake analysis:', err);
-          }
-        })(),
-        (async () => {
-          if (sanitizedUser !== 'default_user') {
-            try {
-              const doneQuery = `
-                SELECT DISTINCT JSON_VALUE(q, '$.id') AS qid
-                FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`,
-                UNNEST(JSON_EXTRACT_ARRAY(results_json)) AS q
-                WHERE user_id = @targetUserId
-              `;
-              const [doneRows] = await bq.query({
-                query: doneQuery,
-                params: { targetUserId: sanitizedUser }
-              });
-              doneQuestionIds = doneRows.map(row => row.qid).filter(Boolean);
-            } catch (err) {
-              console.error('Error fetching done question IDs:', err);
+          } else if (r.type === 'topicBreakdown') {
+            topicBreakdownRows.push(parsed);
+          } else if (r.type === 'mistakeAnalysis') {
+            mistakeAnalysisRows.push(parsed);
+          } else if (r.type === 'doneQuestions') {
+            if (parsed.qid && sanitizedUser !== 'default_user') {
+              doneQuestionIds.push(parsed.qid);
             }
           }
-        })()
-      ]);
+        } catch (e) {
+          console.error("Failed to parse consolidated row in generate:", r, e);
+        }
+      }
+
+      if (topicBreakdownRows.length > 0) {
+        topicBreakdown = topicBreakdownRows.map(row => `Topic: ${row.topic} | Good at: ${row.good_at} | Not good at: ${row.not_good_at}`).join('\n');
+      }
+      if (mistakeAnalysisRows.length > 0) {
+        mistakeAnalysis = mistakeAnalysisRows.map((row, idx) => `Mistake Pattern ${idx + 1}: ${row.mistake_patterns}`).join('\n');
+      }
     } catch (err) {
       console.error('Parallel fetch error:', err);
     }
