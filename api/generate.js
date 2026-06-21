@@ -614,17 +614,17 @@ All questions generated MUST adhere to these critical design directives:
 
 3. Detailed Solutions: Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 4. QUESTION TYPES MIX: You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.
-5. BACKWARD CHAINING (REVERSE DESIGN): Use a backward-chaining methodology to design questions.
+5. BACKWARD CHAINING (REVERSE DESIGN): Use a backward-chaining methodology to design questions. EVERY single question generated must be completely unique, original, and never seen before.
 
 ***Constraints & Execution Instructions:***
 
-1. **Backward Chaining Generation Methodology (CRITICAL)**
-You must generate every question using a backward chaining thought process before outputting the final problem:
+1. **Backward Chaining Generation Methodology (CRITICAL - Ensure 100% Uniqueness & Originality)**
+You must generate every question using a backward chaining thought process before outputting the final problem, ensuring that each question is completely unique, original, and never seen before:
 
-* **Step 1 (The Trap):** Identify a specific, non-obvious conceptual trap, a hidden limiting factor, or a subtle breakdown of a standard textbook assumption.
-* **Step 2 (The System):** Design a chemical system or reaction where this specific trap naturally occurs.
-* **Step 3 (The Distractors):** Calculate or derive the incorrect answers that result directly from falling into the conceptual trap (rote formula shortcut, ignoring the limiting factor, etc.).
-* **Step 4 (The Problem):** Draft the neutral question text that presents the system, masking the trap completely.
+* **Step 1 (The Trap - Must be completely unique and original):** Identify a specific, non-obvious conceptual trap, a hidden limiting factor, or a subtle breakdown of a standard textbook assumption. This trap must be entirely novel, original, and never seen before in any question or textbook.
+* **Step 2 (The System - Must be completely unique, original, and as convoluted as possible):** Once you have the trick/trap in mind, design a chemical system, physical system, mathematical scenario, or reaction where this specific trap naturally occurs, making the system/reaction or context as convoluted as possible while ensuring it is completely unique, original, and never seen before (avoid standard textbook setups).
+* **Step 3 (The Distractors - Must be completely unique and original):** Calculate or derive the incorrect answers that result directly from falling into the conceptual trap (rote formula shortcut, ignoring the limiting factor, etc.). Ensure the options are uniquely designed to target this specific trap.
+* **Step 4 (The Problem - Must be completely unique and original):** Draft the neutral question text that presents the system, masking the trap completely, written in a completely unique, original, and never-seen-before style.
 
 Here is an example:
 
@@ -639,7 +639,7 @@ Here is an example:
 
 ###Steps:###
 To ensure high question quality:
-- Mentally perform the draft, test-solving, feedback, and revision steps using a backward-chaining methodology.
+- Mentally perform the draft, test-solving, feedback, and revision steps using a backward-chaining methodology, ensuring that each question is completely unique, original, and never seen before.
 - Do NOT output your thought process in any field of the JSON. Only output the final, fully refined question parameters.
 - Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with \`[\`.
 
