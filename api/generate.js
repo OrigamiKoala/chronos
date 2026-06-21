@@ -730,114 +730,65 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
     const models = [...new Set([modelId, 'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'])];
 
-    try {
-      await executeWithRetry(models, async (ai, currentModel) => {
-        const needed = count - questionsSent;
-        if (needed <= 0) return;
+    let attempts = 0;
+    const maxAttempts = 3;
+    while (questionsSent < count && attempts < maxAttempts) {
+      attempts++;
+      try {
+        await executeWithRetry(models, async (ai, currentModel) => {
+          const needed = count - questionsSent;
+          if (needed <= 0) return;
 
-        let dynamicPrompt = `Generate exactly ${needed} ${subject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 1 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(1, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
+          let dynamicPrompt = `Generate exactly ${needed} ${subject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 1 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(1, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
 Follow these strict rules:
 1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
 
-        if (topics && typeof topics === 'string' && topics.trim()) {
-          dynamicPrompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
-        }
+          if (topics && typeof topics === 'string' && topics.trim()) {
+            dynamicPrompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
+          }
 
-        const maxOutputTokens = currentModel.includes('1.5') ? 8192 : 65536;
-        const stream = await ai.models.generateContentStream({
-          model: currentModel,
-          contents: dynamicPrompt,
-          config: {
-            systemInstruction,
-            responseMimeType: "application/json",
-            safetySettings,
-            maxOutputTokens,
-            temperature: 1.5,
-          },
-        });
+          const maxOutputTokens = currentModel.includes('1.5') ? 8192 : 65536;
+          const stream = await ai.models.generateContentStream({
+            model: currentModel,
+            contents: dynamicPrompt,
+            config: {
+              systemInstruction,
+              responseMimeType: "application/json",
+              safetySettings,
+              maxOutputTokens,
+              temperature: 1.5,
+            },
+          });
 
-        let accumulated = '';
-        let localQuestionsSent = 0;
+          let accumulated = '';
+          let localQuestionsSent = 0;
 
-        for await (const chunk of stream) {
-          const text = chunk.text;
-          if (text) {
-            accumulated += text;
+          for await (const chunk of stream) {
+            const text = chunk.text;
+            if (text) {
+              accumulated += text;
 
-            // Extract all fully-formed question objects so far
-            const parsed = extractCompleteObjects(accumulated);
+              // Extract all fully-formed question objects so far
+              const parsed = extractCompleteObjects(accumulated);
 
-            // Emit any newly completed questions
-            while (localQuestionsSent < parsed.length) {
-              if (questionsSent < count) {
-                res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[localQuestionsSent] })}\n\n`);
-                questionsSent++;
+              // Emit any newly completed questions
+              while (localQuestionsSent < parsed.length) {
+                if (questionsSent < count) {
+                  res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[localQuestionsSent] })}\n\n`);
+                  questionsSent++;
+                }
+                localQuestionsSent++;
               }
-              localQuestionsSent++;
             }
           }
+        }, req);
+      } catch (streamErr) {
+        console.warn(`Model streaming failed or busy on attempt ${attempts}:`, streamErr);
+        if (questionsSent === 0 && attempts >= maxAttempts) {
+          throw streamErr;
         }
-      }, req);
-    } catch (streamErr) {
-      console.warn(`Model streaming failed or busy:`, streamErr);
-    }
-
-    const neededCount = count - questionsSent;
-    if (neededCount > 0) {
-      console.warn(`Model streaming generated fewer questions than requested (${questionsSent}/${count}). Falling back to BigQuery pregenerated questions for the remaining ${neededCount}.`);
-      try {
-        const pregenQuery = `
-          SELECT question_json
-          FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
-          WHERE subject = @subject AND difficulty = @difficulty
-            AND (ARRAY_LENGTH(@doneIds) = 0 OR JSON_VALUE(question_json, '$.id') NOT IN UNNEST(@doneIds))
-          ORDER BY RAND()
-          LIMIT @limit
-        `;
-        let [rows] = await bq.query({
-          query: pregenQuery,
-          params: { subject: subject, difficulty: difficulty, limit: neededCount, doneIds: doneQuestionIds },
-          types: { doneIds: ['STRING'] }
-        });
-
-        // If not enough questions match both subject and difficulty, fetch more with matching subject only
-        if (rows.length < neededCount) {
-          const fetchedCount = rows.length;
-          const remainingNeeded = neededCount - fetchedCount;
-          const fallbackQuery = `
-            SELECT question_json
-            FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
-            WHERE subject = @subject
-              AND (ARRAY_LENGTH(@doneIds) = 0 OR JSON_VALUE(question_json, '$.id') NOT IN UNNEST(@doneIds))
-            ORDER BY RAND()
-            LIMIT @limit
-          `;
-          const [moreRows] = await bq.query({
-            query: fallbackQuery,
-            params: { subject: subject, limit: remainingNeeded, doneIds: doneQuestionIds },
-            types: { doneIds: ['STRING'] }
-          });
-          rows = [...rows, ...moreRows];
-        }
-
-        if (rows.length === 0) {
-          throw new Error(`No pregenerated questions found in BigQuery for subject: ${subject}`);
-        }
-
-        // Send the pregenerated questions
-        const finalQuestions = rows.slice(0, neededCount);
-        for (const row of finalQuestions) {
-          const qObj = JSON.parse(row.question_json);
-          res.write(`data: ${JSON.stringify({ type: 'question', data: qObj })}\n\n`);
-          questionsSent++;
-        }
-      } catch (fallbackErr) {
-        console.error('Fallback query also failed:', fallbackErr);
-        // If we haven't sent any questions at all, propagate the original error/failure
-        if (questionsSent === 0) {
-          throw new Error(`Failed to generate problems: ${fallbackErr.message}`);
-        }
+        break;
       }
     }
 
