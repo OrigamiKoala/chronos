@@ -426,7 +426,7 @@ You MUST format your output strictly as a JSON object, with no markdown code blo
 }`;
 
         const response = await executeWithRetry(
-          ['gemini-2.5-flash', 'gemini-1.5-flash'],
+          ['gemini-3.1-flash-lite'],
           (ai, currentModel) => ai.models.generateContent({
             model: currentModel,
             contents: prompt,
