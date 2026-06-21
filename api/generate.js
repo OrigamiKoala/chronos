@@ -41,16 +41,7 @@ export default async function handler(req, res) {
       });
       if (rows && rows.length > 0) {
         const questionsList = JSON.parse(rows[0].questions_json);
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache, no-transform');
-        res.setHeader('Connection', 'keep-alive');
-        res.setHeader('X-Accel-Buffering', 'no');
-        for (const q of questionsList) {
-          res.write(`data: ${JSON.stringify({ type: 'question', data: q })}\n\n`);
-        }
-        res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-        res.end();
-        return;
+        return res.status(200).json(questionsList);
       }
     } catch (err) {
       console.error('Error fetching student homework questions:', err);
@@ -725,10 +716,9 @@ Follow these strict rules:
         }, req);
       } catch (genErr) {
         console.warn(`Model generation failed or busy on attempt ${attempts}:`, genErr);
-        if (allQuestions.length === 0 && attempts >= maxAttempts) {
+        if (attempts >= maxAttempts) {
           throw genErr;
         }
-        break;
       }
     }
 
