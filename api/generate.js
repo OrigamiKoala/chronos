@@ -63,10 +63,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { count, startingDifficulty, subject, targetUserId = 'default_user', examFormat, lessonTitle, lessonDescription, topics, assignmentId } = req.body;
+  const { count, subject, targetUserId = 'default_user', examFormat, lessonTitle, lessonDescription, topics, assignmentId } = req.body;
+  const difficulty = Number(req.body.difficulty !== undefined ? req.body.difficulty : 5);
 
-  if (!count || !startingDifficulty || !subject) {
-    return res.status(400).json({ error: 'Missing required parameters: count, startingDifficulty, subject' });
+  if (!count || !difficulty || !subject) {
+    return res.status(400).json({ error: 'Missing required parameters: count, difficulty, subject' });
   }
 
   const sanitizedUser = String(targetUserId).trim().toLowerCase();
@@ -218,7 +219,7 @@ export default async function handler(req, res) {
       `;
       const [rows] = await bq.query({
         query: pregenQuery,
-        params: { subject: normSubject || subject, difficulty: startingDifficulty, doneIds: doneQuestionIds },
+        params: { subject: normSubject || subject, difficulty: difficulty, doneIds: doneQuestionIds },
         types: { doneIds: ['STRING'] }
       });
       if (rows && rows.length > 0) {
@@ -734,7 +735,7 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
         const needed = count - questionsSent;
         if (needed <= 0) return;
 
-        let dynamicPrompt = `Generate exactly ${needed} ${subject} problems. The difficulty should start around ${startingDifficulty} out of 10 and can vary slightly to provide a balanced test.
+        let dynamicPrompt = `Generate exactly ${needed} ${subject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 1 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(1, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
 Follow these strict rules:
 1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
@@ -793,7 +794,7 @@ Follow these strict rules:
           `;
           let [rows] = await bq.query({
             query: pregenQuery,
-            params: { subject: subject, difficulty: startingDifficulty, limit: neededCount, doneIds: doneQuestionIds },
+            params: { subject: subject, difficulty: difficulty, limit: neededCount, doneIds: doneQuestionIds },
             types: { doneIds: ['STRING'] }
           });
 

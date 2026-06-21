@@ -231,14 +231,14 @@ async function readSSEStream(response, onQuestion) {
  * Generate exam problems.
  *
  * @param {number}   count
- * @param {number}   startingDifficulty
+ * @param {number}   difficulty
  * @param {string}   subject
  * @param {string}   username
  * @param {function} onQuestion - optional callback (questionObj, index) invoked
  *                                for each question the moment it fully arrives.
  * @returns {Promise<Array>} Resolves with the complete array of question objects.
  */
-export async function generateProblems(count, startingDifficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix', lessonTitle = null, lessonDescription = null, topics = '', assignmentId = null) {
+export async function generateProblems(count, difficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix', lessonTitle = null, lessonDescription = null, topics = '', assignmentId = null) {
   try {
     const response = await fetch('/api/generate', {
       method: 'POST',
@@ -247,7 +247,7 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
       },
       body: JSON.stringify({
         count,
-        startingDifficulty,
+        difficulty,
         subject,
         targetUserId: username,
         freeResponseMode,
@@ -290,7 +290,7 @@ export async function generateProblems(count, startingDifficulty, subject = "Mat
     console.warn("Using fallback mock data due to API failure.");
     const mockProblems = [];
     for (let i = 0; i < count; i++) {
-      const diff = Math.min(10, Math.max(1, startingDifficulty + (i % 2 === 0 ? 1 : -1) * Math.floor(i / 2)));
+      const diff = Math.min(10, Math.max(1, difficulty + (i % 2 === 0 ? 1 : -1) * Math.floor(i / 2)));
       const format = examFormat || (freeResponseMode ? 'free_response' : 'mix');
 
       if (format === 'free_response' || (format === 'mix' && i % 3 === 2)) {

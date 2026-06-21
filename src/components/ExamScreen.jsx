@@ -111,7 +111,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     resumeState ? false : true
   );
   const [currentDifficulty, setCurrentDifficulty] = useState(() =>
-    resumeState ? (resumeState.problems[resumeState.currentQuestionIndex]?.difficulty || config.startingDifficulty) : config.startingDifficulty
+    resumeState ? (resumeState.problems[resumeState.currentQuestionIndex]?.difficulty || config.difficulty) : config.difficulty
   );
   const [isPaused, setIsPaused] = useState(false);
   const [isRated, setIsRated] = useState(() => {
@@ -203,7 +203,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     questionIntervalsRef.current = Array.from({ length: totalCount }, () => []);
 
     if (sharedQuestions.length > 0) {
-      setCurrentDifficulty(sharedQuestions[0].difficulty || config.startingDifficulty);
+      setCurrentDifficulty(sharedQuestions[0].difficulty || config.difficulty);
       setLoading(false);
     }
 
@@ -216,7 +216,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     try {
       const generated = await generateProblems(
         aiCount,
-        config.startingDifficulty,
+        config.difficulty,
         config.subject,
         config.username || 'default_user',
         (question, index) => {
@@ -230,7 +230,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
           if (!firstReceived) {
             firstReceived = true;
             if (sharedQuestions.length === 0) {
-              setCurrentDifficulty(question.difficulty || config.startingDifficulty);
+              setCurrentDifficulty(question.difficulty || config.difficulty);
               setLoading(false);
             }
           }
@@ -481,7 +481,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         timeSpent: Math.max(0, timeSpent),
         intervals,
         timeOut: isTimeout,
-        difficultyAtTime: prob.difficulty || config.startingDifficulty,
+        difficultyAtTime: prob.difficulty || config.difficulty,
         frqSubmission: idx === currentQuestionIndex ? updatedSubmissions[currentQuestionIndex] : frqSubmissions[idx]
       };
     });
@@ -677,7 +677,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
           timeSpent,
           intervals,
           timeOut: isTimeout,
-          difficultyAtTime: prob.difficulty || config.startingDifficulty,
+          difficultyAtTime: prob.difficulty || config.difficulty,
           frqSubmission: activeSubmissions[idx] || null
         };
       });

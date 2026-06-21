@@ -165,7 +165,7 @@ export default async function handler(req, res) {
               title: hw.title ? hw.title.trim() : `Homework for ${title}`,
               subject: hw.subject || 'Math',
               numQuestions: Number(hw.numQuestions) || 5,
-              startingDifficulty: Number(hw.startingDifficulty) || 5,
+              difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
               examFormat: formatsStr,
               timeLimitStyle: hw.timeLimitStyle || 'per_question',
               timeLimitValue: Number(hw.timeLimitValue) || 60,
@@ -177,8 +177,8 @@ export default async function handler(req, res) {
 
             const insertAssignmentQuery = `
               INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
-                (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
-              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson, @questionsPerSet)
+                (assignment_id, lesson_id, title, subject, num_questions, difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
+              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @difficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson, @questionsPerSet)
             `;
 
             return bq.query({
@@ -189,7 +189,7 @@ export default async function handler(req, res) {
                 title: hw.title ? hw.title.trim() : `Homework for ${title}`,
                 subject: hw.subject || 'Math',
                 numQuestions: Number(hw.numQuestions) || 5,
-                startingDifficulty: Number(hw.startingDifficulty) || 5,
+                difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
                 examFormat: formatsStr,
                 timeLimitStyle: hw.timeLimitStyle || 'per_question',
                 timeLimitValue: Number(hw.timeLimitValue) || 60,
@@ -286,7 +286,7 @@ export default async function handler(req, res) {
             title: hw.title ? hw.title.trim() : `Homework for ${title}`,
             subject: hw.subject || 'Math',
             numQuestions: Number(hw.numQuestions) || 5,
-            startingDifficulty: Number(hw.startingDifficulty) || 5,
+            difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
             examFormat: formatsStr,
             timeLimitStyle: hw.timeLimitStyle || 'per_question',
             timeLimitValue: Number(hw.timeLimitValue) || 60,
@@ -300,7 +300,7 @@ export default async function handler(req, res) {
             const updateAssignmentQuery = `
               UPDATE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
               SET title = @title, subject = @subject, num_questions = @numQuestions, 
-                  starting_difficulty = @startingDifficulty, exam_format = @examFormat, 
+                  difficulty = @difficulty, exam_format = @examFormat, 
                   time_limit_style = @timeLimitStyle, time_limit_value = @timeLimitValue, 
                   stress_mode = @stressMode, content_based = @contentBased, due_date = CAST(@dueDate AS TIMESTAMP),
                   shared_questions_json = @sharedQuestionsJson, questions_per_set = @questionsPerSet
@@ -313,7 +313,7 @@ export default async function handler(req, res) {
                 title: hw.title ? hw.title.trim() : `Homework for ${title}`,
                 subject: hw.subject || 'Math',
                 numQuestions: Number(hw.numQuestions) || 5,
-                startingDifficulty: Number(hw.startingDifficulty) || 5,
+                difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
                 examFormat: formatsStr,
                 timeLimitStyle: hw.timeLimitStyle || 'per_question',
                 timeLimitValue: Number(hw.timeLimitValue) || 60,
@@ -330,8 +330,8 @@ export default async function handler(req, res) {
           } else {
             const insertAssignmentQuery = `
               INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
-                (assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
-              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @startingDifficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson, @questionsPerSet)
+                (assignment_id, lesson_id, title, subject, num_questions, difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
+              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @difficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson, @questionsPerSet)
             `;
             return bq.query({
               query: insertAssignmentQuery,
@@ -341,7 +341,7 @@ export default async function handler(req, res) {
                 title: hw.title ? hw.title.trim() : `Homework for ${title}`,
                 subject: hw.subject || 'Math',
                 numQuestions: Number(hw.numQuestions) || 5,
-                startingDifficulty: Number(hw.startingDifficulty) || 5,
+                difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
                 examFormat: formatsStr,
                 timeLimitStyle: hw.timeLimitStyle || 'per_question',
                 timeLimitValue: Number(hw.timeLimitValue) || 60,
@@ -422,7 +422,7 @@ export default async function handler(req, res) {
 
     try {
       const query = `
-        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.starting_difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.content_based, a.due_date, a.shared_questions_json, a.questions_per_set, l.title as lesson_title, l.description as lesson_description
+        SELECT a.assignment_id, a.title, a.subject, a.num_questions, a.difficulty, a.exam_format, a.time_limit_style, a.time_limit_value, a.stress_mode, a.content_based, a.due_date, a.shared_questions_json, a.questions_per_set, l.title as lesson_title, l.description as lesson_description
         FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` a
         JOIN \`${projectId}\`.\`chronos_users\`.\`lessons\` l ON a.lesson_id = l.lesson_id
         WHERE l.organization = @organization
@@ -793,7 +793,7 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
           WHERE teacher_id = @username
         ),
         assignments AS (
-          SELECT 'assignments' AS type, TO_JSON_STRING(STRUCT(assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)) AS data
+          SELECT 'assignments' AS type, TO_JSON_STRING(STRUCT(assignment_id, lesson_id, title, subject, num_questions, difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)) AS data
           FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
           WHERE lesson_id IN (
             SELECT lesson_id FROM \`${projectId}\`.\`chronos_users\`.\`lessons\` WHERE teacher_id = @username

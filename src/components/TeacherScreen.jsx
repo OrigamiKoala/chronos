@@ -169,7 +169,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'AMC 8 Mock Exam',
         subject: 'Math',
         numQuestions: 25,
-        startingDifficulty: 3,
+        difficulty: 3,
         examFormat: ['multiple_choice'],
         timeLimitStyle: 'whole_test',
         timeLimitValue: 40,
@@ -178,7 +178,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'AMC 10 Mock Exam',
         subject: 'Math',
         numQuestions: 25,
-        startingDifficulty: 4,
+        difficulty: 4,
         examFormat: ['multiple_choice'],
         timeLimitStyle: 'whole_test',
         timeLimitValue: 75,
@@ -187,7 +187,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'AMC 12 Mock Exam',
         subject: 'Math',
         numQuestions: 25,
-        startingDifficulty: 5,
+        difficulty: 5,
         examFormat: ['multiple_choice'],
         timeLimitStyle: 'whole_test',
         timeLimitValue: 75,
@@ -196,7 +196,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'MATHCOUNTS Chapter Sprint',
         subject: 'Math',
         numQuestions: 30,
-        startingDifficulty: 1,
+        difficulty: 1,
         examFormat: ['short_answer'],
         timeLimitStyle: 'whole_test',
         timeLimitValue: 40,
@@ -205,7 +205,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'MATHCOUNTS State Sprint',
         subject: 'Math',
         numQuestions: 30,
-        startingDifficulty: 2,
+        difficulty: 2,
         examFormat: ['short_answer'],
         timeLimitStyle: 'whole_test',
         timeLimitValue: 40,
@@ -214,7 +214,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'MATHCOUNTS Nationals Sprint',
         subject: 'Math',
         numQuestions: 30,
-        startingDifficulty: 3,
+        difficulty: 3,
         examFormat: ['short_answer'],
         timeLimitStyle: 'whole_test',
         timeLimitValue: 40,
@@ -223,7 +223,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'MATHCOUNTS Chapter Target',
         subject: 'Math',
         numQuestions: 8,
-        startingDifficulty: 2,
+        difficulty: 2,
         examFormat: ['short_answer'],
         timeLimitStyle: 'per_set',
         timeLimitValue: 6,
@@ -233,7 +233,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'MATHCOUNTS State Target',
         subject: 'Math',
         numQuestions: 8,
-        startingDifficulty: 3,
+        difficulty: 3,
         examFormat: ['short_answer'],
         timeLimitStyle: 'per_set',
         timeLimitValue: 6,
@@ -243,7 +243,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'MATHCOUNTS Nationals Target',
         subject: 'Math',
         numQuestions: 8,
-        startingDifficulty: 4,
+        difficulty: 4,
         examFormat: ['short_answer'],
         timeLimitStyle: 'per_set',
         timeLimitValue: 6,
@@ -253,7 +253,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'Chemistry Part I Mock Exam',
         subject: 'Chemistry',
         numQuestions: 60,
-        startingDifficulty: 4,
+        difficulty: 4,
         examFormat: ['multiple_choice'],
         timeLimitStyle: 'whole_test',
         timeLimitValue: 90,
@@ -262,7 +262,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'Chemistry ACS LSE Mock Exam',
         subject: 'Chemistry',
         numQuestions: 60,
-        startingDifficulty: 2,
+        difficulty: 2,
         examFormat: ['multiple_choice'],
         timeLimitStyle: 'whole_test',
         timeLimitValue: 110,
@@ -271,7 +271,7 @@ export function TeacherScreen({ user, onBack }) {
         title: 'Chemistry Part II Mock Exam',
         subject: 'Chemistry',
         numQuestions: 8,
-        startingDifficulty: 5,
+        difficulty: 5,
         examFormat: ['free_response'],
         timeLimitStyle: 'whole_test',
         timeLimitValue: 105,
@@ -283,7 +283,7 @@ export function TeacherScreen({ user, onBack }) {
       setHwTitle(cfg.title);
       setHwSubject(cfg.subject);
       setHwQuestions(cfg.numQuestions);
-      setHwDifficulty(cfg.startingDifficulty);
+      setHwDifficulty(cfg.difficulty);
       setHwFormats(cfg.examFormat);
       setHwTimeStyle(cfg.timeLimitStyle);
       setHwTimeValue(cfg.timeLimitValue);
@@ -468,7 +468,7 @@ export function TeacherScreen({ user, onBack }) {
             title: hwTitle.trim() || `Homework ${homeworkList.length + 1}: ${lessonTitle.trim()}`,
             subject: hwSubject,
             numQuestions: hwQuestions,
-            startingDifficulty: hwDifficulty,
+            difficulty: hwDifficulty,
             examFormat: hwFormats,
             timeLimitStyle: hwTimeStyle,
             timeLimitValue: hwTimeValue,
@@ -550,7 +550,7 @@ export function TeacherScreen({ user, onBack }) {
         title: hw.title,
         subject: hw.subject,
         numQuestions: hw.num_questions !== undefined ? hw.num_questions : hw.numQuestions,
-        startingDifficulty: hw.starting_difficulty !== undefined ? hw.starting_difficulty : hw.startingDifficulty,
+        difficulty: hw.difficulty !== undefined ? hw.difficulty : 5,
         examFormat: (hw.exam_format || hw.examFormat || 'multiple_choice').includes(',') ? (hw.exam_format || hw.examFormat).split(',') : [hw.exam_format || hw.examFormat || 'multiple_choice'],
         timeLimitStyle: hw.time_limit_style || hw.timeLimitStyle || 'whole_test',
         timeLimitValue: hw.time_limit_value !== undefined ? hw.time_limit_value : hw.timeLimitValue || 30,
@@ -654,7 +654,7 @@ export function TeacherScreen({ user, onBack }) {
       title: titleVal,
       subject: hwSubject,
       numQuestions: hwQuestions,
-      startingDifficulty: hwDifficulty,
+      difficulty: hwDifficulty,
       examFormat: hwFormats,
       timeLimitStyle: hwTimeStyle,
       timeLimitValue: hwTimeValue,
@@ -1325,7 +1325,7 @@ export function TeacherScreen({ user, onBack }) {
                           <div>
                             <strong style={{ color: 'var(--text-primary)', fontSize: '1rem' }}>{hw.title}</strong>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.1rem' }}>
-                              Subject: {hw.subject} | {hw.num_questions ?? hw.numQuestions} Qs | Start Diff: {hw.starting_difficulty ?? hw.startingDifficulty}
+                              Subject: {hw.subject} | {hw.num_questions ?? hw.numQuestions} Qs | Diff: {hw.difficulty}
                             </span>
                           </div>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -1650,7 +1650,7 @@ export function TeacherScreen({ user, onBack }) {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>{hw.title}</span>
                             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                              {hw.subject} | {hw.numQuestions} Qs | Diff: {hw.startingDifficulty} | {hw.stressMode === 'none' ? 'No Stress' : `${hw.stressMode} stress`} | {hw.contentBased ? '📚 Content-based' : '🎲 Generic'}
+                              {hw.subject} | {hw.numQuestions} Qs | Diff: {hw.difficulty} | {hw.stressMode === 'none' ? 'No Stress' : `${hw.stressMode} stress`} | {hw.contentBased ? '📚 Content-based' : '🎲 Generic'}
                             </span>
                           </div>
                           <button

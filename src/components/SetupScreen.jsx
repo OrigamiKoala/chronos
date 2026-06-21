@@ -46,7 +46,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     }
     return {
       subject: parsed?.subject || 'Math',
-      startingDifficulty: parsed?.startingDifficulty || 5,
+      difficulty: parsed?.difficulty || 5,
       numQuestions: parsed?.numQuestions || 5,
       stressMode: parsed?.stressMode || 'dynamic',
       timeLimitPerQuestion: parsed?.timeLimitPerQuestion || 60,
@@ -99,7 +99,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 25,
-          startingDifficulty: 3,
+          difficulty: 3,
           examFormat: ['multiple_choice'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 40,
@@ -114,7 +114,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 25,
-          startingDifficulty: 4,
+          difficulty: 4,
           examFormat: ['multiple_choice'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 75,
@@ -129,7 +129,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 25,
-          startingDifficulty: 5,
+          difficulty: 5,
           examFormat: ['multiple_choice'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 75,
@@ -144,7 +144,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 30,
-          startingDifficulty: 1,
+          difficulty: 1,
           examFormat: ['short_answer'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 40,
@@ -159,7 +159,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 30,
-          startingDifficulty: 2,
+          difficulty: 2,
           examFormat: ['short_answer'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 40,
@@ -174,7 +174,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 30,
-          startingDifficulty: 3,
+          difficulty: 3,
           examFormat: ['short_answer'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 40,
@@ -189,7 +189,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 8,
-          startingDifficulty: 2,
+          difficulty: 2,
           examFormat: ['short_answer'],
           timeLimitStyle: 'per_set',
           questionsPerSet: 2,
@@ -205,7 +205,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 8,
-          startingDifficulty: 3,
+          difficulty: 3,
           examFormat: ['short_answer'],
           timeLimitStyle: 'per_set',
           questionsPerSet: 2,
@@ -221,7 +221,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 8,
-          startingDifficulty: 4,
+          difficulty: 4,
           examFormat: ['short_answer'],
           timeLimitStyle: 'per_set',
           questionsPerSet: 2,
@@ -237,7 +237,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 60,
-          startingDifficulty: 4,
+          difficulty: 4,
           examFormat: ['multiple_choice'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 90,
@@ -252,7 +252,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 60,
-          startingDifficulty: 2,
+          difficulty: 2,
           examFormat: ['multiple_choice'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 110,
@@ -267,7 +267,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         const next = {
           ...prev,
           numQuestions: 8,
-          startingDifficulty: 5,
+          difficulty: 5,
           examFormat: ['free_response'],
           timeLimitStyle: 'whole_test',
           timeLimitWholeTest: 105,
@@ -296,7 +296,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     }
     setConfig({
       subject: hw.subject || 'Math',
-      startingDifficulty: Number(hw.starting_difficulty) || 5,
+      difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
       numQuestions: Number(hw.num_questions) || 5,
       stressMode: hw.stress_mode || 'none',
       timeLimitPerQuestion: hw.time_limit_style === 'per_question' ? (Number(hw.time_limit_value) || 60) : 60,
@@ -399,7 +399,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                     <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{hw.title}</strong>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      Lesson: {hw.lesson_title} | {hw.subject} • {hw.num_questions} Qs • Diff {hw.starting_difficulty}
+                      Lesson: {hw.lesson_title} | {hw.subject} • {hw.num_questions} Qs • Diff {hw.difficulty}
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.15rem' }}>
@@ -494,7 +494,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           </div>
           <div style={{ flex: 1 }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Difficulty (1-10)</label>
-            <input type="number" name="startingDifficulty" min="1" max="10" value={config.startingDifficulty} onChange={handleChange} className="input-field" />
+            <input type="number" name="difficulty" min="1" max="10" value={config.difficulty || 5} onChange={handleChange} className="input-field" />
           </div>
         </div>
 

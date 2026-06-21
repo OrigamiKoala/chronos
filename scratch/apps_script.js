@@ -48,7 +48,7 @@ function generateHomework(payload, projectId) {
       const subject = hw.subject || 'Math';
       const normSubject = subject.toLowerCase();
       const numQuestions = hw.numQuestions || 5;
-      const startingDifficulty = hw.startingDifficulty || 5;
+      const difficulty = Number(hw.difficulty !== undefined ? hw.difficulty : 5);
 
       const sharedQuestionsCount = Array.isArray(hw.sharedQuestions) ? hw.sharedQuestions.length : 0;
       const aiCount = numQuestions - sharedQuestionsCount;
@@ -88,7 +88,7 @@ function generateHomework(payload, projectId) {
       }
 
       // Calculate difficulty
-      const baseDiff = Math.max(1, Math.min(10, startingDifficulty));
+      const baseDiff = Math.max(1, Math.min(10, difficulty));
       let expectedR = 1000;
       if (subject.toLowerCase() === 'math') {
         const mathMap = { 1: 500, 2: 600, 3: 800, 4: 900, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
@@ -167,9 +167,17 @@ function generateHomework(payload, projectId) {
         lessonInstructions = `Homework for "${lessonTitle}". Content: "${lessonDescription}"`;
       }
 
-      const prompt = `Write tricky Olympiad questions targeting weak areas (${weaknesses}). 
+      const prompt = `You must ensure that EVERY single question is completely unique, original, and never seen before. Do NOT repeat, rephrase, or adapt previously used setups, standard textbook scenarios, chemical reactions, physical systems, or mathematical templates.
+
+Use a backward-chaining thought process to generate each question step-by-step, ensuring maximum uniqueness and originality:
+- Step 1 (The Trap - Must be completely unique and original): Identify a specific, non-obvious conceptual trap, a hidden limiting factor, or a subtle breakdown of a standard textbook assumption. This trap must be entirely novel, original, and never seen before.
+- Step 2 (The System - Must be completely unique, original, and as convoluted as possible): Once you have the trick/trap in mind, design a chemical system, physical system, mathematical scenario, or reaction where this specific trap naturally occurs. The system/context must be made as convoluted as possible to challenge the user while ensuring it is completely unique, original, and never seen before (avoid standard textbook setups).
+- Step 3 (The Distractors - Must be completely unique and original): Calculate or derive the incorrect answers that result directly from falling into the conceptual trap.
+- Step 4 (The Problem - Must be completely unique and original): Draft the neutral question text that presents the system, masking the trap completely, written in a completely unique, original, and never-seen-before style.
+
+Write tricky Olympiad questions targeting weak areas (${weaknesses}). 
 Subject: ${subject}
-Difficulty: ${studentDifficulty}
+Average Difficulty: ${studentDifficulty} (This represents the average difficulty of the exam. No single question's difficulty should be more than 2 difficulty units away from this average!)
 Count: ${aiCount}
 Types: ${parsedTypes.join(', ')}
 ${lessonInstructions}
@@ -185,7 +193,7 @@ Return strictly a JSON array of question objects matching this schema:
   "type": ${typeSchemaDesc},
   "options": ["A", "B", "C", "D"], // if MCQ
   "answer": "correct answer",
-  "difficulty": 5,
+  "difficulty": 5, // Must represent the difficulty of this specific question, and must be in the range [${Math.max(1, studentDifficulty - 2)}, ${Math.min(10, studentDifficulty + 2)}] (no question can be more than 2 units away from the average difficulty ${studentDifficulty})
   "detailedSolution": "",
   "step1_trap": "trap description",
   "step2_system": "system description",

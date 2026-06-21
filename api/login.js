@@ -111,7 +111,7 @@ export default async function handler(req, res) {
               title STRING,
               subject STRING,
               num_questions INT64,
-              starting_difficulty INT64,
+              difficulty INT64,
               exam_format STRING,
               time_limit_style STRING,
               time_limit_value INT64,
@@ -182,6 +182,15 @@ export default async function handler(req, res) {
             )
           `)
         ]);
+
+        try {
+          await bq.query(`
+            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+            RENAME COLUMN starting_difficulty TO difficulty
+          `);
+        } catch (renameErr) {
+          console.log("Migration rename starting_difficulty to difficulty ignored/already done:", renameErr.message);
+        }
       } catch (e) {
         console.warn("Alter table error or already exists:", e);
       }
