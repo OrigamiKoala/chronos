@@ -188,6 +188,9 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     setLoading(true);
     setError(null);
 
+    const MAX_RETRIES = 3;
+    let retryCount = 0;
+
     const sharedQuestions = config.sharedQuestions || [];
     const totalCount = config.numQuestions;
     const aiCount = totalCount - sharedQuestions.length;
@@ -247,8 +250,13 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       }
     } catch (err) {
       if (sharedQuestions.length === 0) {
-        setError("Failed to fetch problems. Retrying...");
-        setTimeout(() => fetchProblems(), 2000);
+        retryCount++;
+        if (retryCount < MAX_RETRIES) {
+          setError(`Failed to fetch problems. Retrying (${retryCount}/${MAX_RETRIES})...`);
+          setTimeout(() => fetchProblems(), 2000);
+        } else {
+          setError('Failed to generate problems after multiple attempts. Please go back and try again.');
+        }
       } else {
         console.error("Failed to generate remainder of problems:", err);
       }
@@ -1166,6 +1174,12 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {
+                          const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+                          if (file.size > MAX_FILE_SIZE) {
+                            alert('File is too large. Maximum size is 5MB.');
+                            e.target.value = '';
+                            return;
+                          }
                           setUploadedFileName(file.name);
                           const reader = new FileReader();
                           reader.onload = (event) => {
@@ -1357,7 +1371,19 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 className="input-field"
                 value={activeAnswer}
                 onChange={(e) => handleAnswerSelect(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && activeAnswer.trim() && (config.stressMode === 'strict' ? submitStrictAnswer() : handleFinishExam())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && activeAnswer.trim()) {
+                    if (config.stressMode === 'strict') {
+                      submitStrictAnswer();
+                    } else if (currentQuestionIndex + 1 >= config.numQuestions) {
+                      handleFinishExam();
+                    } else if (currentQuestionIndex + 1 < problems.length) {
+                      recordActiveInterval(currentQuestionIndex);
+                      clearInterval(timerRef.current);
+                      setCurrentQuestionIndex(prev => prev + 1);
+                    }
+                  }
+                }}
                 disabled={isEditingLocked}
               />
             </div>

@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';

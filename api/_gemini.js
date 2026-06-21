@@ -13,7 +13,7 @@ function markKeyRateLimited(modelId, apiKey) {
   console.warn(`[API Rotation] Key marked rate-limited for model ${modelId} today.`);
 }
 
-export async function executeWithRetry(models, apiCallFn, req) {
+export async function executeWithRetry(models, apiCallFn) {
   const modelList = Array.isArray(models) ? models : [models];
   const keys = [
     process.env.GEMINI_API_KEY,
@@ -48,8 +48,6 @@ export async function executeWithRetry(models, apiCallFn, req) {
   let all503 = true;
 
   for (const currentModel of modelList) {
-    let modelFailedDueTo503 = false;
-
     for (let i = 0; i < keysOrder.length; i++) {
       const apiKey = keysOrder.at(i);
       if (isKeyRateLimited(currentModel, apiKey)) {
@@ -80,7 +78,6 @@ export async function executeWithRetry(models, apiCallFn, req) {
 
         if (status === 503) {
           console.warn(`[503] Model overloaded for ${currentModel}. Breaking out of key loop to try next model.`);
-          modelFailedDueTo503 = true;
           break; // Model overloaded, trying other keys for the SAME model won't help
         } else if (status === 429) {
           console.warn(`[429] Rate limit hit for ${currentModel} on key.`);
@@ -100,4 +97,79 @@ export async function executeWithRetry(models, apiCallFn, req) {
   }
 
   throw lastError || new Error('All API keys failed or are rate limited');
+}
+
+export function escapeLiteralNewlines(jsonStr) {
+  let result = '';
+  let inString = false;
+  let escape = false;
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const ch = jsonStr.charAt(i);
+
+    if (inString) {
+      if (escape) {
+        result += ch;
+        escape = false;
+      } else if (ch === '\\') {
+        result += ch;
+        escape = true;
+      } else if (ch === '"') {
+        result += ch;
+        inString = false;
+      } else if (ch === '\n') {
+        result += '\\n';
+      } else if (ch === '\r') {
+        result += '\\r';
+      } else {
+        result += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inString = true;
+      }
+      result += ch;
+    }
+  }
+  return result;
+}
+
+export function parseJSONResponse(text) {
+  if (!text) return null;
+  
+  let cleanText = text.trim();
+
+  const tryParse = (str) => {
+    try {
+      const escaped = escapeLiteralNewlines(str.trim());
+      return JSON.parse(escaped);
+    } catch {
+      return null;
+    }
+  };
+
+  let parsed = tryParse(cleanText);
+  if (parsed) return parsed;
+
+  const jsonMatch = cleanText.match(/```json\s*([\s\S]*?)\s*```/i);
+  if (jsonMatch) {
+    parsed = tryParse(jsonMatch[1]);
+    if (parsed) return parsed;
+  }
+
+  const codeMatch = cleanText.match(/```\s*([\s\S]*?)\s*```/i);
+  if (codeMatch) {
+    parsed = tryParse(codeMatch[1]);
+    if (parsed) return parsed;
+  }
+
+  const firstBrace = cleanText.indexOf('{');
+  const lastBrace = cleanText.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = cleanText.substring(firstBrace, lastBrace + 1);
+    parsed = tryParse(candidate);
+    if (parsed) return parsed;
+  }
+
+  return null;
 }

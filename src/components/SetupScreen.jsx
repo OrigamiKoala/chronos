@@ -30,7 +30,13 @@ const getSubjectLevelName = (subject, rating) => {
 export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chemistry: 100 }, onSubjectChange, user }) {
   const [config, setConfig] = useState(() => {
     const saved = localStorage.getItem('chronos_exam_config');
-    const parsed = saved ? JSON.parse(saved) : null;
+    let parsed = null;
+    try {
+      parsed = saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.warn('Corrupted exam config in localStorage, resetting:', e);
+      localStorage.removeItem('chronos_exam_config');
+    }
     let formatVal = parsed?.examFormat || ['multiple_choice', 'short_answer', 'free_response'];
     if (typeof formatVal === 'string') {
       if (formatVal === 'multiple_choice') formatVal = ['multiple_choice'];
@@ -82,7 +88,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     } else {
       setTimeout(() => setHomeworks([]), 0);
     }
-  }, [user?.user_id, user?.user_organization]);
+  }, [user?.user_id, user?.user_organization, user?.user_role]);
 
   const [selectedPreset, setSelectedPreset] = useState('custom');
 

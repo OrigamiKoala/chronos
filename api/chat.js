@@ -30,7 +30,7 @@ function verifyTeacherJwt(authHeader, secretString) {
     const decodedPayload = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (decodedPayload.exp && Math.floor(Date.now() / 1000) > decodedPayload.exp) return null;
     return decodedPayload;
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -67,11 +67,12 @@ export default async function handler(req, res) {
 
     // Build SQL Statement Context (Using exact schema matching)
     let studentFilterClause = '';
+    const queryParams = { teacherId };
     if (studentId) {
       const targetIds = Array.isArray(studentId) ? studentId : [studentId];
       if (targetIds.length > 0) {
-        const idList = targetIds.map(id => `'${id}'`).join(',');
-        studentFilterClause = `AND v.student_id IN (${idList})`;
+        studentFilterClause = `AND v.student_id IN UNNEST(@studentIds)`;
+        queryParams.studentIds = targetIds;
       }
     }
 
@@ -115,7 +116,7 @@ export default async function handler(req, res) {
 
     const [bqRows] = await bq.query({
       query: bqQuery,
-      params: { teacherId }
+      params: queryParams
     });
 
     let contextData = '';
@@ -172,7 +173,7 @@ Keep answers clear, highly metric-accurate, and under 3 sentences.`;
     }), req);
 
     return res.status(200).json({
-      response: response.text,
+      response: response.text || 'Sorry, I could not generate a response. Please try again.',
       _debug: { rowCount: bqRows?.length || 0, studentIdReceived: studentId, teacherId }
     });
 

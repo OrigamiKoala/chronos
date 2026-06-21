@@ -1,6 +1,5 @@
-/* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry } from './_gemini.js';
+import { executeWithRetry, parseJSONResponse } from './_gemini.js';
 import crypto from 'crypto';
 
 // Helper function to generate HS256 JWT
@@ -614,8 +613,10 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
 
           if (response.text) {
             try {
-              const responseText = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
-              const responseObj = JSON.parse(responseText);
+              const responseObj = parseJSONResponse(response.text);
+              if (!responseObj) {
+                throw new Error('Failed to parse student insights response from Gemini');
+              }
 
               const insightId = `insight_${Date.now()}_${sId}`;
               const insertInsightQuery = `

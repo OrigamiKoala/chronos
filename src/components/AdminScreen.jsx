@@ -67,7 +67,6 @@ export function AdminScreen({ user, onBack }) {
     if (user?.user_organization) {
       fetchMembers(user.user_organization);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.user_organization]);
 
   const handleBulkPromote = async (e) => {

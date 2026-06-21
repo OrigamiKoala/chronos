@@ -109,12 +109,12 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const newRating = localNewRating;
   const ratingChange = localRatingChange;
   const results = localResults;
-  const totalQuestions = results.length;
+  const totalQuestions = results.length || 1; // Guard against division by zero
   const correctAnswers = results.filter(r => r.isCorrect).length;
-  const accuracy = Math.round((correctAnswers / totalQuestions) * 100) || 0;
+  const accuracy = Math.round((correctAnswers / totalQuestions) * 100);
 
   const totalTime = results.reduce((acc, curr) => acc + curr.timeSpent, 0);
-  const avgTime = Math.round(totalTime / totalQuestions) || 0;
+  const avgTime = Math.round(totalTime / totalQuestions);
 
   // Point efficiency calculation
   const rawPointsEarned = results.reduce((acc, r) => {

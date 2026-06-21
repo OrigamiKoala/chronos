@@ -78,7 +78,7 @@ async function verifyTeacherJwt(authHeader, secretString) {
     if (decodedPayload.exp && Math.floor(Date.now() / 1000) > decodedPayload.exp) return false;
 
     return decodedPayload;
-  } catch (err) {
+  } catch {
     return false;
   }
 }
@@ -248,7 +248,7 @@ async function runBackgroundGradingRetry(payload, env) {
 }
 
 async function runBackgroundHomeworkGeneration(payload, serviceAccount, accessToken) {
-  const { teacherId, lessonId, lessonTitle, lessonDescription, studentIds, homeworks, geminiApiKeys } = payload;
+  const { lessonTitle, lessonDescription, studentIds, homeworks, geminiApiKeys } = payload;
   const projectId = serviceAccount.project_id;
 
   for (const studentId of studentIds) {
@@ -259,7 +259,6 @@ async function runBackgroundHomeworkGeneration(payload, serviceAccount, accessTo
       const normSubject = subject.toLowerCase();
       const numQuestions = hw.numQuestions || 5;
       const startingDifficulty = hw.startingDifficulty || 5;
-      const format = hw.examFormat || 'mix';
 
       // Check if student has already submitted this homework assignment
       try {
@@ -322,7 +321,7 @@ async function runBackgroundHomeworkGeneration(payload, serviceAccount, accessTo
 
       // 2. Calculate expected rating for teacher's chosen difficulty
       const baseDiff = Math.max(1, Math.min(10, startingDifficulty));
-      let expectedR = 1000;
+      let expectedR;
       if (subject.toLowerCase() === 'math') {
         const mathMap = new Map([[1, 500], [2, 600], [3, 800], [4, 900], [5, 1000], [6, 1250], [7, 1500], [8, 2000], [9, 2500], [10, 3000]]);
         expectedR = mathMap.get(Math.round(baseDiff)) || 1000;
@@ -421,7 +420,7 @@ Follow these strict Olympiad Design Philosophies:
 1. Novelty & "Invisible Traps"
 - Create highly original questions requiring first-principles reasoning over template-matching.
 - Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption. The user should be tricked into thinking the wrong way, overlooking something.
-- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C".
+- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C".
 - Incorporate a deceptive path: the most common rote shortcut should yield a value matching one incorrect distractor.
 - No question should be like any other question seen before.
 
@@ -462,7 +461,7 @@ Follow these strict Olympiad Design Philosophies:
 - Create highly original questions requiring first-principles reasoning over memory or template-matching.
 - Questions should reward chemical intuition, not breadth of knowledge, experience grinding previous problems, or computational power.
 - Center every problem on a non-obvious conceptual trick, hidden limiting factor, or subtle breakdown of a standard assumption.
-- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C".
+- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C".
 - Incorporate a deceptive path: the most common rote formula shortcut should yield a value matching one incorrect distractor.
 
 2. Advanced Design & Difficulty Criteria
@@ -501,7 +500,7 @@ Follow these strict Olympiad Design Philosophies:
 1. Novelty & "Invisible Traps"
 - Create highly original questions requiring first-principles reasoning over template-matching.
 - Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption.
-- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C".
+- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C".
 - Incorporate a deceptive path: the most common rote shortcut should yield a value matching one incorrect distractor.
 
 2. Advanced Design & Difficulty Criteria
@@ -526,7 +525,7 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
   "topic": "Chemical Bonding & Bond Order",
   "question": "Which species has the longest carbon-oxygen bond?",
   "type": "multiple_choice",
-  "options": ["$\\\\\ce{HCO2^-}$", "$\\\\\ce{CO3^{2-}}$", "$\\\\\ce{CO2}$", "$\\\\\ce{COS}$"],
+  "options": ["$\\\\ce{HCO2^-}$", "$\\\\ce{CO3^{2-}}$", "$\\\\ce{CO2}$", "$\\\\ce{COS}$"],
   "answer": "B",
   "difficulty": 5,
   "detailedSolution": ""
@@ -547,7 +546,7 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
         ? `\n  "options": ["Option A", "Option B", "Option C", "Option D"], // MUST be provided if type is multiple_choice`
         : ``;
       let keywordExpressionSchemaDesc = parsedTypes.includes('short_answer')
-        ? `\n  "keywordExpression": "A logical boolean expression representing answer correctness (e.g., 'gravity AND newton' or 'O2 OR oxygen' or \"'carbon dioxide' OR CO2\"). Use AND, OR, NOT, parentheses, and single quotes for multi-word phrases. Required ONLY if type is short_answer.",`
+        ? `\n  "keywordExpression": "A logical boolean expression representing answer correctness (e.g., 'gravity AND newton' or 'O2 OR oxygen' or \\"'carbon dioxide' OR CO2\\"). Use AND, OR, NOT, parentheses, and single quotes for multi-word phrases. Required ONLY if type is short_answer.",`
         : ``;
       let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
 
@@ -639,7 +638,7 @@ The output must be a pure JSON array containing exactly the requested number of 
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
   "answer": ${answerSchemaDesc},
   "difficulty": a number between 1 and 10 representing difficulty,
-  "detailedSolution": "An empty string \"\""
+  "detailedSolution": "An empty string \\"\\""
 }
 
 Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.
@@ -651,7 +650,6 @@ Follow these strict rules:
 2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
 
       let responseText = null;
-      let geminiError = null;
       let success = false;
 
       for (const model of ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite']) {
@@ -682,15 +680,15 @@ Follow these strict rules:
                 break;
               }
             } else {
-              geminiError = await response.text();
               const status = response.status;
-              if (status === 503 || (geminiError && geminiError.toLowerCase().includes('overloaded'))) {
+              const errTxt = await response.text();
+              if (status === 503 || (errTxt && errTxt.toLowerCase().includes('overloaded'))) {
                 console.warn(`[503] Model ${model} overloaded. Breaking key loop to try next model.`);
                 break;
               }
             }
-          } catch (err) {
-            geminiError = err.message;
+          } catch {
+            // Silently try next key
           }
         }
       }

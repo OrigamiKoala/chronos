@@ -122,7 +122,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
             </button>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               <Calendar size={12} />
-              {new Date(latest.created_at?.value || latest.created_at).toLocaleDateString()}
+              {(() => { const d = new Date(latest.created_at?.value || latest.created_at); return isNaN(d.getTime()) ? 'Unknown date' : d.toLocaleDateString(); })()}
             </span>
           </div>
         </div>
@@ -141,7 +141,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
               borderRadius: '4px',
               textTransform: 'capitalize'
             }}>
-              {latest.progress_status}
+              {latest.progress_status || 'Unknown'}
             </span>
           </div>
 
@@ -176,7 +176,8 @@ export function StudentAIInsights({ studentId, teacherId }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {historyList.map(ins => {
               const isExpanded = expandedId === ins.insight_id;
-              const dateStr = new Date(ins.created_at?.value || ins.created_at).toLocaleDateString();
+              const rawDate = new Date(ins.created_at?.value || ins.created_at);
+              const dateStr = isNaN(rawDate.getTime()) ? 'Unknown date' : rawDate.toLocaleDateString();
               const histProgress = getProgressStyle(ins.progress_status);
 
               return (
@@ -196,7 +197,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
                         padding: '0.1rem 0.4rem',
                         borderRadius: '3px'
                       }}>
-                        {ins.progress_status.split(' ')[0]}
+                        {(ins.progress_status || 'Unknown').split(' ')[0]}
                       </span>
                     </div>
                     {isExpanded ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}

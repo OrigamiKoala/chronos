@@ -1,6 +1,5 @@
-/* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry } from './_gemini.js';
+import { executeWithRetry, parseJSONResponse } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -477,7 +476,10 @@ You MUST format your output strictly as a JSON object, with no markdown code blo
         );
 
         const responseText = response.text;
-        const parsed = JSON.parse(responseText);
+        const parsed = parseJSONResponse(responseText);
+        if (!parsed) {
+          throw new Error('Failed to parse JSON response from Gemini');
+        }
         detailedAnalysis = parsed.detailedAnalysis || {};
         topicBreakdowns = parsed.topicBreakdowns || {};
       } catch (geminiError) {

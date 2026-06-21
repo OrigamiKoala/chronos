@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
@@ -40,7 +39,7 @@ function verifyToken(token) {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (data.exp < Date.now()) return null;
     return data.username;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

@@ -1,6 +1,5 @@
-/* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry } from './_gemini.js';
+import { executeWithRetry, escapeLiteralNewlines } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -48,8 +47,9 @@ function extractCompleteObjects(jsonStr) {
       depth--;
       if (depth === 0 && objStart !== -1) {
         try {
-          objects.push(JSON.parse(jsonStr.substring(objStart, i + 1)));
-        } catch (e) { /* incomplete, skip */ }
+          const rawObjStr = jsonStr.substring(objStart, i + 1);
+          objects.push(JSON.parse(escapeLiteralNewlines(rawObjStr)));
+        } catch { /* incomplete, skip */ }
         objStart = -1;
       }
     }
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { count, startingDifficulty, subject, targetUserId = 'default_user', freeResponseMode, examFormat, lessonTitle, lessonDescription, topics, assignmentId } = req.body;
+  const { count, startingDifficulty, subject, targetUserId = 'default_user', examFormat, lessonTitle, lessonDescription, topics, assignmentId } = req.body;
 
   if (!count || !startingDifficulty || !subject) {
     return res.status(400).json({ error: 'Missing required parameters: count, startingDifficulty, subject' });
@@ -239,7 +239,7 @@ Follow these strict Olympiad Design Philosophies:
 1. Novelty & "Invisible Traps"
 - Create highly original questions requiring first-principles reasoning over template-matching.
 - Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption. The user should be tricked into thinking the wrong way, overlooking something.
-- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C".
+- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C".
 - Incorporate a deceptive path: the most common rote shortcut should yield a value matching one incorrect distractor.
 - No question should be like any other question seen before.
 
@@ -323,7 +323,7 @@ Follow these strict Olympiad Design Philosophies:
 - Create highly original questions requiring first-principles reasoning over memory or template-matching.
 - Questions should reward chemical intuition, not breadth of knowledge, experience grinding previous problems, or computational power.
 - Center every problem on a non-obvious conceptual trick, hidden limiting factor, or subtle breakdown of a standard assumption.
-- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C".
+- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C".
 - Incorporate a deceptive path: the most common rote formula shortcut should yield a value matching one incorrect distractor.
 
 2. Advanced Design & Difficulty Criteria
@@ -490,7 +490,7 @@ Follow these strict Olympiad Design Philosophies:
 1. Novelty & "Invisible Traps"
 - Create highly original questions requiring first-principles reasoning over template-matching.
 - Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption.
-- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \times 10^{-8}$ M aqueous solution of $\ce{HCl}$ at $25 ^{\circ}$ C".
+- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C".
 - Incorporate a deceptive path: the most common rote shortcut should yield a value matching one incorrect distractor.
 
 2. Advanced Design & Difficulty Criteria
@@ -518,20 +518,20 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
   "topic": "Chemical Bonding & Bond Order",
   "question": "Which species has the longest carbon-oxygen bond?",
   "type": "multiple_choice",
-  "options": ["$\\\\\ce{HCO2^-}$", "$\\\\\ce{CO3^{2-}}$", "$\\\\\ce{CO2}$", "$\\\\\ce{COS}$"],
+  "options": ["$\\\\ce{HCO2^-}$", "$\\\\ce{CO3^{2-}}$", "$\\\\ce{CO2}$", "$\\\\ce{COS}$"],
   "answer": "B",
   "difficulty": 5,
-  "detailedSolution": "Bond length is inversely proportional to bond order. $\\\\\ce{HCO2^-}$: avg C-O bond order = 1.5. $\\\\\ce{CO3^{2-}}$: avg = 1.33. $\\\\\ce{CO2}$: 2.0. $\\\\\ce{COS}$: C-O is 2.0. Carbonate has the lowest bond order (1.33), hence the longest C-O bond."
+  "detailedSolution": "Bond length is inversely proportional to bond order. $\\\\ce{HCO2^-}$: avg C-O bond order = 1.5. $\\\\ce{CO3^{2-}}$: avg = 1.33. $\\\\ce{CO2}$: 2.0. $\\\\ce{COS}$: C-O is 2.0. Carbonate has the lowest bond order (1.33), hence the longest C-O bond."
 }
 
 {
   "id": "chem_ex2",
   "topic": "Acid-Base Titration & Gas Laws",
-  "question": "A is an ionic compound containing only H, N, and O.\\\\n(a) A 1.000-g sample titrated with 0.5000 M NaOH reaches equivalence at 25.0 mL. Find the molar mass.\\\\n(b) Heating 1.000 g at 230°C in 1.50 L gives 784 mmHg. Find moles of gas.\\\\n(c) After drying with $\\\\\ce{Mg(ClO4)2}$, 308 mL at 755 mmHg, 25°C. Find moles of dry gas.\\\\n(d) Determine the formula of A.\\\\n(e) Draw Lewis structures for cation, anion, and decomposition products.",
+  "question": "A is an ionic compound containing only H, N, and O.\\\\n(a) A 1.000-g sample titrated with 0.5000 M NaOH reaches equivalence at 25.0 mL. Find the molar mass.\\\\n(b) Heating 1.000 g at 230°C in 1.50 L gives 784 mmHg. Find moles of gas.\\\\n(c) After drying with $\\\\ce{Mg(ClO4)2}$, 308 mL at 755 mmHg, 25°C. Find moles of dry gas.\\\\n(d) Determine the formula of A.\\\\n(e) Draw Lewis structures for cation, anion, and decomposition products.",
   "type": "free_response",
   "answer": "",
   "difficulty": 9,
-  "detailedSolution": "(a) Moles OH- = 0.0125, so M = 80.0 g/mol. (b) PV=nRT gives 0.0375 mol total gas. (c) 0.0125 mol dry gas. (d) 1:3 total gas ratio, 1:2 water ratio → $\\\\\ce{NH4NO3}$ (M=80.04), decomposing to $\\\\\ce{N2O + 2H2O}$. (e) $\\\\\ce{NH4+}$: tetrahedral N with +1 charge. $\\\\\ce{NO3-}$: trigonal planar with resonance. $\\\\\ce{N2O}$: two resonance structures ($\\\\\ce{N#[N+][O-]}$ and $\\\\\ce{[N-]=[N+]=O}$)."
+  "detailedSolution": "(a) Moles OH- = 0.0125, so M = 80.0 g/mol. (b) PV=nRT gives 0.0375 mol total gas. (c) 0.0125 mol dry gas. (d) 1:3 total gas ratio, 1:2 water ratio → $\\\\ce{NH4NO3}$ (M=80.04), decomposing to $\\\\ce{N2O + 2H2O}$. (e) $\\\\ce{NH4+}$: tetrahedral N with +1 charge. $\\\\ce{NO3-}$: trigonal planar with resonance. $\\\\ce{N2O}$: two resonance structures ($\\\\ce{N#[N+][O-]}$ and $\\\\ce{[N-]=[N+]=O}$)."
 }
 `;
     }
@@ -549,7 +549,7 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
       ? `\n  "options": ["Option A", "Option B", "Option C", "Option D"], // MUST be provided if type is multiple_choice`
       : ``;
     let keywordExpressionSchemaDesc = parsedTypes.includes('short_answer')
-      ? `\n  "keywordExpression": "A logical boolean expression representing answer correctness (e.g., 'gravity AND newton' or 'O2 OR oxygen' or \"'carbon dioxide' OR CO2\"). Use AND, OR, NOT, parentheses, and single quotes for multi-word phrases. Required ONLY if type is short_answer.",`
+      ? `\n  "keywordExpression": "A logical boolean expression representing answer correctness (e.g., 'gravity AND newton' or 'O2 OR oxygen' or \\"'carbon dioxide' OR CO2\\"). Use AND, OR, NOT, parentheses, and single quotes for multi-word phrases. Required ONLY if type is short_answer.",`
       : ``;
     let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
 
@@ -648,9 +648,9 @@ For example, your output must look like this:
   {
     "id": "chem_prob1",
     "topic": "Stoichiometry & Hydrocarbons",
-    "question": "A $4.41$ g sample of a gaseous hydrocarbon M is completely combusted in excess oxygen to produce $13.20$ g of \\\ce{CO_2} and $7.21$ g of \\\ce{H_2O}. Determine the molecular formula of M if its density at STP is $1.97$ g/L.",
+    "question": "A $4.41$ g sample of a gaseous hydrocarbon M is completely combusted in excess oxygen to produce $13.20$ g of \\\\ce{CO_2} and $7.21$ g of \\\\ce{H_2O}. Determine the molecular formula of M if its density at STP is $1.97$ g/L.",
     "type": "multiple_choice",
-    "options": ["\\\ce{CH_4}", "\\\ce{C_2H_6}", "\\\ce{C_3H_8}", "\\\ce{C_4H_{10}}"],
+    "options": ["\\\\ce{CH_4}", "\\\\ce{C_2H_6}", "\\\\ce{C_3H_8}", "\\\\ce{C_4H_{10}}"],
     "answer": "C",
     "difficulty": 5,
     "detailedSolution": ""
@@ -658,7 +658,7 @@ For example, your output must look like this:
   {
     "id": "chem_prob2",
     "topic": "Electrochemistry",
-    "question": "A galvanic cell consists of a silver electrode in $1.0$ M \\\ce{AgNO_3} and a copper electrode in $1.0$ M \\\ce{Cu(NO_3)_2}. If the cell operates at $25$ °C under a constant current of $2.0$ A for $45$ minutes, calculate the change in mass of the copper electrode. ($E^\\circ(\\\ce{Ag^+/Ag}) = +0.80$ V, $E^\\circ(\\\ce{Cu^{2+}/Cu}) = +0.34$ V, $F = 96485$ C/mol).",
+    "question": "A galvanic cell consists of a silver electrode in $1.0$ M \\\\ce{AgNO_3} and a copper electrode in $1.0$ M \\\\ce{Cu(NO_3)_2}. If the cell operates at $25$ °C under a constant current of $2.0$ A for $45$ minutes, calculate the change in mass of the copper electrode. ($E^\\circ(\\\\ce{Ag^+/Ag}) = +0.80$ V, $E^\\circ(\\\\ce{Cu^{2+}/Cu}) = +0.34$ V, $F = 96485$ C/mol).",
     "type": "short_answer",
     "answer": "1.78 g",
     "keywordExpression": "'1.78' OR '1.78 g'",
@@ -688,7 +688,7 @@ The output must be a pure JSON array containing exactly the requested number of 
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
   "answer": ${answerSchemaDesc},
   "difficulty": a number between 1 and 10 representing difficulty,
-  "detailedSolution": "An empty string \"\""
+  "detailedSolution": "An empty string \\"\\""
 }
 
 Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.
@@ -818,7 +818,7 @@ Follow these strict rules:
           }
 
           if (rows.length === 0) {
-            throw new Error(`No pregenerated questions found in BigQuery for subject: ${subject}`);
+            throw new Error(`No pregenerated questions found in BigQuery for subject: ${subject}`, { cause: streamErr });
           }
 
           // Send the pregenerated questions

@@ -1,7 +1,31 @@
-/* eslint-disable */
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry } from './_gemini.js';
+import { executeWithRetry, parseJSONResponse } from './_gemini.js';
 import crypto from 'crypto';
+
+// Helper function to generate HS256 JWT
+function generateJWT(payload, secret) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const base64UrlEncode = (obj) => {
+    return Buffer.from(JSON.stringify(obj))
+      .toString('base64')
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+  };
+
+  const headerEncoded = base64UrlEncode(header);
+  const payloadEncoded = base64UrlEncode(payload);
+
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${headerEncoded}.${payloadEncoded}`)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  return `${headerEncoded}.${payloadEncoded}.${signature}`;
+}
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const ELO_ALGORITHM_VERSION = 3;
@@ -614,7 +638,6 @@ export default async function handler(req, res) {
   try {
 
     // Grade all questions in parallel! Solve on-the-fly and award partial credit!
-    const isOnlyMCQ = results.every(r => r.type === 'multiple_choice');
     const hasFRQ = results.some(r => r.type === 'free_response');
 
     const gradedResults = await Promise.all(results.map(async (r) => {
@@ -788,7 +811,10 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
             }
           }), req);
 
-          const graded = JSON.parse(gradingResponse.text);
+          const graded = parseJSONResponse(gradingResponse.text);
+          if (!graded) {
+            throw new Error('Failed to parse grading response from Gemini');
+          }
           return {
             ...r,
             isCorrect: !!graded.isCorrect,
@@ -1136,30 +1162,6 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
         } else {
           const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
         
-        function generateJWT(payload, secret) {
-          const header = { alg: 'HS256', typ: 'JWT' };
-          const base64UrlEncode = (obj) => {
-            return Buffer.from(JSON.stringify(obj))
-              .toString('base64')
-              .replace(/=/g, '')
-              .replace(/\+/g, '-')
-              .replace(/\//g, '_');
-          };
-
-          const headerEncoded = base64UrlEncode(header);
-          const payloadEncoded = base64UrlEncode(payload);
-
-          const signature = crypto
-            .createHmac('sha256', secret)
-            .update(`${headerEncoded}.${payloadEncoded}`)
-            .digest('base64')
-            .replace(/=/g, '')
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_');
-
-          return `${headerEncoded}.${payloadEncoded}.${signature}`;
-        }
-
         const accessToken = generateJWT({
           teacherId: 'SYSTEM',
           exp: Math.floor(Date.now() / 1000) + 7200 // 2 hours
@@ -1345,64 +1347,65 @@ Do NOT include markdown formatting, backticks, or any conversational text. Retur
     let mistakePatterns = '';
 
     if (response.text) {
-      const cleanedText = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
-      const responseObj = JSON.parse(cleanedText);
-      mistakePatterns = responseObj.mistake_patterns || '';
+      const responseObj = parseJSONResponse(response.text);
+      if (responseObj) {
+        mistakePatterns = responseObj.mistake_patterns || '';
 
-      if (!isGuest) {
-        detailedAnalysis = responseObj.detailed_analysis || null;
-        const topicBreakdowns = responseObj.topic_breakdowns;
+        if (!isGuest) {
+          detailedAnalysis = responseObj.detailed_analysis || null;
+          const topicBreakdowns = responseObj.topic_breakdowns;
 
-        const upsertPromises = [];
+          const upsertPromises = [];
 
-        // Save mistake patterns in BigQuery
-        if (mistakePatterns) {
-          const insertQuery = `
-            INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
-              (user_id, exam_id, subject, mistake_patterns, created_at)
-            VALUES
-              (@username, @examId, @subject, @mistakePatterns, CURRENT_TIMESTAMP())
-          `;
-          upsertPromises.push(bq.query({
-            query: insertQuery,
-            params: { username, examId, subject, mistakePatterns }
-          }));
-        }
-
-        // Fire topic breakdowns
-        if (Array.isArray(topicBreakdowns)) {
-          for (const b of topicBreakdowns) {
+          // Save mistake patterns in BigQuery
+          if (mistakePatterns) {
+            const insertQuery = `
+              INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+                (user_id, exam_id, subject, mistake_patterns, created_at)
+              VALUES
+                (@username, @examId, @subject, @mistakePatterns, CURRENT_TIMESTAMP())
+            `;
             upsertPromises.push(bq.query({
-              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
-                USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
-                ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-                WHEN MATCHED THEN
-                  UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
-                WHEN NOT MATCHED THEN
-                  INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
-                  VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
-              params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
+              query: insertQuery,
+              params: { username, examId, subject, mistakePatterns }
             }));
           }
-        }
 
-        // Fire weakness analysis merge
-        if (detailedAnalysis) {
-          upsertPromises.push(bq.query({
-            query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
-              USING (SELECT @username AS user_id, @subject AS subject) S
-              ON T.user_id = S.user_id AND T.subject = S.subject
-              WHEN MATCHED THEN
-                UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
-              WHEN NOT MATCHED THEN
-                INSERT (user_id, subject, detailed_analysis, updated_at)
-                VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())`,
-            params: { username, subject, detailedAnalysis }
-          }));
-        }
+          // Fire topic breakdowns
+          if (Array.isArray(topicBreakdowns)) {
+            for (const b of topicBreakdowns) {
+              upsertPromises.push(bq.query({
+                query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+                  USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
+                  ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
+                  WHEN MATCHED THEN
+                    UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
+                  WHEN NOT MATCHED THEN
+                    INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
+                    VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
+                params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
+              }));
+            }
+          }
 
-        if (upsertPromises.length > 0) {
-          await Promise.all(upsertPromises);
+          // Fire weakness analysis merge
+          if (detailedAnalysis) {
+            upsertPromises.push(bq.query({
+              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
+                USING (SELECT @username AS user_id, @subject AS subject) S
+                ON T.user_id = S.user_id AND T.subject = S.subject
+                WHEN MATCHED THEN
+                  UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
+                WHEN NOT MATCHED THEN
+                  INSERT (user_id, subject, detailed_analysis, updated_at)
+                  VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())`,
+              params: { username, subject, detailedAnalysis }
+            }));
+          }
+
+          if (upsertPromises.length > 0) {
+            await Promise.all(upsertPromises);
+          }
         }
       }
     }

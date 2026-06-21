@@ -77,7 +77,7 @@ export default async function handler(req, res) {
       let results;
       try {
         results = JSON.parse(row.results_json);
-      } catch (e) {
+      } catch {
         continue;
       }
 

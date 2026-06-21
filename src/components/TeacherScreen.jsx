@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, BookOpen, Plus, Loader2, Award, ShieldAlert, CheckCircle, XCircle, Sparkles, Send, Trash2 } from 'lucide-react';
+import { Users, BookOpen, Plus, Loader2, ShieldAlert, CheckCircle, XCircle, Sparkles, Send, Trash2 } from 'lucide-react';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { StudentAIInsights } from './StudentAIInsights';
 import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
@@ -34,7 +34,7 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
       throw new Error(`HTTP error! status: ${response.status} body: ${errBody}`);
     }
 
-    const data = await response.ok ? await response.json() : {};
+    const data = await response.json();
     if (data._debug) {
       console.log('[Chat API Debug]', data._debug);
     }
@@ -58,11 +58,10 @@ export function TeacherScreen({ user, onBack }) {
   const [chatScope, setChatScope] = useState('class'); // 'class' or 'students'
   const [chatSelectedStudents, setChatSelectedStudents] = useState([]);
   const [chatSessionId, setChatSessionId] = useState(() => 'sess_' + Math.random().toString(36).substring(2, 9));
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [accessToken, setAccessToken] = useState('');
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -133,7 +132,6 @@ export function TeacherScreen({ user, onBack }) {
   const [reviewExam, setReviewExam] = useState(null);
 
   // Selected Topic Details state
-  const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
 
   // Create Lesson Modal state
   const [showLessonModal, setShowLessonModal] = useState(false);

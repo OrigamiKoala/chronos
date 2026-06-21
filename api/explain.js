@@ -1,5 +1,4 @@
-/* eslint-disable */
-import { executeWithRetry } from './_gemini.js';
+import { executeWithRetry, parseJSONResponse } from './_gemini.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -129,14 +128,16 @@ Return strictly a valid JSON object with the following schema:
     let explanationText = '';
     let shouldRemarkCorrectVal = false;
 
-    const parsed = parseJSONResponse(response.text);
+    const parsed = parseJSONResponse(response.text || '');
     if (parsed) {
       explanationText = parsed.explanation;
       shouldRemarkCorrectVal = parsed.shouldRemarkCorrect || false;
-    } else {
+    } else if (response.text) {
       console.warn('Failed to parse JSON response from Gemini, using robust extractors as fallback.');
       explanationText = extractExplanationFallback(response.text);
       shouldRemarkCorrectVal = extractShouldRemarkCorrectFallback(response.text);
+    } else {
+      explanationText = 'The AI did not return a response. The request may have been blocked by safety filters. Please try again.';
     }
 
     return res.status(200).json({
@@ -164,82 +165,10 @@ Return strictly a valid JSON object with the following schema:
   }
 }
 
-function escapeLiteralNewlines(jsonStr) {
-  let result = '';
-  let inString = false;
-  let escape = false;
 
-  for (let i = 0; i < jsonStr.length; i++) {
-    const ch = jsonStr.charAt(i);
-
-    if (inString) {
-      if (escape) {
-        result += ch;
-        escape = false;
-      } else if (ch === '\\') {
-        result += ch;
-        escape = true;
-      } else if (ch === '"') {
-        result += ch;
-        inString = false;
-      } else if (ch === '\n') {
-        result += '\\n';
-      } else if (ch === '\r') {
-        result += '\\r';
-      } else {
-        result += ch;
-      }
-    } else {
-      if (ch === '"') {
-        inString = true;
-      }
-      result += ch;
-    }
-  }
-  return result;
-}
-
-function parseJSONResponse(text) {
-  if (!text) return null;
-  
-  let cleanText = text.trim();
-
-  const tryParse = (str) => {
-    try {
-      const escaped = escapeLiteralNewlines(str.trim());
-      return JSON.parse(escaped);
-    } catch (e) {
-      return null;
-    }
-  };
-
-  let parsed = tryParse(cleanText);
-  if (parsed) return parsed;
-
-  const jsonMatch = cleanText.match(/```json\s*([\s\S]*?)\s*```/i);
-  if (jsonMatch) {
-    parsed = tryParse(jsonMatch[1]);
-    if (parsed) return parsed;
-  }
-
-  const codeMatch = cleanText.match(/```\s*([\s\S]*?)\s*```/i);
-  if (codeMatch) {
-    parsed = tryParse(codeMatch[1]);
-    if (parsed) return parsed;
-  }
-
-  const firstBrace = cleanText.indexOf('{');
-  const lastBrace = cleanText.lastIndexOf('}');
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    const candidate = cleanText.substring(firstBrace, lastBrace + 1);
-    parsed = tryParse(candidate);
-    if (parsed) return parsed;
-  }
-
-  return null;
-}
 
 function extractExplanationFallback(text) {
+  if (!text) return 'No explanation available.';
   const keyIndex = text.indexOf('"explanation"');
   if (keyIndex === -1) return text;
 
@@ -272,6 +201,7 @@ function extractExplanationFallback(text) {
 }
 
 function extractShouldRemarkCorrectFallback(text) {
+  if (!text) return false;
   const match = text.match(/"shouldRemarkCorrect"\s*:\s*(true|false)/i);
   if (match) {
     return match[1].toLowerCase() === 'true';

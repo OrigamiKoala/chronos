@@ -19,13 +19,23 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
     { value: '#ef4444', label: 'Rose' },
   ];
 
+  const heightRef = useRef(height);
+  const initialImageRef = useRef(initialImage);
+  const colorRef = useRef(color);
+  const lineWidthRef = useRef(lineWidth);
+
+  heightRef.current = height;
+  initialImageRef.current = initialImage;
+  colorRef.current = color;
+  lineWidthRef.current = lineWidth;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     // Ensure canvas styles are set first so getBoundingClientRect measures correctly
     canvas.style.width = '100%';
-    canvas.style.height = `${height}px`;
+    canvas.style.height = `${heightRef.current}px`;
 
     // Handle high DPI displays
     const rect = canvas.getBoundingClientRect();
@@ -37,39 +47,46 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
     context.scale(dpr, dpr);
     context.lineCap = 'round';
     context.lineJoin = 'round';
-    context.strokeStyle = color;
-    context.lineWidth = lineWidth;
+    context.strokeStyle = colorRef.current;
+    context.lineWidth = lineWidthRef.current;
     contextRef.current = context;
 
     // Save initial blank canvas state to history
-    saveState();
+    setHistory([canvas.toDataURL()]);
 
-    if (initialImage) {
+    const activeInitialImage = initialImageRef.current;
+    if (activeInitialImage) {
       const img = new Image();
       img.onload = () => {
         context.globalCompositeOperation = 'source-over';
-        context.drawImage(img, 0, 0, rect.width, height);
+        context.drawImage(img, 0, 0, rect.width, heightRef.current);
         // Save loaded state to history
         setHistory([canvas.toDataURL()]);
       };
-      img.src = initialImage;
+      img.src = activeInitialImage;
     }
 
     // Resize listener
     const handleResize = () => {
       const tempImage = canvas.toDataURL();
       const newRect = canvas.getBoundingClientRect();
+
+      const oldStrokeStyle = context.strokeStyle;
+      const oldLineWidth = context.lineWidth;
+      const oldGco = context.globalCompositeOperation;
+
       canvas.width = newRect.width * dpr;
       canvas.height = newRect.height * dpr;
       context.scale(dpr, dpr);
       context.lineCap = 'round';
       context.lineJoin = 'round';
-      context.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,1)' : color;
-      context.lineWidth = lineWidth;
+      context.strokeStyle = oldStrokeStyle;
+      context.lineWidth = oldLineWidth;
+      context.globalCompositeOperation = oldGco;
 
       const img = new Image();
       img.onload = () => {
-        context.drawImage(img, 0, 0, newRect.width, height);
+        context.drawImage(img, 0, 0, newRect.width, heightRef.current);
       };
       img.src = tempImage;
     };

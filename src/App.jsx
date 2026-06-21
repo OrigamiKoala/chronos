@@ -5,7 +5,7 @@ import { AnalyticsScreen } from './components/AnalyticsScreen';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { AdminScreen } from './components/AdminScreen';
 import { TeacherScreen } from './components/TeacherScreen';
-import { BrainCircuit, Award, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
+import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
@@ -54,12 +54,9 @@ function App() {
   const [loginModalMode, setLoginModalMode] = useState('login'); // 'login', 'setup_recovery', 'forgot_username', 'forgot_verify'
 
   // Organization & Role States
-  const [selectedOrg, setSelectedOrg] = useState('');
-  const [selectedRole, setSelectedRole] = useState('student');
   const [joinCode, setJoinCode] = useState('');
   const [profileJoinCode, setProfileJoinCode] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [profileOrg, setProfileOrg] = useState('');
   const [profileRole, setProfileRole] = useState('');
 
   // Setup Recovery State
@@ -246,8 +243,6 @@ function App() {
           setLoginPassword('');
           setRecoveryQuestion('');
           setRecoveryAnswer('');
-          setSelectedOrg('');
-          setSelectedRole('student');
           setJoinCode('');
         }
       } else {
