@@ -1,5 +1,5 @@
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry, escapeLiteralNewlines } from './_gemini.js';
+import { executeWithRetry, parseJSONResponse } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -11,52 +11,6 @@ const bq = new BigQuery({
   },
 });
 
-
-/**
- * Parse complete JSON objects from a partially streamed JSON array string.
- * Tracks brace depth and string boundaries to extract finished {...} objects.
- */
-function extractCompleteObjects(jsonStr) {
-  const objects = [];
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-  let objStart = -1;
-
-  for (let i = 0; i < jsonStr.length; i++) {
-    const ch = jsonStr.charAt(i);
-
-    if (escape) {
-      escape = false;
-      continue;
-    }
-
-    if (inString) {
-      if (ch === '\\') escape = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-
-    // Outside string
-    if (ch === '"') {
-      inString = true;
-    } else if (ch === '{') {
-      if (depth === 0) objStart = i;
-      depth++;
-    } else if (ch === '}') {
-      depth--;
-      if (depth === 0 && objStart !== -1) {
-        try {
-          const rawObjStr = jsonStr.substring(objStart, i + 1);
-          objects.push(JSON.parse(escapeLiteralNewlines(rawObjStr)));
-        } catch { /* incomplete, skip */ }
-        objStart = -1;
-      }
-    }
-  }
-
-  return objects;
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -696,16 +650,9 @@ Output the result strictly as a raw, valid JSON array, keeping it free of any ma
 
 CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (applying a single standard formula to given values). These plug-and-chug applications can ONLY happen for difficulty level 1.`;
 
-    // 3. Set SSE headers for streaming
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-
-    let questionsSent = 0;
+    const allQuestions = [];
     if (pregeneratedQuestion) {
-      res.write(`data: ${JSON.stringify({ type: 'question', data: pregeneratedQuestion })}\n\n`);
-      questionsSent = 1;
+      allQuestions.push(pregeneratedQuestion);
     }
 
     const safetySettings = [
@@ -732,11 +679,11 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
 
     let attempts = 0;
     const maxAttempts = 3;
-    while (questionsSent < count && attempts < maxAttempts) {
+    while (allQuestions.length < count && attempts < maxAttempts) {
       attempts++;
       try {
         await executeWithRetry(models, async (ai, currentModel) => {
-          const needed = count - questionsSent;
+          const needed = count - allQuestions.length;
           if (needed <= 0) return;
 
           const typeInstruction = needed >= parsedTypes.length
@@ -752,60 +699,43 @@ Follow these strict rules:
             dynamicPrompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
           }
 
-          const maxOutputTokens = currentModel.includes('1.5') ? 8192 : 65536;
-          const stream = await ai.models.generateContentStream({
+          const response = await ai.models.generateContent({
             model: currentModel,
             contents: dynamicPrompt,
             config: {
               systemInstruction,
               responseMimeType: "application/json",
               safetySettings,
-              maxOutputTokens,
               temperature: 1.5,
             },
           });
 
-          let accumulated = '';
-          let localQuestionsSent = 0;
-
-          for await (const chunk of stream) {
-            const text = chunk.text;
-            if (text) {
-              accumulated += text;
-
-              // Extract all fully-formed question objects so far
-              const parsed = extractCompleteObjects(accumulated);
-
-              // Emit any newly completed questions
-              while (localQuestionsSent < parsed.length) {
-                if (questionsSent < count) {
-                  res.write(`data: ${JSON.stringify({ type: 'question', data: parsed[localQuestionsSent] })}\n\n`);
-                  questionsSent++;
+          const text = response.text;
+          if (text) {
+            const parsed = parseJSONResponse(text);
+            if (parsed) {
+              const list = Array.isArray(parsed) ? parsed : [parsed];
+              for (const q of list) {
+                if (allQuestions.length < count) {
+                  allQuestions.push(q);
                 }
-                localQuestionsSent++;
               }
             }
           }
         }, req);
-      } catch (streamErr) {
-        console.warn(`Model streaming failed or busy on attempt ${attempts}:`, streamErr);
-        if (questionsSent === 0 && attempts >= maxAttempts) {
-          throw streamErr;
+      } catch (genErr) {
+        console.warn(`Model generation failed or busy on attempt ${attempts}:`, genErr);
+        if (allQuestions.length === 0 && attempts >= maxAttempts) {
+          throw genErr;
         }
         break;
       }
     }
 
-    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-    res.end();
+    return res.status(200).json(allQuestions.slice(0, count));
 
   } catch (err) {
-    console.error('Streaming generation error:', err);
-    if (res.headersSent) {
-      res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
-      res.end();
-    } else {
-      return res.status(500).json({ error: err.message || 'Internal Server Error' });
-    }
+    console.error('Generation error:', err);
+    return res.status(500).json({ error: err.message || 'Internal Server Error' });
   }
 }
