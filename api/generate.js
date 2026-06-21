@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required parameters: count, startingDifficulty, subject' });
   }
 
-  const sanitizedUser = String(targetUserId).replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
+  const sanitizedUser = String(targetUserId).trim().toLowerCase();
   const normSubject = String(subject).trim().toLowerCase();
 
   if (assignmentId && sanitizedUser !== 'default_user') {
