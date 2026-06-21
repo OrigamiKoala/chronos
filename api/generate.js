@@ -780,57 +780,63 @@ Follow these strict rules:
         }
       }, req);
     } catch (streamErr) {
-      const neededCount = count - questionsSent;
-      if (neededCount > 0) {
-        console.warn(`Model streaming failed or busy. Falling back to BigQuery pregenerated questions. Needed: ${neededCount}`, streamErr);
-        try {
-          const pregenQuery = `
+      console.warn(`Model streaming failed or busy:`, streamErr);
+    }
+
+    const neededCount = count - questionsSent;
+    if (neededCount > 0) {
+      console.warn(`Model streaming generated fewer questions than requested (${questionsSent}/${count}). Falling back to BigQuery pregenerated questions for the remaining ${neededCount}.`);
+      try {
+        const pregenQuery = `
+          SELECT question_json
+          FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
+          WHERE subject = @subject AND difficulty = @difficulty
+            AND (ARRAY_LENGTH(@doneIds) = 0 OR JSON_VALUE(question_json, '$.id') NOT IN UNNEST(@doneIds))
+          ORDER BY RAND()
+          LIMIT @limit
+        `;
+        let [rows] = await bq.query({
+          query: pregenQuery,
+          params: { subject: subject, difficulty: difficulty, limit: neededCount, doneIds: doneQuestionIds },
+          types: { doneIds: ['STRING'] }
+        });
+
+        // If not enough questions match both subject and difficulty, fetch more with matching subject only
+        if (rows.length < neededCount) {
+          const fetchedCount = rows.length;
+          const remainingNeeded = neededCount - fetchedCount;
+          const fallbackQuery = `
             SELECT question_json
             FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
-            WHERE subject = @subject AND difficulty = @difficulty
+            WHERE subject = @subject
               AND (ARRAY_LENGTH(@doneIds) = 0 OR JSON_VALUE(question_json, '$.id') NOT IN UNNEST(@doneIds))
             ORDER BY RAND()
             LIMIT @limit
           `;
-          let [rows] = await bq.query({
-            query: pregenQuery,
-            params: { subject: subject, difficulty: difficulty, limit: neededCount, doneIds: doneQuestionIds },
+          const [moreRows] = await bq.query({
+            query: fallbackQuery,
+            params: { subject: subject, limit: remainingNeeded, doneIds: doneQuestionIds },
             types: { doneIds: ['STRING'] }
           });
+          rows = [...rows, ...moreRows];
+        }
 
-          // If not enough questions match both subject and difficulty, fetch more with matching subject only
-          if (rows.length < neededCount) {
-            const fetchedCount = rows.length;
-            const remainingNeeded = neededCount - fetchedCount;
-            const fallbackQuery = `
-              SELECT question_json
-              FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
-              WHERE subject = @subject
-                AND (ARRAY_LENGTH(@doneIds) = 0 OR JSON_VALUE(question_json, '$.id') NOT IN UNNEST(@doneIds))
-              ORDER BY RAND()
-              LIMIT @limit
-            `;
-            const [moreRows] = await bq.query({
-              query: fallbackQuery,
-              params: { subject: subject, limit: remainingNeeded, doneIds: doneQuestionIds },
-              types: { doneIds: ['STRING'] }
-            });
-            rows = [...rows, ...moreRows];
-          }
+        if (rows.length === 0) {
+          throw new Error(`No pregenerated questions found in BigQuery for subject: ${subject}`);
+        }
 
-          if (rows.length === 0) {
-            throw new Error(`No pregenerated questions found in BigQuery for subject: ${subject}`, { cause: streamErr });
-          }
-
-          // Send the pregenerated questions
-          const finalQuestions = rows.slice(0, neededCount);
-          for (const row of finalQuestions) {
-            const qObj = JSON.parse(row.question_json);
-            res.write(`data: ${JSON.stringify({ type: 'question', data: qObj })}\n\n`);
-          }
-        } catch (fallbackErr) {
-          console.error('Fallback query also failed:', fallbackErr);
-          throw streamErr; // Throw original streaming error to avoid hiding it if fallback fails/has no data
+        // Send the pregenerated questions
+        const finalQuestions = rows.slice(0, neededCount);
+        for (const row of finalQuestions) {
+          const qObj = JSON.parse(row.question_json);
+          res.write(`data: ${JSON.stringify({ type: 'question', data: qObj })}\n\n`);
+          questionsSent++;
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback query also failed:', fallbackErr);
+        // If we haven't sent any questions at all, propagate the original error/failure
+        if (questionsSent === 0) {
+          throw new Error(`Failed to generate problems: ${fallbackErr.message}`);
         }
       }
     }
