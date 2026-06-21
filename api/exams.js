@@ -1020,37 +1020,39 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       // Fire wrong inserts + mastery upsert in parallel
       await Promise.all([...wrongInsertPromises, ...masteryPromises]);
 
-      // 4. Trigger update of user weaknesses using direct Gemini model
-      let freshAnalysis = null;
-      let freshMistakePatterns = '';
-      
-      const analysisPromises = [updateAIWeaknesses(sanitizedUser, subject, req)];
-      if (!isOnlyMCQ) {
-        analysisPromises.push(analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req));
-      }
-      
-      const analysisResults = await Promise.all(analysisPromises);
-      freshAnalysis = analysisResults[0];
-      if (!isOnlyMCQ) {
-        freshMistakePatterns = analysisResults[1] || '';
-      }
+      // 4. Trigger unified weakness and mistake analysis using a single Gemini request
+      const { detailedAnalysis, mistakePatterns } = await generateAndSaveDiagnostics(
+        sanitizedUser,
+        examId,
+        subject,
+        gradedResults,
+        false,
+        req
+      );
 
       return res.status(200).json({ 
         success: true, 
-        detailedAnalysis: freshAnalysis, 
-        mistakePatterns: freshMistakePatterns,
+        detailedAnalysis, 
+        mistakePatterns,
         results: gradedResults,
         accuracy: finalAccuracy,
         ratingChange: finalRatingChange,
         newRating: finalNewRating
       });
     } else {
-      // For Guest user: run mistake analysis via Gemini without BigQuery insert, return detailedAnalysis as null
-      const freshMistakePatterns = isOnlyMCQ ? '' : await analyzeMistakesAndSave(sanitizedUser, examId, subject, gradedResults, req);
+      // For Guest user: run diagnostics/mistake analysis without BigQuery insert, return detailedAnalysis as null
+      const { mistakePatterns } = await generateAndSaveDiagnostics(
+        sanitizedUser,
+        examId,
+        subject,
+        gradedResults,
+        true,
+        req
+      );
       return res.status(200).json({ 
         success: true, 
         detailedAnalysis: null, 
-        mistakePatterns: freshMistakePatterns,
+        mistakePatterns,
         results: gradedResults,
         accuracy: finalAccuracy,
         ratingChange: finalRatingChange,
@@ -1163,71 +1165,106 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
   }
 }
 
-// Background worker function to analyze wrong problems and update weaknesses
-async function updateAIWeaknesses(username, subject, req) {
+// Unified background worker function to analyze weaknesses and mistake patterns in a single Gemini request
+async function generateAndSaveDiagnostics(username, examId, subject, results, isGuest, req) {
   try {
-    // A. Fetch incorrect questions for this user and subject
-    const fetchWrongProblemsQuery = `
-      SELECT topic, question_text, user_answer, correct_answer
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-      WHERE user_id = @username AND subject = @subject
-    `;
-    const [wrongProblems] = await bq.query({
-      query: fetchWrongProblemsQuery,
-      params: { username, subject }
-    });
-    
-    // B. Fetch student's overall topic mastery statistics
-    const fetchMasteryQuery = `
-      SELECT sub_category as topic, correct_count, total_count, accuracy_rate
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-      WHERE user_id = @username AND subject = @subject
-    `;
-    const [masteryRows] = await bq.query({
-      query: fetchMasteryQuery,
-      params: { username, subject }
-    });
-
-    if ((!wrongProblems || wrongProblems.length === 0) && (!masteryRows || masteryRows.length === 0)) {
-      return null;
+    const isOnlyMCQ = results.every(r => r.type === 'multiple_choice');
+    if (isGuest && isOnlyMCQ) {
+      return { detailedAnalysis: null, mistakePatterns: '' };
     }
 
-    const masteryString = masteryRows && masteryRows.length > 0
-      ? masteryRows.map(m => `Topic: ${m.topic} | Attempts: ${m.total_count} | Correct: ${m.correct_count} | Accuracy: ${Math.round((m.accuracy_rate || 0) * 100)}%`).join('\n')
-      : 'No attempts recorded for any topic yet.';
+    let masteryString = 'No attempts recorded for any topic yet.';
+    let wrongProblemsString = 'No incorrect questions recorded.';
 
-    const wrongProblemsString = wrongProblems && wrongProblems.length > 0
-      ? wrongProblems.map(p => `Topic: ${p.topic} | Question: ${p.question_text} | User Answer: ${p.user_answer || 'None'} | Correct Answer: ${p.correct_answer}`).join(' ; ')
-      : 'No incorrect questions recorded.';
+    if (!isGuest) {
+      // Fetch incorrect questions for this user and subject
+      const fetchWrongProblemsQuery = `
+        SELECT topic, question_text, user_answer, correct_answer
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+        WHERE user_id = @username AND subject = @subject
+      `;
+      const [wrongProblems] = await bq.query({
+        query: fetchWrongProblemsQuery,
+        params: { username, subject }
+      });
+      
+      // Fetch student's overall topic mastery statistics
+      const fetchMasteryQuery = `
+        SELECT sub_category as topic, correct_count, total_count, accuracy_rate
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+        WHERE user_id = @username AND subject = @subject
+      `;
+      const [masteryRows] = await bq.query({
+        query: fetchMasteryQuery,
+        params: { username, subject }
+      });
 
-    const prompt = `Analyze these incorrect ${subject} exam questions and overall topic mastery data attempted by user '${username}'. 
-Provide a thorough diagnostic analysis of their strengths and weaknesses in this subject. 
+      if (masteryRows && masteryRows.length > 0) {
+        masteryString = masteryRows.map(m => `Topic: ${m.topic} | Attempts: ${m.total_count} | Correct: ${m.correct_count} | Accuracy: ${Math.round((m.accuracy_rate || 0) * 100)}%`).join('\n');
+      }
 
+      if (wrongProblems && wrongProblems.length > 0) {
+        wrongProblemsString = wrongProblems.map(p => `Topic: ${p.topic} | Question: ${p.question_text} | User Answer: ${p.user_answer || 'None'} | Correct Answer: ${p.correct_answer}`).join(' ; ');
+      }
+    }
+
+    const currentAttemptString = results.map((r, i) => `
+Question ${i+1}: ${r.question}
+Correct Answer: ${r.answer}
+User's Answer: ${r.userAnswer || 'None'}
+Is Correct: ${r.isCorrect ? 'Yes' : 'No'}
+Time Spent: ${r.timeSpent || 0}s
+Timed Out: ${r.timeOut ? 'Yes' : 'No'}
+`).join('\n');
+
+    let prompt = `You are a world-class diagnostic tutor for the stress-sandbox app. 
+Analyze the user's performance on this ${subject} exam attempt and their historical learning profile.
+
+Current Exam Attempt Details:
+${currentAttemptString}
+`;
+
+    if (!isGuest) {
+      prompt += `
 Student's overall topic mastery statistics (number of attempts, correct answers, and accuracy) in this subject:
 ${masteryString}
 
-Incorrect questions:
+Incorrect questions history in this subject:
 ${wrongProblemsString}
+`;
+    }
 
-Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. 
-For EACH of these identified topics (both strengths and weaknesses), generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at.
+    prompt += `
+Your tasks:
+1. Provide a professional, diagnostic summary of their mistake patterns on this specific exam attempt (e.g. conceptual gaps, calculation errors, timing issues, or panic) and concrete recommendations to avoid these mistakes in the future.
+`;
 
-CRITICAL RULES:
-1. Don't flag any topic as a weakness if the student has never tested on it (i.e., total attempts is 0, or not present in the mastery list).
-2. Only flag a topic as a weakness if the student gets it wrong constantly (e.g., accuracy is less than 65% across at least 3 attempts).
-3. If they have only attempted a topic 1 or 2 times and got it wrong, do NOT flag it as a weakness, as there is insufficient data to establish that they get it wrong constantly.
-4. For each topic in 'topic_breakdowns', the 'good_at' and 'not_good_at' descriptions MUST be completely distinct and address different aspects of the topic. They MUST NOT be identical, copy each other, or be contradictory.
-5. If the topic is a clear strength (high accuracy, no incorrect questions), specify what makes them strong in 'good_at', and for 'not_good_at' write: "No significant weaknesses observed in recent attempts."
-6. If the topic is a clear weakness (low accuracy, multiple incorrect questions), specify their core struggle in 'not_good_at', and for 'good_at' write: "Requires fundamental instruction on basic concepts before identifying specific strengths." or describe any partial progress they've shown.
+    if (!isGuest) {
+      prompt += `
+2. Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. 
+3. For EACH of these identified topics (both strengths and weaknesses), generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at.
+4. Provide a thorough detailed diagnostic analysis of their strengths and weaknesses in this subject.
 
+CRITICAL RULES FOR TOPIC BREAKDOWNS:
+- Don't flag any topic as a weakness if the student has never tested on it (i.e. not present in overall topic mastery).
+- Only flag a topic as a weakness if the student gets it wrong constantly (e.g., accuracy is less than 65% across at least 3 attempts).
+- If they have only attempted a topic 1 or 2 times and got it wrong, do NOT flag it as a weakness.
+- For each topic in 'topic_breakdowns', the 'good_at' and 'not_good_at' descriptions MUST be completely distinct and address different aspects of the topic. They MUST NOT be identical, copy each other, or be contradictory.
+- If the topic is a clear strength, specify what makes them strong in 'good_at', and for 'not_good_at' write: "No significant weaknesses observed in recent attempts."
+- If the topic is a clear weakness, specify their core struggle in 'not_good_at', and for 'good_at' write: "Requires fundamental instruction on basic concepts before identifying specific strengths." or describe any partial progress shown.
+`;
+    }
+
+    prompt += `
 Return strictly a valid JSON object with the following schema:
 {
-  "strengths": ["Topic A", "Topic B"],
-  "weaknesses": ["Topic B", "Topic C"],
-  "detailed_analysis": "A detailed diagnosis...",
-  "topic_breakdowns": [
+  "mistake_patterns": "A detailed, direct, supportive, and pedagogical summary of their mistake patterns on this specific attempt...",
+  "strengths": ${isGuest ? '[]' : '["Topic A", "Topic B"]'},
+  "weaknesses": ${isGuest ? '[]' : '["Topic B", "Topic C"]'},
+  "detailed_analysis": ${isGuest ? '""' : '"A detailed diagnosis..."'},
+  "topic_breakdowns": ${isGuest ? '[]' : `[
     { "topic": "Topic B", "good_at": "What they do well...", "not_good_at": "What they struggle with..." }
-  ]
+  ]`}
 }
 Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.`;
 
@@ -1237,259 +1274,93 @@ Do NOT include markdown formatting, backticks, or any conversational text. Retur
       model: currentModel,
       contents: prompt,
       safety_settings: [
-        {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        }
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
       ],
       safetySettings: [
-        {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        }
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
       ],
       config: {
         responseMimeType: "application/json",
-        temperature: 0.2,
-        safety_settings: [
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          }
-        ],
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          }
-        ]
+        temperature: 0.3
       }
     }), req);
+
+    let detailedAnalysis = null;
+    let mistakePatterns = '';
 
     if (response.text) {
-      const responseText = response.text;
-      const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const cleanedText = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
       const responseObj = JSON.parse(cleanedText);
-      const detailedAnalysis = responseObj.detailed_analysis;
-      const topicBreakdowns = responseObj.topic_breakdowns;
-      
-      const upsertPromises = [];
+      mistakePatterns = responseObj.mistake_patterns || '';
 
-      // Fire topic breakdowns in parallel
-      if (Array.isArray(topicBreakdowns)) {
-        for (const b of topicBreakdowns) {
+      if (!isGuest) {
+        detailedAnalysis = responseObj.detailed_analysis || null;
+        const topicBreakdowns = responseObj.topic_breakdowns;
+
+        const upsertPromises = [];
+
+        // Save mistake patterns in BigQuery
+        if (mistakePatterns) {
+          const insertQuery = `
+            INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+              (user_id, exam_id, subject, mistake_patterns, created_at)
+            VALUES
+              (@username, @examId, @subject, @mistakePatterns, CURRENT_TIMESTAMP())
+          `;
           upsertPromises.push(bq.query({
-            query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
-              USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
-              ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-              WHEN MATCHED THEN
-                UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
-              WHEN NOT MATCHED THEN
-                INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
-                VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
-            params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
+            query: insertQuery,
+            params: { username, examId, subject, mistakePatterns }
           }));
         }
-      }
 
-      // Fire analysis merge in parallel
-      if (detailedAnalysis) {
-        upsertPromises.push(bq.query({
-          query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
-            USING (SELECT @username AS user_id, @subject AS subject) S
-            ON T.user_id = S.user_id AND T.subject = S.subject
-            WHEN MATCHED THEN
-              UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
-            WHEN NOT MATCHED THEN
-              INSERT (user_id, subject, detailed_analysis, updated_at)
-              VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())`,
-          params: { username, subject, detailedAnalysis }
-        }));
-      }
-
-      if (upsertPromises.length > 0) {
-        await Promise.all(upsertPromises);
-      }
-      return detailedAnalysis || null;
-    }
-    return null;
-  } catch (err) {
-    console.error('Background AI weaknesses update failed:', err);
-    return null;
-  }
-}
-
-async function analyzeMistakesAndSave(username, examId, subject, results, req) {
-  try {
-    const prompt = `You are an expert tutor. Analyze the user's performance on this ${subject} exam.
-Look closely at their answers to determine what kind of mistakes they made (e.g., conceptual gaps, calculation errors, timing issues, or panic).
-
-Exam attempt details:
-${results.map((r, i) => `
-Question ${i+1}: ${r.question}
-Correct Answer: ${r.answer}
-User's Answer: ${r.userAnswer}
-Is Correct: ${r.isCorrect ? 'Yes' : 'No'}
-Time Spent: ${r.timeSpent}s
-Timed Out: ${r.timeOut ? 'Yes' : 'No'}
-`).join('\n')}
-
-Provide a professional, diagnostic summary of their mistake patterns and concrete recommendations to avoid these mistakes in the future.
-Be direct, supportive, and pedagogical. Do not include markdown headers or greetings.`;
-
-    const modelId = 'gemini-3.1-flash-lite';
-    const models = [modelId, 'gemini-3-flash-preview'];
-    const response = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
-      model: currentModel,
-      contents: prompt,
-      safety_settings: [
-        {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        }
-      ],
-      safetySettings: [
-        {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        }
-      ],
-      config: {
-        temperature: 0.3,
-        safety_settings: [
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+        // Fire topic breakdowns
+        if (Array.isArray(topicBreakdowns)) {
+          for (const b of topicBreakdowns) {
+            upsertPromises.push(bq.query({
+              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+                USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
+                ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
+                WHEN MATCHED THEN
+                  UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
+                WHEN NOT MATCHED THEN
+                  INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
+                  VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
+              params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
+            }));
           }
-        ],
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          }
-        ]
-      }
-    }), req);
-
-    const mistakePatterns = response.text || '';
-
-    // Save results in BigQuery
-    if (username !== 'default_user') {
-      const insertQuery = `
-        INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
-          (user_id, exam_id, subject, mistake_patterns, created_at)
-        VALUES
-          (@username, @examId, @subject, @mistakePatterns, CURRENT_TIMESTAMP())
-      `;
-      await bq.query({
-        query: insertQuery,
-        params: {
-          username,
-          examId,
-          subject,
-          mistakePatterns
         }
-      });
+
+        // Fire weakness analysis merge
+        if (detailedAnalysis) {
+          upsertPromises.push(bq.query({
+            query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` T
+              USING (SELECT @username AS user_id, @subject AS subject) S
+              ON T.user_id = S.user_id AND T.subject = S.subject
+              WHEN MATCHED THEN
+                UPDATE SET detailed_analysis = @detailedAnalysis, updated_at = CURRENT_TIMESTAMP()
+              WHEN NOT MATCHED THEN
+                INSERT (user_id, subject, detailed_analysis, updated_at)
+                VALUES (@username, @subject, @detailedAnalysis, CURRENT_TIMESTAMP())`,
+            params: { username, subject, detailedAnalysis }
+          }));
+        }
+
+        if (upsertPromises.length > 0) {
+          await Promise.all(upsertPromises);
+        }
+      }
     }
-    return mistakePatterns;
+
+    return { detailedAnalysis, mistakePatterns };
+
   } catch (err) {
-    console.error('Error in mistake analysis background job:', err);
-    return null;
+    console.error('Error in generateAndSaveDiagnostics:', err);
+    return { detailedAnalysis: null, mistakePatterns: '' };
   }
 }
