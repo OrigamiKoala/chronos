@@ -182,15 +182,6 @@ export default async function handler(req, res) {
             )
           `)
         ]);
-
-        try {
-          await bq.query(`
-            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
-            RENAME COLUMN starting_difficulty TO difficulty
-          `);
-        } catch (renameErr) {
-          console.log("Migration rename starting_difficulty to difficulty ignored/already done:", renameErr.message);
-        }
       } catch (e) {
         console.warn("Alter table error or already exists:", e);
       }
