@@ -417,7 +417,7 @@ export function TeacherScreen({ user, onBack }) {
   useEffect(() => {
     fetchTeacherData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.user_id]);
 
   const handleClaimStudent = async (studentId, isClaimed) => {
     try {

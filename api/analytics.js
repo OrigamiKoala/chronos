@@ -87,61 +87,101 @@ export default async function handler(req, res) {
 
   try {
     // Fire all 6 independent reads in parallel
-    const eloQuery = `
-      SELECT user_id, exam_id, subject, accuracy, new_rating, rating_change, created_at
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-      WHERE user_id IN UNNEST(@usernames)
-      ORDER BY created_at ASC
-    `;
-    const tagQuery = `
-      SELECT t.user_id, t.exam_id, t.question_index, t.tag, t.is_correct, t.points_value, h.created_at, h.subject
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\` t
-      JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
-        ON t.exam_id = h.exam_id AND t.user_id = h.user_id
-      WHERE t.user_id IN UNNEST(@usernames)
-      ORDER BY h.created_at ASC
-    `;
-    const resultsQuery = `
-      SELECT r.user_id, r.exam_id, r.results_json, h.created_at, h.subject
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
-      JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
-        ON r.exam_id = h.exam_id AND r.user_id = h.user_id
-      WHERE r.user_id IN UNNEST(@usernames)
-      ORDER BY h.created_at ASC
-    `;
-    const masteryQuery = `
-      SELECT user_id, sub_category, subject, correct_count, total_count, accuracy_rate
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-      WHERE user_id IN UNNEST(@usernames) AND total_count > 0
-      ORDER BY subject, accuracy_rate DESC
-    `;
-    const analysisQuery = `
-      SELECT user_id, subject, detailed_analysis
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
-      WHERE user_id IN UNNEST(@usernames)
-    `;
-    const breakdownQuery = `
-      SELECT user_id, topic, good_at, not_good_at
-      FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-      WHERE user_id IN UNNEST(@usernames)
+    const consolidatedQuery = `
+      WITH elo AS (
+        SELECT 'elo' AS type, TO_JSON_STRING(STRUCT(user_id, exam_id, subject, accuracy, new_rating, rating_change, created_at)) AS data
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+        WHERE user_id IN UNNEST(@usernames)
+      ),
+      tags AS (
+        SELECT 'tag' AS type, TO_JSON_STRING(STRUCT(t.user_id, t.exam_id, t.question_index, t.tag, t.is_correct, t.points_value, h.created_at, h.subject)) AS data
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\` t
+        JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
+          ON t.exam_id = h.exam_id AND t.user_id = h.user_id
+        WHERE t.user_id IN UNNEST(@usernames)
+      ),
+      results AS (
+        SELECT 'results' AS type, TO_JSON_STRING(STRUCT(r.user_id, r.exam_id, r.results_json, h.created_at, h.subject)) AS data
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
+        JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
+          ON r.exam_id = h.exam_id AND r.user_id = h.user_id
+        WHERE r.user_id IN UNNEST(@usernames)
+      ),
+      mastery AS (
+        SELECT 'mastery' AS type, TO_JSON_STRING(STRUCT(user_id, sub_category, subject, correct_count, total_count, accuracy_rate)) AS data
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+        WHERE user_id IN UNNEST(@usernames) AND total_count > 0
+      ),
+      analysis AS (
+        SELECT 'analysis' AS type, TO_JSON_STRING(STRUCT(user_id, subject, detailed_analysis)) AS data
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\`
+        WHERE user_id IN UNNEST(@usernames)
+      ),
+      breakdown AS (
+        SELECT 'breakdown' AS type, TO_JSON_STRING(STRUCT(user_id, topic, good_at, not_good_at)) AS data
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+        WHERE user_id IN UNNEST(@usernames)
+      )
+      SELECT type, data FROM elo
+      UNION ALL
+      SELECT type, data FROM tags
+      UNION ALL
+      SELECT type, data FROM results
+      UNION ALL
+      SELECT type, data FROM mastery
+      UNION ALL
+      SELECT type, data FROM analysis
+      UNION ALL
+      SELECT type, data FROM breakdown
     `;
 
     const params = { usernames };
-    const [eloResult, tagResult, resultsResult, masteryResult, analysisResult, breakdownResult] = await Promise.allSettled([
-      bq.query({ query: eloQuery, params }),
-      bq.query({ query: tagQuery, params }),
-      bq.query({ query: resultsQuery, params }),
-      bq.query({ query: masteryQuery, params }),
-      bq.query({ query: analysisQuery, params }),
-      bq.query({ query: breakdownQuery, params })
-    ]);
+    const [rows] = await bq.query({ query: consolidatedQuery, params });
 
-    const eloHistory = eloResult.status === 'fulfilled' ? eloResult.value[0] : [];
-    const tagData = tagResult.status === 'fulfilled' ? tagResult.value[0] : [];
-    const resultRows = resultsResult.status === 'fulfilled' ? resultsResult.value[0] : [];
-    const topicMastery = masteryResult.status === 'fulfilled' ? masteryResult.value[0] : [];
-    const analyses = analysisResult.status === 'fulfilled' ? analysisResult.value[0] : [];
-    const breakdowns = breakdownResult.status === 'fulfilled' ? breakdownResult.value[0] : [];
+    const eloHistory = [];
+    const tagData = [];
+    const resultRows = [];
+    const topicMastery = [];
+    const analyses = [];
+    const breakdowns = [];
+
+    for (const r of rows) {
+      try {
+        const parsedData = JSON.parse(r.data);
+        if (r.type === 'elo') eloHistory.push(parsedData);
+        else if (r.type === 'tag') tagData.push(parsedData);
+        else if (r.type === 'results') resultRows.push(parsedData);
+        else if (r.type === 'mastery') topicMastery.push(parsedData);
+        else if (r.type === 'analysis') analyses.push(parsedData);
+        else if (r.type === 'breakdown') breakdowns.push(parsedData);
+      } catch (parseErr) {
+        console.error("Failed to parse row data:", r, parseErr);
+      }
+    }
+
+    // Apply sorting in JS to match previous database ordering
+    eloHistory.sort((a, b) => {
+      const da = new Date(a.created_at?.value || a.created_at);
+      const db = new Date(b.created_at?.value || b.created_at);
+      return da - db;
+    });
+
+    tagData.sort((a, b) => {
+      const da = new Date(a.created_at?.value || a.created_at);
+      const db = new Date(b.created_at?.value || b.created_at);
+      return da - db;
+    });
+
+    resultRows.sort((a, b) => {
+      const da = new Date(a.created_at?.value || a.created_at);
+      const db = new Date(b.created_at?.value || b.created_at);
+      return da - db;
+    });
+
+    topicMastery.sort((a, b) => {
+      if (a.subject !== b.subject) return a.subject.localeCompare(b.subject);
+      return b.accuracy_rate - a.accuracy_rate;
+    });
 
     // Build a map of exam results to dynamically look up question type and difficulty
     const examResultsMap = {};

@@ -150,44 +150,61 @@ export default async function handler(req, res) {
     }
 
     try {
-      const resultsQuery = `
-        SELECT results_json
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-        WHERE exam_id = @examId
-        LIMIT 1
-      `;
-      const mistakeQuery = `
-        SELECT mistake_patterns
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
-        WHERE exam_id = @examId
-        LIMIT 1
-      `;
-      const tagsQuery = `
-        SELECT question_index, tag
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
-        WHERE exam_id = @examId
-        ORDER BY question_index ASC
+      const consolidatedQuery = `
+        WITH results AS (
+          SELECT 'results' AS type, TO_JSON_STRING(STRUCT(results_json)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+          WHERE exam_id = @examId
+          LIMIT 1
+        ),
+        mistake AS (
+          SELECT 'mistake' AS type, TO_JSON_STRING(STRUCT(mistake_patterns)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\`
+          WHERE exam_id = @examId
+          LIMIT 1
+        ),
+        tags AS (
+          SELECT 'tags' AS type, TO_JSON_STRING(STRUCT(question_index, tag)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+          WHERE exam_id = @examId
+        )
+        SELECT type, data FROM results
+        UNION ALL
+        SELECT type, data FROM mistake
+        UNION ALL
+        SELECT type, data FROM tags
       `;
 
       const params = { examId };
-      const [resultsResult, mistakeResult, tagsResult] = await Promise.allSettled([
-        bq.query({ query: resultsQuery, params }),
-        bq.query({ query: mistakeQuery, params }),
-        bq.query({ query: tagsQuery, params })
-      ]);
+      const [rows] = await bq.query({ query: consolidatedQuery, params });
 
-      // Results are required
-      if (resultsResult.status !== 'fulfilled' || resultsResult.value[0].length === 0) {
+      let results_json = null;
+      let mistakeRows = [];
+      const tagRows = [];
+
+      for (const r of rows) {
+        try {
+          const parsed = JSON.parse(r.data);
+          if (r.type === 'results') results_json = parsed.results_json;
+          else if (r.type === 'mistake') mistakeRows.push(parsed);
+          else if (r.type === 'tags') tagRows.push(parsed);
+        } catch (e) {
+          console.error("Failed to parse get-exam consolidated row:", r, e);
+        }
+      }
+
+      if (!results_json) {
         return res.status(404).json({ error: 'Exam results not found' });
       }
-      const results = JSON.parse(resultsResult.value[0][0].results_json);
-
-      // Mistakes are optional
-      const mistakeRows = mistakeResult.status === 'fulfilled' ? mistakeResult.value[0] : [];
+      const results = JSON.parse(results_json);
       const mistakePatterns = mistakeRows.length > 0 ? mistakeRows[0].mistake_patterns : null;
 
-      // Tags are optional
-      const tagRows = tagsResult.status === 'fulfilled' ? tagsResult.value[0] : [];
+      tagRows.sort((a, b) => {
+        const qa = a.question_index !== null && a.question_index !== undefined ? Number(a.question_index) : 0;
+        const qb = b.question_index !== null && b.question_index !== undefined ? Number(b.question_index) : 0;
+        return qa - qb;
+      });
+
       const savedTags = tagRows.map(r => {
         let qIdx = r.question_index;
         if (qIdx !== null && qIdx !== undefined) {
@@ -225,30 +242,45 @@ export default async function handler(req, res) {
 
     try {
       // 1. Fetch current results_json from user_exam_results and history details from user_exam_history
-      const getResultsQuery = `
-        SELECT results_json
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-        WHERE exam_id = @examId AND user_id = @username
-        LIMIT 1
-      `;
-      const getHistoryQuery = `
-        SELECT rating_change, new_rating, avg_time, accuracy
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-        WHERE exam_id = @examId AND user_id = @username
-        LIMIT 1
+      const consolidatedQuery = `
+        WITH exam AS (
+          SELECT 'exam' AS type, TO_JSON_STRING(STRUCT(results_json)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+          WHERE exam_id = @examId AND user_id = @username
+          LIMIT 1
+        ),
+        hist AS (
+          SELECT 'hist' AS type, TO_JSON_STRING(STRUCT(rating_change, new_rating, avg_time, accuracy)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+          WHERE exam_id = @examId AND user_id = @username
+          LIMIT 1
+        )
+        SELECT type, data FROM exam
+        UNION ALL
+        SELECT type, data FROM hist
       `;
 
-      const [[examRows], [historyRows]] = await Promise.all([
-        bq.query({ query: getResultsQuery, params: { examId, username: sanitizedUser } }),
-        bq.query({ query: getHistoryQuery, params: { examId, username: sanitizedUser } })
-      ]);
+      const [rows] = await bq.query({ query: consolidatedQuery, params: { examId, username: sanitizedUser } });
 
-      if (!examRows || examRows.length === 0 || !historyRows || historyRows.length === 0) {
+      let examData = null;
+      let histData = null;
+
+      for (const r of rows) {
+        try {
+          const parsed = JSON.parse(r.data);
+          if (r.type === 'exam') examData = parsed;
+          else if (r.type === 'hist') histData = parsed;
+        } catch (e) {
+          console.error("Failed to parse remark-correct consolidated row:", r, e);
+        }
+      }
+
+      if (!examData || !histData) {
         return res.status(404).json({ error: 'Exam results or history not found' });
       }
 
-      const results = JSON.parse(examRows[0].results_json);
-      const hist = historyRows[0];
+      const results = JSON.parse(examData.results_json);
+      const hist = histData;
 
       // 2. Find and update the specific question
       let questionFound = false;

@@ -82,7 +82,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     } else {
       setTimeout(() => setHomeworks([]), 0);
     }
-  }, [user]);
+  }, [user?.user_id, user?.user_organization]);
 
   const [selectedPreset, setSelectedPreset] = useState('custom');
 

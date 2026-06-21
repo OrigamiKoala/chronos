@@ -771,57 +771,32 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
         });
       }
 
-      // Fetch all organization students
-      const getOrgStudentsQuery = `
-        SELECT user_id, math_rating, physics_rating, chemistry_rating, created_at
-        FROM \`${projectId}\`.\`chronos_users\`.\`users\`
-        WHERE user_organization = @organization AND user_role = 'student'
-        ORDER BY user_id ASC
-      `;
-      const [orgStudents] = await bq.query({
-        query: getOrgStudentsQuery,
-        params: { organization }
-      });
-
-      // Fetch claimed students
-      const getClaimedStudentsQuery = `
-        SELECT student_id
-        FROM \`${projectId}\`.\`chronos_users\`.\`teacher_students\`
-        WHERE teacher_id = @username
-      `;
-      const [claimedRows] = await bq.query({
-        query: getClaimedStudentsQuery,
-        params: { username: sanitizedUser }
-      });
-      const claimedStudentIds = claimedRows.map(r => r.student_id);
-
-      // Fetch lessons
-      const getLessonsQuery = `
-        SELECT lesson_id, title, description, created_at
-        FROM \`${projectId}\`.\`chronos_users\`.\`lessons\`
-        WHERE teacher_id = @username
-        ORDER BY created_at DESC
-      `;
-      const [lessons] = await bq.query({
-        query: getLessonsQuery,
-        params: { username: sanitizedUser }
-      });
-
-      // Fetch assignments and submissions in parallel
-      let assignments = [];
-      let submissions = [];
-
-      if (lessons.length > 0) {
-        const getAssignmentsQuery = `
-          SELECT assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set
+      // Fetch all data in a single consolidated BigQuery query
+      const consolidatedQuery = `
+        WITH orgStudents AS (
+          SELECT 'orgStudents' AS type, TO_JSON_STRING(STRUCT(user_id, math_rating, physics_rating, chemistry_rating, created_at)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`users\`
+          WHERE user_organization = @organization AND user_role = 'student'
+        ),
+        claimedStudents AS (
+          SELECT 'claimedStudents' AS type, TO_JSON_STRING(STRUCT(student_id)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`teacher_students\`
+          WHERE teacher_id = @username
+        ),
+        lessons AS (
+          SELECT 'lessons' AS type, TO_JSON_STRING(STRUCT(lesson_id, title, description, created_at)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`lessons\`
+          WHERE teacher_id = @username
+        ),
+        assignments AS (
+          SELECT 'assignments' AS type, TO_JSON_STRING(STRUCT(assignment_id, lesson_id, title, subject, num_questions, starting_difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)) AS data
           FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
           WHERE lesson_id IN (
             SELECT lesson_id FROM \`${projectId}\`.\`chronos_users\`.\`lessons\` WHERE teacher_id = @username
           )
-          ORDER BY created_at DESC
-        `;
-        const getSubmissionsQuery = `
-          SELECT user_id, exam_id, subject, accuracy, new_rating, rating_change, created_at, assignment_id
+        ),
+        submissions AS (
+          SELECT 'submissions' AS type, TO_JSON_STRING(STRUCT(user_id, exam_id, subject, accuracy, new_rating, rating_change, created_at, assignment_id)) AS data
           FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
           WHERE assignment_id IN (
             SELECT assignment_id FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
@@ -829,16 +804,47 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
               SELECT lesson_id FROM \`${projectId}\`.\`chronos_users\`.\`lessons\` WHERE teacher_id = @username
             )
           )
-          ORDER BY created_at DESC
-        `;
+        )
+        SELECT type, data FROM orgStudents
+        UNION ALL
+        SELECT type, data FROM claimedStudents
+        UNION ALL
+        SELECT type, data FROM lessons
+        UNION ALL
+        SELECT type, data FROM assignments
+        UNION ALL
+        SELECT type, data FROM submissions
+      `;
 
-        const [assignResult, subResult] = await Promise.all([
-          bq.query({ query: getAssignmentsQuery, params: { username: sanitizedUser } }),
-          bq.query({ query: getSubmissionsQuery, params: { username: sanitizedUser } })
-        ]);
-        assignments = assignResult[0];
-        submissions = subResult[0];
+      const [rows] = await bq.query({
+        query: consolidatedQuery,
+        params: { organization, username: sanitizedUser }
+      });
+
+      const orgStudents = [];
+      const claimedStudentIds = [];
+      const lessons = [];
+      let assignments = [];
+      let submissions = [];
+
+      for (const r of rows) {
+        try {
+          const parsed = JSON.parse(r.data);
+          if (r.type === 'orgStudents') orgStudents.push(parsed);
+          else if (r.type === 'claimedStudents') claimedStudentIds.push(parsed.student_id);
+          else if (r.type === 'lessons') lessons.push(parsed);
+          else if (r.type === 'assignments') assignments.push(parsed);
+          else if (r.type === 'submissions') submissions.push(parsed);
+        } catch (parseErr) {
+          console.error("Failed to parse row data in teacher-data:", r, parseErr);
+        }
       }
+
+      // Sort results to match original ordering
+      orgStudents.sort((a, b) => a.user_id.localeCompare(b.user_id));
+      lessons.sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at));
+      assignments.sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at));
+      submissions.sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at));
 
       // Compute collective student stats & aggregate strengths/weaknesses
       const myStudents = orgStudents.filter(s => claimedStudentIds.includes(s.user_id));
