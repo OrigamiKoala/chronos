@@ -14,7 +14,8 @@ import {
   Filler
 } from 'chart.js';
 import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle as TriangleIcon, BookOpen, Save, Check, Clock } from 'lucide-react';
-import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
+import { ChemicalText, SmilesRenderer } from './ChemicalText';
+import { isSmiles } from './chemicalHelpers';
 import { normalizeAnswer } from './ExamScreen';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler);
@@ -255,7 +256,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       } else {
         next = { ...prev, [index]: tag };
       }
-      
+
       setTagsSaving(true);
       setTagsSaved(false);
 
@@ -272,7 +273,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
 
   const handleAskAI = async (index, problemObj, userQuery = '') => {
     const currentMessages = activeExplanations[index]?.messages || [];
-    const history = userQuery 
+    const history = userQuery
       ? [...currentMessages, { sender: 'user', text: userQuery }]
       : currentMessages;
 
@@ -886,7 +887,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                       )}
 
                       {activeExplanations[i].messages && activeExplanations[i].messages.length > 0 && (
-                        <div 
+                        <div
                           ref={el => { chatContainersRef.current[i] = el; }}
                           style={{
                             display: 'flex',
