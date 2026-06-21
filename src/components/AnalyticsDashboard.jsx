@@ -343,7 +343,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       })
       .then(d => { setData(d); setLoading(false); })
       .catch(e => { setError(e.message); setLoading(false); });
-  }, [user]);
+  }, [user?.user_id]);
 
   // ELO over time chart
   const eloChartData = useMemo(() => {
