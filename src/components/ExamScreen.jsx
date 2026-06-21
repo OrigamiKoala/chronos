@@ -212,58 +212,76 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     }
 
     let firstReceived = false;
+    let allGenerated = [];
+    let streamedQuestions = [];
 
-    try {
-      const generated = await generateProblems(
-        aiCount,
-        config.difficulty,
-        config.subject,
-        config.username || 'default_user',
-        (question, index) => {
-          if (index < aiCount) {
+    while (allGenerated.length < aiCount && retryCount < MAX_RETRIES) {
+      const needed = aiCount - allGenerated.length;
+      try {
+        streamedQuestions = [];
+        const generated = await generateProblems(
+          needed,
+          config.difficulty,
+          config.subject,
+          config.username || 'default_user',
+          (question, index) => {
+            // Append as they arrive in real-time
             setProblems(prev => {
               if (prev.length >= totalCount) return prev;
               return [...prev, question];
             });
-          }
 
-          if (!firstReceived) {
-            firstReceived = true;
-            if (sharedQuestions.length === 0) {
-              setCurrentDifficulty(question.difficulty || config.difficulty);
-              setLoading(false);
+            streamedQuestions.push(question);
+
+            if (!firstReceived) {
+              firstReceived = true;
+              if (sharedQuestions.length === 0) {
+                setCurrentDifficulty(question.difficulty || config.difficulty);
+                setLoading(false);
+              }
             }
-          }
-        },
-        config.examFormat === 'free_response',
-        config.examFormat || 'mix',
-        config.lessonTitle,
-        config.lessonDescription,
-        config.topics,
-        config.assignmentId
-      );
+          },
+          config.examFormat === 'free_response',
+          config.examFormat || 'mix',
+          config.lessonTitle,
+          config.lessonDescription,
+          config.topics,
+          config.assignmentId
+        );
 
-      if (generated && generated.length > 0) {
-        setProblems(prev => {
-          const shared = prev.slice(0, sharedQuestions.length);
-          return [...shared, ...generated].slice(0, totalCount);
-        });
-      }
-    } catch (err) {
-      if (sharedQuestions.length === 0) {
-        retryCount++;
-        if (retryCount < MAX_RETRIES) {
-          setError(`Failed to fetch problems. Retrying (${retryCount}/${MAX_RETRIES})...`);
-          setTimeout(() => fetchProblems(), 2000);
+        if (generated && generated.length > 0) {
+          allGenerated = [...allGenerated, ...generated];
         } else {
-          setError('Failed to generate problems after multiple attempts. Please go back and try again.');
+          // If no questions returned, merge whatever was streamed and retry
+          if (streamedQuestions.length > 0) {
+            allGenerated = [...allGenerated, ...streamedQuestions];
+          }
+          retryCount++;
         }
-      } else {
-        console.error("Failed to generate remainder of problems:", err);
+      } catch (err) {
+        if (streamedQuestions.length > 0) {
+          allGenerated = [...allGenerated, ...streamedQuestions];
+        }
+        retryCount++;
+        if (retryCount >= MAX_RETRIES) {
+          if (sharedQuestions.length === 0 && allGenerated.length === 0) {
+            setError('Failed to generate problems after multiple attempts. Please go back and try again.');
+          } else {
+            console.error("Failed to generate remainder of problems:", err);
+          }
+          break;
+        }
+        // Small delay before retrying
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
-    } finally {
-      setLoading(false);
     }
+
+    // Set the final consolidated list
+    setProblems(prev => {
+      const shared = prev.slice(0, sharedQuestions.length);
+      return [...shared, ...allGenerated].slice(0, totalCount);
+    });
+    setLoading(false);
   };
 
   useEffect(() => {

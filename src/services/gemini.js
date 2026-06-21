@@ -190,10 +190,12 @@ async function readSSEStream(response, onQuestion) {
 
       for (const frame of frames) {
         const trimmed = frame.trim();
-        if (!trimmed.startsWith('data: ')) continue;
+        if (!trimmed.startsWith('data:')) continue;
 
         try {
-          const event = JSON.parse(trimmed.slice(6));
+          const colonIdx = trimmed.indexOf(':');
+          const jsonPayload = trimmed.slice(colonIdx + 1).trim();
+          const event = JSON.parse(jsonPayload);
 
           if (event.type === 'question' && event.data) {
             questions.push(event.data);
@@ -210,9 +212,11 @@ async function readSSEStream(response, onQuestion) {
         const frames = buffer.split('\n\n');
         for (const frame of frames) {
           const trimmed = frame.trim();
-          if (!trimmed.startsWith('data: ')) continue;
+          if (!trimmed.startsWith('data:')) continue;
           try {
-            const event = JSON.parse(trimmed.slice(6));
+            const colonIdx = trimmed.indexOf(':');
+            const jsonPayload = trimmed.slice(colonIdx + 1).trim();
+            const event = JSON.parse(jsonPayload);
             if (event.type === 'question' && event.data) {
               questions.push(event.data);
               if (onQuestion) onQuestion(event.data, questions.length - 1);

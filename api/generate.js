@@ -739,10 +739,14 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
           const needed = count - questionsSent;
           if (needed <= 0) return;
 
+          const typeInstruction = needed >= parsedTypes.length
+            ? `You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`
+            : `Each generated question MUST be chosen from the following types: ${parsedTypes.join(', ')}.`;
+
           let dynamicPrompt = `Generate exactly ${needed} ${subject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 1 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(1, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
 Follow these strict rules:
 1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
-2. You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`;
+2. ${typeInstruction}`;
 
           if (topics && typeof topics === 'string' && topics.trim()) {
             dynamicPrompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
