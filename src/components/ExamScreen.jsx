@@ -74,15 +74,11 @@ function isAnswerCorrect(prob, ans) {
 }
 
 export function ExamScreen({ config, onFinish, resumeState }) {
-  const [numQuestions, setNumQuestions] = useState(() =>
-    resumeState ? resumeState.problems.length : config.numQuestions
-  );
-
   const isWholeTestMode = config.timeLimitStyle === 'whole_test';
   const isSetTimedMode = config.timeLimitStyle === 'per_set';
   const questionsPerSet = config.questionsPerSet || 2;
   const timeLimitPerSet = config.timeLimitPerSet || config.timeLimitValue || 10; // in minutes
-  const totalSets = Math.ceil(numQuestions / questionsPerSet);
+  const totalSets = Math.ceil(config.numQuestions / questionsPerSet);
 
   const [activeSetIndex, setActiveSetIndex] = useState(() => {
     if (resumeState && resumeState.config && resumeState.config.activeSetIndex !== undefined) {
@@ -127,10 +123,10 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   const [saving, setSaving] = useState(false);
   const [totalTimeLeft, setTotalTimeLeft] = useState(() => config.timeLimitWholeTest * 60);
   const [questionTimesLeft, setQuestionTimesLeft] = useState(() =>
-    Array(numQuestions).fill(isWholeTestMode ? null : config.timeLimitPerQuestion)
+    Array(config.numQuestions).fill(isWholeTestMode ? null : config.timeLimitPerQuestion)
   );
   const [answers, setAnswers] = useState(() =>
-    resumeState ? resumeState.answers : Array(numQuestions).fill('')
+    resumeState ? resumeState.answers : Array(config.numQuestions).fill('')
   );
   const [results, setResults] = useState([]);
   const [error, setError] = useState(null);
@@ -144,7 +140,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   const [whiteboardPreview, setWhiteboardPreview] = useState('');
   const [transcribing, setTranscribing] = useState(false);
   const [frqSubmissions, setFrqSubmissions] = useState(() =>
-    resumeState ? resumeState.frqSubmissions : Array(numQuestions).fill(null)
+    resumeState ? resumeState.frqSubmissions : Array(config.numQuestions).fill(null)
   );
 
   const timerRef = useRef(null);
@@ -248,14 +244,10 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       );
 
       if (generated && generated.length > 0) {
-        const finalLength = Math.min(totalCount, sharedQuestions.length + generated.length);
         setProblems(prev => {
           const shared = prev.slice(0, sharedQuestions.length);
           return [...shared, ...generated].slice(0, totalCount);
         });
-        setNumQuestions(finalLength);
-      } else {
-        setNumQuestions(sharedQuestions.length);
       }
     } catch (err) {
       if (sharedQuestions.length === 0) {
@@ -575,7 +567,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     updatedAnswers[currentQuestionIndex] = finalValue;
     setAnswers(updatedAnswers);
 
-    const isLast = currentQuestionIndex + 1 >= numQuestions;
+    const isLast = currentQuestionIndex + 1 >= config.numQuestions;
     if (isLast) {
       handleFinishExam(null, updatedAnswers, updatedSubmissions);
     } else {
@@ -614,7 +606,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     updatedAnswers[currentQuestionIndex] = finalValue;
     setAnswers(updatedAnswers);
 
-    const isLast = currentQuestionIndex + 1 >= numQuestions;
+    const isLast = currentQuestionIndex + 1 >= config.numQuestions;
 
     if (config.stressMode === 'strict') {
       clearInterval(timerRef.current);
@@ -733,7 +725,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     const updatedResults = [...results, questionResult];
     setResults(updatedResults);
 
-    if (currentQuestionIndex + 1 >= numQuestions) {
+    if (currentQuestionIndex + 1 >= config.numQuestions) {
       onFinish(updatedResults);
     } else {
       const nextIndex = currentQuestionIndex + 1;
@@ -796,7 +788,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
         <h3>Generating Problems...</h3>
-        <p style={{ color: 'var(--text-secondary)' }}>Preparing exam with {numQuestions} questions</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Preparing exam with {config.numQuestions} questions</p>
         {error && <p style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</p>}
       </div>
     );
@@ -887,7 +879,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
         <h3>Loading next question...</h3>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Streaming question {currentQuestionIndex + 1} of {numQuestions}</p>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Streaming question {currentQuestionIndex + 1} of {config.numQuestions}</p>
         {config.stressMode !== 'strict' && (
           <button
             className="btn btn-outline"
@@ -923,7 +915,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
   const isLowTime = activeTimeLeft <= 10;
   const isHidden = config.stressMode === 'hidden' && !isLowTime;
   const isDynamicStress = config.stressMode === 'dynamic' && isLowTime;
-  const allLoaded = problems.length === numQuestions;
+  const allLoaded = problems.length === config.numQuestions;
 
   const intervalsForCurrent = questionIntervalsRef.current[currentQuestionIndex] || [];
   const timeSpentOnCurrent = intervalsForCurrent.reduce((acc, inv) => acc + (inv.end - inv.start), 0) + (elapsedSecondsRef.current - currentQuestionEntryTimeRef.current);
@@ -955,7 +947,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Question {currentQuestionIndex + 1} of {numQuestions}
+            Question {currentQuestionIndex + 1} of {config.numQuestions}
           </span>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
             <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '4px' }}>
@@ -1303,7 +1295,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                   </button>
                 )
               ) : (
-                config.stressMode !== 'strict' && currentQuestionIndex + 1 < numQuestions && (
+                config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
                   <button
                     className="btn btn-outline"
                     style={{ marginRight: '0.75rem' }}
@@ -1320,7 +1312,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 )
               )}
 
-              {config.stressMode !== 'strict' && allLoaded && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === numQuestions)) && (
+              {config.stressMode !== 'strict' && allLoaded && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions)) && (
                 <button
                   className="btn btn-primary"
                   onClick={() => {
@@ -1384,7 +1376,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                   if (e.key === 'Enter' && activeAnswer.trim()) {
                     if (config.stressMode === 'strict') {
                       submitStrictAnswer();
-                    } else if (currentQuestionIndex + 1 >= numQuestions) {
+                    } else if (currentQuestionIndex + 1 >= config.numQuestions) {
                       handleFinishExam();
                     } else if (currentQuestionIndex + 1 < problems.length) {
                       recordActiveInterval(currentQuestionIndex);
@@ -1426,7 +1418,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 </button>
               )
             ) : (
-              config.stressMode !== 'strict' && currentQuestionIndex + 1 < numQuestions && (
+              config.stressMode !== 'strict' && currentQuestionIndex + 1 < config.numQuestions && (
                 <button
                   className="btn btn-outline"
                   style={{ marginRight: '0.75rem' }}
@@ -1443,7 +1435,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
             )}
 
             {config.stressMode === 'strict' ? (
-              currentQuestionIndex + 1 === numQuestions ? (
+              currentQuestionIndex + 1 === config.numQuestions ? (
                 allLoaded && (
                   <button
                     className="btn btn-primary"
@@ -1463,7 +1455,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
                 </button>
               )
             ) : (
-              allLoaded && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === numQuestions)) && (
+              allLoaded && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions)) && (
                 <button
                   className="btn btn-primary"
                   onClick={() => handleFinishExam()}
@@ -1481,7 +1473,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         <div style={{
           height: '100%',
           background: 'var(--accent-primary)',
-          width: `${((currentQuestionIndex) / numQuestions) * 100}%`,
+          width: `${((currentQuestionIndex) / config.numQuestions) * 100}%`,
           transition: 'width 0.3s ease'
         }} />
       </div>
