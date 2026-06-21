@@ -47,8 +47,11 @@ async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homework
     const studentIds = claimedRows.map(r => r.student_id);
 
     if (studentIds.length === 0) return;
-
-    const WEBHOOK_URL = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL || process.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
+    const WEBHOOK_URL = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL;
+    if (!WEBHOOK_URL) {
+      console.warn('GOOGLE_APPS_SCRIPT_WEBHOOK_URL is not configured. Skipping background homework generation.');
+      return;
+    }
     const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
     
     // Helper function to generate HS256 JWT

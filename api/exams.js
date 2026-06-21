@@ -1130,8 +1130,11 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       }
 
       try {
-        const WEBHOOK_URL = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL || process.env.VITE_CHAT_WORKER_URL || 'https://stress-sandbox-chat.jiayou-carl-liu.workers.dev';
-        const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
+        const WEBHOOK_URL = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL;
+        if (!WEBHOOK_URL) {
+          console.warn('GOOGLE_APPS_SCRIPT_WEBHOOK_URL is not configured. Skipping background exam grading.');
+        } else {
+          const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
         
         function generateJWT(payload, secret) {
           const header = { alg: 'HS256', typ: 'JWT' };
@@ -1199,8 +1202,9 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
             }
           })
         }).catch(err => console.error("Worker fetch failed in trigger:", err));
+        }
       } catch (triggerErr) {
-        console.error('Failed to trigger Cloudflare Worker for background grading:', triggerErr);
+        console.error('Failed to trigger background grading:', triggerErr);
       }
 
       return res.status(503).json({
