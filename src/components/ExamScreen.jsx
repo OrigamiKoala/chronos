@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateProblems } from '../services/gemini';
 import { Loader2, Clock, AlertTriangle, ArrowRight, Upload, Type, Image as ImageIcon, ArrowLeft, Pause, Play } from 'lucide-react';
-import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
+import { ChemicalText, SmilesRenderer } from './ChemicalText';
+import { isSmiles } from './chemicalHelpers.js';
 import { Whiteboard } from './Whiteboard';
 
 // Normalize an answer string for comparison:
@@ -410,7 +411,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       finalValue = typedWork;
     }
 
-    const hasContent = 
+    const hasContent =
       (submitType === 'whiteboard' && imagePayload) ||
       (submitType === 'image' && imagePayload) ||
       (submitType === 'text' && typedWork.trim());
@@ -663,8 +664,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         const isTimeout = isSetTimedMode
           ? (activeSetsTimedOut[setIdx] && !userAnswer)
           : (isWholeTestMode
-              ? (totalTimeLeft <= 0)
-              : (questionTimesLeft[idx] <= 0));
+            ? (totalTimeLeft <= 0)
+            : (questionTimesLeft[idx] <= 0));
         const isCorrect = prob.type === 'free_response'
           ? false
           : (!isTimeout && isAnswerCorrect(prob, userAnswer));
@@ -1087,8 +1088,8 @@ export function ExamScreen({ config, onFinish, resumeState }) {
           <AlertTriangle size={18} /> {
             isSetTimedMode
               ? (Math.floor(currentQuestionIndex / questionsPerSet) !== activeSetIndex
-                  ? "This set is locked because you have submitted it."
-                  : "This set is locked because the time limit has expired.")
+                ? "This set is locked because you have submitted it."
+                : "This set is locked because the time limit has expired.")
               : "Time limit reached. Edits are locked."
           }
         </div>
@@ -1248,10 +1249,10 @@ export function ExamScreen({ config, onFinish, resumeState }) {
 
             <div style={{ marginBottom: '2rem' }}>
               <span style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Show Your Process / Explanation:</span>
-              <Whiteboard 
-                key={currentQuestionIndex} 
-                ref={whiteboardRef} 
-                initialImage={frqSubmissions[currentQuestionIndex]?.type === 'whiteboard' ? frqSubmissions[currentQuestionIndex].value : null} 
+              <Whiteboard
+                key={currentQuestionIndex}
+                ref={whiteboardRef}
+                initialImage={frqSubmissions[currentQuestionIndex]?.type === 'whiteboard' ? frqSubmissions[currentQuestionIndex].value : null}
               />
             </div>
 
