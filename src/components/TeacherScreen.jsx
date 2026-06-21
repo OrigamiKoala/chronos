@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Users, BookOpen, Plus, Loader2, ShieldAlert, CheckCircle, XCircle, Sparkles, Send, Trash2 } from 'lucide-react';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { StudentAIInsights } from './StudentAIInsights';
-import { ChemicalText, isSmiles, SmilesRenderer } from './ChemicalText';
+import { ChemicalText, SmilesRenderer } from './ChemicalText';
+import { isSmiles } from './chemicalHelpers';
 
 // Chatbot Vercel function
 async function sendChatMessage({ message, teacherId, selectedStudentIds, sessionId, accessToken, history }) {
@@ -1762,14 +1763,14 @@ export function TeacherScreen({ user, onBack }) {
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Timer Value</label>
-                      <input 
-                        type={hwTimeStyle === 'none' ? 'text' : 'number'} 
-                        min="1" 
-                        value={hwTimeStyle === 'none' ? 'N/A' : hwTimeValue} 
-                        disabled={hwTimeStyle === 'none'} 
-                        onChange={(e) => { setHwTimeValue(Number(e.target.value)); setHwPreset('custom'); }} 
-                        className="input-field" 
-                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem', opacity: hwTimeStyle === 'none' ? 0.5 : 1, cursor: hwTimeStyle === 'none' ? 'not-allowed' : 'default' }} 
+                      <input
+                        type={hwTimeStyle === 'none' ? 'text' : 'number'}
+                        min="1"
+                        value={hwTimeStyle === 'none' ? 'N/A' : hwTimeValue}
+                        disabled={hwTimeStyle === 'none'}
+                        onChange={(e) => { setHwTimeValue(Number(e.target.value)); setHwPreset('custom'); }}
+                        className="input-field"
+                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem', opacity: hwTimeStyle === 'none' ? 0.5 : 1, cursor: hwTimeStyle === 'none' ? 'not-allowed' : 'default' }}
                       />
                     </div>
                   </div>
