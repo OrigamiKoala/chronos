@@ -109,7 +109,18 @@ export function escapeLiteralNewlines(jsonStr) {
 
     if (inString) {
       if (escape) {
-        result += ch;
+        // The AI frequently writes LaTeX commands like \rightarrow, \theta, \frac, \beta
+        // as bare JSON escape sequences: \r, \t, \f, \b — which JSON.parse converts to
+        // control characters (CR, TAB, FF, BS). Convert them to double-escaped literals
+        // so the parsed string contains the actual LaTeX backslash character.
+        // \n and \\ are left as-is: \n is legitimately used as a line-break in question
+        // text, and \\ is a valid double-backslash in both JSON and LaTeX.
+        if (ch === 'r' || ch === 't' || ch === 'b' || ch === 'f') {
+          // Re-escape: \r → \\r, \t → \\t, etc., so JSON.parse yields a literal backslash
+          result += '\\\\' + ch;
+        } else {
+          result += ch;
+        }
         escape = false;
       } else if (ch === '\\') {
         result += ch;
@@ -133,6 +144,7 @@ export function escapeLiteralNewlines(jsonStr) {
   }
   return result;
 }
+
 
 export function parseJSONResponse(text) {
   if (!text) return null;
