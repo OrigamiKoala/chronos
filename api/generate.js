@@ -444,7 +444,15 @@ Follow these strict Olympiad Design Philosophies:
 - Multi-Step Cascades: Output of one step forms input of the next, without explicit prompting on intermediates.
 - Subtle Nuances: Test electronic structures, periodic trends, thermodynamic vs. kinetic control, anomalies in MO configurations ($B_2$ vs $O_2$).
 - Rigor: Eliminate simplifying assumptions (e.g., x-is-small approximation). Require solving higher-order equations from mass/charge balances.
-- Novel Context: Present principles in unfamiliar frameworks (bioinorganic sites, MOFs, industrial catalysis).
+- Novel Context: MANDATORY — every question must be set in an unfamiliar or real-world olympiad-appropriate context. Rotate through this menu; do NOT use the same context type twice in one exam:
+    • Industrial processes (Haber–Bosch, contact process, Hall–Héroult, Solvay, Fischer–Tropsch, Ostwald)
+    • Atmospheric chemistry (ozone depletion mechanisms, NOx photochemical smog, stratospheric halogen cycles)
+    • Electroanalytical / separation science (cyclic voltammetry, ion-exchange chromatography, electrophoresis, potentiometry)
+    • Nuclear & radiochemistry (radioactive decay series, specific activity, neutron activation analysis, isotopic labelling in synthesis)
+    • Inorganic materials (MOF gas adsorption, solid-state ion conductors, corrosion galvanic cells, crystal-field stabilization in spinels)
+    • Organic synthesis context (multi-step retrosynthesis, protecting-group strategy, regio- and stereoselectivity in complex substrates)
+    • Thermochemical cycles (Born–Haber, Ellingham diagrams, coupled redox/precipitation equilibria)
+    • Spectroscopic identification (mass-spec fragmentation cascades, 1H-NMR of chiral or aromatic systems, IR of coordinated ligands)
 
 3. Syllabus Boundaries
 - DIFFICULTY < 8 (USNCO): Standard AP/USNCO scope at max depth. No calculus-based derivations. Limit spectroscopy to 1D-NMR and basic IR/UV-Vis. Increase difficulty by coupling unexpected systems.
@@ -461,13 +469,13 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
 
 {
   "id": "chem_ex1",
-  "topic": "Chemical Bonding & Bond Order",
-  "question": "Which species has the longest carbon-oxygen bond?",
+  "topic": "Analytical Chemistry, Oxidation-Reduction",
+  "question": "A weighed sample of a copper-nickel alloy is dissolved in a known volume of nitric acid. Which method is most suitable for determining the mass percent of copper in the alloy?\\n\\n(A) Treatment of an aliquot of the solution with excess iodide, followed by titration of the iodine produced with sodium thiosulfate.\\n(B) Measurement of the absorbance of the solution at a wavelength of light at which both $\\\\ce{Cu^{2+}}$ and $\\\\ce{Ni^{2+}}$ absorb, and comparison with the absorbances of known standards of the two ions.\\n(C) Addition of excess sodium hydroxide to the solution, isolation of the metal hydroxides by filtration, and measurement of the mass of the precipitate.\\n(D) Bubbling hydrogen gas through the solution and measuring the mass of the metal that precipitates from the solution.",
   "type": "multiple_choice",
-  "options": ["$\\\\ce{HCO2^-}$", "$\\\\ce{CO3^{2-}}$", "$\\\\ce{CO2}$", "$\\\\ce{COS}$"],
-  "answer": "B",
+  "options": ["Treatment of an aliquot of the solution with excess iodide, followed by titration of the iodine produced with sodium thiosulfate.", "Measurement of the absorbance of the solution at a wavelength of light at which both $\\\\ce{Cu^{2+}}$ and $\\\\ce{Ni^{2+}}$ absorb, and comparison with the absorbances of known standards of the two ions.", "Addition of excess sodium hydroxide to the solution, isolation of the metal hydroxides by filtration, and measurement of the mass of the precipitate.", "Bubbling hydrogen gas through the solution and measuring the mass of the metal that precipitates from the solution."],
+  "answer": "A",
   "difficulty": 5,
-  "detailedSolution": "Bond length is inversely proportional to bond order. $\\\\ce{HCO2^-}$: avg C-O bond order = 1.5. $\\\\ce{CO3^{2-}}$: avg = 1.33. $\\\\ce{CO2}$: 2.0. $\\\\ce{COS}$: C-O is 2.0. Carbonate has the lowest bond order (1.33), hence the longest C-O bond."
+  "detailedSolution": "Method A exploits the selective redox: $\\\\ce{2Cu^{2+} + 4I^- -> 2CuI + I_2}$. The liberated $\\\\ce{I_2}$ is titrated with thiosulfate, giving moles of Cu specifically. $\\\\ce{Ni^{2+}}$ does not react with iodide under these conditions, so it does not interfere. Method B fails because both ions absorb at the same wavelength, making the absorbance non-specific. Method C fails because both $\\\\ce{Cu(OH)_2}$ and $\\\\ce{Ni(OH)_2}$ precipitate together. Method D fails because $\\\\ce{HNO_3}$ is a strong oxidizing agent that reacts with $\\\\ce{H_2}$ before it can reduce the metal ions."
 }
 
 {
