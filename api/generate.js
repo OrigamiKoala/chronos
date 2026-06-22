@@ -541,9 +541,10 @@ ${mistakeAnalysis}
 ###CRITICAL UNIQUE & CREATIVE DIRECTIVE:###
 You must be extremely creative and ensure that EVERY question is completely unique and novel. Do NOT repeat, rephrase, or adapt previously used setups, standard textbook scenarios, chemical reactions, physical systems, or mathematical templates. Avoid using similar numerical values, scenarios, or phrasing across different questions or exams. Force yourself to design entirely new contexts, variables, and systems for each problem.
 
-Tailor the questions to target the user's weaknesses:
-1. In knowledge base and skill set (using the User Weakness Analysis and User Topic Breakdown).
-2. In thinking and test-taking style (using the Recent Mistake Patterns). Craft questions that specifically test or trigger their common mistake patterns (such as conceptual traps, calculation errors, panic, or edge case negligence) to help them overcome these pitfalls.
+###MANDATORY ADAPTIVE WEAKNESS-TARGETING DIRECTIVE:###
+You MUST make the generated questions highly adaptive by directly targeting this specific user's diagnostic profile:
+1. TARGET SUBJECT & CONCEPTUAL WEAKNESSES: You MUST allocate approximately 30% of the questions on the exam to directly address the user's weak knowledge areas and conceptual gaps (using the User Weakness Analysis and User Topic Breakdown data).
+2. TARGET COGNITIVE & THINKING WEAKNESSES: You MUST craft questions that specifically trigger and test the user's documented test-taking pitfalls and cognitive mistake patterns (using the Recent Mistake Patterns data, such as calculation haste, rote-formula shortcuts, overlooking boundary conditions/edge cases, unit conversion slips, or conceptual panic). Design the problem setups and multiple-choice distractor options so that a student falling into these exact thinking traps is led to make those specific mistakes, thereby teaching them to overcome these cognitive weaknesses.
 
 ANTI-TEMPLATE DIRECTIVE: A problem is a forbidden template if it exhibits any of these structural properties — regardless of its topic or difficulty level:
 - Single-formula plug-and-chug: one concept, one equation, values handed to the student, answer drops out directly with no coupling.

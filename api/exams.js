@@ -1288,14 +1288,17 @@ ${wrongProblemsString}
 
     prompt += `
 Your tasks:
-1. Provide a professional, diagnostic summary of their mistake patterns on this specific exam attempt (e.g. conceptual gaps, calculation errors, timing issues, or panic) and concrete recommendations to avoid these mistakes in the future.
+1. Analyze the user's mistake patterns and identify weaknesses in their WAYS OF THINKING on this specific attempt.
+   - Go beyond mere topic/concept gaps: analyze the specific incorrect answers they chose ("User's Answer") versus the correct answers ("Correct Answer") across all questions.
+   - Infer their cognitive pitfalls and reasoning shortcuts (e.g., did they apply a formula blindly without checking assumptions, ignore boundary/limiting conditions, make consistent algebraic/sign errors, misread units, fail to double-check their calculations, or panic under time pressure?).
+   - Provide a detailed diagnostic summary of these thinking pitfalls, and offer concrete recommendations to help them correct these thinking patterns.
 `;
 
     if (!isGuest) {
       prompt += `
 2. Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. 
 3. For EACH of these identified topics (both strengths and weaknesses), generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at.
-4. Provide a thorough detailed diagnostic analysis of their strengths and weaknesses in this subject.
+4. Provide a thorough, detailed diagnostic analysis of their strengths and weaknesses in this subject, focusing on both conceptual understanding and their general cognitive reasoning patterns, problem-solving habits, and error-checking strategies.
 
 CRITICAL RULES FOR TOPIC BREAKDOWNS:
 - Don't flag any topic as a weakness if the student has never tested on it (i.e. not present in overall topic mastery).

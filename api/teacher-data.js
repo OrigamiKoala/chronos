@@ -588,14 +588,17 @@ Student's Practice History during the week of ${new Date(lessonDateStr).toLocale
 ${practiceSummaryText}
 
 Your tasks:
-1. Summarize the student's practice during the week. Note key areas they attempted, their accuracy, and any obvious conceptual gaps or silly mistakes. If they didn't practice, clearly report that they did not record any practice activity.
-2. Formulate specific suggestions for the coach/teacher on what the student should learn or practice next to improve.
+1. Summarize the student's practice during the week, diagnosing both conceptual topic gaps AND thinking/reasoning weaknesses. 
+   - Analyze the specific wrong answers chosen ("Student Answer") versus the correct answers ("Correct Answer") across their attempts. 
+   - Draw conclusions about the student's cognitive traps, mistake patterns, and ways of thinking (e.g. rushing calculations, falling for distractor baits, applying formulas without context, missing edge cases, or unit errors).
+   - If they didn't practice, clearly report that they did not record any practice activity.
+2. Formulate specific suggestions for the coach/teacher on what concepts to focus on AND what reasoning habits or error-checking practices the student should develop next to improve their thinking.
 3. Determine if the student is progressing toward the learning goals (defined by the lesson title and description). Clearly state "Yes", "No", or "Partial" and explain why based on their performance/practice in topics related to the lesson plan.
 
 Return strictly a valid JSON object with the following schema:
 {
-  "summary": "Your detailed summary of the last week of practice",
-  "suggestions": "Your concrete advice for the teacher on what the student should be learning/practicing next",
+  "summary": "Your detailed summary of the last week of practice, describing both topic performance and diagnosed thinking/cognitive weaknesses based on their incorrect vs. correct answers.",
+  "suggestions": "Your concrete advice for the teacher on both conceptual next steps and specific cognitive strategies or error-checking habits the student should build.",
   "progress_status": "Yes / No / Partial (and explain why)"
 }
 Do NOT include markdown headers, backticks, or any conversational text. Return ONLY the raw JSON object.`;
