@@ -46,7 +46,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     }
     return {
       subject: parsed?.subject || 'Math',
-      difficulty: parsed?.difficulty || 5,
+      difficulty: parsed?.difficulty !== undefined ? parsed.difficulty : 5,
       numQuestions: parsed?.numQuestions || 5,
       stressMode: parsed?.stressMode || 'dynamic',
       timeLimitPerQuestion: parsed?.timeLimitPerQuestion || 60,
@@ -320,7 +320,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
   const handleChange = (e) => {
     const { name, value } = e.target;
     setConfig((prev) => {
-      const next = { ...prev, [name]: isNaN(value) ? value : Number(value) || value };
+      const next = { ...prev, [name]: (value === '' || isNaN(value)) ? value : Number(value) };
       if (name === 'timeLimitStyle' && value === 'none') {
         next.stressMode = 'none';
       }
@@ -493,8 +493,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             <input type="number" name="numQuestions" min="1" max="20" value={config.numQuestions} onChange={handleChange} className="input-field" />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Difficulty (1-10)</label>
-            <input type="number" name="difficulty" min="1" max="10" value={config.difficulty || 5} onChange={handleChange} className="input-field" />
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Difficulty (0-10)</label>
+            <input type="number" name="difficulty" min="0" max="10" value={config.difficulty !== undefined ? config.difficulty : 5} onChange={handleChange} className="input-field" />
           </div>
         </div>
 
@@ -593,7 +593,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
           <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
             <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
-              <div><strong>1:</strong> MATHCOUNTS school/chapter</div>
+              <div><strong>0:</strong> MATHCOUNTS School</div>
+              <div><strong>1:</strong> MATHCOUNTS Chapter/Sprint</div>
               <div><strong>2:</strong> MATHCOUNTS States</div>
               <div><strong>3:</strong> MATHCOUNTS National Sprint</div>
               <div><strong>4:</strong> AMC 12 question 21-25</div>

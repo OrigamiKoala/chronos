@@ -120,7 +120,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   // Point efficiency calculation
   const rawPointsEarned = results.reduce((acc, r) => {
     if (r.type === 'free_response') {
-      const difficulty = r.difficulty || r.difficultyAtTime || 1;
+      const difficulty = r.difficulty !== undefined ? r.difficulty : (r.difficultyAtTime !== undefined ? r.difficultyAtTime : 1);
       const score = r.score !== undefined ? Number(r.score) : (r.isCorrect ? 1.0 : 0.0);
       return acc + (score * difficulty);
     } else {
@@ -131,7 +131,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
 
   const totalPoints = results.reduce((acc, r) => {
     if (r.type === 'free_response') {
-      return acc + (r.difficulty || r.difficultyAtTime || 1);
+      return acc + (r.difficulty !== undefined ? r.difficulty : (r.difficultyAtTime !== undefined ? r.difficultyAtTime : 1));
     } else {
       return acc + 1;
     }
@@ -213,7 +213,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           const problem = results[parseInt(idx)];
           const isFRQ = problem?.type === 'free_response';
           const pointsValue = isFRQ
-            ? (problem?.difficulty || problem?.difficultyAtTime || 1)
+            ? (problem?.difficulty !== undefined ? problem?.difficulty : (problem?.difficultyAtTime !== undefined ? problem?.difficultyAtTime : 1))
             : 1;
           return {
             questionIndex: parseInt(idx),
@@ -464,7 +464,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             const score = r.score !== undefined ? Number(r.score) : (r.isCorrect ? 1.0 : 0.0);
             if (score > 0) {
               const isFRQ = r.type === 'free_response';
-              const points = isFRQ ? (r.difficulty || r.difficultyAtTime || 1) : 1;
+              const points = isFRQ ? (r.difficulty !== undefined ? r.difficulty : (r.difficultyAtTime !== undefined ? r.difficultyAtTime : 1)) : 1;
               intervalValue += (points * score) * (overlapDuration / intervalSeconds);
             }
           }

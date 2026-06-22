@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   const { count, subject, targetUserId = 'default_user', examFormat, lessonTitle, lessonDescription, topics, assignmentId } = req.body;
   const difficulty = Number(req.body.difficulty !== undefined ? req.body.difficulty : 5);
 
-  if (!count || !difficulty || !subject) {
+  if (!count || (difficulty !== 0 && !difficulty) || !subject) {
     return res.status(400).json({ error: 'Missing required parameters: count, difficulty, subject' });
   }
 
@@ -202,7 +202,7 @@ Follow these strict Olympiad Design Philosophies:
 
 4. SVG Diagrams: When needed, generate a single valid <svg> block. Use primitive shapes, <defs>/<use>, inline attributes (no CSS <style>), white background, single-quotes for JSON compat. Enclose in \`\`\`xml code blocks.
 
-Difficulty scale: 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 10=hardest IMO.
+Difficulty scale: 0=simplest part of MATHCOUNTS (MATHCOUNTS School), 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 10=hardest IMO.
 `;
       examples = `
 5. Exemplar Questions (format reference):
@@ -633,7 +633,7 @@ The output must be a pure JSON array containing exactly the requested number of 
   "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format.",
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
   "answer": ${answerSchemaDesc},
-  "difficulty": a number representing difficulty. This MUST be in the range [${Math.max(1, difficulty - 2)}, ${Math.min(10, difficulty + 2)}] (no question can be more than 2 difficulty units away from the average test difficulty ${difficulty}),
+  "difficulty": a number representing difficulty. This MUST be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}] (no question can be more than 2 difficulty units away from the average test difficulty ${difficulty}),
   "detailedSolution": "An empty string \\"\\""
 }
 
@@ -681,7 +681,7 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
             ? `You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`
             : `Each generated question MUST be chosen from the following types: ${parsedTypes.join(', ')}.`;
 
-          let dynamicPrompt = `Generate exactly ${needed} ${subject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 1 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(1, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
+          let dynamicPrompt = `Generate exactly ${needed} ${subject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 0 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
 Follow these strict rules:
 1. Do NOT generate detailed solutions. Always set the "detailedSolution" field to an empty string "".
 2. ${typeInstruction}`;

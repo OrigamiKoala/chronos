@@ -111,7 +111,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     resumeState ? false : true
   );
   const [currentDifficulty, setCurrentDifficulty] = useState(() =>
-    resumeState ? (resumeState.problems[resumeState.currentQuestionIndex]?.difficulty || config.difficulty) : config.difficulty
+    resumeState ? (resumeState.problems[resumeState.currentQuestionIndex]?.difficulty !== undefined ? resumeState.problems[resumeState.currentQuestionIndex].difficulty : config.difficulty) : config.difficulty
   );
   const [isPaused, setIsPaused] = useState(false);
   const [isRated, setIsRated] = useState(() => {
@@ -203,7 +203,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
     questionIntervalsRef.current = Array.from({ length: totalCount }, () => []);
 
     if (sharedQuestions.length > 0) {
-      setCurrentDifficulty(sharedQuestions[0].difficulty || config.difficulty);
+      setCurrentDifficulty(sharedQuestions[0].difficulty !== undefined ? sharedQuestions[0].difficulty : config.difficulty);
       setLoading(false);
     }
 
@@ -236,7 +236,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
             if (!firstReceived) {
               firstReceived = true;
               if (sharedQuestions.length === 0) {
-                setCurrentDifficulty(question.difficulty || config.difficulty);
+                setCurrentDifficulty(question.difficulty !== undefined ? question.difficulty : config.difficulty);
                 setLoading(false);
               }
             }
@@ -499,7 +499,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         timeSpent: Math.max(0, timeSpent),
         intervals,
         timeOut: isTimeout,
-        difficultyAtTime: prob.difficulty || config.difficulty,
+        difficultyAtTime: prob.difficulty !== undefined ? prob.difficulty : config.difficulty,
         frqSubmission: idx === currentQuestionIndex ? updatedSubmissions[currentQuestionIndex] : frqSubmissions[idx]
       };
     });
@@ -637,7 +637,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         isCorrect: false, // graded at the end
         timeSpent,
         timeOut: false,
-        difficultyAtTime: problem.difficulty || currentDifficulty,
+        difficultyAtTime: problem.difficulty !== undefined ? problem.difficulty : currentDifficulty,
         frqSubmission: {
           type: submitType,
           value: imagePayload || finalValue
@@ -695,7 +695,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
           timeSpent,
           intervals,
           timeOut: isTimeout,
-          difficultyAtTime: prob.difficulty || config.difficulty,
+          difficultyAtTime: prob.difficulty !== undefined ? prob.difficulty : config.difficulty,
           frqSubmission: activeSubmissions[idx] || null
         };
       });
@@ -725,7 +725,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         nextDifficulty += 1;
       }
     } else {
-      if (currentDifficulty > 1) {
+      if (currentDifficulty > 0) {
         nextDifficulty -= 1;
       }
     }
@@ -737,7 +737,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       timeSpent,
       intervals,
       timeOut: isTimeout,
-      difficultyAtTime: problem.difficulty || currentDifficulty
+      difficultyAtTime: problem.difficulty !== undefined ? problem.difficulty : currentDifficulty
     };
 
     const updatedResults = [...results, questionResult];
@@ -749,7 +749,7 @@ export function ExamScreen({ config, onFinish, resumeState }) {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
       if (problems[nextIndex]) {
-        setCurrentDifficulty(problems[nextIndex].difficulty || nextDifficulty);
+        setCurrentDifficulty(problems[nextIndex].difficulty !== undefined ? problems[nextIndex].difficulty : nextDifficulty);
       } else {
         setCurrentDifficulty(nextDifficulty);
       }

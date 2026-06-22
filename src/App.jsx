@@ -419,15 +419,15 @@ function App() {
     const isRated = examConfig.isRated !== false;
 
     const getQuestionRating = (sub, diff) => {
-      const d = Math.max(1, Math.min(10, diff));
+      const d = Math.max(0, Math.min(10, diff));
       if (sub === 'Math') {
-        const mathMap = { 1: 500, 2: 600, 3: 800, 4: 900, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
+        const mathMap = { 0: 300, 1: 500, 2: 600, 3: 800, 4: 900, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
         return mathMap[Math.round(d)] || 1000;
       } else if (sub === 'Chemistry') {
-        const chemMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
+        const chemMap = { 0: 50, 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
         return chemMap[Math.round(d)] || 1000;
       } else if (sub === 'Physics') {
-        const physMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1300, 7: 1600, 8: 2000, 9: 2500, 10: 3000 };
+        const physMap = { 0: 50, 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1300, 7: 1600, 8: 2000, 9: 2500, 10: 3000 };
         return physMap[Math.round(d)] || 1000;
       }
       return 100;
@@ -437,7 +437,7 @@ function App() {
     const correctAnswers = results.filter(r => r.isCorrect).length;
     const score = correctAnswers / totalQuestions;
 
-    const sumQuestionRatings = results.reduce((acc, r) => acc + getQuestionRating(subject, r.difficulty || 5), 0);
+    const sumQuestionRatings = results.reduce((acc, r) => acc + getQuestionRating(subject, r.difficulty !== undefined ? r.difficulty : 5), 0);
     const avgQuestionRating = sumQuestionRatings / totalQuestions;
 
     let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));

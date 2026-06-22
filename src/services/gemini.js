@@ -295,7 +295,7 @@ export async function generateProblems(count, difficulty, subject = "Math", user
     const mockProblems = [];
     for (let i = 0; i < count; i++) {
       const offset = (i % 5) - 2; // yields -2, -1, 0, 1, 2
-      const diff = Math.min(10, Math.max(1, difficulty + offset));
+      const diff = Math.min(10, Math.max(0, difficulty + offset));
       const format = examFormat || (freeResponseMode ? 'free_response' : 'mix');
 
       if (format === 'free_response' || (format === 'mix' && i % 3 === 2)) {
