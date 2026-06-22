@@ -161,9 +161,16 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
           isSvg = true;
         }
 
-        // If this part is an SVG block, render it inside a white card so black-stroke
-        // SVGs display correctly against the app's dark background.
+        // If this part is an SVG block, adapt it to dark mode and render it inside a dark card container.
         if (isSvg) {
+          const cleanedSvg = svgContent
+            .replace(/stroke\s*=\s*['"](?:black|#000000|#000)['"]/gi, "stroke='#ffffff'")
+            .replace(/fill\s*=\s*['"](?:black|#000000|#000)['"]/gi, "fill='#ffffff'")
+            .replace(/fill\s*=\s*['"](?:white|#ffffff|#fff)['"]/gi, "fill='none'")
+            .replace(/background\s*:\s*(?:white|#ffffff|#fff|black|#000000|#000)/gi, "background:transparent")
+            .replace(/stroke\s*:\s*(?:black|#000000|#000)/gi, "stroke:#ffffff")
+            .replace(/fill\s*:\s*(?:black|#000000|#000)/gi, "fill:#ffffff");
+
           return (
             <span
               key={partIndex}
@@ -172,14 +179,14 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
               <span
                 style={{
                   display: 'block',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
                   borderRadius: '10px',
                   padding: '16px',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
                   overflow: 'hidden',
                   lineHeight: 0,
                 }}
-                dangerouslySetInnerHTML={{ __html: svgContent }}
+                dangerouslySetInnerHTML={{ __html: cleanedSvg }}
               />
             </span>
           );

@@ -1,6 +1,13 @@
 // Helper to determine if a token is a SMILES string
 export function isSmiles(word) {
   if (!word || word.length < 2) return false;
+
+  // Reject single element symbols followed by numbers (e.g., C2, C4, C-3) representing carbon numbers
+  const isSingleAtomRef = /^(C|c|O|o|N|n|P|p|S|s|F|f|I|i|H|h|Cl|cl|Br|br)[-+]?\d+$/;
+  if (isSingleAtomRef.test(word)) {
+    return false;
+  }
+
   // Reject H-containing words ONLY when they lack SMILES structural markers (brackets, parens, bonds).
   // This allows inorganic SMILES like [OH2], [NH3], [NH4+], OS(=O)(=O)O while
   // still rejecting plain English words like "the", "have", "he".
