@@ -490,7 +490,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
         <div style={{ display: 'flex', gap: '1rem' }}>
           <div style={{ flex: 1 }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Questions</label>
-            <input type="number" name="numQuestions" min="1" max="20" value={config.numQuestions} onChange={handleChange} className="input-field" />
+            <input type="number" name="numQuestions" min="1" max="60" value={config.numQuestions} onChange={handleChange} className="input-field" />
           </div>
           <div style={{ flex: 1 }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Difficulty (0-10)</label>
@@ -678,7 +678,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                   <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
                     Questions Per Set
                   </label>
-                  <input type="number" name="questionsPerSet" min="1" max="20" value={config.questionsPerSet} onChange={handleChange} className="input-field" />
+                  <input type="number" name="questionsPerSet" min="1" max="60" value={config.questionsPerSet} onChange={handleChange} className="input-field" />
                 </div>
               </div>
             ) : (
