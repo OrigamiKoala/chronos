@@ -73,7 +73,7 @@ function isAnswerCorrect(prob, ans) {
   return normalizeAnswer(ans) === normalizeAnswer(prob.answer);
 }
 
-export function ExamScreen({ config, onFinish, resumeState }) {
+export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   const isWholeTestMode = config.timeLimitStyle === 'whole_test';
   const isSetTimedMode = config.timeLimitStyle === 'per_set';
   const questionsPerSet = config.questionsPerSet || 2;
@@ -263,9 +263,14 @@ export function ExamScreen({ config, onFinish, resumeState }) {
           allGenerated = [...allGenerated, ...streamedQuestions];
         }
         retryCount++;
-        if (retryCount >= MAX_RETRIES) {
+        const isTimeout = err.message === 'Timeout' || err.message?.toLowerCase().includes('timeout') || err.message?.includes('504');
+        if (retryCount >= MAX_RETRIES || isTimeout) {
           if (sharedQuestions.length === 0 && allGenerated.length === 0) {
-            setError('Failed to generate problems after multiple attempts. Please go back and try again.');
+            if (isTimeout) {
+              setError('Whoops, you asked for too many questions! Please try again.');
+            } else {
+              setError('Failed to generate problems after multiple attempts. Please go back and try again.');
+            }
           } else {
             console.error("Failed to generate remainder of problems:", err);
           }
@@ -862,6 +867,21 @@ export function ExamScreen({ config, onFinish, resumeState }) {
         >
           <Play size={18} /> Resume Test
         </button>
+      </div>
+    );
+  }
+
+  if (error && problems.length === 0) {
+    return (
+      <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+        <AlertTriangle className="text-gradient" size={48} style={{ margin: '0 auto 1rem', color: 'var(--danger)' }} />
+        <h3 className="text-gradient">Generation Failed</h3>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '1.05rem', lineHeight: '1.6' }}>{error}</p>
+        {onCancel && (
+          <button className="btn btn-primary" onClick={onCancel} style={{ margin: '0 auto' }}>
+            Go Back
+          </button>
+        )}
       </div>
     );
   }

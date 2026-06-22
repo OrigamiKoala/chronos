@@ -265,7 +265,10 @@ export async function generateProblems(count, difficulty, subject = "Math", user
 
     if (!response.ok) {
       console.warn(`Vercel API returned status ${response.status}.`);
-      throw new Error("API call failed");
+      if (response.status === 504) {
+        throw new Error("Timeout");
+      }
+      throw new Error(`API call failed with status ${response.status}`);
     }
 
     const contentType = response.headers.get('content-type') || '';

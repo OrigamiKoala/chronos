@@ -141,7 +141,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
   // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\]), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
   // and markdown bold (**...**) / italic (*...*) to keep them intact.
-  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|```xml[\s\S]*?<\/svg>[\s\S]*?```|<svg[\s\S]*?<\/svg>|\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|\*\*[^*]+\*\*|\*[^*]+\*)/g);
 
   return (
     <span ref={containerRef} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -153,6 +153,10 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
           isSvg = true;
           // Strip off the ```xml and ``` block delimiters
           svgContent = part.replace(/^```xml\s*/, '').replace(/\s*```$/, '');
+        } else if (part.startsWith('[[SVG:')) {
+          isSvg = true;
+          // Strip off the [[SVG: and ]] markers
+          svgContent = part.replace(/^\[\[SVG:\s*/, '').replace(/\s*\]\]$/, '');
         } else if (part.startsWith('<svg')) {
           isSvg = true;
         }

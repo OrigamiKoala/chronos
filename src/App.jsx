@@ -1055,6 +1055,7 @@ function App() {
               <ExamScreen
                 config={examConfig}
                 onFinish={finishExam}
+                onCancel={restart}
                 resumeState={activeExam && activeExam.exam_id === examConfig?.examId ? activeExam : null}
               />
             )}
