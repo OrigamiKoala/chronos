@@ -116,8 +116,9 @@ export function escapeLiteralNewlines(jsonStr) {
         // \n and \\ are left as-is: \n is legitimately used as a line-break in question
         // text, and \\ is a valid double-backslash in both JSON and LaTeX.
         if (ch === 'r' || ch === 't' || ch === 'b' || ch === 'f') {
-          // Re-escape: \r → \\r, \t → \\t, etc., so JSON.parse yields a literal backslash
-          result += '\\\\' + ch;
+          // Re-escape: \r → \\r, \t → \\t, etc. so JSON.parse yields a literal backslash + letter.
+          // Note: the leading \ is already in `result` (added above); we only add one more \ + ch.
+          result += '\\' + ch;
         } else {
           result += ch;
         }

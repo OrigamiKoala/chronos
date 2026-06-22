@@ -545,6 +545,18 @@ Tailor the questions to target the user's weaknesses:
 1. In knowledge base and skill set (using the User Weakness Analysis and User Topic Breakdown).
 2. In thinking and test-taking style (using the Recent Mistake Patterns). Craft questions that specifically test or trigger their common mistake patterns (such as conceptual traps, calculation errors, panic, or edge case negligence) to help them overcome these pitfalls.
 
+ANTI-TEMPLATE DIRECTIVE: A problem is a forbidden template if it exhibits any of these structural properties — regardless of its topic or difficulty level:
+- Single-formula plug-and-chug: one concept, one equation, values handed to the student, answer drops out directly with no coupling.
+- Catalogue question: simply asks the student to recall or identify a memorised fact, rule, or definition with no reasoning step.
+- Familiar scaffold with swapped numbers: structurally identical to a class of textbook problems (e.g., a standard titration, incline, or stoichiometry setup) with only numerical values or element names changed.
+- Isolated calculation: tests exactly one sub-skill in complete isolation with no unexpected coupling to another concept.
+- Generic framing: the question could have been written by any textbook author without any real-world or experimental motivation.
+Any question matching one or more of these patterns must be redesigned before finalising.
+
+SELF-CHECK (MANDATORY before finalising each question): Before writing the final JSON for each question, ask yourself: "Is this question structurally novel? Would a student who has drilled olympiad problem sets be genuinely surprised by the setup, the system, or the question being asked — even if they know the underlying concept well?" If the answer is no — if the setup is a familiar scaffold with new numbers or a different element — redesign the question from scratch. Note: difficulty level is irrelevant here. A hard USNCO question can still be a clichéd template. What matters is whether the problem-setup itself is fresh and unexpected.
+
+SURPRISING PREMISE DIRECTIVE: Every question should ideally open from a counterintuitive, puzzling, or surprising premise — a real experimental observation, an anomalous result, or a system that behaves differently from naive expectation. Avoid generic lab-exercise framings ("A student dissolves...", "A block is placed on a surface..."). Instead, ground the question in a specific, vivid scenario that demands explanation.
+
 ###Constraints:###
 
 ${constraints}
@@ -570,6 +582,7 @@ All questions generated MUST adhere to these critical design directives:
 4. QUESTION TYPES MIX: You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.
 5. BACKWARD CHAINING (REVERSE DESIGN): Use a backward-chaining methodology to design questions. EVERY single question generated must be completely unique, original, and never seen before.
 6. SVG DIAGRAMS (CRITICAL - HIGH FREQUENCY REQUIRED): You MUST include [[SVG: <svg>...</svg>]] diagrams in the majority of your questions. Every geometry question, every graph-based problem (titration curves, phase diagrams, potential energy surfaces, circuit diagrams, free-body diagrams, coordinate geometry, function plots, etc.) MUST have a corresponding SVG figure embedded directly in the question text. Failing to include diagrams where they would naturally appear is a serious quality defect. Use single-quotes for all SVG attribute values.
+7. ANSWER-FORM VARIATION: Rotate the structural form of what the answer requires across questions in the same exam. Do not produce multiple questions that all ask for the same type of quantity (e.g., all asking for a final numerical value, or all asking "which of the following is correct"). Include variety such as: a question whose answer is a ratio or dimensionless quantity derived from multiple steps; a question that requires identifying which piece of given information is irrelevant or insufficient; a question where the student must recognise that the naive calculation gives the wrong answer and explain why; a question whose answer is a qualitative ranking or ordering rather than a single value.
 
 ***Constraints & Execution Instructions:***
 
@@ -706,7 +719,6 @@ Follow these strict rules:
               systemInstruction,
               responseMimeType: "application/json",
               safetySettings,
-              temperature: 1.5,
             },
           });
 

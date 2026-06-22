@@ -161,16 +161,30 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
           isSvg = true;
         }
 
-        // If this part is an SVG block, render it inline
+        // If this part is an SVG block, render it inside a white card so black-stroke
+        // SVGs display correctly against the app's dark background.
         if (isSvg) {
           return (
             <span
               key={partIndex}
-              style={{ display: 'block', margin: '16px auto', maxWidth: '100%', textAlign: 'center' }}
-              dangerouslySetInnerHTML={{ __html: svgContent }}
-            />
+              style={{ display: 'block', margin: '20px auto', maxWidth: '580px' }}
+            >
+              <span
+                style={{
+                  display: 'block',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '10px',
+                  padding: '16px',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
+                  overflow: 'hidden',
+                  lineHeight: 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: svgContent }}
+              />
+            </span>
           );
         }
+
 
         // If this part is a LaTeX math block, render it directly as text so MathJax can process it
         if (part.startsWith('$') || part.startsWith('\\(') || part.startsWith('\\[')) {
