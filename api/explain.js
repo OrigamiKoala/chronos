@@ -44,98 +44,29 @@ Return strictly a valid JSON object with the following schema:
 
     const modelId = 'gemini-3.1-flash-lite';
     const models = [modelId, 'gemini-3-flash-preview'];
-    const response = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
+    const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
       model: currentModel,
-      contents: prompt,
-      safety_settings: [
-        {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        }
-      ],
-      safetySettings: [
-        {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-        }
-      ],
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.3,
-        safety_settings: [
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          }
-        ],
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          }
-        ]
+      input: prompt,
+      response_format: {
+        type: 'text',
+        mime_type: 'application/json'
       },
+      generation_config: {
+        temperature: 0.3
+      }
     }), req);
 
     let explanationText = '';
     let shouldRemarkCorrectVal = false;
 
-    const parsed = parseJSONResponse(response.text || '');
+    const parsed = parseJSONResponse(response.output_text || '');
     if (parsed) {
       explanationText = parsed.explanation;
       shouldRemarkCorrectVal = parsed.shouldRemarkCorrect || false;
-    } else if (response.text) {
+    } else if (response.output_text) {
       console.warn('Failed to parse JSON response from Gemini, using robust extractors as fallback.');
-      explanationText = extractExplanationFallback(response.text);
-      shouldRemarkCorrectVal = extractShouldRemarkCorrectFallback(response.text);
+      explanationText = extractExplanationFallback(response.output_text);
+      shouldRemarkCorrectVal = extractShouldRemarkCorrectFallback(response.output_text);
     } else {
       explanationText = 'The AI did not return a response. The request may have been blocked by safety filters. Please try again.';
     }

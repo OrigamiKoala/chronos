@@ -466,16 +466,17 @@ You MUST format your output strictly as a JSON object, with no markdown code blo
 
         const response = await executeWithRetry(
           ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'],
-          (ai, currentModel) => ai.models.generateContent({
+          (ai, currentModel) => ai.interactions.create({
             model: currentModel,
-            contents: prompt,
-            config: {
-              responseMimeType: "application/json"
+            input: prompt,
+            response_format: {
+              type: 'text',
+              mime_type: 'application/json'
             }
           })
         );
 
-        const responseText = response.text;
+        const responseText = response.output_text;
         const parsed = parseJSONResponse(responseText);
         if (!parsed) {
           throw new Error('Failed to parse JSON response from Gemini');

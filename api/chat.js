@@ -146,34 +146,34 @@ Keep answers clear, highly metric-accurate, and under 3 sentences.`;
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.1-flash';
     const models = [...new Set([modelId, 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'])];
 
-    const contents = [];
+    const input = [];
     if (Array.isArray(history)) {
       for (const msg of history) {
         if (msg.text && msg.sender) {
-          contents.push({
-            role: msg.sender === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }]
+          input.push({
+            type: msg.sender === 'user' ? 'user_input' : 'model_output',
+            content: [{ type: 'text', text: msg.text }]
           });
         }
       }
     }
-    contents.push({
-      role: 'user',
-      parts: [{ text: message }]
+    input.push({
+      type: 'user_input',
+      content: [{ type: 'text', text: message }]
     });
 
-    const response = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
+    const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
       model: currentModel,
-      contents: contents,
-      config: {
-        systemInstruction: systemPrompt,
+      input: input,
+      system_instruction: systemPrompt,
+      generation_config: {
         maxOutputTokens: 256,
         temperature: 0.3
       }
     }), req);
 
     return res.status(200).json({
-      response: response.text || 'Sorry, I could not generate a response. Please try again.',
+      response: response.output_text || 'Sorry, I could not generate a response. Please try again.',
       _debug: { rowCount: bqRows?.length || 0, studentIdReceived: studentId, teacherId }
     });
 

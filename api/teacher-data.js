@@ -605,18 +605,21 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
 
           const modelId = 'gemini-3.1-flash-lite';
           const models = [modelId, 'gemini-3-flash-preview'];
-          const response = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
+          const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
             model: currentModel,
-            contents: geminiPrompt,
-            config: {
-              responseMimeType: "application/json",
+            input: geminiPrompt,
+            response_format: {
+              type: 'text',
+              mime_type: 'application/json'
+            },
+            generation_config: {
               temperature: 0.3
             }
           }), req);
 
-          if (response.text) {
+          if (response.output_text) {
             try {
-              const responseObj = parseJSONResponse(response.text);
+              const responseObj = parseJSONResponse(response.output_text);
               if (!responseObj) {
                 throw new Error('Failed to parse student insights response from Gemini');
               }

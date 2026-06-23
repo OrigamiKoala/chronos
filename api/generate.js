@@ -719,17 +719,17 @@ Follow these strict rules:
             dynamicPrompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
           }
 
-          const response = await ai.models.generateContent({
+          const response = await ai.interactions.create({
             model: currentModel,
-            contents: dynamicPrompt,
-            config: {
-              systemInstruction,
-              responseMimeType: "application/json",
-              safetySettings,
-            },
+            input: dynamicPrompt,
+            system_instruction,
+            response_format: {
+              type: 'text',
+              mime_type: 'application/json'
+            }
           });
 
-          const text = response.text;
+          const text = response.output_text;
           if (text) {
             const parsed = parseJSONResponse(text);
             if (parsed) {

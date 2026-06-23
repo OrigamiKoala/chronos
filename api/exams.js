@@ -711,7 +711,7 @@ Return strictly a valid JSON object with the following schema:
 }
 Do NOT include markdown headers or backticks in the response. Return ONLY the raw JSON object.`;
 
-          const contents = [];
+          const input = [];
           if (isImage) {
             const parts = r.frqSubmission.value.split(',');
             const base64Data = parts[1] || r.frqSubmission.value;
@@ -720,98 +720,31 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
             if (mimeMatch) {
               mimeType = mimeMatch[1];
             }
-            contents.push({
-              inlineData: {
-                data: base64Data,
-                mimeType: mimeType
-              }
+            input.push({
+              type: 'image',
+              mime_type: mimeType,
+              data: base64Data
             });
           }
-          contents.push(gradingPrompt);
+          input.push({
+            type: 'text',
+            text: gradingPrompt
+          });
 
           const models = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
-          const gradingResponse = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
+          const gradingResponse = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
             model: currentModel,
-            contents: contents,
-            safety_settings: [
-              {
-                category: 'HARM_CATEGORY_HATE_SPEECH',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-              },
-              {
-                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-              },
-              {
-                category: 'HARM_CATEGORY_HARASSMENT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-              },
-              {
-                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-              }
-            ],
-            safetySettings: [
-              {
-                category: 'HARM_CATEGORY_HATE_SPEECH',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-              },
-              {
-                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-              },
-              {
-                category: 'HARM_CATEGORY_HARASSMENT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-              },
-              {
-                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-              }
-            ],
-            config: {
-              responseMimeType: "application/json",
-              temperature: 0.2,
-              safety_settings: [
-                {
-                  category: 'HARM_CATEGORY_HATE_SPEECH',
-                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-                },
-                {
-                  category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-                },
-                {
-                  category: 'HARM_CATEGORY_HARASSMENT',
-                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-                },
-                {
-                  category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-                }
-              ],
-              safetySettings: [
-                {
-                  category: 'HARM_CATEGORY_HATE_SPEECH',
-                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-                },
-                {
-                  category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-                },
-                {
-                  category: 'HARM_CATEGORY_HARASSMENT',
-                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-                },
-                {
-                  category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                  threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-                }
-              ]
+            input: input,
+            response_format: {
+              type: 'text',
+              mime_type: 'application/json'
+            },
+            generation_config: {
+              temperature: 0.2
             }
           }), req);
 
-          const graded = parseJSONResponse(gradingResponse.text);
+          const graded = parseJSONResponse(gradingResponse.output_text);
           if (!graded) {
             throw new Error('Failed to parse grading response from Gemini');
           }
@@ -1407,23 +1340,14 @@ Do NOT include markdown formatting, backticks, or any conversational text. Retur
 
     const modelId = 'gemini-3.1-flash-lite';
     const models = [modelId, 'gemini-3-flash-preview'];
-    const response = await executeWithRetry(models, (ai, currentModel) => ai.models.generateContent({
+    const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
       model: currentModel,
-      contents: prompt,
-      safety_settings: [
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
-      ],
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
-      ],
-      config: {
-        responseMimeType: "application/json",
+      input: prompt,
+      response_format: {
+        type: 'text',
+        mime_type: 'application/json'
+      },
+      generation_config: {
         temperature: 0.3
       }
     }), req);
@@ -1431,8 +1355,8 @@ Do NOT include markdown formatting, backticks, or any conversational text. Retur
     let detailedAnalysis = null;
     let mistakePatterns = '';
 
-    if (response.text) {
-      const responseObj = parseJSONResponse(response.text);
+    if (response.output_text) {
+      const responseObj = parseJSONResponse(response.output_text);
       if (responseObj) {
         mistakePatterns = responseObj.mistake_patterns || '';
 
