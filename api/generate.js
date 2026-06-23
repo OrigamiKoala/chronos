@@ -722,7 +722,7 @@ Follow these strict rules:
           const response = await ai.interactions.create({
             model: currentModel,
             input: dynamicPrompt,
-            system_instruction,
+            system_instruction: systemInstruction,
             response_format: {
               type: 'text',
               mime_type: 'application/json'
