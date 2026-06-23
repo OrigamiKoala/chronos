@@ -1,0 +1,27 @@
+const fs = require('fs');
+const content = fs.readFileSync('/Users/carlliu/stress-sandbox/scratch/extracted_problems.txt', 'utf8');
+console.log("Total length:", content.length);
+// Split content by some delimiter or print first few thousand characters
+console.log(content.slice(0, 3000));
+console.log("-----------------------------------------");
+console.log(content.slice(3000, 6000));
+console.log("-----------------------------------------");
+console.log(content.slice(6000, 9000));
+console.log("-----------------------------------------");
+console.log(content.slice(9000, 12000));
+console.log("-----------------------------------------");
+console.log(content.slice(12000, 15000));
+console.log("-----------------------------------------");
+console.log(content.slice(15000, 18000));
+console.log("-----------------------------------------");
+console.log(content.slice(18000, 21000));
+console.log("-----------------------------------------");
+console.log(content.slice(21000, 24000));
+console.log("-----------------------------------------");
+console.log(content.slice(24000, 27000));
+console.log("-----------------------------------------");
+console.log(content.slice(27000, 30000));
+console.log("-----------------------------------------");
+console.log(content.slice(30000, 33000));
+console.log("-----------------------------------------");
+console.log(content.slice(33000, 36000));

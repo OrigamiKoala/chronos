@@ -1,0 +1,64 @@
+<USER_REQUEST>
+add each of the following problems as exemplars, cleaning up the LaTeX and formatting the output JSON properly. implement a dynamic exemplar rotation system, where 3 exemplars are automatically chosen at random to send to the bot every time; don't edit the svg code or problem text for these problems, and add the current exemplars to that rotation system: $$\textbf{42. }\text{A diagram showing the thermodynamic stability of mercury-containing species as a function of pH and}$$
+$$\text{reduction potential (Pourbaix diagram) is shown below. What is }\textbf{X}\text{?}$$
+$$\textbf{(A) }\text{Hg}_2^{2+}(aq) \quad\quad\quad\quad \textbf{(B) }\text{Hg}_2\text{O}(s)$$
+$$\textbf{(C) }\text{Hg(OH)}^+(aq) \quad\quad\quad \textbf{(D) }\text{Hg(O)(OH)}(s)$$
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%" style="background-color: #ffffff;">
+  <line x1="80" y1="50" x2="80" y2="420" stroke="#cccccc" stroke-width="1" />
+  <line x1="140" y1="50" x2="140" y2="420" stroke="#eeeeee" stroke-width="1" />
+  <line x1="200" y1="50" x2="200" y2="420" stroke="#eeeeee" stroke-width="1" />
+  <line x1="260" y1="50" x2="260" y2="420" stroke="#eeeeee" stroke-width="1" />
+  <line x1="320" y1="50" x2="320" y2="420" stroke="#eeeeee" stroke-width="1" />
+  <line x1="380" y1="50" x2="380" y2="420" stroke="#eeeeee" stroke-width="1" />
+  <line x1="440" y1="50" x2="440" y2="420" stroke="#cccccc" stroke-width="1" />
+  
+  <line x1="80" y1="420" x2="440" y2="420" stroke="#000000" stroke-width="1.5" />
+  <line x1="80" y1="50" x2="80" y2="420" stroke="#000000" stroke-width="1.5" />
+  <line x1="440" y1="50" x2="440" y2="420" stroke="#cccccc" stroke-width="1" />
+  <line x1="80" y1="50" x2="440" y2="50" stroke="#cccccc" stroke-width="1" />
+
+  <line x1="75" y1="50" x2="80" y2="50" stroke="#000000" stroke-width="1" />
+  <text x="50" y="55" font-family="Arial" font-size="12" text-anchor="middle">1.2</text>
+  <line x1="75" y1="111.7" x2="80" y2="111.7" stroke="#000000" stroke-width="1" />
+  <text x="50" y="116
+<truncated 32749 bytes>
+diately, at a rate close to 1}$$
+$$\text{mol per 193000 C. As the electrolysis proceeds, the}$$
+$$\text{rate of copper deposition decreases.}$$
+$$\textbf{(C) }\text{No copper is deposited for a certain length of time,}$$
+$$\text{then copper deposition begins.}$$
+$$\textbf{(D) }\text{Copper is deposited at a rate of 1 mol per 193000 C}$$
+$$\text{for a certain length of time, then the rate of copper}$$
+$$\text{deposition decreases.}$$
+
+$$\textbf{34. }\text{Which statement best describes the differences between a}$$
+$$0.1\text{ M solution of ammonium bicarbonate, NH}_4(\text{HCO}_3),$$
+$$\text{and a } 0.1\text{ M solution of ammonium carbonate,}$$
+$$(\text{NH}_4)_2\text{CO}_3\text{?}$$
+$$\textbf{(A) }\text{The pH of the ammonium bicarbonate solution is}$$
+$$\text{lower because bicarbonate is a weaker base than}$$
+$$\text{carbonate.}$$
+$$\textbf{(B) }\text{The pH of the ammonium bicarbonate solution is}$$
+$$\text{lower because both ammonium ion and bicarbonate}$$
+$$\text{ion can act as Br\o nsted acids.}$$
+$$\textbf{(C) }\text{The pH of the ammonium bicarbonate solution is}$$
+$$\text{higher because it has only half the ammonium ion}$$
+$$\text{concentration of the ammonium carbonate solution.}$$
+$$\textbf{(D) }\text{The pH of the ammonium bicarbonate solution is}$$
+$$\text{higher because it contains only two-thirds as many}$$
+$$\text{total ions as the ammonium carbonate solution.}$$
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-23T12:41:38-07:00.
+
+The user's current state is as follows:
+Active Document: /Users/carlliu/stress-sandbox/api/generate.js (LANGUAGE_JAVASCRIPT)
+Cursor is on line: 213
+Other open documents:
+- /Users/carlliu/stress-sandbox/api/generate.js (LANGUAGE_JAVASCRIPT)
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Gemini 3.5 Flash (High). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>

@@ -1,0 +1,12 @@
+<USER_REQUEST>
+also implement this rotating dynamic exemplar system in ochem-bot
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-23T12:42:00-07:00.
+
+The user's current state is as follows:
+Active Document: /Users/carlliu/stress-sandbox/api/generate.js (LANGUAGE_JAVASCRIPT)
+Cursor is on line: 213
+Other open documents:
+- /Users/carlliu/stress-sandbox/api/generate.js (LANGUAGE_JAVASCRIPT)
+</ADDITIONAL_METADATA>
