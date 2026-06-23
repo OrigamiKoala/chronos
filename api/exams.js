@@ -958,6 +958,88 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
       finalNewRating = Math.max(100, currentRating + finalRatingChange);
     }
 
+    // 0. Add questions to pregenerated_questions table in BigQuery (non-mock questions only)
+    const nonMockQuestions = gradedResults.filter(q => {
+      if (!q.id || !q.question) return false;
+      const isMock = q.id.toString().toLowerCase().includes('mock') || 
+                     q.question.toString().startsWith('Mock') ||
+                     /^\d+-\d+$/.test(q.id); // Matches Date.now()-i format
+      return !isMock;
+    });
+
+    if (nonMockQuestions.length > 0) {
+      const normSubject = String(subject).trim().toLowerCase();
+      const selectClauses = [];
+      const params = {};
+      const types = {};
+
+      nonMockQuestions.forEach((q, idx) => {
+        const idParam = `qid_${idx}`;
+        const subjectParam = `sub_${idx}`;
+        const topicParam = `topic_${idx}`;
+        const diffParam = `diff_${idx}`;
+        const typeParam = `type_${idx}`;
+        const jsonParam = `json_${idx}`;
+
+        const cleanQuestion = {
+          id: q.id,
+          topic: q.topic || 'General',
+          question: q.question,
+          type: q.type,
+          difficulty: Number(q.difficulty !== undefined ? q.difficulty : 5),
+          answer: q.answer || '',
+          detailedSolution: q.detailedSolution || ''
+        };
+        if (q.options) cleanQuestion.options = q.options;
+        if (q.keywordExpression) cleanQuestion.keywordExpression = q.keywordExpression;
+
+        params[idParam] = String(q.id);
+        params[subjectParam] = normSubject;
+        params[topicParam] = String(q.topic || 'General');
+        params[diffParam] = Number(q.difficulty !== undefined ? q.difficulty : 5);
+        params[typeParam] = String(q.type);
+        params[jsonParam] = JSON.stringify(cleanQuestion);
+
+        types[idParam] = 'STRING';
+        types[subjectParam] = 'STRING';
+        types[topicParam] = 'STRING';
+        types[diffParam] = 'INT64';
+        types[typeParam] = 'STRING';
+        types[jsonParam] = 'STRING';
+
+        selectClauses.push(`
+          SELECT 
+            @${idParam} AS question_id,
+            @${subjectParam} AS subject,
+            @${topicParam} AS topic,
+            @${diffParam} AS difficulty,
+            @${typeParam} AS type,
+            @${jsonParam} AS question_json
+        `);
+      });
+
+      const batchMergePregenQuery = `
+        MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
+        USING (
+          ${selectClauses.join('\n          UNION ALL\n          ')}
+        ) S
+        ON T.question_id = S.question_id
+        WHEN NOT MATCHED THEN
+          INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
+          VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())
+      `;
+
+      try {
+        await bq.query({
+          query: batchMergePregenQuery,
+          params,
+          types
+        });
+      } catch (pregenErr) {
+        console.error('Failed to add questions to pregenerated_questions:', pregenErr);
+      }
+    }
+
     const isGuest = sanitizedUser === 'default_user';
 
     if (!isGuest) {

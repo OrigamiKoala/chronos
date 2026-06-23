@@ -293,8 +293,35 @@ export async function generateProblems(count, difficulty, subject = "Math", user
     }
   } catch (error) {
     console.error("Failed to connect to API:", error);
+    try {
+      console.warn("Attempting to fetch fallback questions from BigQuery...");
+      const fallbackResponse = await fetch('/api/fallback-questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          count,
+          difficulty,
+          subject,
+          targetUserId: username,
+          examFormat,
+        }),
+      });
+      if (fallbackResponse.ok) {
+        const data = await fallbackResponse.json();
+        const questions = (Array.isArray(data) ? data : [data]).slice(0, count);
+        if (onQuestion) questions.forEach((q, i) => onQuestion(q, i));
+        return questions;
+      } else {
+        console.warn(`BigQuery fallback endpoint returned status ${fallbackResponse.status}.`);
+      }
+    } catch (fallbackError) {
+      console.error("Failed to fetch fallback questions from BigQuery:", fallbackError);
+    }
+
     // Fallback for missing API key or network error to allow UI testing
-    console.warn("Using fallback mock data due to API failure.");
+    console.warn("Using fallback mock data due to API/BigQuery failure.");
     const mockProblems = [];
     for (let i = 0; i < count; i++) {
       const offset = (i % 5) - 2; // yields -2, -1, 0, 1, 2

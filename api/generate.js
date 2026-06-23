@@ -27,6 +27,16 @@ export default async function handler(req, res) {
   const sanitizedUser = String(targetUserId).trim().toLowerCase();
   const normSubject = String(subject).trim().toLowerCase();
 
+  const allowedTypes = Array.isArray(examFormat)
+    ? examFormat
+    : (typeof examFormat === 'string' && examFormat.trim()
+      ? (examFormat.includes(',') ? examFormat.split(',') : [examFormat])
+      : ['multiple_choice', 'short_answer', 'free_response']);
+  const parsedTypes = allowedTypes.map(t => t.trim()).filter(Boolean);
+
+  const allQuestions = [];
+  let doneQuestionIds;
+
   if (assignmentId && sanitizedUser !== 'default_user') {
     try {
       const getQuestionsQuery = `
@@ -54,7 +64,7 @@ export default async function handler(req, res) {
     let weaknessAnalysis = 'None (no previous analysis available)';
     let topicBreakdown = 'None (no previous topic breakdown available)';
     let mistakeAnalysis = 'None (no previous mistake pattern analysis available)';
-    let doneQuestionIds = [];
+    doneQuestionIds = [];
 
     try {
       const consolidatedQuery = `
@@ -491,13 +501,7 @@ Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO National
 `;
     }
 
-    const allowedTypes = Array.isArray(examFormat)
-      ? examFormat
-      : (typeof examFormat === 'string' && examFormat.trim()
-        ? (examFormat.includes(',') ? examFormat.split(',') : [examFormat])
-        : ['multiple_choice', 'short_answer', 'free_response']);
-
-    const parsedTypes = allowedTypes.map(t => t.trim()).filter(Boolean);
+    // allowedTypes and parsedTypes are defined at the outer scope
 
     let typeSchemaDesc = parsedTypes.map(t => `"${t}"`).join(' | ');
     let optionsSchemaDesc = parsedTypes.includes('multiple_choice')
@@ -666,7 +670,7 @@ Output the result strictly as a raw, valid JSON array, keeping it free of any ma
 
 CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (applying a single standard formula to given values). These plug-and-chug applications can ONLY happen for difficulty level 1.`;
 
-    const allQuestions = [];
+    // using outer allQuestions array
     if (pregeneratedQuestion) {
       allQuestions.push(pregeneratedQuestion);
     }
@@ -735,6 +739,68 @@ Follow these strict rules:
                   allQuestions.push(q);
                 }
               }
+
+              // Save successfully generated questions directly to pregenerated_questions
+              const freshQuestions = list.filter(q => q && q.id && q.question);
+              if (freshQuestions.length > 0) {
+                const selectClauses = [];
+                const params = {};
+                const types = {};
+
+                freshQuestions.forEach((q, idx) => {
+                  const idParam = `qid_${idx}`;
+                  const subjectParam = `sub_${idx}`;
+                  const topicParam = `topic_${idx}`;
+                  const diffParam = `diff_${idx}`;
+                  const typeParam = `type_${idx}`;
+                  const jsonParam = `json_${idx}`;
+
+                  params[idParam] = String(q.id);
+                  params[subjectParam] = normSubject || subject;
+                  params[topicParam] = String(q.topic || 'General');
+                  params[diffParam] = Number(q.difficulty !== undefined ? q.difficulty : difficulty);
+                  params[typeParam] = String(q.type);
+                  params[jsonParam] = JSON.stringify(q);
+
+                  types[idParam] = 'STRING';
+                  types[subjectParam] = 'STRING';
+                  types[topicParam] = 'STRING';
+                  types[diffParam] = 'INT64';
+                  types[typeParam] = 'STRING';
+                  types[jsonParam] = 'STRING';
+
+                  selectClauses.push(`
+                    SELECT 
+                      @${idParam} AS question_id,
+                      @${subjectParam} AS subject,
+                      @${topicParam} AS topic,
+                      @${diffParam} AS difficulty,
+                      @${typeParam} AS type,
+                      @${jsonParam} AS question_json
+                  `);
+                });
+
+                const batchMergePregenQuery = `
+                  MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
+                  USING (
+                    ${selectClauses.join('\n                    UNION ALL\n                    ')}
+                  ) S
+                  ON T.question_id = S.question_id
+                  WHEN NOT MATCHED THEN
+                    INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
+                    VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())
+                `;
+
+                try {
+                  await bq.query({
+                    query: batchMergePregenQuery,
+                    params,
+                    types
+                  });
+                } catch (pregenErr) {
+                  console.error('Failed to add newly generated questions to pregenerated_questions:', pregenErr);
+                }
+              }
             }
           }
         }, req);
@@ -749,7 +815,60 @@ Follow these strict rules:
     return res.status(200).json(allQuestions.slice(0, count));
 
   } catch (err) {
-    console.error('Generation error:', err);
+    console.error('Generation error, falling back to BigQuery pregenerated questions:', err);
+    try {
+      const needed = count - allQuestions.length;
+      if (needed > 0) {
+        const fallbackQuery = `
+          WITH doneQuestions AS (
+            SELECT DISTINCT JSON_VALUE(q, '$.id') AS qid
+            FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`,
+            UNNEST(JSON_EXTRACT_ARRAY(results_json)) AS q
+            WHERE user_id = @targetUserId AND @targetUserId != 'default_user'
+          )
+          SELECT question_json
+          FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
+          WHERE subject = @subject
+            AND (
+              @targetUserId = 'default_user'
+              OR JSON_VALUE(question_json, '$.id') NOT IN (SELECT qid FROM doneQuestions)
+            )
+          ORDER BY 
+            CASE WHEN type IN UNNEST(@allowedTypes) THEN 0 ELSE 1 END,
+            ABS(difficulty - @difficulty) ASC,
+            RAND()
+          LIMIT @needed
+        `;
+        const [rows] = await bq.query({
+          query: fallbackQuery,
+          params: {
+            subject: normSubject || subject,
+            difficulty: difficulty,
+            targetUserId: sanitizedUser,
+            allowedTypes: parsedTypes,
+            needed: needed
+          },
+          types: {
+            allowedTypes: ['STRING'],
+            needed: 'INT64'
+          }
+        });
+        if (rows && rows.length > 0) {
+          for (const r of rows) {
+            try {
+              allQuestions.push(JSON.parse(r.question_json));
+            } catch (parseErr) {
+              console.error('Error parsing fallback question JSON:', parseErr);
+            }
+          }
+        }
+      }
+      if (allQuestions.length > 0) {
+        return res.status(200).json(allQuestions.slice(0, count));
+      }
+    } catch (fallbackErr) {
+      console.error('BigQuery fallback query failed:', fallbackErr);
+    }
     return res.status(500).json({ error: err.message || 'Internal Server Error' });
   }
 }
