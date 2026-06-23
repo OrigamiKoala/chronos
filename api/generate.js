@@ -719,9 +719,6 @@ Follow these strict rules:
             response_format: {
               type: 'text',
               mime_type: 'application/json'
-            },
-            generation_config: {
-              timeout: '300'
             }
           });
 
