@@ -201,49 +201,46 @@ Return strictly a JSON array of question objects matching this schema:
   "step4_problem": "formulation description"
 }]`;
 
-      // Try Gemini first (gemini-3.1-flash-lite), with 3-minute timeout per key
-      let responseText = null;
+      // Try SiliconFlow with Qwen3.6-35B-A3B first (default)
+      let responseText = callSiliconFlow(prompt, 'Qwen/Qwen3.6-35B-A3B', 0.85);
 
-      // Attempt Gemini generation
-      const geminiModels = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
-      for (const geminiModel of geminiModels) {
-        if (responseText) break;
-        if (!geminiApiKeys || geminiApiKeys.length === 0) {
-          console.warn('No Gemini API keys available for model', geminiModel);
-          continue;
-        }
-        for (const key of geminiApiKeys) {
+      // If Qwen failed, fall back to Gemini models
+      if (!responseText) {
+        console.warn('SiliconFlow generation failed; falling back to Gemini');
+        const geminiModels = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
+        for (const geminiModel of geminiModels) {
           if (responseText) break;
-          try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`;
-            const payload = {
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: "application/json", temperature: 1.5 }
-            };
-            const response = UrlFetchApp.fetch(url, {
-              method: 'POST',
-              contentType: 'application/json',
-              payload: JSON.stringify(payload),
-              muteHttpExceptions: true,
-              timeout: 180000 // 3 min timeout per key
-            });
-            if (response.getResponseCode() === 200) {
-              const resData = JSON.parse(response.getContentText());
-              responseText = resData.candidates[0].content.parts[0].text;
-              console.log('Gemini generation succeeded with model', geminiModel);
-            } else {
-              console.warn('Gemini request failed for', geminiModel, ':', response.getResponseCode(), response.getContentText().substring(0, 200));
+          if (!geminiApiKeys || geminiApiKeys.length === 0) {
+            console.warn('No Gemini API keys available for model', geminiModel);
+            continue;
+          }
+          for (const key of geminiApiKeys) {
+            if (responseText) break;
+            try {
+              const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`;
+              const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json", temperature: 1.5 }
+              };
+              const response = UrlFetchApp.fetch(url, {
+                method: 'POST',
+                contentType: 'application/json',
+                payload: JSON.stringify(payload),
+                muteHttpExceptions: true,
+                timeout: 180000 // 3 min timeout per key
+              });
+              if (response.getResponseCode() === 200) {
+                const resData = JSON.parse(response.getContentText());
+                responseText = resData.candidates[0].content.parts[0].text;
+                console.log('Gemini generation succeeded with model', geminiModel);
+              } else {
+                console.warn('Gemini request failed for', geminiModel, ':', response.getResponseCode(), response.getContentText().substring(0, 200));
+              }
+            } catch (err) {
+              console.warn('Gemini request error for', geminiModel, ':', err.message);
             }
-          } catch (err) {
-            console.warn('Gemini request error for', geminiModel, ':', err.message);
           }
         }
-      }
-
-      // If Gemini failed, fall back to SiliconFlow with Qwen3.6-35B-A3B
-      if (!responseText) {
-        console.warn('Gemini generation failed or timed out; falling back to SiliconFlow');
-        responseText = callSiliconFlow(prompt, 'Qwen/Qwen3.6-35B-A3B', 0.85);
       }
 
       if (responseText) {

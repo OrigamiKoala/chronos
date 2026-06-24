@@ -774,7 +774,7 @@ Follow these strict rules:
     }
 
     const geminiModels = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
-    const fallbackModel = 'Qwen/Qwen3.6-35B-A3B';
+    const primaryModel = 'Qwen/Qwen3.6-35B-A3B';
 
     let attempts = 0;
     const maxAttempts = 3;
@@ -787,46 +787,39 @@ Follow these strict rules:
       const dynamicPrompt = buildDynamicPrompt(needed);
       let generated = false;
 
-      // Step 1: Try Gemini models (primary: gemini-3.1-flash-lite, fallback: gemini-3-flash-preview)
-      // wrapped in a 3-minute timeout
+      // Step 1: Try SiliconFlow with Qwen3.6-35B-A3B (default)
       try {
-        const geminiText = await withTimeout(
-          geminiRetry(geminiModels, (ai, currentModel) =>
-            ai.interactions.create({
-              model: currentModel,
-              input: dynamicPrompt,
-              system_instruction: systemInstruction,
-              response_format: { type: 'text', mime_type: 'application/json' },
-              generation_config: { temperature: 1.5 }
-            }).then(r => r.output_text)
-          ),
-          3 * 60 * 1000
-        );
-
-        if (geminiText) {
-          generated = processGenerationResult(geminiText);
-        }
-      } catch (err) {
-        console.warn(`Gemini generation failed (attempt ${attempts}):`, err.message || err);
+        await siliconRetry([primaryModel], async (ai, currentModel) => {
+          const text = await ai.chat(systemInstruction, dynamicPrompt);
+          if (text) {
+            generated = processGenerationResult(text) || generated;
+          }
+        });
+      } catch (sfErr) {
+        console.warn(`SiliconFlow primary failed (attempt ${attempts}):`, sfErr.message || sfErr);
       }
 
-      // Step 2: If Gemini didn't produce enough questions, fall back to SiliconFlow
+      // Step 2: If Qwen didn't produce enough, fall back to Gemini models
       if (!generated || allQuestions.length < count) {
-        const sfNeeded = count - allQuestions.length;
-        if (sfNeeded <= 0) break;
-
         try {
-          await siliconRetry([fallbackModel], async (ai, currentModel) => {
-            const text = await ai.chat(systemInstruction, buildDynamicPrompt(sfNeeded));
-            if (text) {
-              generated = processGenerationResult(text) || generated;
-            }
-          });
-        } catch (sfErr) {
-          console.warn(`SiliconFlow fallback failed (attempt ${attempts}):`, sfErr.message || sfErr);
-          if (attempts >= maxAttempts) {
-            console.error('All generation models exhausted after', maxAttempts, 'attempts');
+          const geminiText = await withTimeout(
+            geminiRetry(geminiModels, (ai, currentModel) =>
+              ai.interactions.create({
+                model: currentModel,
+                input: dynamicPrompt,
+                system_instruction: systemInstruction,
+                response_format: { type: 'text', mime_type: 'application/json' },
+                generation_config: { temperature: 1.5 }
+              }).then(r => r.output_text)
+            ),
+            3 * 60 * 1000
+          );
+
+          if (geminiText) {
+            generated = processGenerationResult(geminiText) || generated;
           }
+        } catch (err) {
+          console.warn(`Gemini fallback failed (attempt ${attempts}):`, err.message || err);
         }
       }
     }
