@@ -645,7 +645,9 @@ function callSiliconFlow(prompt) {
       messages: [
         { role: 'user', content: prompt }
       ],
-      response_format: { type: 'json_object' }
+      response_format: { type: 'json_object' },
+      enable_thinking: false,
+      temperature: 0.85
     };
     const response = UrlFetchApp.fetch(url, {
       method: 'POST',
