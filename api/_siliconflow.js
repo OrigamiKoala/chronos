@@ -67,6 +67,40 @@ export async function executeWithRetry(models, apiCallFn) {
   throw lastError || new Error('All SiliconFlow models failed');
 }
 
+export function escapeLiteralNewlines(jsonStr) {
+  let result = '';
+  let inString = false;
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const ch = jsonStr.charAt(i);
+
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+    } else if (inString && ch === '\\') {
+      const nextCh = jsonStr.charAt(i + 1);
+      if (nextCh === '"') {
+        result += '\\"';
+        i++;
+      } else if (nextCh === '\\') {
+        result += '\\\\';
+        i++;
+      } else {
+        result += '\\\\';
+      }
+    } else {
+      if (inString && ch === '\n') {
+        result += '\\n';
+      } else if (inString && ch === '\r') {
+        result += '\\r';
+      } else {
+        result += ch;
+      }
+    }
+  }
+  return result;
+}
+
 export function parseJSONResponse(text) {
   if (!text) return null;
 
@@ -74,7 +108,8 @@ export function parseJSONResponse(text) {
 
   const tryParse = (str) => {
     try {
-      return JSON.parse(str);
+      const escaped = escapeLiteralNewlines(str.trim());
+      return JSON.parse(escaped);
     } catch {
       return null;
     }
@@ -110,16 +145,16 @@ export function parseJSONResponse(text) {
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     const candidate = cleanText.substring(firstBrace, lastBrace + 1);
     parsed = tryParse(candidate);
-    if (!parsed) return null;
-
-    // If the parsed object has a property whose value is an array,
-    // that's probably the wrapped array from a json_object response.
-    for (const key of Object.keys(parsed)) {
-      if (Array.isArray(parsed[key]) && parsed[key].length > 0) {
-        return parsed[key];
+    if (parsed) {
+      // If the parsed object has a property whose value is an array,
+      // that's probably the wrapped array from a json_object response.
+      for (const key of Object.keys(parsed)) {
+        if (Array.isArray(parsed[key]) && parsed[key].length > 0) {
+          return parsed[key];
+        }
       }
+      return parsed;
     }
-    return parsed;
   }
 
   return null;

@@ -102,45 +102,32 @@ export async function executeWithRetry(models, apiCallFn) {
 export function escapeLiteralNewlines(jsonStr) {
   let result = '';
   let inString = false;
-  let escape = false;
 
   for (let i = 0; i < jsonStr.length; i++) {
     const ch = jsonStr.charAt(i);
 
-    if (inString) {
-      if (escape) {
-        // The AI frequently writes LaTeX commands like \rightarrow, \theta, \frac, \beta
-        // as bare JSON escape sequences: \r, \t, \f, \b — which JSON.parse converts to
-        // control characters (CR, TAB, FF, BS). Convert them to double-escaped literals
-        // so the parsed string contains the actual LaTeX backslash character.
-        // \n and \\ are left as-is: \n is legitimately used as a line-break in question
-        // text, and \\ is a valid double-backslash in both JSON and LaTeX.
-        if (ch === 'r' || ch === 't' || ch === 'b' || ch === 'f') {
-          // Re-escape: \r → \\r, \t → \\t, etc. so JSON.parse yields a literal backslash + letter.
-          // Note: the leading \ is already in `result` (added above); we only add one more \ + ch.
-          result += '\\' + ch;
-        } else {
-          result += ch;
-        }
-        escape = false;
-      } else if (ch === '\\') {
-        result += ch;
-        escape = true;
-      } else if (ch === '"') {
-        result += ch;
-        inString = false;
-      } else if (ch === '\n') {
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+    } else if (inString && ch === '\\') {
+      const nextCh = jsonStr.charAt(i + 1);
+      if (nextCh === '"') {
+        result += '\\"';
+        i++;
+      } else if (nextCh === '\\') {
+        result += '\\\\';
+        i++;
+      } else {
+        result += '\\\\';
+      }
+    } else {
+      if (inString && ch === '\n') {
         result += '\\n';
-      } else if (ch === '\r') {
+      } else if (inString && ch === '\r') {
         result += '\\r';
       } else {
         result += ch;
       }
-    } else {
-      if (ch === '"') {
-        inString = true;
-      }
-      result += ch;
     }
   }
   return result;
@@ -176,12 +163,31 @@ export function parseJSONResponse(text) {
     if (parsed) return parsed;
   }
 
+  // Try extracting the first [...] array block
+  const firstBracket = cleanText.indexOf('[');
+  const lastBracket = cleanText.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    const candidate = cleanText.substring(firstBracket, lastBracket + 1);
+    parsed = tryParse(candidate);
+    if (parsed) return parsed;
+  }
+
+  // Try extracting the first {...} object block
   const firstBrace = cleanText.indexOf('{');
   const lastBrace = cleanText.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     const candidate = cleanText.substring(firstBrace, lastBrace + 1);
     parsed = tryParse(candidate);
-    if (parsed) return parsed;
+    if (parsed) {
+      // If the parsed object has a property whose value is an array,
+      // that's probably the wrapped array from a json_object response.
+      for (const key of Object.keys(parsed)) {
+        if (Array.isArray(parsed[key]) && parsed[key].length > 0) {
+          return parsed[key];
+        }
+      }
+      return parsed;
+    }
   }
 
   return null;
