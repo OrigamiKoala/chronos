@@ -1,5 +1,5 @@
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry, parseJSONResponse } from './_gemini.js';
+import { executeWithRetry, parseJSONResponse } from './_siliconflow.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -668,27 +668,8 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
       allQuestions.push(pregeneratedQuestion);
     }
 
-    const safetySettings = [
-      {
-        category: 'HARM_CATEGORY_HATE_SPEECH',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      },
-      {
-        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      },
-      {
-        category: 'HARM_CATEGORY_HARASSMENT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      },
-      {
-        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-      }
-    ];
-
-    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-    const models = [...new Set([modelId, 'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'])];
+    const modelId = process.env.SILICONFLOW_MODEL || 'deepseek-v4-flash';
+    const models = [...new Set([modelId, 'deepseek-v4-flash'])];
 
     let attempts = 0;
     const maxAttempts = 3;
@@ -712,17 +693,7 @@ Follow these strict rules:
           }
 
 
-          const response = await ai.interactions.create({
-            model: currentModel,
-            input: dynamicPrompt,
-            system_instruction: systemInstruction,
-            response_format: {
-              type: 'text',
-              mime_type: 'application/json'
-            }
-          });
-
-          const text = response.output_text;
+          const text = await ai.chat(systemInstruction, dynamicPrompt);
           if (text) {
             const parsed = parseJSONResponse(text);
             if (parsed) {
