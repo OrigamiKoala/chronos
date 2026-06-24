@@ -17,6 +17,7 @@ async function siliconFlowChatCompletion(model, systemInstruction, userInput, ap
       model,
       messages,
       response_format: { type: 'json_object' },
+      enable_thinking: false,
     }),
   });
 
