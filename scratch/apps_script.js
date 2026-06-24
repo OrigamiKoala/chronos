@@ -201,12 +201,18 @@ Return strictly a JSON array of question objects matching this schema:
   "step4_problem": "formulation description"
 }]`;
 
-      // Try SiliconFlow with Qwen3.6-35B-A3B first (default)
-      let responseText = callSiliconFlow(prompt, 'Qwen/Qwen3.6-35B-A3B', 0.85);
+      // Step 1: Try gemini-3.5-flash first (default)
+      let responseText = callGemini(prompt, geminiApiKeys || [], ['gemini-3.5-flash'], 1.5);
 
-      // If Qwen failed, fall back to Gemini models
+      // Step 2: Fall back to Qwen via SiliconFlow
       if (!responseText) {
-        console.warn('SiliconFlow generation failed; falling back to Gemini');
+        console.warn('gemini-3.5-flash failed; falling back to Qwen via SiliconFlow');
+        responseText = callSiliconFlow(prompt, 'Qwen/Qwen3.6-35B-A3B', 0.85);
+      }
+
+      // Step 3: Fall back to older Gemini models
+      if (!responseText) {
+        console.warn('Qwen fallback failed; trying older Gemini models');
         const geminiModels = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
         for (const geminiModel of geminiModels) {
           if (responseText) break;
@@ -227,7 +233,7 @@ Return strictly a JSON array of question objects matching this schema:
                 contentType: 'application/json',
                 payload: JSON.stringify(payload),
                 muteHttpExceptions: true,
-                timeout: 180000 // 3 min timeout per key
+                timeout: 180000
               });
               if (response.getResponseCode() === 200) {
                 const resData = JSON.parse(response.getContentText());
