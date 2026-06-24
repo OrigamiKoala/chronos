@@ -1,5 +1,6 @@
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry, parseJSONResponse } from './_siliconflow.js';
+import { executeWithRetry as siliconRetry, parseJSONResponse } from './_siliconflow.js';
+import { executeWithRetry as geminiRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
@@ -668,110 +669,164 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
       allQuestions.push(pregeneratedQuestion);
     }
 
-    const modelId = process.env.SILICONFLOW_MODEL || 'Qwen/Qwen3.6-35B-A3B';
-    const models = [...new Set([modelId, 'Qwen/Qwen3.6-35B-A3B'])];
+    // Helper to build dynamic prompt
+    const buildDynamicPrompt = (needed) => {
+      const typeInstruction = needed >= parsedTypes.length
+        ? `You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`
+        : `Each generated question MUST be chosen from the following types: ${parsedTypes.join(', ')}.`;
+
+      let prompt = `Generate exactly ${needed} ${normSubject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 0 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
+Follow these strict rules:
+1. ${typeInstruction}`;
+
+      if (topics && typeof topics === 'string' && topics.trim()) {
+        prompt += `\n2. The generated questions MUST be about the following topics: ${topics.trim()}.`;
+      }
+
+      return prompt;
+    };
+
+    // Helper to process a text response into allQuestions and save to pregenerated_questions
+    const processGenerationResult = (text) => {
+      if (!text) return false;
+      const parsed = parseJSONResponse(text);
+      if (!parsed) return false;
+
+      const list = Array.isArray(parsed) ? parsed : [parsed];
+      for (const q of list) {
+        if (allQuestions.length < count) {
+          allQuestions.push(q);
+        }
+      }
+
+      // Save to pregenerated_questions
+      const freshQuestions = list.filter(q => q && q.id && q.question);
+      if (freshQuestions.length > 0) {
+        const selectClauses = [];
+        const params = {};
+        const types = {};
+
+        freshQuestions.forEach((q, idx) => {
+          const idParam = `qid_${idx}`;
+          const subjectParam = `sub_${idx}`;
+          const topicParam = `topic_${idx}`;
+          const diffParam = `diff_${idx}`;
+          const typeParam = `type_${idx}`;
+          const jsonParam = `json_${idx}`;
+
+          params[idParam] = String(q.id);
+          params[subjectParam] = normSubject;
+          params[topicParam] = String(q.topic || 'General');
+          params[diffParam] = Number(q.difficulty !== undefined ? q.difficulty : difficulty);
+          params[typeParam] = String(q.type);
+          params[jsonParam] = JSON.stringify(q);
+
+          types[idParam] = 'STRING';
+          types[subjectParam] = 'STRING';
+          types[topicParam] = 'STRING';
+          types[diffParam] = 'INT64';
+          types[typeParam] = 'STRING';
+          types[jsonParam] = 'STRING';
+
+          selectClauses.push(`
+            SELECT 
+              @${idParam} AS question_id,
+              @${subjectParam} AS subject,
+              @${topicParam} AS topic,
+              @${diffParam} AS difficulty,
+              @${typeParam} AS type,
+              @${jsonParam} AS question_json
+          `);
+        });
+
+        const batchMergePregenQuery = `
+          MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
+          USING (
+            ${selectClauses.join('\n                    UNION ALL\n                    ')}
+          ) S
+          ON T.question_id = S.question_id
+          WHEN NOT MATCHED THEN
+            INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
+            VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())
+        `;
+
+        try {
+          bq.query({
+            query: batchMergePregenQuery,
+            params,
+            types
+          }).catch(pregenErr => console.error('Failed to add newly generated questions to pregenerated_questions:', pregenErr));
+        } catch (pregenErr) {
+          console.error('Failed to add newly generated questions to pregenerated_questions:', pregenErr);
+        }
+      }
+
+      return true;
+    };
+
+    // Helper: promise with timeout
+    function withTimeout(promise, ms) {
+      let timer;
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('TIMEOUT')), ms);
+      });
+      return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
+    }
+
+    const geminiModels = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
+    const fallbackModel = 'Qwen/Qwen3.6-35B-A3B';
 
     let attempts = 0;
     const maxAttempts = 3;
     while (allQuestions.length < count && attempts < maxAttempts) {
       attempts++;
+
+      const needed = count - allQuestions.length;
+      if (needed <= 0) break;
+
+      const dynamicPrompt = buildDynamicPrompt(needed);
+      let generated = false;
+
+      // Step 1: Try Gemini models (primary: gemini-3.1-flash-lite, fallback: gemini-3-flash-preview)
+      // wrapped in a 3-minute timeout
       try {
-        await executeWithRetry(models, async (ai, currentModel) => {
-          const needed = count - allQuestions.length;
-          if (needed <= 0) return;
+        const geminiText = await withTimeout(
+          geminiRetry(geminiModels, (ai, currentModel) =>
+            ai.interactions.create({
+              model: currentModel,
+              input: dynamicPrompt,
+              system_instruction: systemInstruction,
+              response_format: { type: 'text', mime_type: 'application/json' },
+              generation_config: { temperature: 1.5 }
+            }).then(r => r.output_text)
+          ),
+          3 * 60 * 1000
+        );
 
-          const typeInstruction = needed >= parsedTypes.length
-            ? `You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`
-            : `Each generated question MUST be chosen from the following types: ${parsedTypes.join(', ')}.`;
+        if (geminiText) {
+          generated = processGenerationResult(geminiText);
+        }
+      } catch (err) {
+        console.warn(`Gemini generation failed (attempt ${attempts}):`, err.message || err);
+      }
 
-          let dynamicPrompt = `Generate exactly ${needed} ${normSubject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 0 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
-Follow these strict rules:
-1. ${typeInstruction}`;
+      // Step 2: If Gemini didn't produce enough questions, fall back to SiliconFlow
+      if (!generated || allQuestions.length < count) {
+        const sfNeeded = count - allQuestions.length;
+        if (sfNeeded <= 0) break;
 
-          if (topics && typeof topics === 'string' && topics.trim()) {
-            dynamicPrompt += `\n2. The generated questions MUST be about the following topics: ${topics.trim()}.`;
-          }
-
-
-          const text = await ai.chat(systemInstruction, dynamicPrompt);
-          if (text) {
-            const parsed = parseJSONResponse(text);
-            if (parsed) {
-              const list = Array.isArray(parsed) ? parsed : [parsed];
-              for (const q of list) {
-                if (allQuestions.length < count) {
-                  allQuestions.push(q);
-                }
-              }
-
-              // Save successfully generated questions directly to pregenerated_questions
-              const freshQuestions = list.filter(q => q && q.id && q.question);
-              if (freshQuestions.length > 0) {
-                const selectClauses = [];
-                const params = {};
-                const types = {};
-
-                freshQuestions.forEach((q, idx) => {
-                  const idParam = `qid_${idx}`;
-                  const subjectParam = `sub_${idx}`;
-                  const topicParam = `topic_${idx}`;
-                  const diffParam = `diff_${idx}`;
-                  const typeParam = `type_${idx}`;
-                  const jsonParam = `json_${idx}`;
-
-                  params[idParam] = String(q.id);
-                  params[subjectParam] = normSubject;
-                  params[topicParam] = String(q.topic || 'General');
-                  params[diffParam] = Number(q.difficulty !== undefined ? q.difficulty : difficulty);
-                  params[typeParam] = String(q.type);
-                  params[jsonParam] = JSON.stringify(q);
-
-                  types[idParam] = 'STRING';
-                  types[subjectParam] = 'STRING';
-                  types[topicParam] = 'STRING';
-                  types[diffParam] = 'INT64';
-                  types[typeParam] = 'STRING';
-                  types[jsonParam] = 'STRING';
-
-                  selectClauses.push(`
-                    SELECT 
-                      @${idParam} AS question_id,
-                      @${subjectParam} AS subject,
-                      @${topicParam} AS topic,
-                      @${diffParam} AS difficulty,
-                      @${typeParam} AS type,
-                      @${jsonParam} AS question_json
-                  `);
-                });
-
-                const batchMergePregenQuery = `
-                  MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
-                  USING (
-                    ${selectClauses.join('\n                    UNION ALL\n                    ')}
-                  ) S
-                  ON T.question_id = S.question_id
-                  WHEN NOT MATCHED THEN
-                    INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
-                    VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())
-                `;
-
-                try {
-                  await bq.query({
-                    query: batchMergePregenQuery,
-                    params,
-                    types
-                  });
-                } catch (pregenErr) {
-                  console.error('Failed to add newly generated questions to pregenerated_questions:', pregenErr);
-                }
-              }
+        try {
+          await siliconRetry([fallbackModel], async (ai, currentModel) => {
+            const text = await ai.chat(systemInstruction, buildDynamicPrompt(sfNeeded));
+            if (text) {
+              generated = processGenerationResult(text) || generated;
             }
+          });
+        } catch (sfErr) {
+          console.warn(`SiliconFlow fallback failed (attempt ${attempts}):`, sfErr.message || sfErr);
+          if (attempts >= maxAttempts) {
+            console.error('All generation models exhausted after', maxAttempts, 'attempts');
           }
-        }, req);
-      } catch (genErr) {
-        console.warn(`Model generation failed or busy on attempt ${attempts}:`, genErr);
-        if (attempts >= maxAttempts) {
-          throw genErr;
         }
       }
     }

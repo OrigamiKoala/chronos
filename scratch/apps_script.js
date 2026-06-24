@@ -201,7 +201,51 @@ Return strictly a JSON array of question objects matching this schema:
   "step4_problem": "formulation description"
 }]`;
 
-      const responseText = callSiliconFlow(prompt);
+      // Try Gemini first (gemini-3.1-flash-lite), with 3-minute timeout per key
+      let responseText = null;
+
+      // Attempt Gemini generation
+      const geminiModels = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
+      for (const geminiModel of geminiModels) {
+        if (responseText) break;
+        if (!geminiApiKeys || geminiApiKeys.length === 0) {
+          console.warn('No Gemini API keys available for model', geminiModel);
+          continue;
+        }
+        for (const key of geminiApiKeys) {
+          if (responseText) break;
+          try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`;
+            const payload = {
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseMimeType: "application/json", temperature: 1.5 }
+            };
+            const response = UrlFetchApp.fetch(url, {
+              method: 'POST',
+              contentType: 'application/json',
+              payload: JSON.stringify(payload),
+              muteHttpExceptions: true,
+              timeout: 180000 // 3 min timeout per key
+            });
+            if (response.getResponseCode() === 200) {
+              const resData = JSON.parse(response.getContentText());
+              responseText = resData.candidates[0].content.parts[0].text;
+              console.log('Gemini generation succeeded with model', geminiModel);
+            } else {
+              console.warn('Gemini request failed for', geminiModel, ':', response.getResponseCode(), response.getContentText().substring(0, 200));
+            }
+          } catch (err) {
+            console.warn('Gemini request error for', geminiModel, ':', err.message);
+          }
+        }
+      }
+
+      // If Gemini failed, fall back to SiliconFlow with Qwen3.6-35B-A3B
+      if (!responseText) {
+        console.warn('Gemini generation failed or timed out; falling back to SiliconFlow');
+        responseText = callSiliconFlow(prompt, 'Qwen/Qwen3.6-35B-A3B', 0.85);
+      }
+
       if (responseText) {
         try {
           const cleanText = responseText.trim().replace(/^```json/, '').replace(/```$/, '').trim();
@@ -581,7 +625,7 @@ function runQuery(sql, params, projectId) {
 // ------------------------------------
 // Gemini API Call Helper (kept for grading)
 // ------------------------------------
-function callGemini(contents, apiKeys, models) {
+function callGemini(contents, apiKeys, models, temperature) {
   let requestContents = contents;
   if (typeof contents === 'string') {
     requestContents = [{ parts: [{ text: contents }] }];
@@ -599,6 +643,7 @@ function callGemini(contents, apiKeys, models) {
 
   const defaultModels = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
   const targetModels = models && models.length > 0 ? models : defaultModels;
+  const temp = temperature !== undefined ? temperature : 0.85;
 
   for (const model of targetModels) {
     for (const key of apiKeys) {
@@ -606,7 +651,7 @@ function callGemini(contents, apiKeys, models) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
         const payload = {
           contents: requestContents,
-          generationConfig: { responseMimeType: "application/json" }
+          generationConfig: { responseMimeType: "application/json", temperature: temp }
         };
         const response = UrlFetchApp.fetch(url, {
           method: 'POST',
@@ -629,14 +674,15 @@ function callGemini(contents, apiKeys, models) {
 // ------------------------------------
 // SiliconFlow API Call Helper (for question generation)
 // ------------------------------------
-function callSiliconFlow(prompt) {
+function callSiliconFlow(prompt, modelOverride, temperatureOverride) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('SILICONFLOW_API_KEY');
   if (!apiKey) {
     console.error('SILICONFLOW_API_KEY script property is not set');
     return null;
   }
 
-  const model = PropertiesService.getScriptProperties().getProperty('SILICONFLOW_MODEL') || 'Qwen/Qwen3.6-35B-A3B';
+  const model = modelOverride || PropertiesService.getScriptProperties().getProperty('SILICONFLOW_MODEL') || 'Qwen/Qwen3.6-35B-A3B';
+  const temp = temperatureOverride !== undefined ? temperatureOverride : 0.85;
   const url = 'https://api.siliconflow.com/v1/chat/completions';
 
   try {
@@ -647,7 +693,7 @@ function callSiliconFlow(prompt) {
       ],
       response_format: { type: 'json_object' },
       enable_thinking: false,
-      temperature: 0.85
+      temperature: temp
     };
     const response = UrlFetchApp.fetch(url, {
       method: 'POST',

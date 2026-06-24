@@ -1,29 +1,20 @@
 [
   {
-    "id": "b8f19551",
-    "title": "Explore question generation architecture",
-    "description": "Understand the question generation flow - explore gemini service, setup screen, and teacher screen",
+    "id": "2fa4d018",
+    "title": "Update api/generate.js - Switch to Gemini primary with SiliconFlow fallback",
+    "description": "Change imports to use geminiRetry from _gemini.js, keep siliconRetry from _siliconflow.js. Restructure gen loop: try gemini-3.1-flash-lite (3min timeout) → gemini-3-flash-preview → Qwen/Qwen3.6-35B-A3B via SiliconFlow. Use interactions.create with temperature=1.5.",
     "status": "completed",
-    "createdAt": "2026-06-24T17:20:02.792Z",
-    "updatedAt": "2026-06-24T17:24:05.145Z",
-    "completedAt": "2026-06-24T17:24:05.145Z"
+    "createdAt": "2026-06-24T18:01:56.128Z",
+    "updatedAt": "2026-06-24T18:07:16.612Z",
+    "completedAt": "2026-06-24T18:07:16.612Z"
   },
   {
-    "id": "ed24accd",
-    "title": "Debug the generation issue",
-    "description": "Identify why not all questions are generated and why the last question button gets stuck on 'streaming...'",
+    "id": "59b12596",
+    "title": "Update scratch/apps_script.js - callGemini temperature param + generateHomework cascade",
+    "description": "Add temperature param to callGemini function, pass to generationConfig. Restructure generateHomework to try callGemini with gemini-3.1-flash-lite first, then gemini-3-flash-preview, then fall back to callSiliconFlow with qwen3.6.",
     "status": "completed",
-    "createdAt": "2026-06-24T17:20:02.792Z",
-    "updatedAt": "2026-06-24T17:26:12.126Z",
-    "completedAt": "2026-06-24T17:26:12.126Z"
-  },
-  {
-    "id": "c14818ec",
-    "title": "Fix the generation bug",
-    "description": "Fix the issue so all questions are generated properly and the streaming button resolves",
-    "status": "completed",
-    "createdAt": "2026-06-24T17:20:02.792Z",
-    "updatedAt": "2026-06-24T17:32:04.088Z",
-    "completedAt": "2026-06-24T17:32:04.088Z"
+    "createdAt": "2026-06-24T18:01:56.128Z",
+    "updatedAt": "2026-06-24T18:08:52.299Z",
+    "completedAt": "2026-06-24T18:08:52.299Z"
   }
 ]
