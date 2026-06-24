@@ -506,20 +506,20 @@ function evaluateKeywordExpression(expression, userAnswer) {
   if (!expression) return false;
   const normalizedAnswer = normalizeAnswer(userAnswer);
   const tokens = expression.match(/'[^']+'|"[^"]+"|\(|\)|AND|OR|NOT|[a-zA-Z0-9_.-]+/gi) || [];
-  
+
   const processedTokens = tokens.map(token => {
     const upper = token.toUpperCase();
     if (upper === 'AND') return '&&';
     if (upper === 'OR') return '||';
     if (upper === 'NOT') return '!';
     if (token === '(' || token === ')') return token;
-    
+
     const cleanTerm = token.replace(/^['"]|['"]$/g, '');
     const normTerm = normalizeAnswer(cleanTerm);
     const present = normalizedAnswer.includes(normTerm);
     return present ? 'true' : 'false';
   });
-  
+
   const jsExpression = processedTokens.join(' ');
   try {
     const safeRegex = /^(?:true|false|&&|\|\||!|\(|\)|\s)+$/;
@@ -636,7 +636,7 @@ function callSiliconFlow(prompt) {
     return null;
   }
 
-  const model = PropertiesService.getScriptProperties().getProperty('SILICONFLOW_MODEL') || 'deepseek-ai/DeepSeek-V4-Flash';
+  const model = PropertiesService.getScriptProperties().getProperty('SILICONFLOW_MODEL') || 'Qwen/Qwen3.6-27B';
   const url = 'https://api.siliconflow.com/v1/chat/completions';
 
   try {
