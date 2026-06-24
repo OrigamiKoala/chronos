@@ -668,8 +668,8 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
       allQuestions.push(pregeneratedQuestion);
     }
 
-    const modelId = process.env.SILICONFLOW_MODEL || 'Qwen/Qwen3.6-27B';
-    const models = [...new Set([modelId, 'Qwen/Qwen3.6-27B'])];
+    const modelId = process.env.SILICONFLOW_MODEL || 'Qwen/Qwen3.6-35B-A3B';
+    const models = [...new Set([modelId, 'Qwen/Qwen3.6-35B-A3B'])];
 
     let attempts = 0;
     const maxAttempts = 3;

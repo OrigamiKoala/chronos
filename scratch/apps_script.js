@@ -636,7 +636,7 @@ function callSiliconFlow(prompt) {
     return null;
   }
 
-  const model = PropertiesService.getScriptProperties().getProperty('SILICONFLOW_MODEL') || 'Qwen/Qwen3.6-27B';
+  const model = PropertiesService.getScriptProperties().getProperty('SILICONFLOW_MODEL') || 'Qwen/Qwen3.6-35B-A3B';
   const url = 'https://api.siliconflow.com/v1/chat/completions';
 
   try {
