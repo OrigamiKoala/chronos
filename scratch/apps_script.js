@@ -201,7 +201,7 @@ Return strictly a JSON array of question objects matching this schema:
   "step4_problem": "formulation description"
 }]`;
 
-      const responseText = callGemini(prompt, geminiApiKeys);
+      const responseText = callSiliconFlow(prompt);
       if (responseText) {
         try {
           const cleanText = responseText.trim().replace(/^```json/, '').replace(/```$/, '').trim();
@@ -579,7 +579,7 @@ function runQuery(sql, params, projectId) {
 }
 
 // ------------------------------------
-// Gemini API Call Helper
+// Gemini API Call Helper (kept for grading)
 // ------------------------------------
 function callGemini(contents, apiKeys, models) {
   let requestContents = contents;
@@ -622,6 +622,48 @@ function callGemini(contents, apiKeys, models) {
         console.warn('Gemini request failed:', err);
       }
     }
+  }
+  return null;
+}
+
+// ------------------------------------
+// SiliconFlow API Call Helper (for question generation)
+// ------------------------------------
+function callSiliconFlow(prompt) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('SILICONFLOW_API_KEY');
+  if (!apiKey) {
+    console.error('SILICONFLOW_API_KEY script property is not set');
+    return null;
+  }
+
+  const model = PropertiesService.getScriptProperties().getProperty('SILICONFLOW_MODEL') || 'deepseek-ai/DeepSeek-V4-Flash';
+  const url = 'https://api.siliconflow.com/v1/chat/completions';
+
+  try {
+    const payload = {
+      model: model,
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' }
+    };
+    const response = UrlFetchApp.fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    if (response.getResponseCode() === 200) {
+      const resData = JSON.parse(response.getContentText());
+      return resData.choices[0].message.content;
+    } else {
+      console.warn('SiliconFlow request failed: ' + response.getResponseCode() + ' ' + response.getContentText());
+    }
+  } catch (err) {
+    console.warn('SiliconFlow request failed:', err);
   }
   return null;
 }

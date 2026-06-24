@@ -668,8 +668,8 @@ CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (appl
       allQuestions.push(pregeneratedQuestion);
     }
 
-    const modelId = process.env.SILICONFLOW_MODEL || 'deepseek-v4-flash';
-    const models = [...new Set([modelId, 'deepseek-v4-flash'])];
+    const modelId = process.env.SILICONFLOW_MODEL || 'deepseek-ai/DeepSeek-V4-Flash';
+    const models = [...new Set([modelId, 'deepseek-ai/DeepSeek-V4-Flash'])];
 
     let attempts = 0;
     const maxAttempts = 3;
