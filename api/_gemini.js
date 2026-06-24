@@ -69,6 +69,8 @@ export async function executeWithRetry(models, apiCallFn) {
             status = 429;
           } else if (msg.includes('503') || msg.includes('overloaded') || msg.includes('unavailable') || msg.includes('busy') || msg.includes('high demand')) {
             status = 503;
+          } else if (msg.includes('500')) {
+            status = 503;
           }
         }
 
@@ -136,7 +138,7 @@ export function escapeLiteralNewlines(jsonStr) {
 
 export function parseJSONResponse(text) {
   if (!text) return null;
-  
+
   let cleanText = text.trim();
 
   const tryParse = (str) => {
