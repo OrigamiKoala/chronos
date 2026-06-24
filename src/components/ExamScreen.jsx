@@ -954,6 +954,8 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   const isHidden = config.stressMode === 'hidden' && !isLowTime;
   const isDynamicStress = config.stressMode === 'dynamic' && isLowTime;
   const allLoaded = problems.length === config.numQuestions;
+  const generationComplete = !loading;
+  const noMoreQuestions = generationComplete && currentQuestionIndex + 1 >= problems.length;
 
   const intervalsForCurrent = questionIntervalsRef.current[currentQuestionIndex] || [];
   const timeSpentOnCurrent = intervalsForCurrent.reduce((acc, inv) => acc + (inv.end - inv.start), 0) + (elapsedSecondsRef.current - currentQuestionEntryTimeRef.current);
@@ -1337,7 +1339,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                   <button
                     className="btn btn-outline"
                     style={{ marginRight: '0.75rem' }}
-                    disabled={currentQuestionIndex + 1 >= problems.length}
+                    disabled={currentQuestionIndex + 1 >= problems.length && !noMoreQuestions}
                     onClick={() => {
                       saveCurrentFRQState();
                       recordActiveInterval(currentQuestionIndex);
@@ -1345,12 +1347,12 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                       setCurrentQuestionIndex(prev => prev + 1);
                     }}
                   >
-                    {currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next'}
+                    {noMoreQuestions ? 'Awaiting question...' : (currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next')}
                   </button>
                 )
               )}
 
-              {config.stressMode !== 'strict' && allLoaded && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions)) && (
+              {(config.stressMode !== 'strict' && (allLoaded || noMoreQuestions) && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions))) && (
                 <button
                   className="btn btn-primary"
                   onClick={() => {
@@ -1460,21 +1462,21 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                 <button
                   className="btn btn-outline"
                   style={{ marginRight: '0.75rem' }}
-                  disabled={currentQuestionIndex + 1 >= problems.length}
+                  disabled={currentQuestionIndex + 1 >= problems.length && !noMoreQuestions}
                   onClick={() => {
                     recordActiveInterval(currentQuestionIndex);
                     clearInterval(timerRef.current);
                     setCurrentQuestionIndex(prev => prev + 1);
                   }}
                 >
-                  {currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next'}
+                  {noMoreQuestions ? 'Awaiting question...' : (currentQuestionIndex + 1 >= problems.length ? 'Streaming...' : 'Next')}
                 </button>
               )
             )}
 
             {config.stressMode === 'strict' ? (
               currentQuestionIndex + 1 === config.numQuestions ? (
-                allLoaded && (
+                (allLoaded || noMoreQuestions) && (
                   <button
                     className="btn btn-primary"
                     disabled={!activeAnswer.trim()}
@@ -1486,14 +1488,14 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
               ) : (
                 <button
                   className="btn btn-primary"
-                  disabled={!activeAnswer.trim() || currentQuestionIndex + 1 >= problems.length}
+                  disabled={!activeAnswer.trim() || (currentQuestionIndex + 1 >= problems.length && !noMoreQuestions)}
                   onClick={() => submitStrictAnswer()}
                 >
                   Next Question <ArrowRight size={18} />
                 </button>
               )
             ) : (
-              allLoaded && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions)) && (
+              (allLoaded || noMoreQuestions) && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions)) && (
                 <button
                   className="btn btn-primary"
                   onClick={() => handleFinishExam()}

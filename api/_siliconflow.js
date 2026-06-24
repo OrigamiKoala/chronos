@@ -16,7 +16,6 @@ async function siliconFlowChatCompletion(model, systemInstruction, userInput, ap
     body: JSON.stringify({
       model,
       messages,
-      response_format: { type: 'json_object' },
       enable_thinking: false,
       temperature: 0.85
     }),
@@ -96,12 +95,31 @@ export function parseJSONResponse(text) {
     if (parsed) return parsed;
   }
 
+  // Try extracting the first [...] array block
+  const firstBracket = cleanText.indexOf('[');
+  const lastBracket = cleanText.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    const candidate = cleanText.substring(firstBracket, lastBracket + 1);
+    parsed = tryParse(candidate);
+    if (parsed) return parsed;
+  }
+
+  // Try extracting the first {...} object block
   const firstBrace = cleanText.indexOf('{');
   const lastBrace = cleanText.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     const candidate = cleanText.substring(firstBrace, lastBrace + 1);
     parsed = tryParse(candidate);
-    if (parsed) return parsed;
+    if (!parsed) return null;
+
+    // If the parsed object has a property whose value is an array,
+    // that's probably the wrapped array from a json_object response.
+    for (const key of Object.keys(parsed)) {
+      if (Array.isArray(parsed[key]) && parsed[key].length > 0) {
+        return parsed[key];
+      }
+    }
+    return parsed;
   }
 
   return null;

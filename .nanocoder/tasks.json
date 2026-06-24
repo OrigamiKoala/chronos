@@ -1,1 +1,29 @@
-[]
+[
+  {
+    "id": "b8f19551",
+    "title": "Explore question generation architecture",
+    "description": "Understand the question generation flow - explore gemini service, setup screen, and teacher screen",
+    "status": "completed",
+    "createdAt": "2026-06-24T17:20:02.792Z",
+    "updatedAt": "2026-06-24T17:24:05.145Z",
+    "completedAt": "2026-06-24T17:24:05.145Z"
+  },
+  {
+    "id": "ed24accd",
+    "title": "Debug the generation issue",
+    "description": "Identify why not all questions are generated and why the last question button gets stuck on 'streaming...'",
+    "status": "completed",
+    "createdAt": "2026-06-24T17:20:02.792Z",
+    "updatedAt": "2026-06-24T17:26:12.126Z",
+    "completedAt": "2026-06-24T17:26:12.126Z"
+  },
+  {
+    "id": "c14818ec",
+    "title": "Fix the generation bug",
+    "description": "Fix the issue so all questions are generated properly and the streaming button resolves",
+    "status": "completed",
+    "createdAt": "2026-06-24T17:20:02.792Z",
+    "updatedAt": "2026-06-24T17:32:04.088Z",
+    "completedAt": "2026-06-24T17:32:04.088Z"
+  }
+]
