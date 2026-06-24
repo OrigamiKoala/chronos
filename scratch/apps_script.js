@@ -239,6 +239,10 @@ Return strictly a JSON array of question objects matching this schema:
                 const resData = JSON.parse(response.getContentText());
                 responseText = resData.candidates[0].content.parts[0].text;
                 console.log('Gemini generation succeeded with model', geminiModel);
+              } else if (response.getResponseCode() >= 500) {
+                // 5xx = model overloaded, don't rotate keys — downgrade model
+                console.warn('Gemini 5xx for', geminiModel, ':', response.getResponseCode(), '- skipping to next model');
+                break;
               } else {
                 console.warn('Gemini request failed for', geminiModel, ':', response.getResponseCode(), response.getContentText().substring(0, 200));
               }
@@ -665,6 +669,12 @@ function callGemini(contents, apiKeys, models, temperature) {
         if (response.getResponseCode() === 200) {
           const resData = JSON.parse(response.getContentText());
           return resData.candidates[0].content.parts[0].text;
+        } else if (response.getResponseCode() >= 500) {
+          // 5xx = model overloaded (503), don't rotate keys — downgrade model
+          console.warn('Gemini 5xx for', model, ':', response.getResponseCode(), '- skipping to next model');
+          break;
+        } else {
+          console.warn('Gemini request failed for', model, ':', response.getResponseCode());
         }
       } catch (err) {
         console.warn('Gemini request failed:', err);
