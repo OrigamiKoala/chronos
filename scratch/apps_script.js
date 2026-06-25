@@ -204,12 +204,6 @@ Return strictly a JSON array of question objects matching this schema:
       // Step 1: Try gemini-3.5-flash first (default)
       let responseText = callGemini(prompt, geminiApiKeys || [], ['gemini-3.5-flash'], 1.5);
 
-      // Step 2: Fall back to Qwen via SiliconFlow
-      if (!responseText) {
-        console.warn('gemini-3.5-flash failed; falling back to Qwen via SiliconFlow');
-        responseText = callSiliconFlow(prompt, 'Qwen/Qwen3.6-35B-A3B', 0.85);
-      }
-
       // Step 3: Fall back to older Gemini models
       if (!responseText) {
         console.warn('Qwen fallback failed; trying older Gemini models');
@@ -680,51 +674,6 @@ function callGemini(contents, apiKeys, models, temperature) {
         console.warn('Gemini request failed:', err);
       }
     }
-  }
-  return null;
-}
-
-// ------------------------------------
-// SiliconFlow API Call Helper (for question generation)
-// ------------------------------------
-function callSiliconFlow(prompt, modelOverride, temperatureOverride) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('SILICONFLOW_API_KEY');
-  if (!apiKey) {
-    console.error('SILICONFLOW_API_KEY script property is not set');
-    return null;
-  }
-
-  const model = modelOverride || PropertiesService.getScriptProperties().getProperty('SILICONFLOW_MODEL') || 'Qwen/Qwen3.6-35B-A3B';
-  const temp = temperatureOverride !== undefined ? temperatureOverride : 0.85;
-  const url = 'https://api.siliconflow.com/v1/chat/completions';
-
-  try {
-    const payload = {
-      model: model,
-      messages: [
-        { role: 'user', content: prompt }
-      ],
-      response_format: { type: 'json_object' },
-      enable_thinking: false,
-      temperature: temp
-    };
-    const response = UrlFetchApp.fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + apiKey,
-        'Content-Type': 'application/json'
-      },
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    });
-    if (response.getResponseCode() === 200) {
-      const resData = JSON.parse(response.getContentText());
-      return resData.choices[0].message.content;
-    } else {
-      console.warn('SiliconFlow request failed: ' + response.getResponseCode() + ' ' + response.getContentText());
-    }
-  } catch (err) {
-    console.warn('SiliconFlow request failed:', err);
   }
   return null;
 }

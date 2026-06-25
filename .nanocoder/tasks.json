@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "id": "db71568d",
+    "title": "Update api/generate.js to use gemini-3.1-flash-lite first when count > 40",
+    "description": "Modify the model selection logic so that when count > 40, gemini-3.1-flash-lite is used first instead of gemini-3.5-flash, followed by Qwen then gemini-3-flash-preview",
+    "status": "completed",
+    "createdAt": "2026-06-24T21:43:40.418Z",
+    "updatedAt": "2026-06-24T21:44:26.517Z",
+    "completedAt": "2026-06-24T21:44:26.517Z"
+  }
+]

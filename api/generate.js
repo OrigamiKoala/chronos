@@ -1,5 +1,4 @@
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry as siliconRetry, parseJSONResponse } from './_siliconflow.js';
 import { executeWithRetry as geminiRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
@@ -776,6 +775,13 @@ Follow these strict rules:
     const geminiLiteModels = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
     const defaultModel = 'gemini-3.5-flash';
 
+    // If generating more than 40 questions, use gemini-3.1-flash-lite as primary
+    // instead of gemini-3.5-flash (followed by Qwen, then gemini-3-flash-preview)
+    const useLiteFirst = count > 40;
+    const primaryModel = useLiteFirst ? 'gemini-3.1-flash-lite' : defaultModel;
+    const tertiaryModels = useLiteFirst ? ['gemini-3-flash-preview'] : geminiLiteModels;
+    const step1Label = useLiteFirst ? 'gemini-3.1-flash-lite' : 'gemini-3.5-flash';
+
     let attempts = 0;
     const maxAttempts = 3;
     while (allQuestions.length < count && attempts < maxAttempts) {
@@ -787,10 +793,10 @@ Follow these strict rules:
       const dynamicPrompt = buildDynamicPrompt(needed);
       let generated = false;
 
-      // Step 1: Try gemini-3.5-flash (default) with interactions API and temperature=1.5
+      // Step 1: Try primary model with interactions API and temperature=1.5
       try {
-        const text35 = await withTimeout(
-          geminiRetry([defaultModel], (ai, currentModel) =>
+        const primaryText = await withTimeout(
+          geminiRetry([primaryModel], (ai, currentModel) =>
             ai.interactions.create({
               model: currentModel,
               input: dynamicPrompt,
@@ -801,32 +807,18 @@ Follow these strict rules:
           ),
           3 * 60 * 1000
         );
-        if (text35) {
-          generated = processGenerationResult(text35) || generated;
+        if (primaryText) {
+          generated = processGenerationResult(primaryText) || generated;
         }
       } catch (err) {
-        console.warn(`gemini-3.5-flash failed (attempt ${attempts}):`, err.message || err);
+        console.warn(`${step1Label} failed (attempt ${attempts}):`, err.message || err);
       }
 
-      // Step 2: Fall back to Qwen via SiliconFlow
-      if (!generated || allQuestions.length < count) {
-        try {
-          await siliconRetry(['Qwen/Qwen3.6-35B-A3B'], async (ai, currentModel) => {
-            const text = await ai.chat(systemInstruction, dynamicPrompt);
-            if (text) {
-              generated = processGenerationResult(text) || generated;
-            }
-          });
-        } catch (sfErr) {
-          console.warn(`Qwen fallback failed (attempt ${attempts}):`, sfErr.message || sfErr);
-        }
-      }
-
-      // Step 3: If still not enough, try older Gemini models (flash-lite, flash-preview)
+      // Step 3: If still not enough, try remaining Gemini models
       if (!generated || allQuestions.length < count) {
         try {
           const geminiText = await withTimeout(
-            geminiRetry(geminiLiteModels, (ai, currentModel) =>
+            geminiRetry(tertiaryModels, (ai, currentModel) =>
               ai.interactions.create({
                 model: currentModel,
                 input: dynamicPrompt,
@@ -842,7 +834,7 @@ Follow these strict rules:
             generated = processGenerationResult(geminiText) || generated;
           }
         } catch (err) {
-          console.warn(`Gemini flash-lite/preview fallback failed (attempt ${attempts}):`, err.message || err);
+          console.warn(`Gemini fallback failed (attempt ${attempts}):`, err.message || err);
         }
       }
     }
