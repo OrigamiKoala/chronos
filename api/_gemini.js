@@ -119,7 +119,12 @@ export function escapeLiteralNewlines(jsonStr) {
       } else if (nextCh === '\\') {
         result += '\\\\';
         i++;
+      } else if ('nrtbfu/'.includes(nextCh)) {
+        // Valid JSON escape sequence (\n, \r, \t, \b, \f, \u, \/) — pass through unchanged
+        result += '\\' + nextCh;
+        i++;
       } else {
+        // Dangling backslash — escape it
         result += '\\\\';
       }
     } else {

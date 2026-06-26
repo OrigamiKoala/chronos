@@ -951,7 +951,7 @@ Follow these strict rules:
             input: dynamicPrompt,
             system_instruction: systemInstruction,
             response_format: { type: 'text', mime_type: 'application/json' },
-            generation_config: { temperature: 1.5, thinking_level: 'low' }
+            generation_config: { temperature: 1.5 }
           }).then(r => r.output_text)
         );
 
