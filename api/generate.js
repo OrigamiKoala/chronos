@@ -896,7 +896,7 @@ Follow these strict rules:
         types[idParam] = 'STRING';
         types[subjectParam] = 'STRING';
         types[topicParam] = 'STRING';
-        types[diffParam] = 'INT64';
+        types[diffParam] = 'FLOAT64';
         types[typeParam] = 'STRING';
         types[jsonParam] = 'STRING';
 
