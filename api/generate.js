@@ -963,6 +963,12 @@ Follow these strict rules:
       }
     }
 
+    if (allQuestions.length < count) {
+      console.error(
+        `[generate] AI model returned insufficient questions: got ${allQuestions.length}, needed ${count}. Returning partial set.`
+      );
+    }
+
     return res.status(200).json(allQuestions.slice(0, count));
 
   } catch (err) {
@@ -1013,6 +1019,11 @@ Follow these strict rules:
             }
           }
         }
+      }
+      if (allQuestions.length < count) {
+        console.error(
+          `[generate] BigQuery fallback also returned insufficient questions: got ${allQuestions.length}, needed ${count}.`
+        );
       }
       if (allQuestions.length > 0) {
         return res.status(200).json(allQuestions.slice(0, count));
