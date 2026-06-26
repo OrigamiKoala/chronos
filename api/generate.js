@@ -930,15 +930,6 @@ Follow these strict rules:
       return true;
     };
 
-    // Helper: promise with timeout
-    function withTimeout(promise) {
-      let timer;
-      const timeout = new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error('TIMEOUT')), ms);
-      });
-      return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
-    }
-
     const geminiModels = count > 40
       ? ['gemini-3.1-flash-lite', 'gemini-3-flash-preview']
       : ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
@@ -954,16 +945,14 @@ Follow these strict rules:
       const dynamicPrompt = buildDynamicPrompt(needed);
 
       try {
-        const geminiText = await withTimeout(
-          executeWithRetry(geminiModels, (ai, model) =>
-            ai.interactions.create({
-              model: model,
-              input: dynamicPrompt,
-              system_instruction: systemInstruction,
-              response_format: { type: 'text', mime_type: 'application/json' },
-              generation_config: { temperature: 1.5 }
-            }).then(r => r.output_text)
-          )
+        const geminiText = await executeWithRetry(geminiModels, (ai, model) =>
+          ai.interactions.create({
+            model: model,
+            input: dynamicPrompt,
+            system_instruction: systemInstruction,
+            response_format: { type: 'text', mime_type: 'application/json' },
+            generation_config: { temperature: 1.5 }
+          }).then(r => r.output_text)
         );
 
         if (geminiText) {
