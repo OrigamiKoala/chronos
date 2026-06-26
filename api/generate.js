@@ -852,11 +852,14 @@ Follow these strict rules:
       return prompt;
     };
 
-    // Helper to process a text response into allQuestions and save to pregenerated_questions
+    // Helper to process a text response into allQuestions and save to pregenerated_questions.
+    // Returns a Promise for the BigQuery write (or null if nothing to write) so callers
+    // can await it before sending the response — critical in serverless environments where
+    // fire-and-forget writes are killed when res.json() terminates the function.
     const processGenerationResult = (text) => {
-      if (!text) return false;
+      if (!text) return null;
       const parsed = parseJSONResponse(text);
-      if (!parsed) return false;
+      if (!parsed) return null;
 
       const list = Array.isArray(parsed) ? parsed : [parsed];
       for (const q of list) {
@@ -867,67 +870,57 @@ Follow these strict rules:
 
       // Save to pregenerated_questions
       const freshQuestions = list.filter(q => q && q.id && q.question);
-      if (freshQuestions.length > 0) {
-        const selectClauses = [];
-        const params = {};
-        const types = {};
+      if (freshQuestions.length === 0) return null;
 
-        freshQuestions.forEach((q, idx) => {
-          const idParam = `qid_${idx}`;
-          const subjectParam = `sub_${idx}`;
-          const topicParam = `topic_${idx}`;
-          const diffParam = `diff_${idx}`;
-          const typeParam = `type_${idx}`;
-          const jsonParam = `json_${idx}`;
+      const selectClauses = [];
+      const params = {};
+      const types = {};
 
-          params[idParam] = String(q.id);
-          params[subjectParam] = normSubject;
-          params[topicParam] = String(q.topic || 'General');
-          params[diffParam] = Number(q.difficulty !== undefined ? q.difficulty : difficulty);
-          params[typeParam] = String(q.type);
-          params[jsonParam] = JSON.stringify(q);
+      freshQuestions.forEach((q, idx) => {
+        const idParam = `qid_${idx}`;
+        const subjectParam = `sub_${idx}`;
+        const topicParam = `topic_${idx}`;
+        const diffParam = `diff_${idx}`;
+        const typeParam = `type_${idx}`;
+        const jsonParam = `json_${idx}`;
 
-          types[idParam] = 'STRING';
-          types[subjectParam] = 'STRING';
-          types[topicParam] = 'STRING';
-          types[diffParam] = 'INT64';
-          types[typeParam] = 'STRING';
-          types[jsonParam] = 'STRING';
+        params[idParam] = String(q.id);
+        params[subjectParam] = normSubject;
+        params[topicParam] = String(q.topic || 'General');
+        params[diffParam] = Number(q.difficulty !== undefined ? q.difficulty : difficulty);
+        params[typeParam] = String(q.type);
+        params[jsonParam] = JSON.stringify(q);
 
-          selectClauses.push(`
-            SELECT 
-              @${idParam} AS question_id,
-              @${subjectParam} AS subject,
-              @${topicParam} AS topic,
-              @${diffParam} AS difficulty,
-              @${typeParam} AS type,
-              @${jsonParam} AS question_json
-          `);
-        });
+        types[idParam] = 'STRING';
+        types[subjectParam] = 'STRING';
+        types[topicParam] = 'STRING';
+        types[diffParam] = 'INT64';
+        types[typeParam] = 'STRING';
+        types[jsonParam] = 'STRING';
 
-        const batchMergePregenQuery = `
-          MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
-          USING (
-            ${selectClauses.join('\n                    UNION ALL\n                    ')}
-          ) S
-          ON T.question_id = S.question_id
-          WHEN NOT MATCHED THEN
-            INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
-            VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())
-        `;
+        selectClauses.push(`
+          SELECT 
+            @${idParam} AS question_id,
+            @${subjectParam} AS subject,
+            @${topicParam} AS topic,
+            @${diffParam} AS difficulty,
+            @${typeParam} AS type,
+            @${jsonParam} AS question_json
+        `);
+      });
 
-        try {
-          bq.query({
-            query: batchMergePregenQuery,
-            params,
-            types
-          }).catch(pregenErr => console.error('Failed to add newly generated questions to pregenerated_questions:', pregenErr));
-        } catch (pregenErr) {
-          console.error('Failed to add newly generated questions to pregenerated_questions:', pregenErr);
-        }
-      }
+      const batchMergePregenQuery = `
+        MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
+        USING (
+          ${selectClauses.join('\n                  UNION ALL\n                  ')}
+        ) S
+        ON T.question_id = S.question_id
+        WHEN NOT MATCHED THEN
+          INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
+          VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())
+      `;
 
-      return true;
+      return bq.query({ query: batchMergePregenQuery, params, types });
     };
 
     const geminiModels = count > 40
@@ -936,6 +929,7 @@ Follow these strict rules:
 
     let attempts = 0;
     const maxAttempts = 3;
+    const bqWritePromises = [];
 
     while (allQuestions.length < count && attempts < maxAttempts) {
       attempts++;
@@ -956,10 +950,22 @@ Follow these strict rules:
         );
 
         if (geminiText) {
-          processGenerationResult(geminiText);
+          const writePromise = processGenerationResult(geminiText);
+          if (writePromise) bqWritePromises.push(writePromise);
         }
       } catch (err) {
         console.warn(`Generation failed (attempt ${attempts}):`, err.message || err);
+      }
+    }
+
+    // Await all BigQuery writes before responding — serverless functions terminate
+    // on res.json(), so unawaited writes would be silently dropped.
+    if (bqWritePromises.length > 0) {
+      const results = await Promise.allSettled(bqWritePromises);
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          console.error('[generate] Failed to store generated questions in pregenerated_questions:', result.reason);
+        }
       }
     }
 
