@@ -939,33 +939,25 @@ Follow these strict rules:
       return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
     }
 
-    const geminiLiteModels = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
-    const defaultModel = 'gemini-3.5-flash';
-
-    // If generating more than 40 questions, use gemini-3.1-flash-lite as primary
-    // instead of gemini-3.5-flash (followed by Qwen, then gemini-3-flash-preview)
-    const useLiteFirst = count > 40;
-    const primaryModel = useLiteFirst ? 'gemini-3.1-flash-lite' : defaultModel;
-    const tertiaryModels = useLiteFirst ? ['gemini-3-flash-preview'] : geminiLiteModels;
-    const step1Label = useLiteFirst ? 'gemini-3.1-flash-lite' : 'gemini-3.5-flash';
+    const geminiModels = count > 40
+      ? ['gemini-3.1-flash-lite', 'gemini-3-flash-preview']
+      : ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
 
     let attempts = 0;
     const maxAttempts = 3;
+
     while (allQuestions.length < count && attempts < maxAttempts) {
       attempts++;
-
       const needed = count - allQuestions.length;
       if (needed <= 0) break;
 
       const dynamicPrompt = buildDynamicPrompt(needed);
-      let generated = false;
 
-      // Step 1: Try primary model with interactions API and temperature=1.5
       try {
-        const primaryText = await withTimeout(
-          geminiRetry([primaryModel], (ai, currentModel) =>
+        const geminiText = await withTimeout(
+          executeWithRetry(geminiModels, (ai, model) =>
             ai.interactions.create({
-              model: currentModel,
+              model: model,
               input: dynamicPrompt,
               system_instruction: systemInstruction,
               response_format: { type: 'text', mime_type: 'application/json' },
@@ -974,35 +966,12 @@ Follow these strict rules:
           ),
           3 * 60 * 1000
         );
-        if (primaryText) {
-          generated = processGenerationResult(primaryText) || generated;
+
+        if (geminiText) {
+          processGenerationResult(geminiText);
         }
       } catch (err) {
-        console.warn(`${step1Label} failed (attempt ${attempts}):`, err.message || err);
-      }
-
-      // Step 3: If still not enough, try remaining Gemini models
-      if (!generated || allQuestions.length < count) {
-        try {
-          const geminiText = await withTimeout(
-            geminiRetry(tertiaryModels, (ai, currentModel) =>
-              ai.interactions.create({
-                model: currentModel,
-                input: dynamicPrompt,
-                system_instruction: systemInstruction,
-                response_format: { type: 'text', mime_type: 'application/json' },
-                generation_config: { temperature: 1.5 }
-              }).then(r => r.output_text)
-            ),
-            3 * 60 * 1000
-          );
-
-          if (geminiText) {
-            generated = processGenerationResult(geminiText) || generated;
-          }
-        } catch (err) {
-          console.warn(`Gemini fallback failed (attempt ${attempts}):`, err.message || err);
-        }
+        console.warn(`Generation failed (attempt ${attempts}):`, err.message || err);
       }
     }
 
