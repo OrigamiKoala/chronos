@@ -931,7 +931,7 @@ Follow these strict rules:
     };
 
     // Helper: promise with timeout
-    function withTimeout(promise, ms) {
+    function withTimeout(promise) {
       let timer;
       const timeout = new Promise((_, reject) => {
         timer = setTimeout(() => reject(new Error('TIMEOUT')), ms);
@@ -963,8 +963,7 @@ Follow these strict rules:
               response_format: { type: 'text', mime_type: 'application/json' },
               generation_config: { temperature: 1.5 }
             }).then(r => r.output_text)
-          ),
-          3 * 60 * 1000
+          )
         );
 
         if (geminiText) {
