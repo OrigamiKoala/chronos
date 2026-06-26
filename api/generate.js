@@ -733,7 +733,7 @@ You MUST prioritize generating questions that are directly related to these spec
 
     const systemInstruction = `###Role:### You are an expert coach for students competing in advanced high school Olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. The goal is to prepare them for future iterations of the exam, which are anticipated to increase significantly in difficulty.
 
-###Context:### Rely on the style and structural formatting of past exams appropriate to the difficulty level (see the syllabus boundaries/difficulty scale).
+###Context:### You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
 
 ${topicsInstructions}
 
@@ -749,6 +749,8 @@ ${mistakeAnalysis}
 ###Goal:### Write questions for a user's practice tests that perfectly mirror official styling but features significantly elevated problem difficulty, demanding deep structural, thermodynamic, and mechanistic insight. The exam must be indistinguishable from an official paper in tone, typography, formatting, style, and difficulty. Target the user's weak areas ( ${weaknesses} ).
 
 ###Constraints:###
+
+***CRITICAL:*** You MUST stay within the syllabus boundaries for the exam with the appropriate difficulty.
 
 ${constraints}
 
