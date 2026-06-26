@@ -270,9 +270,6 @@ const physicsExemplars = [
     "type": "free_response",
     "answer": "",
     "difficulty": 10
-  },
-  {
-
   }
 ];
 
