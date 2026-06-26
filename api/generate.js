@@ -569,6 +569,8 @@ ${mistakeAnalysis}
 
 ###Constraints:###
 
+${constraints}
+
 1. For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 
 2. ***Backward Chaining Generation Methodology (CRITICAL)***
@@ -623,8 +625,6 @@ You MUST make the generated questions highly adaptive by directly targeting this
 SELF-CHECK (MANDATORY before finalising each question): Before writing the final JSON for each question, ask yourself: "Is this question structurally novel? Would a student who has drilled olympiad problem sets be genuinely surprised by the setup, the system, or the question being asked — even if they know the underlying concept well?" If the answer is no — if the setup is a familiar scaffold with new numbers or a different element — redesign the question from scratch. Note: difficulty level is irrelevant here. A hard USNCO question can still be a clichéd template. What matters is whether the problem-setup itself is fresh and unexpected.
 
 CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (applying a single standard formula to given values). These plug-and-chug applications can ONLY happen for difficulty level 1.
-
-${constraints}
 
 ###Examples:###
 
