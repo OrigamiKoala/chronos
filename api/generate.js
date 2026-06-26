@@ -889,14 +889,14 @@ Follow these strict rules:
         params[idParam] = String(q.id);
         params[subjectParam] = normSubject;
         params[topicParam] = String(q.topic || 'General');
-        params[diffParam] = Number(q.difficulty !== undefined ? q.difficulty : difficulty);
+        params[diffParam] = Math.round(Number(q.difficulty !== undefined ? q.difficulty : difficulty));
         params[typeParam] = String(q.type);
         params[jsonParam] = JSON.stringify(q);
 
         types[idParam] = 'STRING';
         types[subjectParam] = 'STRING';
         types[topicParam] = 'STRING';
-        types[diffParam] = 'FLOAT64';
+        types[diffParam] = 'INT64';
         types[typeParam] = 'STRING';
         types[jsonParam] = 'STRING';
 
