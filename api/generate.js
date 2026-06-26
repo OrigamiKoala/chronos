@@ -189,6 +189,90 @@ const physicsExemplars = [
     "type": "free_response",
     "answer": "",
     "difficulty": 3,
+  },
+  {
+    "id": "phys_ex3",
+    "topic": "Fluids",
+    "question": `Water-Powered Rice-Pounding Mortar
+      System Parameters
+      Lever Mass ($M$): $30\text{ kg}$
+      Moment of Inertia ($I$): $12\text{ kg}\cdot\text{m}^2$ (around axis $T$)
+      Initial Lift Mass ($m$): $1.0\text{ kg}$ of water causes rotation from horizontal.
+      Bucket Dimensions: $L = 74\text{ cm}$, $h = 12\text{ cm}$, $b = 15\text{ cm}$, angle $\gamma = 30^\circ$
+      Lever Thickness: $8\text{ cm}$
+      Pivot Distance ($a$): $20\text{ cm}$ from bucket edge to axis $T$
+      Assumptions: Water surface always horizontal; neglect friction and water impact force.
+      Problem Problems
+      1. Structure of the Mortar
+      1.1 Determine distance from center of mass $G$ to axis $T$ ($GT$ is horizontal when empty).
+      1.2 Determine $\alpha_1$ (water starts flowing out) and $\alpha_2$ (bucket completely empty).
+      1.3 Determine angle $\beta$ and water mass $m_1$ when total torque $\mu(\alpha) = 0$.
+      2. Working Mode (Small Flow Rate $\Phi$)
+      2.1 Sketch torque $\mu(\alpha)$ vs angle $\alpha$ for one cycle. Explicitly state values at $\alpha_1$, $\alpha_2$, and $\alpha = 0$.
+      2.2 Give geometric interpretation of total energy $W_{\text{total}}$ and pounding work $W_{\text{pounding}}$.
+      2.3 Estimate maximal angle $\alpha_0$ and $W_{\text{pounding}}$.
+      3. Rest Mode
+      3.1.1 Sketch $\mu(\alpha)$ near $\alpha = \beta$ (bucket overflown); identify equilibrium type.
+      3.1.2 Find analytic form of $\mu(\alpha)$ for $\alpha = \beta + \Delta\alpha$ ($\Delta\alpha$ small).
+      3.1.3 Write equation of motion for small deviations; find harmonic oscillation period $\tau$.
+      3.2 Find minimal flow rate $\Phi_1$ for harmonic motion with amplitude $1^\circ$.
+      3.3 Estimate minimal flow rate $\Phi_2$ for which the mortar ceases to work.
+      Diagrams:
+      FIgure 2: Operation Cycle
+
+      <svg viewBox="0 0 200 420" width="200" height="420" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(0,0)">
+          <text x="10" y="20" font-family="sans-serif" font-size="12">a)</text>
+          <line x1="20" y1="40" x2="180" y2="40" stroke="black" stroke-width="2"/>
+          <line x1="100" y1="40" x2="100" y2="60" stroke="black" stroke-width="4"/>
+          <path d="M 20 40 Q 50 50 80 40 Z" fill="lightblue" stroke="black"/>
+          <line x1="160" y1="40" x2="160" y2="60" stroke="black" stroke-width="2"/>
+        </g>
+        <g transform="translate(0,70)">
+          <text x="10" y="20" font-family="sans-serif" font-size="12">b) alpha_1</text>
+          <line x1="20" y1="50" x2="180" y2="30" stroke="black" stroke-width="2"/>
+          <path d="M 20 50 Q 50 55 80 42 Z" fill="lightblue" stroke="black"/>
+        </g>
+        <g transform="translate(0,140)">
+          <text x="10" y="20" font-family="sans-serif" font-size="12">c) alpha = beta</text>
+          <line x1="20" y1="55" x2="180" y2="25" stroke="black" stroke-width="2"/>
+        </g>
+        <g transform="translate(0,210)">
+          <text x="10" y="20" font-family="sans-serif" font-size="12">d) alpha_2</text>
+          <line x1="20" y1="60" x2="180" y2="20" stroke="black" stroke-width="2"/>
+        </g>
+        <g transform="translate(0,280)">
+          <text x="10" y="20" font-family="sans-serif" font-size="12">e) alpha_0</text>
+          <line x1="20" y1="70" x2="180" y2="10" stroke="black" stroke-width="2"/>
+        </g>
+        <g transform="translate(0,350)">
+          <text x="10" y="20" font-family="sans-serif" font-size="12">f) Impact</text>
+          <line x1="20" y1="40" x2="180" y2="40" stroke="black" stroke-width="2"/>
+          <line x1="160" y1="40" x2="160" y2="60" stroke="black" stroke-width="2"/>
+          <rect x="150" y="60" width="20" height="15" fill="gray"/>
+        </g>
+      </svg>
+
+      Figure 3: Mechanical Dimensions:
+      <svg viewBox="0 0 500 150" width="500" height="150" xmlns="http://www.w3.org/2000/svg">
+        <rect x="50" y="40" width="400" height="16" fill="#e0c090" stroke="black"/>
+        <circle cx="200" cy="48" r="4" fill="black"/>
+        <text x="195" y="35" font-family="sans-serif" font-size="12">T</text>
+        <circle cx="240" cy="48" r="3" fill="red"/>
+        <text x="238" y="35" font-family="sans-serif" font-size="12">G</text>
+        <rect x="400" y="56" width="12" height="50" fill="#e0c090" stroke="black"/>
+        <path d="M 50 40 L 150 40 L 150 56 L 80 56 Z" fill="lightcyan" stroke="black"/>
+        <text x="90" y="35" font-family="sans-serif" font-size="12">Bucket</text>
+        <path d="M 150 25 L 200 25" stroke="black" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+        <text x="160" y="20" font-family="sans-serif" font-size="10">a = 20 cm</text>
+        <path d="M 380 106 L 430 106 L 420 130 L 390 130 Z" fill="none" stroke="black" stroke-width="2"/>
+      </svg>`,
+    "type": "free_response",
+    "answer": "",
+    "difficulty": 10
+  },
+  {
+
   }
 ];
 
