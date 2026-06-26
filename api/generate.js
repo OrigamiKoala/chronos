@@ -19,8 +19,7 @@ const mathExemplars = [
     "type": "multiple_choice",
     "options": ["$25$", "$26$", "$27$", "$28$", "29"],
     "answer": "A",
-    "difficulty": 5,
-    "detailedSolution": "Say WLOG that $AB$ is the top side of the square, and the square is of side length 1. Let us say that the midpoint of $AB$ is $M$, while the midpoint of $CD$ is $Q$. Drawing a vertical line to split the square in half, we notice that if $P$ is to the left of the line, $AP < BP$, and if P is to the right of the line, $AP > BP$. Also, drawing a quarter circle of radius 1 from point $A$, we can split the area into points P for which $AP < AB$ and $AP > AB$. Because of our constraints, there are 2 cases:\n\nCase 1: $AB > AP > BP$ In this case, $P$ will be to the right of the vertical line and inside of the quarter circle. Let us say that the intersection of the vertical line and quarter circle is $N$. The distance from $N$ to $AD$ is 1/2, and we can say that $\\\\angle BAN$ is $60^\\circ$. Sector $BAN$ of circle $A$ would therefore have an area of $\\\\frac{\\\\pi}{6}$. Because $\\\\triangle AMN$ is a 30-60-90 triangle, the area of $AMN$ is $\\\\frac{\\\\sqrt{3}}{8}$. The probability of case 1 happening should then be $\\\\frac{\\\\pi}{6}-\\\\frac{\\\\sqrt{3}}{8}$.\n\nCase 2: $AB < AP < BP$ In this case, $P$ will be to the left of the vertical line and outside of the quarter circle. Knowing that the quarter circle's area is $\\\\frac{\\\\pi}{4}$, we can subtract the probability of Case 1 happening to get the chance that $P$ is on the left of the vertical line and in circle $A$. Doing this would give $\\\\frac{\\\\pi}{12}+\\\\frac{\\\\sqrt{3}}{8}$. To get the probability of Case 2 happening, we can subtract this from the area of rectangle $AMQD$. This would give us $\\\\frac{1}{2}-\\\\frac{\\\\pi}{12}-\\\\frac{\\\\sqrt{3}}{8}$.\n\nAdding both cases, we get the total probability as $\\\\frac{1}{2}+\\\\frac{\\\\pi}{12}-\\\\frac{\\\\sqrt{3}}{4} = \\\\frac{6+\\\\pi-3\\\\sqrt{3}}{12}$. Formatting this gives us $6+1+3+3+12 = \\\\boxed{\\\\textbf{(A) } 25}$."
+    "difficulty": 4,
   },
   {
     "id": "math_ex2",
@@ -28,8 +27,7 @@ const mathExemplars = [
     "question": "For each nonnegative integer $r$ less than $502$, define\\\\n\\\\n$$S_r=\\\\sum_{m\\\\geq 0}\\\\binom{10,000}{502m+r},\\\\n\\\\n$$where $\\\\binom{10,000}{n}$ is defined to be $0$ when $n>10,000$. That is, $S_r$ is the sum of all the binomial coefficients of the form $\\\\binom{10,000}{k}$ for which $0\\\\leq k\\\\leq 10,000$ and $k-r$ is a multiple of $502$. Find the number of integers in the list $S_0,S_1,S_2,\\\\dots,S_{501}$ that are multiples of the prime number $503$.",
     "type": "short_answer",
     "answer": "39",
-    "difficulty": 7,
-    "detailedSolution": "Take player $v^*$ with max out-degree $\\\\Delta$. Let $W$ = wins, $L$ = losses. For any $u \\\\in L$: if $u$ beat all of $W$, then $d^+(u) \\\\geq \\\\Delta+1$, contradiction. So some $w \\\\in W$ beats $u$, and $v^*$ dominates $u$ via $w$. $v^*$ trivially dominates $W$ directly. QED."
+    "difficulty": 6,
   },
   {
     "id": "math_ex3",
@@ -39,7 +37,6 @@ const mathExemplars = [
     "options": ["$9$", "$10$", "$12$", "$13$", "14"],
     "answer": "A",
     "difficulty": 3,
-    "detailedSolution": "If a group has median $m$, then we must have that $3$ of the numbers in that group are $\\\\leq m$. Since there are 5 different groups, $3$ groups must have a median $\\\\leq M$, so there are at least $3\\\\cdot3=9$ numbers that are $\\\\leq M$. Since there are at least $9$ numbers that are $\\\\leq M$, we have $M$ at minimum $\\\\boxed{\\\\textbf{(A) }9}.$"
   },
   {
     "id": "math_ex4",
@@ -48,7 +45,124 @@ const mathExemplars = [
     "type": "free_response",
     "answer": "",
     "difficulty": 10,
-    "detailedSolution": "Choose integers $a,b,k$ such that $a^2+b^2=k(ab+1)$ Now, for fixed $k$, out of all pairs $(a,b)$ choose the one with the lowest value of $\\\\min(a,b)$. Label $b'=\\\\min(a,b), a'=\\\\max(a,b)$. Thus, $a'^2-kb'a'+b'^2-k=0$ is a quadratic in $a'$. Should there be another root, $c'$, the root would satisfy: $b'c'\\\\leq a'c'=b'^2-k<b'^2\\\\implies c'<b'$ Thus, $c'$ isn't a positive integer (if it were, it would contradict the minimality condition). But $c'=kb'-a'$, so $c'$ is an integer; hence, $c'\\\\leq 0$. In addition, $(a'+1)(c'+1)=a'c'+a'+c'+1=b'^2-k+b'k+1=b'^2+(b'-1)k+1\\\\geq 1$ so that $c'>-1$. We conclude that $c'=0$ so that $b'^2=k$.\n\nThis construction works whenever there exists a solution $(a,b)$ for a fixed $k$, hence $k$ is always a perfect square."
+  },
+  {
+    "id": "math_ex5",
+    "topic": "Algebra",
+    "question": "Patrick started walking at a constant speed along a straight road from his school to the park. One hour after Patrick left, Tanya started running at a constant speed of $2$ miles per hour faster than Patrick walked, following the same straight road from the school to the park. One hour after Tanya left, José started bicycling at a constant speed of $7$ miles per hour faster than Tanya ran, following the same straight road from the school to the park. All three people arrived at the park at the same time. The distance from the school to the park is $\frac{m}{n}$ miles, where $m$ and $n$ are relatively prime positive integers. Find $m+n$.",
+    "type": "short_answer",
+    "answer": "277",
+    "difficulty": 2,
+  },
+  {
+    "id": "math_ex6",
+    "topic": "Number Theory",
+    "question": "Find the number of positive integer palindromes written in base $10$, with no zero digits, and whose digits add up to $13$. For example, $42124$ has these properties. Recall that a palindrome is a number whose representation reads the same from left to right as from right to left.",
+    "type": "short_answer",
+    "answer": "62",
+    "difficulty": 2
+  },
+  {
+    "id": "math_ex7",
+    "topic": "Geometry",
+    "question": "A hemisphere with radius $200$ sits on top of a horizontal circular disk with radius $200$, and the hemisphere and disk have the same center. Let $\mathcal{T}$ be the region of points $P$ in the disk such that a sphere of radius $42$ can be placed on top of the disk at $P$ and lie completely inside the hemisphere. The area of $\mathcal{T}$ divided by the area of the disk is $\frac{p}{q}$, where $p$ and $q$ are relatively prime positive integers. Find $p+q$.",
+    "type": "short_answer",
+    "answer": "79",
+    "difficulty": 2,
+  },
+  {
+    "id": "math_ex8",
+    "topic": "Geometry",
+    "question": "A plane contains points $A$ and $B$ with $AB=1$. Point $A$ is rotated in the plane counterclockwise through an acute angle $\theta$ around point $B$ to point $A'$. Then $B$ is rotated in the plane clockwise through angle $\theta$ around point $A'$ to point $B'$. Suppose $AB'=\frac{4}{3}$. The value of $\cos\theta$ can be written as $\frac{m}{n}$, where $m$ and $n$ are relatively prime positive integers. Find $m+n$.",
+    "type": "short_answer",
+    "answer": "65",
+    "difficulty": 3,
+  },
+  {
+    "id": "math_ex9",
+    "topic": "Algebra",
+    "question": "The product of all positive real numbers $x$ satisfying the equation\[\sqrt[20]{x^{\log_{2026}x}}=26x\]is an integer $P$. Find the number of positive integer divisors of $P$.",
+    "type": "short_answer",
+    "answer": "441",
+    "difficulty": 3,
+  },
+  {
+    "id": "math_ex10",
+    "topic": "Number Theory",
+    "question": "Let $N$ be the number of positive integer divisors of $17017^{17}$ that leave a remainder of $5$ upon division by $12$. Find the remainder when $N$ is divided by $1000$.",
+    "type": "short_answer",
+    "answer": "29",
+    "difficulty": 4,
+  },
+  {
+    "id": "math_ex11",
+    "topic": "Combinatorics",
+    "question": "Joanne has a blank fair six-sided die and six stickers each displaying a different integer from $1$ to $6$. Joanne rolls the die and then places the sticker labeled $1$ on the top face of the die. She then rolls the die again, places the sticker labeled $2$ on the top face, and continues this process to place the rest of the stickers in order. If the die ever lands with a sticker already on its top face, the new sticker is placed to cover the old sticker. Let $p$ be the conditional probability that at the end of the process exactly one face has been left blank, given that all the even-numbered stickers are visible on faces of the die. Then $p$ can be written as $\frac{m}{n}$, where $m$ and $n$ are relatively prime positive integers. Find $m+n$.",
+    "type": "short_answer",
+    "answer": "029",
+    "difficulty": 4,
+  },
+  {
+    "id": "math_ex12",
+    "topic": "Combinatorics",
+    "question": `Let $a, b,$ and $n$ be positive integers with both $a$ and $b$ greater than or equal to $2$ and less than or equal to $2n.{}$ Define an $a \times b$ cell loop in a $2n \times 2n$ grid of cells to be the $2a + 2b - 4$ cells that surround an $(a - 2) \times (b - 2)$ (possibly empty) rectangle of cells in the grid. For example, the following diagram shows a way to partition a $6 \times 6$ grid of cells into $4$ cell loops. 
+    
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <rect x="20" y="20" width="400" height="400" fill="#247eff" />
+  
+  <rect x="120" y="120" width="200" height="200" fill="#ff7675" />
+  
+  <rect x="20" y="420" width="400" height="200" fill="#ffffff" />
+  
+  <rect x="420" y="20" width="200" height="600" fill="#fff775" />
+
+  <g stroke="#2d3436" stroke-width="1" opacity="0.7">
+    <line x1="120" y1="20" x2="120" y2="620" />
+    <line x1="220" y1="20" x2="220" y2="620" />
+    <line x1="320" y1="20" x2="320" y2="620" />
+    <line x1="420" y1="20" x2="420" y2="620" />
+    <line x1="520" y1="20" x2="520" y2="620" />
+    
+    <line x1="20" y1="120" x2="620" y2="120" />
+    <line x1="20" y1="220" x2="620" y2="220" />
+    <line x1="20" y1="320" x2="620" y2="320" />
+    <line x1="20" y1="420" x2="620" y2="420" />
+    <line x1="20" y1="520" x2="620" y2="520" />
+  </g>
+
+  <g stroke="#000000" stroke-width="10" stroke-linecap="square">
+    <rect x="20" y="20" width="600" height="600" fill="none" stroke-width="16" />
+    
+    <line x1="420" y1="20" x2="420" y2="620" stroke-width="12" />
+    <line x1="20" y1="420" x2="420" y2="420" stroke-width="12" />
+    
+    <rect x="120" y="120" width="200" height="200" fill="none" stroke-width="12" />
+    
+    <line x1="120" y1="520" x2="320" y2="520" stroke-width="12" stroke-linecap="round" />
+    <line x1="520" y1="120" x2="520" y2="520" stroke-width="12" stroke-linecap="round" />
+  </g>
+
+  <circle cx="220" cy="220" r="28" fill="#000000" />
+</svg>
+`,
+    "answer": "83",
+    "difficulty": 8,
+  },
+  {
+    "id": "math_ex13",
+    "topic": "Algebra",
+    "question": "What is the value of $(7 \times 2) − (3 \times 4 + 2)$?",
+    "type": "short_answer",
+    "answer": "0",
+    "difficulty": 0,
+  },
+  {
+    "id": "math_ex14",
+    "topic": "Algebra",
+    "question": "Charlene is looking at part-time jobs from three local businesses. Al’s Avocados pays $\$250$ dollars a week no matter what. Bertha’s Burritos pays $\$20$ an hour. Carl’s Cantaloupes pays $\$15$ an hour for the first $10$ hours and $\$25$ an hour beyond that. Charlene’s desired number of hours per week would pay her the same at Al’s and at Carl’s.How much would she make per week if she took the job at Bertha’s?",
+    "type": "short_answer",
+    "answer": "$280",
+    "difficulty": 1,
   }
 ];
 
@@ -67,7 +181,6 @@ const physicsExemplars = [
     ],
     "answer": "A",
     "difficulty": 6,
-    "detailedSolution": "Let $OB = OC = d$. The time interval between the emission of the two pulses is \\\\delta t = t_2 - t_1. The arrival time of the first pulse at $O$ is $t'_1 = t_1 + \\\\frac{d + v \\\\delta t \\\\cos \\\\theta}{c}$. The arrival time of the second pulse at $O$ is $t'_2 = t_2 + \\\\frac{d}{c}$. The observed time interval \\\\delta t' is \\\\delta t' = t'_2 - t'_1 = \\\\delta t (1 - \\\\beta \\\\cos \\\\theta)$. The apparent transverse velocity is $v_T = \\\\frac{v \\\\delta t \\\\sin \\\\theta}{\\\\delta t'}$. Substituting gives $\\\\beta_T = \\\\frac{v_T}{c} = \\\\frac{\\\\beta \\\\sin \\\\theta}{1 - \\\\beta \\\\cos \\\\theta}$."
   },
   {
     "id": "phys_ex2",
@@ -76,7 +189,6 @@ const physicsExemplars = [
     "type": "free_response",
     "answer": "",
     "difficulty": 3,
-    "detailedSolution": "Part A: Horizontal momentum is conserved, and vertical momentum is zero at highest point.\nPart B: $x_{cm} = (v_0 \\\\cos \\\\theta) t_2$. Lands at $x_2 = \\\\frac{4}{3} x_{cm} = \\\\frac{8 v_0^2 \\\\sin \\\\theta \\\\cos \\\\theta}{3g}$.\nPart C: CM velocity is constant. Q is negative, R is positive.\nPart D: $x_{new} > x_2$ because $v_{x,R,new} > v_{x,R}$ due to $v_{x,Q} = 0$ instead of $v_{x,Q} < 0$."
   }
 ];
 
@@ -94,16 +206,14 @@ const chemistryExemplars = [
     ],
     "answer": "A",
     "difficulty": 5,
-    "detailedSolution": "Method A exploits the selective redox: $\\\\ce{2Cu^{2+} + 4I^- -> 2CuI + I_2}$. The liberated $\\\\ce{I_2}$ is titrated with thiosulfate, giving moles of Cu specifically. $\\\\ce{Ni^{2+}}$ does not react with iodide under these conditions, so it does not interfere. Method B fails because both ions absorb at the same wavelength, making the absorbance non-specific. Method C fails because both $\\\\ce{Cu(OH)_2}$ and $\\\\ce{Ni(OH)_2}$ precipitate together. Method D fails because $\\\\ce{HNO_3}$ is a strong oxidizing agent that reacts with $\\\\ce{H_2}$ before it can reduce the metal ions."
   },
   {
     "id": "chem_ex2",
     "topic": "Acid-Base Titration & Gas Laws",
-    "question": "A is an ionic compound that contains only the elements hydrogen, nitrogen, and oxygen.\\n\\na. A 1.000-g sample of A is dissolved in 20 mL water and titrated with 0.5000 M NaOH solution, giving the data shown below. What is the molar mass of A?\\n\\n[[SVG: <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 400' style='max-width:100%;background:white'><rect x='60' y='20' width='520' height='320' fill='white'/><g stroke='#ddd' stroke-width='0.5'><line x1='60' y1='52' x2='580' y2='52'/><line x1='60' y1='84' x2='580' y2='84'/><line x1='60' y1='116' x2='580' y2='116'/><line x1='60' y1='148' x2='580' y2='148'/><line x1='60' y1='180' x2='580' y2='180'/><line x1='60' y1='212' x2='580' y2='212'/><line x1='60' y1='244' x2='580' y2='244'/><line x1='60' y1='276' x2='580' y2='276'/><line x1='60' y1='308' x2='580' y2='308'/><line x1='103' y1='20' x2='103' y2='340'/><line x1='147' y1='20' x2='147' y2='340'/><line x1='190' y1='20' x2='190' y2='340'/><line x1='233' y1='20' x2='233' y2='340'/><line x1='277' y1='20' x2='277' y2='340'/><line x1='320' y1='20' x2='320' y2='340'/><line x1='363' y1='20' x2='363' y2='340'/><line x1='407' y1='20' x2='407' y2='340'/><line x1='450' y1='20' x2='450' y2='340'/><line x1='493' y1='20' x2='493' y2='340'/><line x1='537' y1='20' x2='537' y2='340'/></g><rect x='60' y='20' width='520' height='320' fill='none' stroke='#999' stroke-width='1'/><g font-family='Arial,sans-serif' font-size='12' text-anchor='end' fill='black'><text x='55' y='24'>14</text><text x='55' y='56'>13</text><text x='55' y='88'>12</text><text x='55' y='120'>11</text><text x='55' y='152'>10</text><text x='55' y='184'>9</text><text x='55' y='216'>8</text><text x='55' y='248'>7</text><text x='55' y='280'>6</text><text x='55' y='312'>5</text><text x='55' y='344'>4</text></g><text font-family='Arial,sans-serif' font-size='14' font-weight='bold' text-anchor='middle' transform='translate(20,180) rotate(-90)'>pH</text><g font-family='Arial,sans-serif' font-size='12' text-anchor='middle' fill='black'><text x='60' y='358'>0</text><text x='103' y='358'>5</text><text x='147' y='358'>10</text><text x='190' y='358'>15</text><text x='233' y='358'>20</text><text x='277' y='358'>25</text><text x='320' y='358'>30</text><text x='363' y='358'>35</text><text x='407' y='358'>40</text><text x='450' y='358'>45</text><text x='493' y='358'>50</text><text x='537' y='358'>55</text><text x='580' y='358'>60</text></g><text x='320' y='390' font-family='Arial,sans-serif' font-size='14' text-anchor='middle'>mL 0.5000 M NaOH added</text><path d='M 60 314.4 C 60 250,68.7 237.6,77.3 218.4 S 103.3 192.8,146.7 173.6 S 190 160.8,233.3 144.8 S 268 109.6,276.7 77.6 S 285.3 68,320 58.4 S 406.7 48.8,580 42.4' fill='none' stroke='black' stroke-width='2'/></svg>]]\\n\\nb. When a 1.000-g sample of A is heated at 230 °C in an evacuated 1.50 L vessel, it decomposes into gaseous products, giving a final pressure of 784 mm Hg. How many moles of gas are formed in this reaction?\\n\\nc. If the gases produced from the decomposition of 1.000 g of A are instead first passed through a column packed with magnesium perchlorate (which strongly absorbs water vapor) and then collected at 25 °C and a pressure of 755 mm Hg, the total volume of gas is 308 mL. How many moles of gas are collected in this experiment?\\n\\nd. What is the formula of A? Explain your reasoning.\\n\\ne. Write Lewis structures for the cation and the anion present in A and for the product(s) of its decomposition at 230 °C. Your Lewis structures should include all bonds, lone pairs, and nonzero formal charges. You should show all significant resonance structures for each species.",
+    "question": "A is an ionic compound that contains only the elements hydrogen, nitrogen, and oxygen. a. A $1.000$-g sample of A is dissolved in $20$ mL water and titrated with $0.5000$ M $\ce{NaOH}$ solution, giving the data shown below. What is the molar mass of A? [[SVG: <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 400' style='max-width:100%;background:white'><rect x='60' y='20' width='520' height='320' fill='white'/><g stroke='#ddd' stroke-width='0.5'><line x1='60' y1='52' x2='580' y2='52'/><line x1='60' y1='84' x2='580' y2='84'/><line x1='60' y1='116' x2='580' y2='116'/><line x1='60' y1='148' x2='580' y2='148'/><line x1='60' y1='180' x2='580' y2='180'/><line x1='60' y1='212' x2='580' y2='212'/><line x1='60' y1='244' x2='580' y2='244'/><line x1='60' y1='276' x2='580' y2='276'/><line x1='60' y1='308' x2='580' y2='308'/><line x1='103' y1='20' x2='103' y2='340'/><line x1='147' y1='20' x2='147' y2='340'/><line x1='190' y1='20' x2='190' y2='340'/><line x1='233' y1='20' x2='233' y2='340'/><line x1='277' y1='20' x2='277' y2='340'/><line x1='320' y1='20' x2='320' y2='340'/><line x1='363' y1='20' x2='363' y2='340'/><line x1='407' y1='20' x2='407' y2='340'/><line x1='450' y1='20' x2='450' y2='340'/><line x1='493' y1='20' x2='493' y2='340'/><line x1='537' y1='20' x2='537' y2='340'/></g><rect x='60' y='20' width='520' height='320' fill='none' stroke='#999' stroke-width='1'/><g font-family='Arial,sans-serif' font-size='12' text-anchor='end' fill='black'><text x='55' y='24'>14</text><text x='55' y='56'>13</text><text x='55' y='88'>12</text><text x='55' y='120'>11</text><text x='55' y='152'>10</text><text x='55' y='184'>9</text><text x='55' y='216'>8</text><text x='55' y='248'>7</text><text x='55' y='280'>6</text><text x='55' y='312'>5</text><text x='55' y='344'>4</text></g><text font-family='Arial,sans-serif' font-size='14' font-weight='bold' text-anchor='middle' transform='translate(20,180) rotate(-90)'>pH</text><g font-family='Arial,sans-serif' font-size='12' text-anchor='middle' fill='black'><text x='60' y='358'>0</text><text x='103' y='358'>5</text><text x='147' y='358'>10</text><text x='190' y='358'>15</text><text x='233' y='358'>20</text><text x='277' y='358'>25</text><text x='320' y='358'>30</text><text x='363' y='358'>35</text><text x='407' y='358'>40</text><text x='450' y='358'>45</text><text x='493' y='358'>50</text><text x='537' y='358'>55</text><text x='580' y='358'>60</text></g><text x='320' y='390' font-family='Arial,sans-serif' font-size='14' text-anchor='middle'>mL 0.5000 M NaOH added</text><path d='M 60 314.4 C 60 250,68.7 237.6,77.3 218.4 S 103.3 192.8,146.7 173.6 S 190 160.8,233.3 144.8 S 268 109.6,276.7 77.6 S 285.3 68,320 58.4 S 406.7 48.8,580 42.4' fill='none' stroke='black' stroke-width='2'/></svg>]] b. When a $1.000$-g sample of A is heated at $230 ^{\circ}$C in an evacuated $1.50$ L vessel, it decomposes into gaseous products, giving a final pressure of $784$ mm Hg. How many moles of gas are formed in this reaction?\\n\\n c. If the gases produced from the decomposition of $1.000$ g of A are instead first passed through a column packed with magnesium perchlorate (which strongly absorbs water vapor) and then collected at $25^{\circ}$C and a pressure of $755$ mm Hg, the total volume of gas is $308$ mL. How many moles of gas are collected in this experiment?\\n\\nd. What is the formula of A? Explain your reasoning.\\n\\ne. Write Lewis structures for the cation and the anion present in A and for the product(s) of its decomposition at $230^{\circ}$C. Your Lewis structures should include all bonds, lone pairs, and nonzero formal charges. You should show all significant resonance structures for each species.",
     "type": "free_response",
     "answer": "",
     "difficulty": 5,
-    "detailedSolution": "(a) Moles OH- = 0.0125, so M = 80.0 g/mol. (b) PV=nRT gives 0.0375 mol total gas. (c) 0.0125 mol dry gas. (d) 1:3 total gas ratio, 1:2 water ratio → $\\\\ce{NH4NO3}$ (M=80.04), decomposing to $\\\\ce{N2O + 2H2O}$. (e) $\\\\ce{NH4+}$: tetrahedral N with +1 charge. $\\\\ce{NO3-}$: trigonal planar with resonance. $\\\\ce{N2O}$: two resonance structures ($\\\\ce{N#[N+][O-]}$ and $\\\\ce{[N-]=[N+]=O}$)."
   },
   {
     "id": "chem_ex3",
@@ -117,18 +227,20 @@ const chemistryExemplars = [
       "$\\\\text{Hg(O)(OH)}(s)$"
     ],
     "answer": "A",
-    "difficulty": 5,
-    "detailedSolution": "Under acidic conditions (low pH) and intermediate reduction potentials (between metallic $\\\\text{Hg}(l)$ and $\\\\text{Hg}^{2+}(aq)$), mercury(I) exists as the stable diatomic cation $\\\\text{Hg}_2^{2+}(aq)$."
+    "difficulty": 6,
   },
   {
     "id": "chem_ex4",
     "topic": "Chemical Equilibrium, Thermodynamics, Gas Laws",
-    "question": "Solid calcium carbonate is in equilibrium with calcium oxide and carbon dioxide, with $K_{\\\\text{p}} = 0.12$ bar at $1200$ K.\\\\n\\\\n$$\\\\text{CaCO}_3(s) \\\\rightleftharpoons \\\\text{CaO}(s) + \\\\text{CO}_2(g) \\\\quad K_{\\\\text{eq}} = 0.12\\\\text{ at } 1200\\\\text{ K}$$\\\\n\\\\nA $1.00$ g sample of $\\\\text{CaCO}_3$ ($M = 100.09$) is placed in an evacuated piston which is allowed to equilibrate at $1200$ K. How will the pressure in the piston after equilibrium is attained depend on the volume of the piston?\\\\n\\\\nOption (A)\\\\n[[SVG: <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 300' width='100%' height='100%' style='background-color: #ffffff;'><text x='30' y='40' font-family='Arial' font-size='22' font-weight='bold'>(A)</text><line x1='80' y1='240' x2='280' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='80' y1='50' x2='80' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='280' y1='50' x2='280' y2='240' stroke='#cccccc' stroke-width='0.8' /><line x1='80' y1='50' x2='280' y2='50' stroke='#cccccc' stroke-width='0.8' /><line x1='75' y1='50' x2='80' y2='50' stroke='#000000' /><text x='70' y='54' font-family='Arial' font-size='12' text-anchor='end'>0.14</text><line x1='75' y1='77.1' x2='80' y2='77.1' stroke='#000000' /><text x='70' y='81.1' font-family='Arial' font-size='12' text-anchor='end'>0.12</text><line x1='75' y1='104.3' x2='80' y2='104.3' stroke='#000000' /><text x='70' y='108.3' font-family='Arial' font-size='12' text-anchor='end'>0.10</text><line x1='75' y1='131.4' x2='80' y2='131.4' stroke='#000000' /><text x='70' y='135.4' font-family='Arial' font-size='12' text-anchor='end'>0.08</text><line x1='75' y1='158.6' x2='80' y2='158.6' stroke='#000000' /><text x='70' y='162.6' font-family='Arial' font-size='12' text-anchor='end'>0.06</text><line x1='75' y1='185.7' x2='80' y2='185.7' stroke='#000000' /><text x='70' y='189.7' font-family='Arial' font-size='12' text-anchor='end'>0.04</text><line x1='75' y1='212.9' x2='80' y2='212.9' stroke='#000000' /><text x='70' y='216.9' font-family='Arial' font-size='12' text-anchor='end'>0.02</text><line x1='75' y1='240' x2='80' y2='240' stroke='#000000' /><text x='70' y='244' font-family='Arial' font-size='12' text-anchor='end'>0.00</text><line x1='80' y1='240' x2='80' y2='245' stroke='#000000' /><text x='80' y='260' font-family='Arial' font-size='12' text-anchor='middle'>0</text><line x1='130' y1='240' x2='130' y2='245' stroke='#cccccc' /><text x='130' y='260' font-family='Arial' font-size='12' text-anchor='middle'>5</text><line x1='180' y1='240' x2='180' y2='245' stroke='#cccccc' /><text x='180' y='260' font-family='Arial' font-size='12' text-anchor='middle'>10</text><line x1='230' y1='240' x2='230' y2='245' stroke='#cccccc' /><text x='230' y='260' font-family='Arial' font-size='12' text-anchor='middle'>15</text><line x1='280' y1='240' x2='280' y2='245' stroke='#000000' /><text x='280' y='260' font-family='Arial' font-size='12' text-anchor='middle'>20</text><text x='45' y='145' font-family='Arial' font-size='13' text-anchor='middle' transform='rotate(-90,45,145)'>P, bar</text><text x='180' y='280' font-family='Arial' font-size='13' text-anchor='middle'>V, L</text><path d='M 80,77.1 L 163.1,77.1 Q 200,120 280,172.1' fill='none' stroke='#000000' stroke-width='1.5' /></svg>]]\\\\n\\\\nOption (B)\\\\n[[SVG: <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 300' width='100%' height='100%' style='background-color: #ffffff;'><text x='30' y='40' font-family='Arial' font-size='22' font-weight='bold'>(B)</text><line x1='80' y1='240' x2='280' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='80' y1='50' x2='80' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='280' y1='50' x2='280' y2='240' stroke='#cccccc' stroke-width='0.8' /><line x1='80' y1='50' x2='280' y2='50' stroke='#cccccc' stroke-width='0.8' /><line x1='75' y1='50' x2='80' y2='50' stroke='#000000' /><text x='70' y='54' font-family='Arial' font-size='12' text-anchor='end'>0.14</text><line x1='75' y1='77.1' x2='80' y2='77.1' stroke='#000000' /><text x='70' y='81.1' font-family='Arial' font-size='12' text-anchor='end'>0.12</text><line x1='75' y1='104.3' x2='80' y2='104.3' stroke='#000000' /><text x='70' y='108.3' font-family='Arial' font-size='12' text-anchor='end'>0.10</text><line x1='75' y1='131.4' x2='80' y2='131.4' stroke='#000000' /><text x='70' y='135.4' font-family='Arial' font-size='12' text-anchor='end'>0.08</text><line x1='75' y1='158.6' x2='80' y2='158.6' stroke='#000000' /><text x='70' y='162.6' font-family='Arial' font-size='12' text-anchor='end'>0.06</text><line x1='75' y1='185.7' x2='80' y2='185.7' stroke='#000000' /><text x='70' y='189.7' font-family='Arial' font-size='12' text-anchor='end'>0.04</text><line x1='75' y1='212.9' x2='80' y2='212.9' stroke='#000000' /><text x='70' y='216.9' font-family='Arial' font-size='12' text-anchor='end'>0.02</text><line x1='75' y1='240' x2='80' y2='240' stroke='#000000' /><text x='70' y='244' font-family='Arial' font-size='12' text-anchor='end'>0.00</text><line x1='80' y1='240' x2='80' y2='245' stroke='#000000' /><text x='80' y='260' font-family='Arial' font-size='12' text-anchor='middle'>0</text><line x1='130' y1='240' x2='130' y2='245' stroke='#cccccc' /><text x='130' y='260' font-family='Arial' font-size='12' text-anchor='middle'>5</text><line x1='180' y1='240' x2='180' y2='245' stroke='#cccccc' /><text x='180' y='260' font-family='Arial' font-size='12' text-anchor='middle'>10</text><line x1='230' y1='240' x2='230' y2='245' stroke='#cccccc' /><text x='230' y='260' font-family='Arial' font-size='12' text-anchor='middle'>15</text><line x1='280' y1='240' x2='280' y2='245' stroke='#000000' /><text x='280' y='260' font-family='Arial' font-size='12' text-anchor='middle'>20</text><text x='45' y='145' font-family='Arial' font-size='13' text-anchor='middle' transform='rotate(-90,45,145)'>P, bar</text><text x='180' y='280' font-family='Arial' font-size='13' text-anchor='middle'>V, L</text><path d='M 80,240 L 163.1,77.1 L 280,77.1' fill='none' stroke='#000000' stroke-width='1.5' /></svg>]]\\\\n\\\\nOption (C)\\\\n[[SVG: <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 300' width='100%' height='100%' style='background-color: #ffffff;'><text x='30' y='40' font-family='Arial' font-size='22' font-weight='bold'>(C)</text><line x1='80' y1='240' x2='280' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='80' y1='50' x2='80' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='280' y1='50' x2='280' y2='240' stroke='#cccccc' stroke-width='0.8' /><line x1='80' y1='50' x2='280' y2='50' stroke='#cccccc' stroke-width='0.8' /><line x1='75' y1='50' x2='80' y2='50' stroke='#000000' /><text x='70' y='54' font-family='Arial' font-size='12' text-anchor='end'>0.14</text><line x1='75' y1='77.1' x2='80' y2='77.1' stroke='#000000' /><text x='70' y='81.1' font-family='Arial' font-size='12' text-anchor='end'>0.12</text><line x1='75' y1='104.3' x2='80' y2='104.3' stroke='#000000' /><text x='70' y='108.3' font-family='Arial' font-size='12' text-anchor='end'>0.10</text><line x1='75' y1='131.4' x2='80' y2='131.4' stroke='#000000' /><text x='70' y='135.4' font-family='Arial' font-size='12' text-anchor='end'>0.08</text><line x1='75' y1='158.6' x2='80' y2='158.6' stroke='#000000' /><text x='70' y='162.6' font-family='Arial' font-size='12' text-anchor='end'>0.06</text><line x1='75' y1='185.7' x2='80' y2='185.7' stroke='#000000' /><text x='70' y='189.7' font-family='Arial' font-size='12' text-anchor='end'>0.04</text><line x1='75' y1='212.9' x2='80' y2='212.9' stroke='#000000' /><text x='70' y='216.9' font-family='Arial' font-size='12' text-anchor='end'>0.02</text><line x1='75' y1='240' x2='80' y2='240' stroke='#000000' /><text x='70' y='244' font-family='Arial' font-size='12' text-anchor='end'>0.00</text><line x1='80' y1='240' x2='80' y2='245' stroke='#000000' /><text x='80' y='260' font-family='Arial' font-size='12' text-anchor='middle'>0</text><line x1='130' y1='240' x2='130' y2='245' stroke='#cccccc' /><text x='130' y='260' font-family='Arial' font-size='12' text-anchor='middle'>5</text><line x1='180' y1='240' x2='180' y2='245' stroke='#cccccc' /><text x='180' y='260' font-family='Arial' font-size='12' text-anchor='middle'>10</text><line x1='230' y1='240' x2='230' y2='245' stroke='#cccccc' /><text x='230' y='260' font-family='Arial' font-size='12' text-anchor='middle'>15</text><line x1='280' y1='240' x2='280' y2='245' stroke='#000000' /><text x='280' y='260' font-family='Arial' font-size='12' text-anchor='middle'>20</text><text x='45' y='145' font-family='Arial' font-size='13' text-anchor='middle' transform='rotate(-90,45,145)'>P, bar</text><text x='180' y='280' font-family='Arial' font-size='13' text-anchor='middle'>V, L</text><line x1='80' y1='77.1' x2='280' y2='77.1' stroke='#000000' stroke-width='1.5' /></svg>]]\\\\n\\\\nOption (D)\\\\n[[SVG: <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 300' width='100%' height='100%' style='background-color: #ffffff;'><text x='30' y='40' font-family='Arial' font-size='22' font-weight='bold'>(D)</text><line x1='80' y1='240' x2='280' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='80' y1='50' x2='80' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='280' y1='50' x2='280' y2='240' stroke='#cccccc' stroke-width='0.8' /><line x1='80' y1='50' x2='280' y2='50' stroke='#cccccc' stroke-width='0.8' /><line x1='75' y1='50' x2='80' y2='50' stroke='#000000' /><text x='70' y='54' font-family='Arial' font-size='12' text-anchor='end'>0.14</text><line x1='75' y1='77.1' x2='80' y2='77.1' stroke='#000000' /><text x='70' y='81.1' font-family='Arial' font-size='12' text-anchor='end'>0.12</text><line x1='75' y1='104.3' x2='80' y2='104.3' stroke='#000000' /><text x='70' y='108.3' font-family='Arial' font-size='12' text-anchor='end'>0.10</text><line x1='75' y1='131.4' x2='80' y2='131.4' stroke='#000000' /><text x='70' y='135.4' font-family='Arial' font-size='12' text-anchor='end'>0.08</text><line x1='75' y1='158.6' x2='80' y2='158.6' stroke='#000000' /><text x='70' y='162.6' font-family='Arial' font-size='12' text-anchor='end'>0.06</text><line x1='75' y1='185.7' x2='80' y2='185.7' stroke='#000000' /><text x='70' y='189.7' font-family='Arial' font-size='12' text-anchor='end'>0.04</text><line x1='75' y1='212.9' x2='80' y2='212.9' stroke='#000000' /><text x='70' y='216.9' font-family='Arial' font-size='12' text-anchor='end'>0.02</text><line x1='75' y1='240' x2='80' y2='240' stroke='#000000' /><text x='70' y='244' font-family='Arial' font-size='12' text-anchor='end'>0.00</text><line x1='80' y1='240' x2='80' y2='245' stroke='#000000' /><text x='80' y='260' font-family='Arial' font-size='12' text-anchor='middle'>0</text><line x1='130' y1='240' x2='130' y2='245' stroke='#cccccc' /><text x='130' y='260' font-family='Arial' font-size='12' text-anchor='middle'>5</text><line x1='180' y1='240' x2='180' y2='245' stroke='#cccccc' /><text x='180' y='260' font-family='Arial' font-size='12' text-anchor='middle'>10</text><line x1='230' y1='240' x2='230' y2='245' stroke='#cccccc' /><text x='230' y='260' font-family='Arial' font-size='12' text-anchor='middle'>15</text><line x1='280' y1='240' x2='280' y2='245' stroke='#000000' /><text x='280' y='260' font-family='Arial' font-size='12' text-anchor='middle'>20</text><text x='45' y='145' font-family='Arial' font-size='13' text-anchor='middle' transform='rotate(-90,45,145)'>P, bar</text><text x='180' y='280' font-family='Arial' font-size='13' text-anchor='middle'>V, L</text><path d='M 80,240 L 163.1,82 Q 200,120 280,172.1' fill='none' stroke='#000000' stroke-width='1.5' /></svg>]]",
-    "type": "multiple_choice",
-    "options": ["A", "B", "C", "D"],
+    "question": "Solid calcium carbonate is in equilibrium with calcium oxide and carbon dioxide, with $K_{\\\\text{p}} = 0.12$ bar at $1200$ K.\\\\n\\\\n$$\\\\text{CaCO}_3(s) \\\\rightleftharpoons \\\\text{CaO}(s) + \\\\text{CO}_2(g) \\\\quad K_{\\\\text{eq}} = 0.12\\\\text{ at } 1200\\\\text{ K}$$\\\\n\\\\nA $1.00$ g sample of $\\\\text{CaCO}_3$ ($M = 100.09$) is placed in an evacuated piston which is allowed to equilibrate at $1200$ K. How will the pressure in the piston after equilibrium is attained depend on the volume of the piston?", "type": "multiple_choice",
+    "options": [
+      "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 300' width='100%' height='100%' style='background-color: #ffffff;'><text x='30' y='40' font-family='Arial' font-size='22' font-weight='bold'>(A)</text><line x1='80' y1='240' x2='280' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='80' y1='50' x2='80' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='280' y1='50' x2='280' y2='240' stroke='#cccccc' stroke-width='0.8' /><line x1='80' y1='50' x2='280' y2='50' stroke='#cccccc' stroke-width='0.8' /><line x1='75' y1='50' x2='80' y2='50' stroke='#000000' /><text x='70' y='54' font-family='Arial' font-size='12' text-anchor='end'>0.14</text><line x1='75' y1='77.1' x2='80' y2='77.1' stroke='#000000' /><text x='70' y='81.1' font-family='Arial' font-size='12' text-anchor='end'>0.12</text><line x1='75' y1='104.3' x2='80' y2='104.3' stroke='#000000' /><text x='70' y='108.3' font-family='Arial' font-size='12' text-anchor='end'>0.10</text><line x1='75' y1='131.4' x2='80' y2='131.4' stroke='#000000' /><text x='70' y='135.4' font-family='Arial' font-size='12' text-anchor='end'>0.08</text><line x1='75' y1='158.6' x2='80' y2='158.6' stroke='#000000' /><text x='70' y='162.6' font-family='Arial' font-size='12' text-anchor='end'>0.06</text><line x1='75' y1='185.7' x2='80' y2='185.7' stroke='#000000' /><text x='70' y='189.7' font-family='Arial' font-size='12' text-anchor='end'>0.04</text><line x1='75' y1='212.9' x2='80' y2='212.9' stroke='#000000' /><text x='70' y='216.9' font-family='Arial' font-size='12' text-anchor='end'>0.02</text><line x1='75' y1='240' x2='80' y2='240' stroke='#000000' /><text x='70' y='244' font-family='Arial' font-size='12' text-anchor='end'>0.00</text><line x1='80' y1='240' x2='80' y2='245' stroke='#000000' /><text x='80' y='260' font-family='Arial' font-size='12' text-anchor='middle'>0</text><line x1='130' y1='240' x2='130' y2='245' stroke='#cccccc' /><text x='130' y='260' font-family='Arial' font-size='12' text-anchor='middle'>5</text><line x1='180' y1='240' x2='180' y2='245' stroke='#cccccc' /><text x='180' y='260' font-family='Arial' font-size='12' text-anchor='middle'>10</text><line x1='230' y1='240' x2='230' y2='245' stroke='#cccccc' /><text x='230' y='260' font-family='Arial' font-size='12' text-anchor='middle'>15</text><line x1='280' y1='240' x2='280' y2='245' stroke='#000000' /><text x='280' y='260' font-family='Arial' font-size='12' text-anchor='middle'>20</text><text x='45' y='145' font-family='Arial' font-size='13' text-anchor='middle' transform='rotate(-90,45,145)'>P, bar</text><text x='180' y='280' font-family='Arial' font-size='13' text-anchor='middle'>V, L</text><path d='M 80,77.1 L 163.1,77.1 Q 200,120 280,172.1' fill='none' stroke='#000000' stroke-width='1.5' /></svg>",
+      "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 300' width='100%' height='100%' style='background-color: #ffffff;'><text x='30' y='40' font-family='Arial' font-size='22' font-weight='bold'>(B)</text><line x1='80' y1='240' x2='280' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='80' y1='50' x2='80' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='280' y1='50' x2='280' y2='240' stroke='#cccccc' stroke-width='0.8' /><line x1='80' y1='50' x2='280' y2='50' stroke='#cccccc' stroke-width='0.8' /><line x1='75' y1='50' x2='80' y2='50' stroke='#000000' /><text x='70' y='54' font-family='Arial' font-size='12' text-anchor='end'>0.14</text><line x1='75' y1='77.1' x2='80' y2='77.1' stroke='#000000' /><text x='70' y='81.1' font-family='Arial' font-size='12' text-anchor='end'>0.12</text><line x1='75' y1='104.3' x2='80' y2='104.3' stroke='#000000' /><text x='70' y='108.3' font-family='Arial' font-size='12' text-anchor='end'>0.10</text><line x1='75' y1='131.4' x2='80' y2='131.4' stroke='#000000' /><text x='70' y='135.4' font-family='Arial' font-size='12' text-anchor='end'>0.08</text><line x1='75' y1='158.6' x2='80' y2='158.6' stroke='#000000' /><text x='70' y='162.6' font-family='Arial' font-size='12' text-anchor='end'>0.06</text><line x1='75' y1='185.7' x2='80' y2='185.7' stroke='#000000' /><text x='70' y='189.7' font-family='Arial' font-size='12' text-anchor='end'>0.04</text><line x1='75' y1='212.9' x2='80' y2='212.9' stroke='#000000' /><text x='70' y='216.9' font-family='Arial' font-size='12' text-anchor='end'>0.02</text><line x1='75' y1='240' x2='80' y2='240' stroke='#000000' /><text x='70' y='244' font-family='Arial' font-size='12' text-anchor='end'>0.00</text><line x1='80' y1='240' x2='80' y2='245' stroke='#000000' /><text x='80' y='260' font-family='Arial' font-size='12' text-anchor='middle'>0</text><line x1='130' y1='240' x2='130' y2='245' stroke='#cccccc' /><text x='130' y='260' font-family='Arial' font-size='12' text-anchor='middle'>5</text><line x1='180' y1='240' x2='180' y2='245' stroke='#cccccc' /><text x='180' y='260' font-family='Arial' font-size='12' text-anchor='middle'>10</text><line x1='230' y1='240' x2='230' y2='245' stroke='#cccccc' /><text x='230' y='260' font-family='Arial' font-size='12' text-anchor='middle'>15</text><line x1='280' y1='240' x2='280' y2='245' stroke='#000000' /><text x='280' y='260' font-family='Arial' font-size='12' text-anchor='middle'>20</text><text x='45' y='145' font-family='Arial' font-size='13' text-anchor='middle' transform='rotate(-90,45,145)'>P, bar</text><text x='180' y='280' font-family='Arial' font-size='13' text-anchor='middle'>V, L</text><path d='M 80,240 L 163.1,77.1 L 280,77.1' fill='none' stroke='#000000' stroke-width='1.5' /></svg>",
+      "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 300' width='100%' height='100%' style='background-color: #ffffff;'><text x='30' y='40' font-family='Arial' font-size='22' font-weight='bold'>(C)</text><line x1='80' y1='240' x2='280' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='80' y1='50' x2='80' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='280' y1='50' x2='280' y2='240' stroke='#cccccc' stroke-width='0.8' /><line x1='80' y1='50' x2='280' y2='50' stroke='#cccccc' stroke-width='0.8' /><line x1='75' y1='50' x2='80' y2='50' stroke='#000000' /><text x='70' y='54' font-family='Arial' font-size='12' text-anchor='end'>0.14</text><line x1='75' y1='77.1' x2='80' y2='77.1' stroke='#000000' /><text x='70' y='81.1' font-family='Arial' font-size='12' text-anchor='end'>0.12</text><line x1='75' y1='104.3' x2='80' y2='104.3' stroke='#000000' /><text x='70' y='108.3' font-family='Arial' font-size='12' text-anchor='end'>0.10</text><line x1='75' y1='131.4' x2='80' y2='131.4' stroke='#000000' /><text x='70' y='135.4' font-family='Arial' font-size='12' text-anchor='end'>0.08</text><line x1='75' y1='158.6' x2='80' y2='158.6' stroke='#000000' /><text x='70' y='162.6' font-family='Arial' font-size='12' text-anchor='end'>0.06</text><line x1='75' y1='185.7' x2='80' y2='185.7' stroke='#000000' /><text x='70' y='189.7' font-family='Arial' font-size='12' text-anchor='end'>0.04</text><line x1='75' y1='212.9' x2='80' y2='212.9' stroke='#000000' /><text x='70' y='216.9' font-family='Arial' font-size='12' text-anchor='end'>0.02</text><line x1='75' y1='240' x2='80' y2='240' stroke='#000000' /><text x='70' y='244' font-family='Arial' font-size='12' text-anchor='end'>0.00</text><line x1='80' y1='240' x2='80' y2='245' stroke='#000000' /><text x='80' y='260' font-family='Arial' font-size='12' text-anchor='middle'>0</text><line x1='130' y1='240' x2='130' y2='245' stroke='#cccccc' /><text x='130' y='260' font-family='Arial' font-size='12' text-anchor='middle'>5</text><line x1='180' y1='240' x2='180' y2='245' stroke='#cccccc' /><text x='180' y='260' font-family='Arial' font-size='12' text-anchor='middle'>10</text><line x1='230' y1='240' x2='230' y2='245' stroke='#cccccc' /><text x='230' y='260' font-family='Arial' font-size='12' text-anchor='middle'>15</text><line x1='280' y1='240' x2='280' y2='245' stroke='#000000' /><text x='280' y='260' font-family='Arial' font-size='12' text-anchor='middle'>20</text><text x='45' y='145' font-family='Arial' font-size='13' text-anchor='middle' transform='rotate(-90,45,145)'>P, bar</text><text x='180' y='280' font-family='Arial' font-size='13' text-anchor='middle'>V, L</text><line x1='80' y1='77.1' x2='280' y2='77.1' stroke='#000000' stroke-width='1.5' /></svg>",
+      "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 300' width='100%' height='100%' style='background-color: #ffffff;'><text x='30' y='40' font-family='Arial' font-size='22' font-weight='bold'>(D)</text><line x1='80' y1='240' x2='280' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='80' y1='50' x2='80' y2='240' stroke='#000000' stroke-width='1.2' /><line x1='280' y1='50' x2='280' y2='240' stroke='#cccccc' stroke-width='0.8' /><line x1='80' y1='50' x2='280' y2='50' stroke='#cccccc' stroke-width='0.8' /><line x1='75' y1='50' x2='80' y2='50' stroke='#000000' /><text x='70' y='54' font-family='Arial' font-size='12' text-anchor='end'>0.14</text><line x1='75' y1='77.1' x2='80' y2='77.1' stroke='#000000' /><text x='70' y='81.1' font-family='Arial' font-size='12' text-anchor='end'>0.12</text><line x1='75' y1='104.3' x2='80' y2='104.3' stroke='#000000' /><text x='70' y='108.3' font-family='Arial' font-size='12' text-anchor='end'>0.10</text><line x1='75' y1='131.4' x2='80' y2='131.4' stroke='#000000' /><text x='70' y='135.4' font-family='Arial' font-size='12' text-anchor='end'>0.08</text><line x1='75' y1='158.6' x2='80' y2='158.6' stroke='#000000' /><text x='70' y='162.6' font-family='Arial' font-size='12' text-anchor='end'>0.06</text><line x1='75' y1='185.7' x2='80' y2='185.7' stroke='#000000' /><text x='70' y='189.7' font-family='Arial' font-size='12' text-anchor='end'>0.04</text><line x1='75' y1='212.9' x2='80' y2='212.9' stroke='#000000' /><text x='70' y='216.9' font-family='Arial' font-size='12' text-anchor='end'>0.02</text><line x1='75' y1='240' x2='80' y2='240' stroke='#000000' /><text x='70' y='244' font-family='Arial' font-size='12' text-anchor='end'>0.00</text><line x1='80' y1='240' x2='80' y2='245' stroke='#000000' /><text x='80' y='260' font-family='Arial' font-size='12' text-anchor='middle'>0</text><line x1='130' y1='240' x2='130' y2='245' stroke='#cccccc' /><text x='130' y='260' font-family='Arial' font-size='12' text-anchor='middle'>5</text><line x1='180' y1='240' x2='180' y2='245' stroke='#cccccc' /><text x='180' y='260' font-family='Arial' font-size='12' text-anchor='middle'>10</text><line x1='230' y1='240' x2='230' y2='245' stroke='#cccccc' /><text x='230' y='260' font-family='Arial' font-size='12' text-anchor='middle'>15</text><line x1='280' y1='240' x2='280' y2='245' stroke='#000000' /><text x='280' y='260' font-family='Arial' font-size='12' text-anchor='middle'>20</text><text x='45' y='145' font-family='Arial' font-size='13' text-anchor='middle' transform='rotate(-90,45,145)'>P, bar</text><text x='180' y='280' font-family='Arial' font-size='13' text-anchor='middle'>V, L</text><path d='M 80,240 L 163.1,82 Q 200,120 280,172.1' fill='none' stroke='#000000' stroke-width='1.5' /></svg>"
+    ],
     "answer": "A",
     "difficulty": 5,
-    "detailedSolution": "Since the decomposition reaction $\\\\text{CaCO}_3(s) \\\\rightleftharpoons \\\\text{CaO}(s) + \\\\text{CO}_2(g)$ has $K_{\\\\text{p}} = P_{\\\\text{CO}_2} = 0.12$ bar, the pressure of $\\\\text{CO}_2$ remains constant at $0.12$ bar as long as both solid phases are present. The maximum volume where both solid phases exist is $V = \\\\frac{n R T}{P} = \\\\frac{(1.00 \\\\text{ g}/100.09 \\\\text{ g mol}^{-1}) \\\\times 0.08314 \\\\text{ L bar mol}^{-1}\\\\text{ K}^{-1} \\\\times 1200 \\\\text{ K}}{0.12 \\\\text{ bar}} \\\\approx 8.3$ L. Beyond this volume, all $\\\\text{CaCO}_3(s)$ decomposes, and the pressure decreases as $P \\\\propto 1/V$ (Boyle's law). This behavior is correctly represented in Graph (A)."
   },
   {
     "id": "chem_ex5",
@@ -143,7 +255,6 @@ const chemistryExemplars = [
     ],
     "answer": "B",
     "difficulty": 5,
-    "detailedSolution": "For $\\\\ce{CdS}$ to precipitate quantitatively ($>99.9\\\\%$), $[\\\\ce{Cd^{2+}}] < 1.0 \\\\times 10^{-4}$ M. Thus, $[\\\\ce{S^{2-}}] \\\\ge \\\\frac{K_{\\\\text{sp}}(\\\\text{CdS})}{1.0 \\\\times 10^{-4}} = 1.0 \\\\times 10^{-23}$ M.\\\\n\\\\nFor $\\\\ce{Tl2S}$ to NOT precipitate at all (meaning $[\\\\ce{Tl^+}] = 0.10$ M remains in solution), we must have $[\\\\ce{Tl^+}]^2 [\\\\ce{S^{2-}}] < K_{\\\\text{sp}}(\\\\ce{Tl2S}) \\\\implies (0.10)^2 [\\\\ce{S^{2-}}] < 6.0 \\\\times 10^{-22} \\\\implies [\\\\ce{S^{2-}}] < 6.0 \\\\times 10^{-20}$ M.\\\\n\\\\nThus, $1.0 \\\\times 10^{-23} \\\\le [\\\\ce{S^{2-}}] < 6.0 \\\\times 10^{-20}$ M.\\\\n\\\\nUsing the acid dissociation constants for $\\\\ce{H2S}$:\\\\n\\\\n$$K_{\\\\text{a1}} K_{\\\\text{a2}} = \\\\frac{[\\\\text{H}^+]^2 [\\\\ce{S^{2-}}]}{[\\\\ce{H2S}]}$$\\\\n\\\\n$$8.9 \\\\times 10^{-8} \\\\times 1.0 \\\\times 10^{-19} = 8.9 \\\\times 10^{-27} = \\\\frac{[\\\\text{H}^+]^2 [\\\\ce{S^{2-}}]}{0.1}$$\\\\n\\\\n$$[\\\\text{H}^+]^2 [\\\\ce{S^{2-}}] = 8.9 \\\\times 10^{-28}$$\\\\n\\\\n$$\\\\text{For } [\\\\ce{S^{2-}}] = 1.0 \\\\times 10^{-23} \\\\implies [\\\\text{H}^+]^2 = 8.9 \\\\times 10^{-5} \\\\implies [\\\\text{H}^+] \\\\approx 9.4 \\\\times 10^{-3} \\\\implies \\\\text{pH} \\\\approx 2.03$$\\\\n$$\\\\text{For } [\\\\ce{S^{2-}}] = 6.0 \\\\times 10^{-20} \\\\implies [\\\\text{H}^+]^2 = 1.48 \\\\times 10^{-8} \\\\implies [\\\\text{H}^+] \\\\approx 1.2 \\\\times 10^{-4} \\\\implies \\\\text{pH} \\\\approx 3.91$$\\\\n\\\\nTherefore, the pH must be between approximately $2.0$ and $3.9$ to selectively and quantitatively precipitate cadmium while keeping thallium(I) in solution."
   },
   {
     "id": "chem_ex6",
@@ -157,8 +268,7 @@ const chemistryExemplars = [
       "The packing density of the metals increases down the group as the lattice changes from simple cubic to body-centered cubic to face-centered cubic."
     ],
     "answer": "A",
-    "difficulty": 5,
-    "detailedSolution": "For transition metals, melting points depend strongly on the strength of metallic bonding, which has a significant covalent component due to the sharing of d-electrons. As we move down Group 6 (Cr to Mo to W), the 3d, 4d, and 5d orbitals become larger and more diffuse, resulting in better overlap and stronger covalent contribution to the metallic bonding in the solid state. This leads to a higher melting point."
+    "difficulty": 4,
   },
   {
     "id": "chem_ex7",
@@ -173,7 +283,6 @@ const chemistryExemplars = [
     ],
     "answer": "B",
     "difficulty": 5,
-    "detailedSolution": "For Statement I: Carbon dioxide is a gas and silicon dioxide is a network solid with extremely strong Si-O single bonds. Silicon dioxide is much more thermodynamically stable than carbon dioxide relative to the elemental state, meaning $\\\\ce{SiO2}$ is much harder to reduce than $\\\\ce{CO2}$, so $E^\\\\circ(\\\\text{Si}) < E^\\\\circ(\\\\text{C})$. Thus, Statement I is false.\\\\n\\\\nFor Statement II: Down group 14, the +4 oxidation state becomes less stable relative to the +2 state, and for lead, the +4 state ($\\\\ce{PbO2}$) is extremely powerful as an oxidizing agent (it is easily reduced to $\\\\ce{Pb^{2+}}$ or $\\\\ce{Pb}(s)$) due to the inert pair effect. Thus, $\\\\ce{PbO2}$ is reduced much more easily than $\\\\ce{SnO2}$, so $E^\\\\circ(\\\\text{Sn}) < E^\\\\circ(\\\\text{Pb})$. Thus, Statement II is correct. The answer is (B)."
   },
   {
     "id": "chem_ex8",
@@ -182,8 +291,7 @@ const chemistryExemplars = [
     "type": "free_response",
     "options": [],
     "answer": "",
-    "difficulty": 5,
-    "detailedSolution": "(a) $\\\\Delta G^\\\\circ_f = \\\\Delta H^\\\\circ_f - T\\\\Delta S^\\\\circ_f$. For formation of $\\\\ce{LaNi5}(s)$: $\\\\ce{La}(s) + 5\\\\ce{Ni}(s) \\\\rightarrow \\\\ce{LaNi5}(s)$. $\\\\Delta H^\\\\circ_f = -162$ kJ/mol. $\\\\Delta S^\\\\circ_f = 217 - [56.9 + 5(29.9)] = 217 - 206.4 = 10.6$ J/(mol K). Thus, $\\\\Delta G^\\\\circ_f = -162 - 298.15(0.0106) = -165.2$ kJ/mol.\\\\n\\\\n(b) Maximum degree of hydrogenation is approximately $0.43$.\\\\n\\\\n(c) At the equilibrium plateau, the reaction is $\\\\frac{1}{y} \\\\alpha\\\\text{-LaNi5H}_{0.43}(s) + \\\\frac{1}{2} \\\\ce{H2}(g) \\\\rightleftharpoons \\\\frac{1}{y} \\\\beta\\\\text{-LaNi5H}_{6.39}(s)$, where $y = 6.39 - 0.43 = 5.96$. Since solid phases are in equilibrium, the equilibrium constant is $K_p = P_{\\\\ce{H2}}^{-1/2}$. $\\\\Delta G^\\\\circ_{rxn} = -RT \\\\ln K_p = \\\\frac{1}{2} RT \\\\ln P_{\\\\ce{H2}}$.\\\\n\\\\n(d) Using the van 't Hoff equation and $\\\\Delta G^\\\\circ$ values at different temperatures, we can determine the standard enthalpy and entropy of the transition, and from there calculate $\\\\Delta H^\\\\circ_f$ and $S^\\\\circ$ of $\\\\beta\\\\text{-LaNi5H}_{6.39}(s)$."
+    "difficulty": 6,
   },
   {
     "id": "chem_ex9",
@@ -193,7 +301,6 @@ const chemistryExemplars = [
     "options": ["A", "B", "C", "D"],
     "answer": "C",
     "difficulty": 5,
-    "detailedSolution": "The total dissolved silver concentration is the sum of free $\\\\text{Ag}^+$ and the complex $\\\\text{AgI2-}$. That is, $[\\\\text{Ag}_{\\\\text{total}}] = [\\\\text{Ag}^+] + [\\\\text{AgI2-}]$.\\nSince the solution is saturated with solid $\\\\text{AgI}(s)$, $[\\\\text{Ag}^+] = \\\\frac{K_{sp}}{[\\\\text{I}^-]}$.\\nThe formation of the complex ion is governed by: $\\\\text{Ag}^+ + 2\\\\text{I}^- \\\\rightleftharpoons \\\\text{AgI2-}$, with $K_f = \\\\frac{[\\\\text{AgI2-}]}{[\\\\text{Ag}^+][\\\\text{I}^-]^2}$.\\nSubstituting $[\\\\text{Ag}^+]$ gives: $[\\\\text{AgI2-}] = K_f K_{sp} [\\\\text{I}^-]$.\\nTherefore, $[\\\\text{Ag}_{\\\\text{total}}] = \\\\frac{K_{sp}}{[\\\\text{I}^-]} + K_f K_{sp} [\\\\text{I}^-]$.\\nIn terms of logarithms, at very low $[\\\\text{I}^-]$, the first term dominates, and $\\\\log [\\\\text{Ag}_{\\\\text{total}}] \\\\approx \\\\log K_{sp} - \\\\log [\\\\text{I}^-]$ (a line with slope -1).\\nAt very high $[\\\\text{I}^-]$, the second term dominates, and $\\\\log [\\\\text{Ag}_{\\\\text{total}}] \\\\approx \\\\log(K_f K_{sp}) + \\\\log [\\\\text{I}^-]$ (a line with slope +1).\\nThe graph of $\\\\log [\\\\text{Ag}_{\\\\text{total}}]$ vs $\\\\log [\\\\text{I}^-]$ is therefore a smooth concave curve that starts with a negative slope of -1, reaches a minimum, and then rises with a positive slope of +1. This is correctly shown in Graph (C)."
   },
   {
     "id": "chem_ex10",
@@ -207,8 +314,7 @@ const chemistryExemplars = [
       "Copper is deposited at a rate of 1 mol per 193000 C for a certain length of time, then the rate of copper deposition decreases."
     ],
     "answer": "C",
-    "difficulty": 5,
-    "detailedSolution": "The standard reduction potential for the reduction of $\\\\ce{Fe(CN)6^{3-}}$ to $\\\\ce{Fe(CN)6^{4-}}$ ($+0.370$ V) is higher than that for the reduction of $\\\\ce{Cu^{2+}}$ to $\\\\ce{Cu}(s)$ ($+0.337$ V). Therefore, $\\\\ce{Fe(CN)6^{3-}}$ is reduced first at the cathode. As long as there is a significant concentration of $\\\\ce{Fe(CN)6^{3-}}$ present near the electrode, the potential of the cathode will remain too high to allow the reduction of $\\\\ce{Cu^{2+}}$. Once the concentration of $\\\\ce{Fe(CN)6^{3-}}$ at the electrode drops to a very low level, the potential will shift more negative, allowing copper to begin depositing. Thus, no copper is deposited initially, and copper deposition begins only after a certain period of time. This corresponds to option (C)."
+    "difficulty": 6,
   },
   {
     "id": "chem_ex11",
@@ -222,8 +328,7 @@ const chemistryExemplars = [
       "The pH of the ammonium bicarbonate solution is higher because it contains only two-thirds as many total ions as the ammonium carbonate solution."
     ],
     "answer": "A",
-    "difficulty": 5,
-    "detailedSolution": "Ammonium carbonate contains two moles of the acidic $\\\\ce{NH4+}$ ion and one mole of the basic $\\\\ce{CO3^{2-}}$ ion per mole of compound, whereas ammonium bicarbonate contains one mole of $\\\\ce{NH4+}$ and one mole of $\\\\ce{HCO3-}$ per mole of compound. The carbonate ion ($\\\\ce{CO3^{2-}}$) has a much higher base dissociation constant ($K_b \\\\approx 2.1 \\\\times 10^{-4}$) than the bicarbonate ion ($\\\\ce{HCO3-}$, $K_b \\\\approx 2.2 \\\\times 10^{-8}$). Because bicarbonate is a much weaker base than carbonate, the pH of the ammonium bicarbonate solution is significantly lower than that of the ammonium carbonate solution, making (A) the correct choice."
+    "difficulty": 4,
   },
   {
     "id": "chem_ex12",
@@ -233,7 +338,6 @@ const chemistryExemplars = [
     "options": ["\\\\ce{CH_4}", "\\\\ce{C_2H_6}", "\\\\ce{C_3H_8}", "\\\\ce{C_4H_{10}}"],
     "answer": "C",
     "difficulty": 5,
-    "detailedSolution": "Calculate the moles of carbon and hydrogen atoms from the combustion products:\\n- Moles of C = 13.20 g / 44.01 g/mol = 0.300 mol\\n- Moles of H = 2 * (7.21 g / 18.02 g/mol) = 0.800 mol\\n\\nThe empirical formula is \\\\ce{C3H8} (empirical formula mass = 44.1 g/mol).\\n\\nNext, use the density at STP to calculate the molar mass of M:\\n- Molar Mass = 1.97 g/L * 22.4 L/mol = 44.1 g/mol.\\n\\nSince the molar mass matches the empirical formula mass, the molecular formula of M is \\\\ce{C3H8}."
   },
   {
     "id": "chem_ex13",
@@ -241,8 +345,7 @@ const chemistryExemplars = [
     "question": "A galvanic cell consists of a silver electrode in $1.0$ M \\\\ce{AgNO_3} and a copper electrode in $1.0$ M \\\\ce{Cu(NO_3)_2}. If the cell operates at $25$ °C under a constant current of $2.0$ A for $45$ minutes, calculate the change in mass of the copper electrode. ($E^\\circ(\\\\ce{Ag^+/Ag}) = +0.80$ V, $E^\\circ(\\\\ce{Cu^{2+}/Cu}) = +0.34$ V, $F = 96485$ C/mol).",
     "type": "short_answer",
     "answer": "1.78 g",
-    "difficulty": 6,
-    "detailedSolution": "Since $E^\\circ(\\\\ce{Ag^+/Ag}) = +0.80$ V is greater than $E^\\circ(\\\\ce{Cu^{2+}/Cu}) = +0.34$ V, silver ions are reduced at the cathode, and the copper electrode undergoes oxidation at the anode:\\n$$\\\\ce{Cu(s) -> Cu^{2+}(aq) + 2e^-}$$\\n\\nThis oxidation causes a decrease in the mass of the copper electrode. First, calculate the total charge Q passed through the cell:\\n- Q = I * t = 2.0 A * (45 min * 60 s/min) = 5400 C.\\n\\nConvert charge to moles of electrons:\\n- n(e^-) = 5400 C / 96485 C/mol = 0.0560 mol.\\n\\nFrom the stoichiometry of the anode reaction, 1 mole of copper is oxidized for every 2 moles of electrons:\\n- n(Cu) = 0.0560 mol / 2 = 0.0280 mol.\\n\\nCalculate the mass loss of the copper electrode:\\n- \\\\Delta m = 0.0280 mol * 63.55 g/mol = 1.78 g decrease."
+    "difficulty": 4,
   },
   {
     "id": "chem_ex14",
@@ -250,8 +353,7 @@ const chemistryExemplars = [
     "question": "A horizontal, adiabatic cylinder of total volume $4.0$ L is divided into two compartments by a frictionless, moveable adiabatic piston. Compartment A contains $1.0$ mol of an ideal monoatomic gas at an initial pressure of $3.0$ atm, and compartment B contains $1.0$ mol of the same gas at $1.0$ atm. If $450$ J of heat is slowly supplied to the gas in compartment A via an internal resistive heater, calculate the final equilibrium volume of compartment A.",
     "type": "free_response",
     "answer": "",
-    "difficulty": 9,
-    "detailedSolution": "Let initial states be $P_{A0} = 3.0$ atm, $V_{A0} = 1.0$ L and $P_{B0} = 1.0$ atm, $V_{B0} = 3.0$ L. For compartment B, the compression is reversible and adiabatic: $P_f V_{Bf}^{5/3} = P_{B0} V_{B0}^{5/3}$ where $\\\\gamma = 5/3$. Under equilibrium, final pressures are equal: $P_{Af} = P_{Bf} = P_f$.\\n\\nFor compartment B: $P_f V_{Bf}^{5/3} = 1.0 * 3.0^{5/3} = 6.24$. Using the first law for the total system, the total work done is zero (exterior walls are rigid/adiabatic): $\\\\Delta U_A + \\\\Delta U_B = Q = 450$ J.\\n\\nFor monoatomic gases, $\\\\Delta U = 1.5 \\\\Delta(PV)$. Thus, $1.5 (P_f V_{Af} - P_{A0} V_{A0}) + 1.5 (P_f V_{Bf} - P_{B0} V_{B0}) = Q$.\\n\\nSubstituting values and using $V_{Af} + V_{Bf} = 4.0$ L, we solve the system of equations. Evaluating $V_{Af} = 2.0$ L yields $V_{Bf} = 2.0$ L, and $P_f = 1.0 * (3.0/2.0)^{5/3} = 1.97$ atm. The energy equation is satisfied exactly by these parameters for $Q = 450$ J. The final volume of compartment A is therefore $2.0$ L."
+    "difficulty": 7,
   }
 ];
 
@@ -456,14 +558,7 @@ export default async function handler(req, res) {
       constraints = `
 Follow these strict Olympiad Design Philosophies:
 
-1. Novelty & "Invisible Traps"
-- Create highly original questions requiring first-principles reasoning over template-matching.
-- Every problem must center on a non-obvious conceptual trick or subtle breakdown of a standard assumption. The user should be tricked into thinking the wrong way, overlooking something.
-- Keep the question text entirely neutral and objective — do NOT hint at the solution or mention the specific conceptual trick, trap, or method to use (e.g. do not say "taking into account the ionization of water" or "assume non-ideal behavior"). For example, instead of: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C, taking into account the ionization of water", write: "Calculate the pH of a $1.00 \\times 10^{-8}$ M aqueous solution of $\\ce{HCl}$ at $25 ^{\\circ}$ C".
-- Incorporate a deceptive path: the most common rote shortcut should yield a value matching one incorrect distractor.
-- No question should be like any other question seen before.
-
-2. Advanced Design & Difficulty Criteria
+1. Advanced Design & Difficulty Criteria
 - Multi-Topic Coupling: Require simultaneous application of disparate principles (e.g., coupling sequences with modular arithmetic and pigeonhole, or geometry with number theory).
 - Multi-Step Cascades: Output of one step forms input of the next, without explicit prompting on intermediates.
 - Subtle Nuances: Test edge cases, domain restrictions, degeneracy, boundary conditions, off-by-one errors.
@@ -503,7 +598,13 @@ Difficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest I
       constraints = `
 Follow these strict Olympiad Design Philosophies:
 
-1. SURPRISING PREMISE DIRECTIVE: Every question should ideally open from a counterintuitive, puzzling, or surprising premise — a real experimental observation, an anomalous result, or a system that behaves differently from naive expectation. Avoid generic lab-exercise framings ("A student dissolves...", "A block is placed on a surface..."). Instead, ground the question in a specific, vivid scenario that demands explanation.
+1. Advanced Design & Difficulty Criteria
+- Multi-Topic Coupling: Require simultaneous application of disparate physical principles (e.g., thermodynamic cycle with magnetic induction, electrostatics with rotational dynamics, spring-mass with RC circuit via EM induction).
+- Multi-Step Cascades: Output of one step forms input of the next (e.g., find charge distribution → compute E-field → integrate for potential energy → apply energy conservation).
+- Subtle Nuances: Test non-inertial frames, static-to-kinetic friction transitions, non-obvious geometric constraints, cases where small-angle approximation breaks down.
+- Rigor: Require setting up and solving differential equations, non-trivial integrations, perturbation methods.
+- Novel Context: Present physics in unfamiliar frameworks (astrophysical systems, atmospheric phenomena, biological mechanics).
+- SURPRISING PREMISE DIRECTIVE: Every question should ideally open from a counterintuitive, puzzling, or surprising premise — a real experimental observation, an anomalous result, or a system that behaves differently from naive expectation. Avoid generic lab-exercise framings ("A student dissolves...", "A block is placed on a surface..."). Instead, ground the question in a specific, vivid scenario that demands explanation.
 
 2. Syllabus Boundaries
 - Difficulty 1-2 (AP Chemistry): Atomic Structure and Properties, Compound Structure and Properties (bonds), States of Matter/Solutions/Intermolecular forces, Chemical reactions, kinetics, Thermochemistry, Equilibrium, Acids and Bases, Electrochemistry
@@ -512,8 +613,7 @@ Follow these strict Olympiad Design Philosophies:
 - Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high school knowldge (e.g. simple spectroscopy, organic chemistry mechanisms). You can also bring in more advanced knowledge, but it must be on a first-principles approach: you have to introduce the new concepts/ideas the student should not already know as a high school student.
 
 3. SMILES: Use only for complex organic molecules or coordination complexes. Use LaTeX for all equations, formulas, units, and variables.
-
-4. SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
+   SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
 
 Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO Nationals, 10=hardest IChO.
 `;
@@ -571,9 +671,9 @@ ${mistakeAnalysis}
 
 ${constraints}
 
-1. For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
+4. For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 
-2. ***Backward Chaining Generation Methodology (CRITICAL)***
+5. ***Backward Chaining Generation Methodology (CRITICAL)***
 You must generate every question using a backward chaining thought process before outputting the final problem:
 
 Use a backward-chaining thought process to generate each question step-by-step, ensuring maximum uniqueness and originality:
@@ -595,7 +695,7 @@ Here is an example (for chemistry):
 
 **CRITICAL**: Ensure the problem texts do not hint at the traps or solution - keep those in your reasoning, not in the test.***
 
-3. ***Novelty & "Invisible Traps" (Subtle Conceptual Bottlenecks)***
+6. ***Novelty & "Invisible Traps" (Subtle Conceptual Bottlenecks)***
 
 * Banish stock, predictable questions that can be solved by memory or template-matching. The questions should be completely new and original.
 * The question text must remain entirely neutral. NEVER include hints, warnings, or clarifying instructions (e.g., "Do not assume...", "Account for...", "Do not rely on..."). NEVER tell the user what equation to use, or hint to consider thermodynamics vs kinetic control.
@@ -610,17 +710,17 @@ ANTI-TEMPLATE DIRECTIVE: A problem is a forbidden template if it exhibits any of
 - Generic framing: the question could have been written by any textbook author without any real-world or experimental motivation.
 Any question matching one or more of these patterns must be redesigned before finalising.
 
-4. ***Difficulty-Dependent Syllabus Boundaries***
+7. ***Difficulty-Dependent Syllabus Boundaries***
 
 * Maintain the proper scope appropriate to the test (corresponding to the syllabus boundaries) but test to maximum depth.6. ANSWER-FORM VARIATION: Rotate the structural form of what the answer requires across questions in the same exam. Do not produce multiple questions that all ask for the same type of quantity (e.g., all asking for a final numerical value, or all asking "which of the following is correct"). Include variety such as: a question whose answer is a ratio or dimensionless quantity derived from multiple steps; a question that requires identifying which piece of given information is insufficient; a question where the student must recognise that the naive calculation gives the wrong answer and explain why; a question whose answer is a qualitative ranking or ordering rather than a single value. 
 
 
-5. ***MANDATORY ADAPTIVE WEAKNESS-TARGETING DIRECTIVE:***
+8. ***MANDATORY ADAPTIVE WEAKNESS-TARGETING DIRECTIVE:***
 You MUST make the generated questions highly adaptive by directly targeting this specific user's diagnostic profile:
-1. TARGET SUBJECT & CONCEPTUAL WEAKNESSES: You MUST allocate approximately 30% of the questions on the exam to directly address the user's weak knowledge areas and conceptual gaps (using the User Weakness Analysis and User Topic Breakdown data).
-2. TARGET COGNITIVE & THINKING WEAKNESSES: You MUST craft questions that specifically trigger and test the user's documented test-taking pitfalls and cognitive mistake patterns (using the Recent Mistake Patterns data, such as calculation haste, rote-formula shortcuts, overlooking boundary conditions/edge cases, unit conversion slips, or conceptual panic). Design the problem setups and multiple-choice distractor options so that a student falling into these exact thinking traps is led to make those specific mistakes, thereby teaching them to overcome these cognitive weaknesses.
+- TARGET SUBJECT & CONCEPTUAL WEAKNESSES: You MUST allocate approximately 30% of the questions on the exam to directly address the user's weak knowledge areas and conceptual gaps (using the User Weakness Analysis and User Topic Breakdown data).
+- TARGET COGNITIVE & THINKING WEAKNESSES: You MUST craft questions that specifically trigger and test the user's documented test-taking pitfalls and cognitive mistake patterns (using the Recent Mistake Patterns data, such as calculation haste, rote-formula shortcuts, overlooking boundary conditions/edge cases, unit conversion slips, or conceptual panic). Design the problem setups and multiple-choice distractor options so that a student falling into these exact thinking traps is led to make those specific mistakes, thereby teaching them to overcome these cognitive weaknesses.
 
-6. ***Double-checking***
+9. ***Double-checking***
 
 SELF-CHECK (MANDATORY before finalising each question): Before writing the final JSON for each question, ask yourself: "Is this question structurally novel? Would a student who has drilled olympiad problem sets be genuinely surprised by the setup, the system, or the question being asked — even if they know the underlying concept well?" If the answer is no — if the setup is a familiar scaffold with new numbers or a different element — redesign the question from scratch. Note: difficulty level is irrelevant here. A hard USNCO question can still be a clichéd template. What matters is whether the problem-setup itself is fresh and unexpected.
 
