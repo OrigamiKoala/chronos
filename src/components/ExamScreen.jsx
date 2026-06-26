@@ -811,7 +811,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       <div className="glass-panel" style={{ padding: 'var(--panel-padding-lg)', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Loader2 className="animate-spin text-gradient" size={48} style={{ margin: '0 auto 1rem' }} />
         <h3>Generating Problems...</h3>
-        <p style={{ color: 'var(--text-secondary)' }}>Preparing exam with {config.numQuestions} questions</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Preparing exam with {config.numQuestions} questions. This may take up to 5 min, but will usually take 1-2 min</p>
         {error && <p style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</p>}
       </div>
     );
