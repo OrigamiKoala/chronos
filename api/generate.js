@@ -1,5 +1,5 @@
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry as geminiRetry } from './_gemini.js';
+import { executeWithRetry } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 
