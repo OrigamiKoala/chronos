@@ -6,7 +6,7 @@ import { ChemicalText, SmilesRenderer } from './ChemicalText';
 import { isSmiles } from './chemicalHelpers';
 
 // Chatbot Vercel function
-async function sendChatMessage({ message, teacherId, selectedStudentIds, sessionId, accessToken, history }) {
+async function sendChatMessage({ message, teacherId, selectedStudentIds, sessionId, accessToken, previousInteractionId }) {
   try {
     const headers = {
       'Content-Type': 'application/json',
@@ -25,7 +25,7 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
         // If no students are explicitly selected, pass null so the worker triggers class aggregation
         studentId: selectedStudentIds && selectedStudentIds.length > 0 ? selectedStudentIds : null,
         sessionId: sessionId,
-        history: history
+        previousInteractionId: previousInteractionId || null,
       }),
     });
 
@@ -39,10 +39,10 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
     if (data._debug) {
       console.log('[Chat API Debug]', data._debug);
     }
-    return data.response; // This is the text response from the Gemini API
+    return { text: data.response, interactionId: data.interactionId || null };
   } catch (error) {
     console.error('Error communicating with chatbot API:', error);
-    return 'Sorry, I encountered an error processing that data request.';
+    return { text: 'Sorry, I encountered an error processing that data request.', interactionId: null };
   }
 }
 
@@ -59,6 +59,7 @@ export function TeacherScreen({ user, onBack }) {
   const [chatScope, setChatScope] = useState('class'); // 'class' or 'students'
   const [chatSelectedStudents, setChatSelectedStudents] = useState([]);
   const [chatSessionId, setChatSessionId] = useState(() => 'sess_' + Math.random().toString(36).substring(2, 9));
+  const [chatInteractionId, setChatInteractionId] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [accessToken, setAccessToken] = useState('');
 
@@ -92,15 +93,16 @@ export function TeacherScreen({ user, onBack }) {
     const selectedIds = chatScope === 'class' ? (data?.claimedStudentIds || []) : chatSelectedStudents.map(s => s.user_id || s);
 
     try {
-      const aiResponse = await sendChatMessage({
+      const { text: aiResponse, interactionId } = await sendChatMessage({
         message: userMsg,
         teacherId: user.user_id,
         selectedStudentIds: selectedIds,
         sessionId: chatSessionId,
         accessToken,
-        history: chatMessages
+        previousInteractionId: chatInteractionId
       });
 
+      setChatInteractionId(interactionId);
       setChatMessages(prev => [...prev, { sender: 'ai', text: aiResponse, timestamp: new Date() }]);
     } catch (err) {
       console.error(err);
@@ -1034,6 +1036,7 @@ export function TeacherScreen({ user, onBack }) {
                 onClick={() => {
                   setChatMessages([{ sender: 'ai', text: 'Hello! I am your AI teaching assistant. Ask me anything about your class or select specific students to analyze their performance, strengths, or weaknesses.', timestamp: new Date() }]);
                   setChatSessionId('sess_' + Math.random().toString(36).substring(2, 9));
+                  setChatInteractionId(null);
                 }}
                 className="btn btn-outline"
                 style={{

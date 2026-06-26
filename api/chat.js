@@ -56,7 +56,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized token.' });
     }
 
-    const { message, teacherId, studentId, sessionId, history } = req.body;
+    const { message, teacherId, studentId, sessionId, previousInteractionId } = req.body;
     if (!message || !teacherId || !sessionId) {
       return res.status(400).json({ error: 'Missing parameters' });
     }
@@ -146,34 +146,32 @@ Keep answers clear, highly metric-accurate, and under 3 sentences.`;
     const modelId = process.env.GEMINI_MODEL || 'gemini-3.1-flash';
     const models = [...new Set([modelId, 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'])];
 
-    const input = [];
-    if (Array.isArray(history)) {
-      for (const msg of history) {
-        if (msg.text && msg.sender) {
-          input.push({
-            type: msg.sender === 'user' ? 'user_input' : 'model_output',
-            content: [{ type: 'text', text: msg.text }]
-          });
-        }
-      }
-    }
-    input.push({
+    const input = [{
       type: 'user_input',
       content: [{ type: 'text', text: message }]
-    });
+    }];
 
-    const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
-      model: currentModel,
-      input: input,
+    const interactionOptions = {
+      model: undefined, // set per model in retry
+      input,
       system_instruction: systemPrompt,
       generation_config: {
         maxOutputTokens: 256,
         temperature: 0.3
       }
+    };
+    if (previousInteractionId) {
+      interactionOptions.previous_interaction_id = previousInteractionId;
+    }
+
+    const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
+      ...interactionOptions,
+      model: currentModel,
     }), req);
 
     return res.status(200).json({
       response: response.output_text || 'Sorry, I could not generate a response. Please try again.',
+      interactionId: response.id || null,
       _debug: { rowCount: bqRows?.length || 0, studentIdReceived: studentId, teacherId }
     });
 
