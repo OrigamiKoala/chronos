@@ -822,7 +822,7 @@ The output must be a pure JSON array containing exactly the requested number of 
 {
   "id": "A unique string ID",
   "topic": "A comma-separated list of brief sub-categories or topics tested (e.g. 'Algebra, Number Theory' or 'Stoichiometry, Kinetics' or 'Mechanics, Rotational Dynamics')",
-  "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format.",
+  "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format. ***CRITICAL:*** Do not include the answer choices here, if the question is multiple choice.",
   "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
   "answer": ${answerSchemaDesc},
   "difficulty": a number representing difficulty. This MUST be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}] (no question can be more than 2 difficulty units away from the average test difficulty ${difficulty})
