@@ -797,7 +797,6 @@ Any question matching one or more of these patterns must be redesigned before fi
 
 * Maintain the proper scope appropriate to the test (corresponding to the syllabus boundaries) but test to maximum depth.6. ANSWER-FORM VARIATION: Rotate the structural form of what the answer requires across questions in the same exam. Do not produce multiple questions that all ask for the same type of quantity (e.g., all asking for a final numerical value, or all asking "which of the following is correct"). Include variety such as: a question whose answer is a ratio or dimensionless quantity derived from multiple steps; a question that requires identifying which piece of given information is insufficient; a question where the student must recognise that the naive calculation gives the wrong answer and explain why; a question whose answer is a qualitative ranking or ordering rather than a single value. 
 
-
 8. ***MANDATORY ADAPTIVE WEAKNESS-TARGETING DIRECTIVE:***
 You MUST make the generated questions highly adaptive by directly targeting this specific user's diagnostic profile:
 - TARGET SUBJECT & CONCEPTUAL WEAKNESSES: You MUST allocate approximately 30% of the questions on the exam to directly address the user's weak knowledge areas and conceptual gaps (using the User Weakness Analysis and User Topic Breakdown data).
@@ -806,6 +805,8 @@ You MUST make the generated questions highly adaptive by directly targeting this
 9. ***Double-checking***
 
 SELF-CHECK (MANDATORY before finalising each question): Before writing the final JSON for each question, ask yourself: "Is this question structurally novel? Would a student who has drilled olympiad problem sets be genuinely surprised by the setup, the system, or the question being asked — even if they know the underlying concept well?" If the answer is no — if the setup is a familiar scaffold with new numbers or a different element — redesign the question from scratch. Note: difficulty level is irrelevant here. A hard USNCO question can still be a clichéd template. What matters is whether the problem-setup itself is fresh and unexpected.
+
+***CRITICAL*** You must NOT round intermediate steps, as this can throw the final answer off.
 
 CRITICAL: Difficulty level 1 can include simple plug-and-chug applications (applying a single standard formula to given values). These plug-and-chug applications can ONLY happen for difficulty level 1.
 
