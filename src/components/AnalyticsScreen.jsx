@@ -67,6 +67,13 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     setLocalNewRating(resultsObj.newRating ?? resultsObj.new_rating);
     setLocalRatingChange(resultsObj.ratingChange ?? resultsObj.rating_change);
 
+    // Sync/reset interactionIds
+    if (resultsObj.interactionIds) {
+      setPreviousInteractionIds(resultsObj.interactionIds);
+    } else {
+      setPreviousInteractionIds(Array((resultsObj.results || []).length).fill(null));
+    }
+
     // Sync/reset tags
     const initialTags = {};
     if (resultsObj.savedTags) {
@@ -159,7 +166,12 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     return initial;
   });
 
-  const [previousInteractionIds, setPreviousInteractionIds] = useState(() => Array(results.length).fill(null));
+  const [previousInteractionIds, setPreviousInteractionIds] = useState(() => {
+    if (resultsObj && resultsObj.interactionIds) {
+      return resultsObj.interactionIds;
+    }
+    return Array(results.length).fill(null);
+  });
 
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
 
@@ -325,11 +337,9 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       }
 
       const data = await response.json();
-      setPreviousInteractionIds(prev => {
-        const next = [...prev];
-        next[index] = data.interactionId || null;
-        return next;
-      });
+      const nextInteractionIds = [...previousInteractionIds];
+      nextInteractionIds[index] = data.interactionId || null;
+      setPreviousInteractionIds(nextInteractionIds);
 
       setActiveExplanations(prev => {
         const msgs = prev[index]?.messages || [];
@@ -369,7 +379,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
               questionId: problemObj.id,
               subject,
               topic: problemObj.topic || 'General',
-              explanation: data.explanation
+              explanation: data.explanation,
+              interactionIds: nextInteractionIds
             })
           })
             .then(res => {
@@ -395,7 +406,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
               username: user.user_id,
               examId,
               questionId: problemObj.id,
-              explanation: data.explanation
+              explanation: data.explanation,
+              interactionIds: nextInteractionIds
             })
           })
             .then(res => {

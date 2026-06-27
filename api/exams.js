@@ -148,6 +148,10 @@ export default async function handler(req, res) {
           ADD COLUMN IF NOT EXISTS assignment_id STRING
         `),
         bq.query(`
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+          ADD COLUMN IF NOT EXISTS interaction_ids_json STRING
+        `),
+        bq.query(`
           CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` (
             assignment_id STRING NOT NULL,
             student_id STRING NOT NULL,
@@ -176,7 +180,7 @@ export default async function handler(req, res) {
     try {
       const consolidatedQuery = `
         WITH results AS (
-          SELECT 'results' AS type, TO_JSON_STRING(STRUCT(results_json)) AS data
+          SELECT 'results' AS type, TO_JSON_STRING(STRUCT(results_json, interaction_ids_json)) AS data
           FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
           WHERE exam_id = @examId
           LIMIT 1
@@ -203,13 +207,17 @@ export default async function handler(req, res) {
       const [rows] = await bq.query({ query: consolidatedQuery, params });
 
       let results_json = null;
+      let interaction_ids_json = null;
       let mistakeRows = [];
       const tagRows = [];
 
       for (const r of rows) {
         try {
           const parsed = JSON.parse(r.data);
-          if (r.type === 'results') results_json = parsed.results_json;
+          if (r.type === 'results') {
+            results_json = parsed.results_json;
+            interaction_ids_json = parsed.interaction_ids_json;
+          }
           else if (r.type === 'mistake') mistakeRows.push(parsed);
           else if (r.type === 'tags') tagRows.push(parsed);
         } catch (e) {
@@ -243,7 +251,12 @@ export default async function handler(req, res) {
         return { questionIndex: qIdx, tag: r.tag };
       });
 
-      return res.status(200).json({ results, mistakePatterns, savedTags });
+      return res.status(200).json({
+        results,
+        mistakePatterns,
+        savedTags,
+        interactionIds: interaction_ids_json ? JSON.parse(interaction_ids_json) : null
+      });
     } catch (err) {
       console.error('Get exam error:', err);
       return res.status(500).json({ error: err.message || 'Internal Server Error' });
@@ -256,7 +269,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { username, examId, questionId, subject, topic } = req.body;
+    const { username, examId, questionId, subject, topic, explanation, interactionIds } = req.body;
 
     if (!username || !examId || !questionId || !subject || !topic) {
       return res.status(400).json({ error: 'Missing required parameters' });
@@ -290,20 +303,16 @@ export default async function handler(req, res) {
       let histData = null;
 
       for (const r of rows) {
-        try {
-          const parsed = JSON.parse(r.data);
-          if (r.type === 'exam') examData = parsed;
-          else if (r.type === 'hist') histData = parsed;
-        } catch (e) {
-          console.error("Failed to parse remark-correct consolidated row:", r, e);
-        }
+        const parsed = JSON.parse(r.data);
+        if (r.type === 'exam') examData = parsed.results_json;
+        else if (r.type === 'hist') histData = parsed;
       }
 
       if (!examData || !histData) {
-        return res.status(404).json({ error: 'Exam results or history not found' });
+        return res.status(404).json({ error: 'Exam details or history not found' });
       }
 
-      const results = JSON.parse(examData.results_json);
+      const results = JSON.parse(examData);
       const hist = histData;
 
       // 2. Find and update the specific question
@@ -311,8 +320,8 @@ export default async function handler(req, res) {
       for (const r of results) {
         if (r.id === questionId) {
           r.isCorrect = true;
-          if (req.body.explanation) {
-            r.aiExplanation = req.body.explanation;
+          if (explanation) {
+            r.aiExplanation = explanation;
           }
           questionFound = true;
           break;
@@ -360,9 +369,15 @@ export default async function handler(req, res) {
       await Promise.all([
         bq.query({
           query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-            SET results_json = @resultsJson
+            SET results_json = @resultsJson,
+                interaction_ids_json = @interactionIdsJson
             WHERE exam_id = @examId AND user_id = @username`,
-          params: { examId, username: sanitizedUser, resultsJson: JSON.stringify(results) }
+          params: { 
+            examId, 
+            username: sanitizedUser, 
+            resultsJson: JSON.stringify(results),
+            interactionIdsJson: interactionIds ? JSON.stringify(interactionIds) : null
+          }
         }),
         bq.query({
           query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
@@ -486,7 +501,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { username, examId, questionId, explanation } = req.body;
+    const { username, examId, questionId, explanation, interactionIds } = req.body;
 
     if (!username || !examId || !questionId || !explanation) {
       return res.status(400).json({ error: 'Missing required parameters' });
@@ -527,9 +542,15 @@ export default async function handler(req, res) {
 
       await bq.query({
         query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-          SET results_json = @resultsJson
+          SET results_json = @resultsJson,
+              interaction_ids_json = @interactionIdsJson
           WHERE exam_id = @examId AND user_id = @username`,
-        params: { examId, username: sanitizedUser, resultsJson: JSON.stringify(results) }
+        params: { 
+          examId, 
+          username: sanitizedUser, 
+          resultsJson: JSON.stringify(results),
+          interactionIdsJson: interactionIds ? JSON.stringify(interactionIds) : null
+        }
       });
 
       return res.status(200).json({ success: true });
