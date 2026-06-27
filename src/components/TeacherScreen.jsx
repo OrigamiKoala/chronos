@@ -70,6 +70,7 @@ export function TeacherScreen({ user, onBack }) {
   }, []);
 
   const chatEndRef = useRef(null);
+  const chatInputRef = useRef(null);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -83,6 +84,9 @@ export function TeacherScreen({ user, onBack }) {
 
     const userMsg = chatInput.trim();
     setChatInput('');
+    if (chatInputRef.current) {
+      chatInputRef.current.style.height = 'auto';
+    }
 
     // Add user message to chat history
     const updatedMessages = [...chatMessages, { sender: 'user', text: userMsg, timestamp: new Date() }];
@@ -1134,9 +1138,14 @@ export function TeacherScreen({ user, onBack }) {
             {/* Input form */}
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
               <textarea
+                ref={chatInputRef}
                 placeholder={chatScope === 'class' ? "Ask AI about class-wide performance..." : "Ask AI about selected students..."}
                 value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
+                onChange={(e) => {
+                  setChatInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
                 onKeyDown={handleKeyDown}
                 className="input-field"
                 disabled={chatLoading}

@@ -164,6 +164,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
 
   const chatContainersRef = useRef({});
+  const chatInputRefs = useRef({});
 
   useEffect(() => {
     Object.keys(chatContainersRef.current).forEach(key => {
@@ -275,6 +276,10 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   }, [user, examId, results, onRefreshData]);
 
   const handleAskAI = async (index, problemObj, userQuery = '') => {
+    if (chatInputRefs.current[index]) {
+      chatInputRefs.current[index].style.height = 'auto';
+    }
+
     const currentMessages = activeExplanations[index]?.messages || [];
     const history = userQuery
       ? [...currentMessages, { sender: 'user', text: userQuery }]
@@ -971,14 +976,36 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                       )}
 
                       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                        <input
-                          type="text"
+                        <textarea
+                          ref={el => chatInputRefs.current[i] = el}
                           placeholder="Ask a follow-up or custom question..."
                           className="input-field"
-                          style={{ flex: 1, padding: 'var(--input-padding)', fontSize: '0.85rem' }}
+                          style={{
+                            flex: 1,
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.85rem',
+                            resize: 'none',
+                            minHeight: '38px',
+                            maxHeight: '120px',
+                            overflowY: 'auto',
+                            lineHeight: '1.4',
+                            fontFamily: 'inherit',
+                            borderRadius: 'var(--radius-md)'
+                          }}
                           value={activeExplanations[i].query || ''}
-                          onChange={(e) => updateExplanationQuery(i, e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && activeExplanations[i].query?.trim() && handleAskAI(i, r, activeExplanations[i].query)}
+                          onChange={(e) => {
+                            updateExplanationQuery(i, e.target.value);
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              if (activeExplanations[i].query?.trim()) {
+                                handleAskAI(i, r, activeExplanations[i].query);
+                              }
+                            }
+                          }}
                           disabled={activeExplanations[i].loading}
                         />
                         <button
