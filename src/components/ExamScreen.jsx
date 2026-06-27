@@ -415,7 +415,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config, isRated, activeSetIndex, setTimesLeft, setsTimedOut]);
 
   const saveCurrentFRQState = () => {
-    if (!problem || problem.type !== 'free_response') return;
+    if (!problem || problem.type !== 'free_response') {
+      return { answers, frqSubmissions };
+    }
 
     let finalValue = '';
     let imagePayload = null;
@@ -450,7 +452,11 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       const updatedAnswers = [...answers];
       updatedAnswers[currentQuestionIndex] = finalValue;
       setAnswers(updatedAnswers);
+
+      return { answers: updatedAnswers, frqSubmissions: updatedSubmissions };
     }
+
+    return { answers, frqSubmissions };
   };
 
   const handleTimeUp = () => {
@@ -669,6 +675,36 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   };
 
   const handleFinishExam = (strictResults = null, overrideAnswers = null, overrideSubmissions = null, overrideSetsTimedOut = null) => {
+    const activeAnswers = overrideAnswers || answers;
+    const activeSubmissions = overrideSubmissions || frqSubmissions;
+
+    const hasTimeLeft = isWholeTestMode 
+      ? totalTimeLeft > 0 
+      : (isSetTimedMode 
+          ? (setTimesLeft[activeSetIndex] > 0) 
+          : true);
+
+    if (hasTimeLeft && !strictResults && overrideSetsTimedOut === null) {
+      const unansweredIndexes = [];
+      problems.forEach((prob, idx) => {
+        const ans = activeAnswers[idx];
+        const hasFRQSub = prob.type === 'free_response' && activeSubmissions[idx] && activeSubmissions[idx].value && activeSubmissions[idx].value !== '[Time Out]';
+        const hasAns = ans && ans.trim() !== '' && ans !== '[Time Out]';
+        if (!hasAns && !hasFRQSub) {
+          unansweredIndexes.push(idx + 1);
+        }
+      });
+
+      if (unansweredIndexes.length > 0) {
+        const confirmSubmit = window.confirm(
+          `You still have unanswered questions (Question(s): ${unansweredIndexes.join(', ')}). Are you sure you want to submit?`
+        );
+        if (!confirmSubmit) {
+          return;
+        }
+      }
+    }
+
     recordActiveInterval(currentQuestionIndex);
     clearInterval(timerRef.current);
 
@@ -1356,8 +1392,8 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                 <button
                   className="btn btn-primary"
                   onClick={() => {
-                    saveCurrentFRQState();
-                    handleFinishExam();
+                    const { answers: finalAnswers, frqSubmissions: finalSubmissions } = saveCurrentFRQState();
+                    handleFinishExam(null, finalAnswers, finalSubmissions);
                   }}
                 >
                   Finish Exam <ArrowRight size={18} />

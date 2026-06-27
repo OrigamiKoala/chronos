@@ -158,6 +158,9 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
     });
     return initial;
   });
+
+  const [previousInteractionIds, setPreviousInteractionIds] = useState(() => Array(results.length).fill(null));
+
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
 
   const chatContainersRef = useRef({});
@@ -293,18 +296,21 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       questionToSend = `${problemObj.question}\n\nOptions:\n${optsList}`;
     }
 
+    const previousInteractionId = previousInteractionIds[index];
+
     try {
       const response = await fetch('/api/explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: questionToSend,
-          answer: problemObj.answer,
-          userAnswer: problemObj.userAnswer,
-          isCorrect: problemObj.isCorrect,
+          question: previousInteractionId ? undefined : questionToSend,
+          answer: previousInteractionId ? undefined : problemObj.answer,
+          userAnswer: previousInteractionId ? undefined : problemObj.userAnswer,
+          isCorrect: previousInteractionId ? undefined : problemObj.isCorrect,
           userQuery,
-          history,
-          subject
+          history: previousInteractionId ? [] : history,
+          subject,
+          previousInteractionId
         })
       });
 
@@ -314,6 +320,12 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       }
 
       const data = await response.json();
+      setPreviousInteractionIds(prev => {
+        const next = [...prev];
+        next[index] = data.interactionId || null;
+        return next;
+      });
+
       setActiveExplanations(prev => {
         const msgs = prev[index]?.messages || [];
         return {
