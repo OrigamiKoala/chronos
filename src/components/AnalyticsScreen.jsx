@@ -832,7 +832,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                       <HelpCircle size={14} /> Unsure
                     </button>
 
-                    {/* Silly & Concept — only for incorrect */}
+                    {/* Silly & Concept & Out of Time — only for incorrect */}
                     {!r.isCorrect && (
                       <>
                         <button
@@ -847,12 +847,18 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                         >
                           <BookOpen size={14} /> Concept Problem
                         </button>
+                        <button
+                          className={`tag-btn ${tags[i] === 'time' ? 'tag-btn-active tag-time' : ''}`}
+                          onClick={() => handleTag(i, 'time')}
+                        >
+                          <Clock size={14} /> Out of Time
+                        </button>
                       </>
                     )}
 
                     {tags[i] && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: '0.25rem' }}>
-                        Tagged: {tags[i]}
+                        Tagged: {tags[i] === 'time' ? 'Out of Time' : tags[i]}
                       </span>
                     )}
                   </div>

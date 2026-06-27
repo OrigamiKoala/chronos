@@ -192,6 +192,7 @@ export default async function handler(req, res) {
       }
     }
 
+    const examQuestionTags = {};
     // Build silly vs concept point differentials over time
     const examTagMap = {};
     for (const row of tagData) {
@@ -200,10 +201,25 @@ export default async function handler(req, res) {
         examTagMap[eid] = { exam_id: eid, created_at: row.created_at, subject: row.subject, silly: 0, concept: 0, unsure_correct: 0, unsure_total: 0 };
       }
 
+      let qIdx = row.question_index;
+      if (qIdx !== null && qIdx !== undefined) {
+        if (typeof qIdx === 'object' && qIdx.value !== undefined) {
+          qIdx = parseInt(qIdx.value, 10);
+        } else if (typeof qIdx === 'bigint') {
+          qIdx = Number(qIdx);
+        } else {
+          qIdx = parseInt(qIdx, 10);
+        }
+      }
+      if (!examQuestionTags[eid]) {
+        examQuestionTags[eid] = {};
+      }
+      examQuestionTags[eid][qIdx] = row.tag;
+
       // Dynamic recalculation of points_value based on question type
       let pointsValue = 1;
       const resultsList = examResultsMap[eid] || [];
-      const q = resultsList[row.question_index];
+      const q = resultsList[qIdx];
       if (q) {
         const isFRQ = q.type === 'free_response';
         pointsValue = isFRQ ? (q.difficulty || q.difficultyAtTime || 1) : 1;
@@ -314,15 +330,22 @@ export default async function handler(req, res) {
     // Calculate average time spent per question per subject across all user exam history
     const subjectTimes = { Math: 0, Physics: 0, Chemistry: 0 };
     const subjectQuestions = { Math: 0, Physics: 0, Chemistry: 0 };
+    const subjectTimeOuts = { Math: 0, Physics: 0, Chemistry: 0 };
     for (const row of resultRows) {
       try {
         const results = JSON.parse(row.results_json);
         const sub = row.subject;
         if (subjectTimes[sub] !== undefined) {
-          for (const r of results) {
+          results.forEach((r, qIdx) => {
             subjectTimes[sub] += (r.timeSpent || 0);
             subjectQuestions[sub] += 1;
-          }
+
+            const isTimeOut = r.timeOut || r.userAnswer === '[Time Out]';
+            const hasTimeTag = examQuestionTags[row.exam_id]?.[qIdx] === 'time' || examQuestionTags[row.exam_id]?.[qIdx] === 'out_of_time';
+            if (isTimeOut || hasTimeTag) {
+              subjectTimeOuts[sub] += 1;
+            }
+          });
         }
       } catch (e) {
         console.error(e);
@@ -330,9 +353,50 @@ export default async function handler(req, res) {
     }
 
     const avgTimePerSubject = {};
+    const timeOutPercentagePerSubject = {};
+    let totalQuestions = 0;
+    let totalTimeOuts = 0;
     for (const sub of ['Math', 'Physics', 'Chemistry']) {
       const count = subjectQuestions[sub] || 0;
       avgTimePerSubject[sub] = count > 0 ? Math.round((subjectTimes[sub] / count) * 10) / 10 : 0;
+
+      const timeOuts = subjectTimeOuts[sub] || 0;
+      timeOutPercentagePerSubject[sub] = count > 0 ? Math.round((timeOuts / count) * 100) : 0;
+      totalQuestions += count;
+      totalTimeOuts += timeOuts;
+    }
+    const overallTimeOutPercentage = totalQuestions > 0 ? Math.round((totalTimeOuts / totalQuestions) * 100) : 0;
+
+    // Calculate timeIssuesSeries
+    const timeIssuesSeries = [];
+    for (const row of resultRows) {
+      try {
+        const results = JSON.parse(row.results_json);
+        const incorrectQuestions = results.filter(r => !r.isCorrect);
+        const totalMissed = incorrectQuestions.length;
+        
+        let timeMissed = 0;
+        results.forEach((r, qIdx) => {
+          const isTimeOut = r.timeOut || r.userAnswer === '[Time Out]';
+          const hasTimeTag = examQuestionTags[row.exam_id]?.[qIdx] === 'time' || examQuestionTags[row.exam_id]?.[qIdx] === 'out_of_time';
+          if (!r.isCorrect && (isTimeOut || hasTimeTag)) {
+            timeMissed += 1;
+          }
+        });
+
+        const percentMissedDueToTime = totalMissed > 0 ? Math.round((timeMissed / totalMissed) * 100) : 0;
+        
+        timeIssuesSeries.push({
+          exam_id: row.exam_id,
+          created_at: row.created_at,
+          subject: row.subject,
+          percentMissedDueToTime,
+          timeMissed,
+          totalMissed
+        });
+      } catch (e) {
+        console.error(e);
+      }
     }
 
     // Calculate aggregate timelines by subject
@@ -523,8 +587,11 @@ You MUST format your output strictly as a JSON object, with no markdown code blo
       eloHistory: finalEloHistory,
       tagTimeSeries,
       intuitionSeries,
+      timeIssuesSeries,
       topicMastery: finalTopicMastery,
       avgTimePerSubject,
+      timeOutPercentagePerSubject,
+      overallTimeOutPercentage,
       timelines,
       history,
       strengths,

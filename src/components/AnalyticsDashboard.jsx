@@ -531,6 +531,50 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   }, [data]);
 
 
+  // Time Issues over time
+  const timeIssuesChartData = useMemo(() => {
+    if (!data?.timeIssuesSeries?.length) return null;
+
+    const filteredSeries = selectedSubjectFilter === 'All'
+      ? data.timeIssuesSeries
+      : data.timeIssuesSeries.filter(t => t.subject === selectedSubjectFilter);
+
+    if (filteredSeries.length === 0) return null;
+
+    const dailyMap = {};
+    const labels = [];
+
+    for (const t of filteredSeries) {
+      const dayStr = formatDate(t.created_at?.value || t.created_at);
+      if (!dailyMap[dayStr]) {
+        dailyMap[dayStr] = { timeMissed: 0, totalMissed: 0 };
+        labels.push(dayStr);
+      }
+      dailyMap[dayStr].timeMissed += t.timeMissed || 0;
+      dailyMap[dayStr].totalMissed += t.totalMissed || 0;
+    }
+
+    const ratioData = labels.map(day => {
+      const { timeMissed, totalMissed } = dailyMap[day];
+      return totalMissed > 0 ? Math.round((timeMissed / totalMissed) * 100) : 0;
+    });
+
+    return {
+      labels,
+      datasets: [{
+        label: 'Time-Restricted Missed Questions (%)',
+        data: ratioData,
+        borderColor: '#60a5fa',
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 4,
+        pointHoverRadius: 7
+      }]
+    };
+  }, [data, selectedSubjectFilter]);
+
+
   // Aggregate timeline chart
   const aggregateTimelineChartData = useMemo(() => {
     if (!data?.timelines) return null;
@@ -723,17 +767,28 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
             </div>
 
             {selectedSubjectFilter === 'All' ? (
-              ['Math', 'Physics', 'Chemistry'].map(s => (
-                <div key={s} className="glass-panel analytics-stat-card">
-                  <TrendingUp size={22} color={CHART_COLORS[s].line} />
+              <>
+                {['Math', 'Physics', 'Chemistry'].map(s => (
+                  <div key={s} className="glass-panel analytics-stat-card">
+                    <TrendingUp size={22} color={CHART_COLORS[s].line} />
+                    <div>
+                      <span className="analytics-stat-label">{s} ELO</span>
+                      <span className="analytics-stat-value" style={{ color: CHART_COLORS[s].line }}>
+                        {user?.[`${s.toLowerCase()}_rating`] || 100}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div className="glass-panel analytics-stat-card">
+                  <Clock size={22} color="var(--danger)" />
                   <div>
-                    <span className="analytics-stat-label">{s} ELO</span>
-                    <span className="analytics-stat-value" style={{ color: CHART_COLORS[s].line }}>
-                      {user?.[`${s.toLowerCase()}_rating`] || 100}
+                    <span className="analytics-stat-label">Unable to Finish (Time)</span>
+                    <span className="analytics-stat-value" style={{ color: 'var(--danger)' }}>
+                      {data?.overallTimeOutPercentage !== undefined ? `${data.overallTimeOutPercentage}%` : '0%'}
                     </span>
                   </div>
                 </div>
-              ))
+              </>
             ) : (
               <>
                 <div className="glass-panel analytics-stat-card">
@@ -765,6 +820,15 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                         const sum = subjectHistory.reduce((acc, h) => acc + (h.accuracy || 0), 0);
                         return Math.round((sum / subjectHistory.length) * 100) + '%';
                       })()}
+                    </span>
+                  </div>
+                </div>
+                <div className="glass-panel analytics-stat-card">
+                  <Clock size={22} color="var(--danger)" />
+                  <div>
+                    <span className="analytics-stat-label">Unable to Finish (Time)</span>
+                    <span className="analytics-stat-value" style={{ color: 'var(--danger)' }}>
+                      {data?.timeOutPercentagePerSubject?.[selectedSubjectFilter] !== undefined ? `${data.timeOutPercentagePerSubject[selectedSubjectFilter]}%` : '0%'}
                     </span>
                   </div>
                 </div>
@@ -836,6 +900,35 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 </div>
               ) : (
                 <p className="analytics-empty">Tag problems during review to track mistake types</p>
+              )}
+            </div>
+
+            {/* Time Issues */}
+            <div className="glass-panel analytics-chart-panel">
+              <h4 className="analytics-chart-title">
+                <Clock size={18} color="#60a5fa" /> Missed due to Time
+              </h4>
+              {timeIssuesChartData ? (
+                <div style={{ height: '240px' }}>
+                  <Line data={timeIssuesChartData} options={{
+                    ...baseChartOptions,
+                    plugins: { ...baseChartOptions.plugins, title: { display: false } },
+                    scales: {
+                      ...baseChartOptions.scales,
+                      y: {
+                        ...baseChartOptions.scales.y,
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                          ...baseChartOptions.scales.y.ticks,
+                          callback: (value) => `${value}%`
+                        }
+                      }
+                    }
+                  }} />
+                </div>
+              ) : (
+                <p className="analytics-empty">Take exams or tag questions as &ldquo;Out of Time&rdquo; to track time issues</p>
               )}
             </div>
 

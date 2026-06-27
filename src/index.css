@@ -330,6 +330,12 @@ select.input-field {
   color: #f87171;
 }
 
+.tag-time {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #60a5fa;
+}
+
 /* Analytics Dashboard */
 .analytics-grid {
   display: grid;
