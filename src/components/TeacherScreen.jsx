@@ -1063,7 +1063,7 @@ export function TeacherScreen({ user, onBack }) {
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '380px' }}>
 
             {/* Messages box */}
-            <div style={{
+            <div className="chat-window-scroll" style={{
               flex: 1,
               background: 'rgba(0,0,0,0.15)',
               border: '1px solid rgba(255,255,255,0.03)',
@@ -1139,6 +1139,7 @@ export function TeacherScreen({ user, onBack }) {
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
               <textarea
                 ref={chatInputRef}
+                rows={1}
                 placeholder={chatScope === 'class' ? "Ask AI about class-wide performance..." : "Ask AI about selected students..."}
                 value={chatInput}
                 onChange={(e) => {
@@ -1151,11 +1152,11 @@ export function TeacherScreen({ user, onBack }) {
                 disabled={chatLoading}
                 style={{
                   borderRadius: 'var(--radius-md)',
-                  padding: '0.75rem 1rem',
+                  padding: '0.5rem 1rem',
                   fontSize: '0.9rem',
                   flex: 1,
                   resize: 'none',
-                  minHeight: '44px',
+                  height: '38px',
                   maxHeight: '150px',
                   overflowY: 'auto',
                   lineHeight: '1.4',

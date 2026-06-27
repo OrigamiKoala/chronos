@@ -911,6 +911,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
 
                       {activeExplanations[i].messages && activeExplanations[i].messages.length > 0 && (
                         <div
+                          className="chat-window-scroll"
                           ref={el => { chatContainersRef.current[i] = el; }}
                           style={{
                             display: 'flex',
@@ -978,14 +979,15 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                         <textarea
                           ref={el => chatInputRefs.current[i] = el}
+                          rows={1}
                           placeholder="Ask a follow-up or custom question..."
                           className="input-field"
                           style={{
                             flex: 1,
-                            padding: '0.5rem 0.75rem',
+                            padding: '0.4rem 0.75rem',
                             fontSize: '0.85rem',
                             resize: 'none',
-                            minHeight: '38px',
+                            height: '32px',
                             maxHeight: '120px',
                             overflowY: 'auto',
                             lineHeight: '1.4',
