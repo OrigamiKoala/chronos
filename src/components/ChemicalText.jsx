@@ -126,22 +126,25 @@ export function ReactionRenderer({ reaction, theme = 'dark' }) {
 export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, defaultHeight = 130 }) {
   const containerRef = useRef(null);
 
+  // Replace literal '\n' (backslash followed by n) with actual newlines first
+  const sanitizedText = typeof text === 'string' ? text.replace(/\\n/g, '\n') : text;
+
   // Trigger MathJax typesetting after render so LaTeX like $\text{H}_2\text{SO}_4$ renders
   useEffect(() => {
-    if (!containerRef.current || !text) return;
+    if (!containerRef.current || !sanitizedText) return;
     if (window.MathJax && window.MathJax.typesetPromise) {
       // Typeset only this container to avoid re-processing the entire document
       window.MathJax.typesetPromise([containerRef.current]).catch((err) => {
         console.error('MathJax typeset error:', err);
       });
     }
-  }, [text]);
+  }, [sanitizedText]);
 
-  if (!text) return null;
+  if (!sanitizedText) return null;
 
   // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\]), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
   // and markdown bold (**...**) / italic (*...*) to keep them intact.
-  const parts = text.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  const parts = sanitizedText.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|\*\*[^*]+\*\*|\*[^*]+\*)/g);
 
   return (
     <span ref={containerRef} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -217,6 +220,19 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
           <span key={partIndex}>
             {tokens.map((token, index) => {
               if (/^\s+$/.test(token)) {
+                if (token.includes('\n')) {
+                  const subParts = token.split('\n');
+                  return (
+                    <span key={index}>
+                      {subParts.map((sub, subIdx) => (
+                        <React.Fragment key={subIdx}>
+                          {sub}
+                          {subIdx < subParts.length - 1 && <br />}
+                        </React.Fragment>
+                      ))}
+                    </span>
+                  );
+                }
                 return <span key={index}>{token}</span>;
               }
 
