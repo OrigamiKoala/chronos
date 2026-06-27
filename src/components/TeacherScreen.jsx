@@ -46,7 +46,7 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
   }
 }
 
-export function TeacherScreen({ user, onBack }) {
+export function TeacherScreen({ user, onBack, autoLoginLoading }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -691,6 +691,15 @@ export function TeacherScreen({ user, onBack }) {
   const removeHomeworkItem = (index) => {
     setHomeworkList(homeworkList.filter((_, i) => i !== index));
   };
+
+  if (autoLoginLoading) {
+    return (
+      <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', maxWidth: '600px', margin: '4rem auto' }}>
+        <Loader2 className="animate-spin" size={48} style={{ margin: '0 auto 1rem', color: 'var(--accent-primary)' }} />
+        <h3>Logging in...</h3>
+      </div>
+    );
+  }
 
   if (user?.user_role !== 'teacher' && user?.user_role !== 'admin') {
     return (

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Shield, UserPlus, Users, Loader2, Database } from 'lucide-react';
 
-export function AdminScreen({ user, onBack }) {
+export function AdminScreen({ user, onBack, autoLoginLoading }) {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -158,6 +158,15 @@ export function AdminScreen({ user, onBack }) {
       }
     }
   };
+
+  if (autoLoginLoading) {
+    return (
+      <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', maxWidth: '600px', margin: '4rem auto' }}>
+        <Loader2 className="animate-spin" size={48} style={{ margin: '0 auto 1rem', color: 'var(--accent-primary)' }} />
+        <h3>Logging in...</h3>
+      </div>
+    );
+  }
 
   if (user?.user_role !== 'admin') {
     return (

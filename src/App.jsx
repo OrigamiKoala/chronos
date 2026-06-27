@@ -1092,10 +1092,10 @@ function App() {
               />
             )}
             {currentScreen === 'teacher' && (
-              <TeacherScreen user={user} onBack={restart} />
+              <TeacherScreen user={user} onBack={restart} autoLoginLoading={autoLoginLoading} />
             )}
             {currentScreen === 'admin' && (
-              <AdminScreen user={user} onBack={restart} />
+              <AdminScreen user={user} onBack={restart} autoLoginLoading={autoLoginLoading} />
             )}
           </>
         )}

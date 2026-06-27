@@ -344,30 +344,13 @@ select.input-field {
   margin-bottom: 2rem;
 }
 
-/* Custom scrollbar styling for chat windows — hidden by default, visible on hover */
+/* Hide scrollbars completely for chat windows */
 .chat-window-scroll {
   scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
 }
 .chat-window-scroll::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
-}
-
-.chat-window-scroll:hover {
-  scrollbar-width: thin; /* Firefox */
-}
-.chat-window-scroll:hover::-webkit-scrollbar {
-  display: block;
-  width: 6px;
-}
-.chat-window-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.chat-window-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-}
-.chat-window-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .analytics-chart-panel {
