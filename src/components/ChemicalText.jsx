@@ -133,6 +133,11 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
   useEffect(() => {
     if (!containerRef.current || !sanitizedText) return;
     if (window.MathJax && window.MathJax.typesetPromise) {
+      try {
+        window.MathJax.typesetClear([containerRef.current]);
+      } catch (err) {
+        console.warn('MathJax typesetClear error:', err);
+      }
       // Typeset only this container to avoid re-processing the entire document
       window.MathJax.typesetPromise([containerRef.current]).catch((err) => {
         console.error('MathJax typeset error:', err);
@@ -147,7 +152,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
   const parts = sanitizedText.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|\*\*[^*]+\*\*|\*[^*]+\*)/g);
 
   return (
-    <span ref={containerRef} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
+    <span ref={containerRef} key={sanitizedText} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
       {parts.map((part, partIndex) => {
         let isSvg = false;
         let svgContent = part;

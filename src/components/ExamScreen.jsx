@@ -1395,7 +1395,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                 )
               )}
 
-              {(config.stressMode !== 'strict' && (allLoaded || noMoreQuestions) && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions))) && (
+              {(config.stressMode !== 'strict' && (allLoaded || noMoreQuestions) && (currentQuestionIndex + 1 === config.numQuestions)) && (
                 <button
                   className="btn btn-primary"
                   onClick={() => {
@@ -1538,7 +1538,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                 </button>
               )
             ) : (
-              (allLoaded || noMoreQuestions) && (!isSetTimedMode || (activeSetIndex === totalSets - 1 && currentQuestionIndex + 1 === config.numQuestions)) && (
+              (allLoaded || noMoreQuestions) && (currentQuestionIndex + 1 === config.numQuestions) && (
                 <button
                   className="btn btn-primary"
                   onClick={() => handleFinishExam()}
