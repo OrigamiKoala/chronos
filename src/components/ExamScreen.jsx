@@ -148,6 +148,13 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   const elapsedSecondsRef = useRef(0);
   const currentQuestionEntryTimeRef = useRef(0);
   const questionIntervalsRef = useRef([]);
+  const submittedRef = useRef(false);
+
+  const triggerFinish = (finalResults) => {
+    if (submittedRef.current) return;
+    submittedRef.current = true;
+    onFinish(finalResults);
+  };
 
   const recordActiveInterval = (qIdx) => {
     const start = currentQuestionEntryTimeRef.current;
@@ -515,7 +522,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       };
     });
 
-    onFinish(finalResults);
+    triggerFinish(finalResults);
   };
 
   const handleSetTimeUp = () => {
@@ -742,7 +749,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       });
     }
 
-    onFinish(finalResults);
+    triggerFinish(finalResults);
   };
 
   const handleReadyToSubmit = () => {
@@ -785,7 +792,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     setResults(updatedResults);
 
     if (currentQuestionIndex + 1 >= config.numQuestions) {
-      onFinish(updatedResults);
+      triggerFinish(updatedResults);
     } else {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);

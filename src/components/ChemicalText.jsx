@@ -126,8 +126,8 @@ export function ReactionRenderer({ reaction, theme = 'dark' }) {
 export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, defaultHeight = 130 }) {
   const containerRef = useRef(null);
 
-  // Replace literal '\n' (backslash followed by n) with actual newlines first
-  const sanitizedText = typeof text === 'string' ? text.replace(/\\n/g, '\n') : text;
+  // Replace literal '\n' (backslash followed by n) with actual newlines first, but NOT when followed by a letter (which indicates a LaTeX command like \nu)
+  const sanitizedText = typeof text === 'string' ? text.replace(/\\n(?![a-zA-Z])/g, '\n') : text;
 
   // Trigger MathJax typesetting after render so LaTeX like $\text{H}_2\text{SO}_4$ renders
   useEffect(() => {
