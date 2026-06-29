@@ -2,6 +2,11 @@
 export function isSmiles(word) {
   if (!word || word.length < 2) return false;
 
+  // Reject common Roman numerals like II and III that consist solely of I/i
+  if (/^(ii|iii)$/i.test(word)) {
+    return false;
+  }
+
   // Reject single element symbols followed by numbers (e.g., C2, C4, C-3) representing carbon numbers
   const isSingleAtomRef = /^(C|c|O|o|N|n|P|p|S|s|F|f|I|i|H|h|Cl|cl|Br|br)[-+]?\d+$/;
   if (isSingleAtomRef.test(word)) {
