@@ -5,6 +5,7 @@ import { AnalyticsScreen } from './components/AnalyticsScreen';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { AdminScreen } from './components/AdminScreen';
 import { TeacherScreen } from './components/TeacherScreen';
+import { TestScreen } from './components/TestScreen';
 import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
     const path = typeof window !== 'undefined' ? window.location.pathname : '/';
     if (path === '/teacher') return 'teacher';
     if (path === '/admin') return 'admin';
+    if (path === '/test') return 'test';
     return 'setup';
   });
   const [examConfig, setExamConfig] = useState(null);
@@ -103,6 +105,8 @@ function App() {
       setCurrentScreen('teacher');
     } else if (path === '/admin') {
       setCurrentScreen('admin');
+    } else if (path === '/test') {
+      setCurrentScreen('test');
     } else {
       setCurrentScreen('setup');
     }
@@ -115,6 +119,8 @@ function App() {
         setCurrentScreen('teacher');
       } else if (path === '/admin') {
         setCurrentScreen('admin');
+      } else if (path === '/test') {
+        setCurrentScreen('test');
       } else {
         setCurrentScreen('setup');
       }
@@ -1097,6 +1103,9 @@ function App() {
             {currentScreen === 'admin' && (
               <AdminScreen user={user} onBack={restart} autoLoginLoading={autoLoginLoading} />
             )}
+            {currentScreen === 'test' && (
+              <TestScreen onBack={restart} />
+            )}
           </>
         )}
       </main>
@@ -1110,7 +1119,11 @@ function App() {
         marginTop: '2rem'
       }}>
         <div>Contact: Discord @origamikoala</div>
-        <div style={{ marginTop: '0.35rem' }}>Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a></div>
+        <div style={{ marginTop: '0.35rem' }}>
+          Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a>
+          {' | '}
+          <a href="/test" onClick={(e) => { e.preventDefault(); navigateTo('/test'); }} style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Question Previewer</a>
+        </div>
       </footer>
 
       {/* Sign-In Conversion Warning Modal */}
