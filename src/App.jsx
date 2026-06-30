@@ -1119,11 +1119,7 @@ function App() {
         marginTop: '2rem'
       }}>
         <div>Contact: Discord @origamikoala</div>
-        <div style={{ marginTop: '0.35rem' }}>
-          Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a>
-          {' | '}
-          <a href="/test" onClick={(e) => { e.preventDefault(); navigateTo('/test'); }} style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Question Previewer</a>
-        </div>
+        <div style={{ marginTop: '0.35rem' }}>Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a></div>
       </footer>
 
       {/* Sign-In Conversion Warning Modal */}

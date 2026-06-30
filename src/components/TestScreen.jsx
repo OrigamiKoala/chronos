@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { jsonrepair } from 'jsonrepair';
 import { ChemicalText, SmilesRenderer } from './ChemicalText';
+import { isSmiles } from './chemicalHelpers';
 import { ArrowLeft, Code, AlertCircle, CheckCircle, HelpCircle } from 'lucide-react';
 
 export function TestScreen({ onBack }) {
@@ -10,16 +12,27 @@ export function TestScreen({ onBack }) {
   const handleParse = () => {
     setError('');
     setParsedQuestions([]);
-    if (!jsonInput.trim()) {
+    let rawStr = jsonInput.trim();
+    if (!rawStr) {
       setError('Please enter some JSON content.');
       return;
     }
 
+    if (rawStr.startsWith('```')) {
+      rawStr = rawStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    }
+
     try {
-      const parsed = JSON.parse(jsonInput);
+      let repairedStr = rawStr;
+      try {
+        repairedStr = jsonrepair(rawStr);
+      } catch (repairErr) {
+        console.warn('jsonrepair failed, attempting regular parse:', repairErr);
+      }
+
+      const parsed = JSON.parse(repairedStr);
       const questionsArray = Array.isArray(parsed) ? parsed : [parsed];
 
-      // Simple validation of required fields
       for (let i = 0; i < questionsArray.length; i++) {
         const q = questionsArray[i];
         if (!q.question) {
@@ -44,17 +57,17 @@ export function TestScreen({ onBack }) {
     if (type === 'mcq') {
       example = {
         "id": "demo_mcq",
-        "topic": "Organic Chemistry, Stereochemistry",
-        "question": "Which of the following compounds is chiral?\n\nCC(C)O\n\nCC(Cl)Br\n\n[[SVG: <svg viewBox='0 0 100 100' width='100' height='100'><circle cx='50' cy='50' r='40' stroke='white' stroke-width='2' fill='none'/><text x='50' y='55' fill='white' text-anchor='middle'>SVG Demo</text></svg>]]",
+        "topic": "Organic Chemistry",
+        "question": "Which of the following compounds is chiral?",
         "type": "multiple_choice",
-        "options": ["Isopropyl alcohol", "1-chloro-1-bromoethane", "Methanol", "Ethanol"],
+        "options": ["CCO", "CC(Cl)Br", "CO", "C"],
         "answer": "B",
         "difficulty": 4
       };
     } else if (type === 'short_answer') {
       example = {
         "id": "demo_sa",
-        "topic": "Algebra, Number Theory",
+        "topic": "Algebra",
         "question": "Find the sum of all positive integers $n$ for which $n^2 + 19n + 92$ is a perfect square.",
         "type": "short_answer",
         "answer": "8",
@@ -64,8 +77,8 @@ export function TestScreen({ onBack }) {
     } else {
       example = {
         "id": "demo_frq",
-        "topic": "Classical Mechanics, Rotational Dynamics",
-        "question": "A uniform cylinder of mass $M$ and radius $R$ is placed on a rough horizontal board. The board is accelerated horizontally with a constant acceleration $A$. Assuming the cylinder rolls without slipping, derive the acceleration $a$ of the cylinder relative to the lab frame, and the minimum coefficient of static friction $\\mu_s$ required to prevent slipping.",
+        "topic": "Mechanics",
+        "question": "Derive the acceleration $a$ of the cylinder relative to the lab frame.",
         "type": "free_response",
         "answer": "",
         "difficulty": 7
@@ -85,7 +98,7 @@ export function TestScreen({ onBack }) {
         <ArrowLeft size={16} /> Back to Setup
       </button>
 
-      <div className="glass-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+      <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px' }}>
         <h2 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Code className="text-gradient" /> JSON Question Previewer
         </h2>
@@ -108,16 +121,7 @@ export function TestScreen({ onBack }) {
         <textarea
           value={jsonInput}
           onChange={(e) => setJsonInput(e.target.value)}
-          placeholder='Paste question JSON here... E.g.
-{
-  "id": "q1",
-  "topic": "Algebra",
-  "question": "What is $2 + 2$?",
-  "type": "multiple_choice",
-  "options": ["3", "4", "5", "6"],
-  "answer": "B",
-  "difficulty": 1
-}'
+          placeholder='Paste question JSON here...'
           style={{
             width: '100%',
             height: '240px',
@@ -169,113 +173,143 @@ export function TestScreen({ onBack }) {
 
       {parsedQuestions.length > 0 && (
         <div>
-          <h3 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>Preview Output</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h3 style={{ marginBottom: '20px', color: 'var(--text-primary)', textAlign: 'center' }}>Preview Output</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
             {parsedQuestions.map((q, idx) => (
               <div 
                 key={q.id || idx} 
-                className="glass-panel" 
+                className="glass-panel animate-fade-in" 
                 style={{ 
-                  padding: '24px', 
-                  borderLeft: '4px solid var(--accent-primary)',
-                  position: 'relative'
+                  padding: 'var(--panel-padding)', 
+                  maxWidth: '800px', 
+                  margin: '0 auto 2rem',
+                  width: '100%'
                 }}
               >
-                {/* Meta details */}
-                <div style={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: '12px', 
-                  fontSize: '0.8rem', 
-                  color: 'var(--text-secondary)',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                  paddingBottom: '10px',
-                  marginBottom: '16px'
-                }}>
-                  {q.id && <span><strong>ID:</strong> {q.id}</span>}
-                  {q.type && <span style={{ textTransform: 'capitalize' }}><strong>Type:</strong> {q.type.replace('_', ' ')}</span>}
-                  {q.difficulty !== undefined && <span><strong>Difficulty:</strong> {q.difficulty}/10</span>}
-                  {q.topic && <span><strong>Topic:</strong> {q.topic}</span>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <div>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                      Question {idx + 1} of {parsedQuestions.length}
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '4px' }}>
+                        Level {q.difficulty !== undefined ? q.difficulty : 5}
+                      </span>
+                      {q.topic && (
+                        <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                          Topic: {q.topic}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {q.id && (
+                      <div className="glass-panel" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.4rem 0.8rem',
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.85rem',
+                        color: 'var(--text-muted)'
+                      }}>
+                        ID: {q.id}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Question Text */}
-                <div style={{ fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '20px' }}>
-                  <ChemicalText text={q.question} theme="dark" />
+                <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
+                  <p><ChemicalText text={q.question} theme="dark" /></p>
                 </div>
 
-                {/* Options (MCQ only) */}
                 {q.type === 'multiple_choice' && q.options && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
                     {q.options.map((opt, oIdx) => {
-                      const label = String.fromCharCode(65 + oIdx); // A, B, C, D...
-                      const isCorrect = q.answer === label;
+                      const letter = ['A', 'B', 'C', 'D'][oIdx] || String.fromCharCode(65 + oIdx);
+                      const isCorrect = q.answer === letter;
                       return (
-                        <div 
+                        <button
                           key={oIdx}
+                          className={`btn btn-outline ${isCorrect ? 'selected' : ''}`}
                           style={{
+                            justifyContent: 'flex-start',
+                            background: isCorrect ? 'var(--bg-tertiary)' : 'transparent',
+                            borderColor: isCorrect ? 'var(--accent-primary)' : '',
                             display: 'flex',
                             alignItems: 'center',
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                            backgroundColor: isCorrect ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 255, 255, 0.02)',
-                            border: isCorrect ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.05)',
-                            transition: 'all 0.2s'
+                            gap: '0.75rem',
+                            minHeight: '48px',
+                            padding: '0.5rem 1rem',
+                            width: '100%',
+                            textAlign: 'left'
                           }}
+                          disabled={true}
                         >
                           <span style={{ 
-                            fontWeight: 'bold', 
-                            color: isCorrect ? 'var(--success)' : 'var(--text-secondary)',
-                            marginRight: '12px',
-                            fontSize: '1rem'
+                            fontWeight: '700', 
+                            marginRight: '0.5rem', 
+                            color: isCorrect ? 'var(--accent-primary)' : 'var(--text-secondary)' 
                           }}>
-                            {label}.
+                            {letter}.
                           </span>
-                          <div style={{ flex: 1 }}>
+                          {isSmiles(opt) ? (
+                            <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" />
+                          ) : (
                             <ChemicalText text={opt} theme="dark" defaultWidth={90} defaultHeight={90} />
-                          </div>
+                          )}
                           {isCorrect && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 'bold', marginLeft: '10px' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 'bold', marginLeft: 'auto' }}>
                               Correct Answer
                             </span>
                           )}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
                 )}
 
-                {/* Short Answer details */}
                 {q.type === 'short_answer' && (
-                  <div style={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.02)', 
-                    border: '1px solid rgba(255, 255, 255, 0.05)', 
-                    borderRadius: '8px',
-                    padding: '16px',
-                    marginBottom: '10px'
-                  }}>
-                    <div style={{ marginBottom: '8px' }}>
-                      <strong style={{ color: 'var(--success)' }}>Expected Answer:</strong> {q.answer}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                      Correct Answer Field (Preset):
                     </div>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={q.answer || ''}
+                      disabled={true}
+                      style={{ width: '100%' }}
+                    />
                     {q.keywordExpression && (
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                         <strong>Keyword Expression:</strong> <code>{q.keywordExpression}</code>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Free Response details */}
                 {q.type === 'free_response' && (
-                  <div style={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.02)', 
-                    border: '1px solid rgba(255, 255, 255, 0.05)', 
-                    borderRadius: '8px',
-                    padding: '16px',
-                    color: 'var(--text-secondary)',
-                    fontSize: '0.9rem'
-                  }}>
-                    <HelpCircle size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }} />
-                    This is a Free Response question. Users are expected to submit a full written solution/proof.
+                  <div style={{ marginBottom: '2rem' }}>
+                    <span style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '500', color: 'var(--text-secondary)' }}>
+                      Show Your Process / Explanation:
+                    </span>
+                    <div style={{
+                      height: '240px',
+                      border: '2px dashed var(--bg-glass-border)',
+                      borderRadius: 'var(--radius-md)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--text-muted)',
+                      background: 'rgba(255,255,255,0.01)',
+                      fontSize: '0.95rem'
+                    }}>
+                      [ Exam Whiteboard / Drawing Canvas Mockup ]
+                    </div>
                   </div>
                 )}
               </div>
