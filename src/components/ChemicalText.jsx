@@ -172,17 +172,18 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         // If this part is an SVG block, adapt it to dark mode and render it inside a dark card container.
         if (isSvg) {
           const cleanedSvg = svgContent
-            .replace(/stroke\s*=\s*['"](?:black|#000000|#000)['"]/gi, "stroke='#ffffff'")
-            .replace(/fill\s*=\s*['"](?:black|#000000|#000)['"]/gi, "fill='#ffffff'")
+            .replace(/stroke\s*=\s*['"](?:black|#000000|#000)['"]/gi, "stroke='currentColor'")
+            .replace(/fill\s*=\s*['"](?:black|#000000|#000)['"]/gi, "fill='currentColor'")
             .replace(/fill\s*=\s*['"](?:white|#ffffff|#fff)['"]/gi, "fill='none'")
             .replace(/background\s*:\s*(?:white|#ffffff|#fff|black|#000000|#000)/gi, "background:transparent")
-            .replace(/stroke\s*:\s*(?:black|#000000|#000)/gi, "stroke:#ffffff")
-            .replace(/fill\s*:\s*(?:black|#000000|#000)/gi, "fill:#ffffff");
+            .replace(/stroke\s*:\s*(?:black|#000000|#000)/gi, "stroke:currentColor")
+            .replace(/fill\s*:\s*(?:black|#000000|#000)/gi, "fill:currentColor");
 
           return (
             <span
               key={partIndex}
-              style={{ display: 'block', margin: '20px auto', maxWidth: '580px' }}
+              className="svg-diagram-container"
+              style={{ display: 'block', margin: '20px auto', maxWidth: '580px', color: 'var(--text-primary)' }}
             >
               <span
                 style={{

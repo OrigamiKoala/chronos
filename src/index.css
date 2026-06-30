@@ -481,3 +481,44 @@ select.input-field {
   }
 }
 
+/* SVG Dark Mode Overrides */
+.svg-diagram-container svg {
+  color: var(--text-primary) !important;
+}
+
+.svg-diagram-container svg text {
+  fill: currentColor !important;
+  color: var(--text-primary) !important;
+}
+
+.svg-diagram-container svg line,
+.svg-diagram-container svg path,
+.svg-diagram-container svg rect,
+.svg-diagram-container svg circle,
+.svg-diagram-container svg polygon {
+  transition: stroke 0.2s, fill 0.2s;
+}
+
+/* Force elements with explicit black/dark stroke or fill (or currentColor) to use text color */
+.svg-diagram-container svg [stroke="black"],
+.svg-diagram-container svg [stroke="#000000"],
+.svg-diagram-container svg [stroke="#000"],
+.svg-diagram-container svg [stroke="currentColor"] {
+  stroke: currentColor !important;
+}
+
+.svg-diagram-container svg [fill="black"],
+.svg-diagram-container svg [fill="#000000"],
+.svg-diagram-container svg [fill="#000"] {
+  fill: currentColor !important;
+}
+
+/* Elements with no explicit stroke or fill will default to inheriting currentColor in dark mode */
+.svg-diagram-container svg line:not([stroke]),
+.svg-diagram-container svg path:not([stroke]),
+.svg-diagram-container svg rect:not([stroke]),
+.svg-diagram-container svg circle:not([stroke]),
+.svg-diagram-container svg polygon:not([stroke]) {
+  stroke: currentColor;
+}
+
