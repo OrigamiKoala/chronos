@@ -7,8 +7,14 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
   const svgRef = useRef(null);
   const [hasError, setHasError] = useState(false);
 
+  let cleanSmiles = smiles;
+  const match = smiles ? String(smiles).match(/^<smiles>([\s\S]*?)<\/smiles>$/i) : null;
+  if (match) {
+    cleanSmiles = match[1].trim();
+  }
+
   useEffect(() => {
-    if (!svgRef.current || !smiles) return;
+    if (!svgRef.current || !cleanSmiles) return;
 
     try {
       svgRef.current.innerHTML = '';
@@ -23,7 +29,7 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
         themes: smilesThemes
       });
 
-      const sanitized = smiles.replace(/\\/g, '/');
+      const sanitized = cleanSmiles.replace(/\\/g, '/');
       SmilesDrawer.parse(sanitized, (tree) => {
         Promise.resolve().then(() => setHasError(false));
         drawer.draw(tree, svgRef.current, 'dark', false);
@@ -33,10 +39,10 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
     } catch {
       Promise.resolve().then(() => setHasError(true));
     }
-  }, [smiles, width, height, theme]);
+  }, [cleanSmiles, width, height, theme]);
 
   if (hasError) {
-    return <span>{smiles}</span>;
+    return <span>{cleanSmiles}</span>;
   }
 
   return (
@@ -45,7 +51,7 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
       justifyContent: 'center',
       margin: '12px auto'
     }}>
-      <svg ref={svgRef} data-smiles={smiles} width={width} height={height} style={{ width, height, display: 'block' }} />
+      <svg ref={svgRef} data-smiles={cleanSmiles} width={width} height={height} style={{ width, height, display: 'block' }} />
     </span>
   );
 }
@@ -59,8 +65,14 @@ export function ReactionRenderer({ reaction, theme = 'dark' }) {
   const svgRef = useRef(null);
   const [hasError, setHasError] = useState(false);
 
+  let cleanReaction = reaction;
+  const match = reaction ? String(reaction).match(/^<smiles>([\s\S]*?)<\/smiles>$/i) : null;
+  if (match) {
+    cleanReaction = match[1].trim();
+  }
+
   useEffect(() => {
-    if (!svgRef.current || !reaction) return;
+    if (!svgRef.current || !cleanReaction) return;
 
     try {
       svgRef.current.innerHTML = '';
@@ -93,7 +105,7 @@ export function ReactionRenderer({ reaction, theme = 'dark' }) {
 
       const reactionDrawer = new SmilesDrawer.ReactionDrawer(reactionOpts, molOpts);
 
-      SmilesDrawer.parseReaction(reaction, (rxn) => {
+      SmilesDrawer.parseReaction(cleanReaction, (rxn) => {
         Promise.resolve().then(() => setHasError(false));
         reactionDrawer.draw(rxn, svgRef.current, 'dark');
       }, () => {
@@ -102,10 +114,10 @@ export function ReactionRenderer({ reaction, theme = 'dark' }) {
     } catch {
       Promise.resolve().then(() => setHasError(true));
     }
-  }, [reaction, theme]);
+  }, [cleanReaction, theme]);
 
   if (hasError) {
-    return <span>{reaction}</span>;
+    return <span>{cleanReaction}</span>;
   }
 
   return (
@@ -148,8 +160,8 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
   if (!sanitizedText) return null;
 
   // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\]), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
-  // and markdown bold (**...**) / italic (*...*) to keep them intact.
-  const parts = sanitizedText.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  // smiles tag blocks (<smiles>...</smiles>), and markdown bold (**...**) / italic (*...*) to keep them intact.
+  const parts = sanitizedText.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
 
   return (
     <span ref={containerRef} key={sanitizedText} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -201,6 +213,25 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
           );
         }
 
+        // If this part is wrapped in <smiles>...</smiles> tags, parse it as a SMILES or Reaction SMILES structure
+        if (part.toLowerCase().startsWith('<smiles>') && part.toLowerCase().endsWith('</smiles>')) {
+          const match = part.match(/^<smiles>([\s\S]*?)<\/smiles>$/i);
+          const innerSmiles = match ? match[1].trim() : '';
+          const isReaction = innerSmiles.includes('>');
+          if (isReaction) {
+            return (
+              <span key={partIndex} style={{ display: 'inline-block' }}>
+                <ReactionRenderer reaction={part} theme={theme} />
+              </span>
+            );
+          } else {
+            return (
+              <span key={partIndex} style={{ display: 'inline-block' }}>
+                <SmilesRenderer smiles={part} width={defaultWidth} height={defaultHeight} theme={theme} />
+              </span>
+            );
+          }
+        }
 
         // If this part is a LaTeX math block, render it directly as text so MathJax can process it
         if (part.startsWith('$') || part.startsWith('\\(') || part.startsWith('\\[')) {
@@ -219,9 +250,8 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
           return <em key={partIndex}><ChemicalText text={inner} theme={theme} defaultWidth={defaultWidth} defaultHeight={defaultHeight} /></em>;
         }
 
-        // For non-math text, split by whitespace to detect SMILES/Reactions
+        // For non-math text, split by whitespace to detect newlines and space spacing properly
         const tokens = part.split(/(\s+)/);
-        const isLast = (idx) => idx === tokens.length - 1;
         return (
           <span key={partIndex}>
             {tokens.map((token, index) => {
@@ -240,42 +270,6 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
                   );
                 }
                 return <span key={index}>{token}</span>;
-              }
-
-              // Extract core word by removing leading/trailing punctuation/quotes
-              const match = token.match(/^([`'"({[<]*)(.*?)([`'")}>.,;:!?-]*)$/);
-              if (!match) {
-                return <span key={index}>{token}</span>;
-              }
-
-              const prefix = match[1];
-              const coreWord = match[2];
-              const suffix = match[3];
-
-              if (isReactionSmiles(coreWord)) {
-                const cleanPrefix = prefix.replace(/`/g, '');
-                const cleanSuffix = suffix.replace(/`/g, '');
-                return (
-                  <React.Fragment key={index}>
-                    {cleanPrefix}
-                    <ReactionRenderer reaction={coreWord} width={defaultWidth} height={defaultHeight} theme={theme} />
-                    {cleanSuffix}
-                    {isLast(index) ? '' : ' '}
-                  </React.Fragment>
-                );
-              }
-
-              if (isSmiles(coreWord)) {
-                const cleanPrefix = prefix.replace(/`/g, '');
-                const cleanSuffix = suffix.replace(/`/g, '');
-                return (
-                  <React.Fragment key={index}>
-                    {cleanPrefix}
-                    <SmilesRenderer smiles={coreWord} width={defaultWidth} height={defaultHeight} theme={theme} />
-                    {cleanSuffix}
-                    {isLast(index) ? '' : ' '}
-                  </React.Fragment>
-                );
               }
 
               return <span key={index}>{token}</span>;

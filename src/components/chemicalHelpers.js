@@ -1,22 +1,26 @@
 // Helper to determine if a token is a SMILES string
 export function isSmiles(word) {
-  if (!word || word.length < 2) return false;
+  if (!word || typeof word !== 'string') return false;
+  const match = word.match(/^<smiles>([\s\S]*?)<\/smiles>$/i);
+  if (!match) return false;
+  const inner = match[1].trim();
+  if (inner.length < 2) return false;
 
   // Reject common Roman numerals like II and III that consist solely of I/i
-  if (/^(ii|iii)$/i.test(word)) {
+  if (/^(ii|iii)$/i.test(inner)) {
     return false;
   }
 
   // Reject single element symbols followed by numbers (e.g., C2, C4, C-3) representing carbon numbers
   const isSingleAtomRef = /^(C|c|O|o|N|n|P|p|S|s|F|f|I|i|H|h|Cl|cl|Br|br)[-+]?\d+$/;
-  if (isSingleAtomRef.test(word)) {
+  if (isSingleAtomRef.test(inner)) {
     return false;
   }
 
   // Reject H-containing words ONLY when they lack SMILES structural markers (brackets, parens, bonds).
   // This allows inorganic SMILES like [OH2], [NH3], [NH4+], OS(=O)(=O)O while
   // still rejecting plain English words like "the", "have", "he".
-  if (/[Hh]/.test(word) && !/[[\]()=#]/.test(word)) return false;
+  if (/[Hh]/.test(inner) && !/[[\]()=#]/.test(inner)) return false;
 
   const englishWords = new Set([
     'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'by', 'is', 'are', 'was', 'were', 'be', 'been',
@@ -29,29 +33,29 @@ export function isSmiles(word) {
   ]);
 
   // Clean the word to check against English dictionary
-  const cleanWord = word.replace(/[.,\x2f#!$%^&*;:{}=\-_`~()]/g, "").toLowerCase();
+  const cleanWord = inner.replace(/[.,\x2f#!$%^&*;:{}=\-_`~()]/g, "").toLowerCase();
   if (englishWords.has(cleanWord)) {
     return false;
   }
 
   // Must contain organic/aromatic atoms (C, O, N, S, P, F, Cl, Br, I, H)
-  if (!/[conpsfclbri]/i.test(word)) {
+  if (!/[conpsfclbri]/i.test(inner)) {
     return false;
   }
 
   // Reject if the token contains typical LaTeX commands or curly braces
-  if (/\\(text|ce|mathrm|frac|color|style|alpha|beta|gamma|delta|pi|theta|mu|eta|lambda|chi|psi|phi|omega|sigma|tau|zeta|rho|xi|kappa|iota|to|cdot|pm|mp|le|ge|ne|approx|equiv|sim|cong|propto|infty|partial|nabla|sum|prod)/i.test(word) || /[{}]/.test(word)) {
+  if (/\\(text|ce|mathrm|frac|color|style|alpha|beta|gamma|delta|pi|theta|mu|eta|lambda|chi|psi|phi|omega|sigma|tau|zeta|rho|xi|kappa|iota|to|cdot|pm|mp|le|ge|ne|approx|equiv|sim|cong|propto|infty|partial|nabla|sum|prod)/i.test(inner) || /[{}]/.test(inner)) {
     return false;
   }
 
   // Check valid SMILES character set (including backslash for stereochemistry)
   const smilesCharsRegex = /^[A-Za-z0-9@+\-[\]()\x2f\\=#$.%]+$/;
-  if (!smilesCharsRegex.test(word)) {
+  if (!smilesCharsRegex.test(inner)) {
     return false;
   }
 
   // Must only contain allowed organic/aromatic letters outside of square brackets
-  const outsideBrackets = word.replace(/\[[^\]]*\]/g, "");
+  const outsideBrackets = inner.replace(/\[[^\]]*\]/g, "");
   const remainingAfterOrganic = outsideBrackets
     .replace(/cl/gi, "")
     .replace(/br/gi, "")
@@ -62,17 +66,17 @@ export function isSmiles(word) {
   }
 
   // If it has branching, ring numbers, double/triple bonds, charge, brackets, or stereochemistry indicators:
-  const hasSmiIndicators = /[[\]()=#@+\-\\\x2f]/.test(word) || /[0-9]/.test(word);
+  const hasSmiIndicators = /[[\]()=#@+\-\\\x2f]/.test(inner) || /[0-9]/.test(inner);
   if (hasSmiIndicators) {
     return true;
   }
 
   // If it has no indicators, it might be a simple chain like CCO, CCC, CCCCC, CO, etc.
   const organicOnlyRegex = /^(C|O|N|P|S|F|H|Cl|Br|I|c|o|n|s|p)+$/;
-  if (organicOnlyRegex.test(word) && word.length >= 2) {
+  if (organicOnlyRegex.test(inner) && inner.length >= 2) {
     // Avoid matching typical words like "In", "No", "On", "So", "He", etc.
-    if (word.length === 2 && ['no', 'in', 'on', 'so', 'he', 'cl'].includes(word.toLowerCase())) {
-      return word.toLowerCase() === 'cl'; // Cl is Chlorine
+    if (inner.length === 2 && ['no', 'in', 'on', 'so', 'he', 'cl'].includes(inner.toLowerCase())) {
+      return inner.toLowerCase() === 'cl'; // Cl is Chlorine
     }
     return true;
   }
@@ -82,13 +86,16 @@ export function isSmiles(word) {
 
 export function isReactionSmiles(word) {
   if (!word || typeof word !== 'string') return false;
-  if (!word.includes('>')) return false;
+  const match = word.match(/^<smiles>([\s\S]*?)<\/smiles>$/i);
+  if (!match) return false;
+  const inner = match[1].trim();
+  if (!inner.includes('>')) return false;
 
   // A reaction SMILES should have at least some SMILES-like characters or structures
-  const parts = word.split('>');
+  const parts = inner.split('>');
   const hasSmilesPart = parts.some(part => {
     if (!part) return false;
-    return part.split('.').some(comp => isSmiles(comp));
+    return part.split('.').some(comp => isSmiles(`<smiles>${comp}</smiles>`));
   });
   return hasSmilesPart;
 }

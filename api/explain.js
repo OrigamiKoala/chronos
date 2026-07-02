@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     let subjectInstructions = 'Represent formulas in LaTeX.';
     const normSubject = String(subject || '').trim().toLowerCase();
     if (normSubject === 'chemistry') {
-      subjectInstructions = 'Represent organic molecules strictly using SMILES notation where appropriate (e.g., C(C)O for ethanol, CC(=O)O for acetic acid). Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).';
+      subjectInstructions = 'Represent organic molecules strictly using SMILES notation wrapped in <smiles>...</smiles> tags where appropriate (e.g., <smiles>C(C)O</smiles> for ethanol, <smiles>CC(=O)O</smiles> for acetic acid). Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).';
     }
 
     let prompt = '';
