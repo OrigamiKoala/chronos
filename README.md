@@ -4,6 +4,8 @@
 
 Vibe coded by Carl Liu (c) 2026
 
+Feel free to use this framework, with your own API key (uses Gemini's Interactions API)
+
 ---
 
 ## 🚀 Key Features
