@@ -855,8 +855,17 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
 
       const getQuestionRating = (sub, diff) => {
         const d = Math.max(1, Math.min(10, diff));
-        const eloMap = new Map([[1, 100], [2, 300], [3, 500], [4, 750], [5, 1000], [6, 1250], [7, 1500], [8, 2000], [9, 2500], [10, 3000]]);
-        return eloMap.get(Math.round(d)) || 1000;
+        if (sub === 'Math') {
+          const mathMap = new Map([[1, 500], [2, 600], [3, 800], [4, 900], [5, 1000], [6, 1250], [7, 1500], [8, 2000], [9, 2500], [10, 3000]]);
+          return mathMap.get(Math.round(d)) || 1000;
+        } else if (sub === 'Chemistry') {
+          const chemMap = new Map([[1, 100], [2, 300], [3, 500], [4, 750], [5, 1000], [6, 1250], [7, 1500], [8, 2000], [9, 2500], [10, 3000]]);
+          return chemMap.get(Math.round(d)) || 1000;
+        } else if (sub === 'Physics') {
+          const physMap = new Map([[1, 100], [2, 300], [3, 500], [4, 750], [5, 1000], [6, 1300], [7, 1600], [8, 2000], [9, 2500], [10, 3000]]);
+          return physMap.get(Math.round(d)) || 1000;
+        }
+        return 100;
       };
 
       const sumQuestionRatings = gradedResults.reduce((acc, r) => acc + getQuestionRating(subject, r.difficulty || 5), 0);

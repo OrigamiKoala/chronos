@@ -401,19 +401,50 @@ export default async function handler(req, res) {
               totalQuestions = resArray.length;
               const getQuestionRating = (subject, diff) => {
                 const d = Math.round(Math.max(1, Math.min(10, diff)));
-                switch (d) {
-                  case 1: return 100;
-                  case 2: return 300;
-                  case 3: return 500;
-                  case 4: return 750;
-                  case 5: return 1000;
-                  case 6: return 1250;
-                  case 7: return 1500;
-                  case 8: return 2000;
-                  case 9: return 2500;
-                  case 10: return 3000;
-                  default: return 1000;
+                if (subject === 'Math') {
+                  switch (d) {
+                    case 1: return 500;
+                    case 2: return 600;
+                    case 3: return 800;
+                    case 4: return 900;
+                    case 5: return 1000;
+                    case 6: return 1250;
+                    case 7: return 1500;
+                    case 8: return 2000;
+                    case 9: return 2500;
+                    case 10: return 3000;
+                    default: return 1000;
+                  }
+                } else if (subject === 'Chemistry') {
+                  switch (d) {
+                    case 1: return 100;
+                    case 2: return 300;
+                    case 3: return 500;
+                    case 4: return 750;
+                    case 5: return 1000;
+                    case 6: return 1250;
+                    case 7: return 1500;
+                    case 8: return 2000;
+                    case 9: return 2500;
+                    case 10: return 3000;
+                    default: return 1000;
+                  }
+                } else if (subject === 'Physics') {
+                  switch (d) {
+                    case 1: return 100;
+                    case 2: return 300;
+                    case 3: return 500;
+                    case 4: return 750;
+                    case 5: return 1000;
+                    case 6: return 1300;
+                    case 7: return 1600;
+                    case 8: return 2000;
+                    case 9: return 2500;
+                    case 10: return 3000;
+                    default: return 1000;
+                  }
                 }
+                return 100;
               };
               sumQuestionRatings = resArray.reduce((acc, r) => acc + getQuestionRating(sub, r.difficulty || 5), 0);
             }
