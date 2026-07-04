@@ -426,17 +426,8 @@ function App() {
 
     const getQuestionRating = (sub, diff) => {
       const d = Math.max(0, Math.min(10, diff));
-      if (sub === 'Math') {
-        const mathMap = { 0: 300, 1: 500, 2: 600, 3: 800, 4: 900, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
-        return mathMap[Math.round(d)] || 1000;
-      } else if (sub === 'Chemistry') {
-        const chemMap = { 0: 50, 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
-        return chemMap[Math.round(d)] || 1000;
-      } else if (sub === 'Physics') {
-        const physMap = { 0: 50, 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1300, 7: 1600, 8: 2000, 9: 2500, 10: 3000 };
-        return physMap[Math.round(d)] || 1000;
-      }
-      return 100;
+      const eloMap = { 0: 50, 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
+      return eloMap[Math.round(d)] || 1000;
     };
 
     const totalQuestions = results.length;
