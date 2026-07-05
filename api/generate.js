@@ -654,7 +654,7 @@ Follow these strict Olympiad Design Philosophies:
 
 Difficulty scale: 0=simplest part of MATHCOUNTS (MATHCOUNTS School), 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 10=hardest IMO.
 `;
-      examples = formatExemplarsForPrompt(getRandomExemplars(mathExemplars, 3));
+      examples = formatExemplarsForPrompt(mathExemplars);
     } else if (normSubject === 'physics') {
       constraints = `
 Follow these strict Olympiad Design Philosophies:
@@ -674,7 +674,7 @@ Follow these strict Olympiad Design Philosophies:
 
 Difficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest IPhO.
 `;
-      examples = formatExemplarsForPrompt(getRandomExemplars(physicsExemplars, 3));
+      examples = formatExemplarsForPrompt(physicsExemplars);
     } else if (normSubject === 'chemistry') {
       constraints = `
 Follow these strict Olympiad Design Philosophies:
@@ -698,7 +698,7 @@ Follow these strict Olympiad Design Philosophies:
 
 Difficulty scale: 1=Honors/early AP, 3=harder ACS Local, 5=harder USNCO Nationals, 10=hardest IChO.
 `;
-      examples = formatExemplarsForPrompt(getRandomExemplars(chemistryExemplars, 3));
+      examples = formatExemplarsForPrompt(chemistryExemplars);
     }
 
     // allowedTypes and parsedTypes are defined at the outer scope
