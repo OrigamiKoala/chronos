@@ -788,10 +788,11 @@ const agents_description = `
     - NEVER hint at the problem solution or trap. 
     - Do not include any commentary.
     - Questions must be solvable with a scientific calculator ONLY. Excessive computation is beyond the scope of olympiads.
-    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES.
-    - Make graphs using SVG code. CRITICAL: There should be many problems with SVG diagrams.
+    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. ***CRITICAL***You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>). Use LaTeX for all equations, formulas, units, and variables.
     - The traps should be well hidden and not immediately obvious to the student.
     - For calculation questions, do NOT round or truncate to ensure numerical accuracy.
+    - SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
+    - For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 ---
 
 ## Agent: Solver
@@ -808,6 +809,7 @@ const agents_description = `
     - The solutions should be clear and detailed, yet still concise.
     - The problems should all be solvable with ONLY a scientific calculator.
     - Multiple choice questions should have exactly ONE correct answer.
+
 ---
 
 ## Agent: Reviewer
@@ -826,18 +828,20 @@ const agents_description = `
     - Banish stock, predictable questions that can be solved by memory or template-matching. The questions should be completely new and original.
     - Avoid topics listed in excluded topics.
     - The correct answers should be counterintuitive.
-    - The problem texts should be written in the same style/tone as past olympiad exams.
-    - All incorrect answer choices should correspond to valid mistakes the student may make or traps they may fall into.
-    - The problem texts should keep a strictly neutral tone. NEVER include hints, warnings, or clarifying instructions (e.g., "Do not assume...", "Account for...", "Do not rely on..."). NEVER tell the user what equation to use, or hint to consider thermodynamics vs kinetic control. NEVER hint at the solution or trap.
-    - No commentary in the question text.
-    - Questions must be solvable with a scientific calculator ONLY.
-    - All organic species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES.
-    - All graphs should be made with SVG code. CRITICAL: There should be many problems with SVG diagrams.
+    - The problem texts should be written in the same style/tone as past olympiad exams, but make the questions harder.
+    - Incorrect answer choices should correspond to the common misconceptions and errors that students would likely make. 
+    - Keep a strictly neutral tone. NEVER include hints, warnings, or clarifying instructions (e.g., "Do not assume...", "Account for...", "Do not rely on...").
+    - NEVER hint at the problem solution or trap. 
+    - Do not include any commentary.
+    - Questions must be solvable with a scientific calculator ONLY. Excessive computation is beyond the scope of olympiads.
+    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. ***CRITICAL***You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>). Use LaTeX for all equations, formulas, units, and variables.
     - The traps should be well hidden and not immediately obvious to the student.
+    - For calculation questions, do NOT round or truncate to ensure numerical accuracy.
+    - SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
     - For calculation questions, any answer choices/solutions should not round or truncate to ensure numerical accuracy.
     - The solutions should be clear and detailed, yet still concise.
     - Multiple choice questions should have exactly ONE correct answer.
-
+    - For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
 ---
 
 ## Agent: Compiler
@@ -1033,11 +1037,11 @@ export default async function handler(req, res) {
     }
 
     // 2. Build the Gemini generation prompt
-    let constraints = '';
+    let syllabus = '';
     let examples = '';
 
     if (normSubject === 'math') {
-      constraints = `
+      syllabus = `
 Syllabus Boundaries
 - Restrict to algebra, combinatorics, geometry, number theory. No calculus. Increase difficulty by coupling topics.
 - NO research level math (e.g. differential equations, topology, etc.)
@@ -1046,7 +1050,7 @@ Difficulty scale: 0=simplest part of MATHCOUNTS (MATHCOUNTS School), 1=MATHCOUNT
 `;
       examples = formatExemplarsForPrompt(mathExemplars);
     } else if (normSubject === 'physics') {
-      constraints = `
+      syllabus = `
 Syllabus Boundaries
 - DIFFICULTY < 8 (F=ma/AP Physics C): Restrict to classical mechanics, electromagnetism, thermodynamics, fluid dynamics, waves, optics. Increase difficulty by coupling unexpected systems.
 - DIFFICULTY >= 8 (USAPhO/IPhO): Original concept-first designs. May introduce special relativity, quantum basics, statistical mechanics, etc. but MUST define all concepts from scratch (first-principles guardrail). free_response MUST require comprehensive derivation, not just a final number.
@@ -1055,12 +1059,12 @@ Difficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest I
 `;
       examples = formatExemplarsForPrompt(physicsExemplars);
     } else if (normSubject === 'chemistry') {
-      constraints = `
-Syllabus Boundaries
+      syllabus = `
+# Syllabus Boundaries
 
 There are two styles of exam - USNCO-style and IChO-style.
 
-# USNCO Style Exams (Difficulty < 8):
+## USNCO Style Exams (Difficulty < 8):
 
 - Difficulty 1 (AP Chem Exam): Straightforward applications of concepts and formulas. Minimal thinking.
 - Difficulty 2-3 (ACS Local Exam): More convoluted applications of concepts and formulas. Some thinking required.
@@ -1074,13 +1078,9 @@ The following topics are excluded from USNCO-style exams:
 
 ${chem_excluded_topics}
 
-# IChO Style Exams (Difficulty 8+):
+## IChO Style Exams (Difficulty 8+):
 
-Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high school knowldge (e.g. simple spectroscopy, organic chemistry mechanisms). You can also bring in more advanced knowledge, but it must be on a first-principles approach: you have to introduce the new concepts/ideas the student should not already know as a high school student.
-
-3. SMILES: Use only for complex organic molecules or coordination complexes. ***CRITICAL***You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>). Use LaTeX for all equations, formulas, units, and variables.
-   SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
-`;
+Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high school knowldge (e.g. simple spectroscopy, organic chemistry mechanisms). You can also bring in more advanced knowledge, but it must be on a first-principles approach: you have to introduce the new concepts/ideas the student should not already know as a high school student.`;
       examples = formatExemplarsForPrompt(chemistryExemplars);
     }
 
@@ -1114,9 +1114,9 @@ You MUST prioritize generating questions that are directly related to these spec
 `;
     }
 
-    const systemInstruction = `#Role: You are an expert coach for students competing in advanced high school Olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. The goal is to prepare them for future iterations of the exam, which are anticipated to increase significantly in difficulty.
+    const systemInstruction = `# Role: You are an expert coach for students competing in advanced high school Olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. The goal is to prepare them for future iterations of the exam, which are anticipated to increase significantly in difficulty.
 
-#Context: You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
+# Context: You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
 
 ${topicsInstructions}
 
@@ -1129,25 +1129,21 @@ ${topicBreakdown}
 - Recent Mistake Patterns (thinking / test-taking style):
 ${mistakeAnalysis}
 
-#Goal: Write questions for a user's practice tests that perfectly mirror official styling but features significantly elevated problem difficulty, demanding deep structural, thermodynamic, and mechanistic insight. The exam must be indistinguishable from an official paper in tone, typography, formatting, style, and difficulty. Target the user's weak areas ( ${weaknesses} ).
+# Goal: Write questions for a user's practice tests that perfectly mirror official styling but features significantly elevated problem difficulty, demanding deep structural, thermodynamic, and mechanistic insight. The exam must be indistinguishable from an official paper in tone, typography, formatting, style, and difficulty. Target the user's weak areas ( ${weaknesses} ).
 
-#Steps: You will stimulate different agent roles, completing a full generation pipeline:
+# Context: You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
+
+${syllabus}
+
+# Steps: You will stimulate different agent roles, completing a full generation pipeline:
 
 ${agents_description}
 
-#Constraints:
-
-***CRITICAL:*** You MUST stay within the syllabus boundaries for the exam with the appropriate difficulty.
-
-${constraints}
-
-4. For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
-
-#Examples:
+# Examples:
 
 ${examples}
 
-#Output Requirements:
+# Output Requirements:
 
 Do NOT output your thought process in any field of the JSON. Only output the final, fully refined question parameters.
 Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with \`[\`.
