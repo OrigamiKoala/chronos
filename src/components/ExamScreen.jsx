@@ -114,6 +114,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     resumeState ? (resumeState.problems[resumeState.currentQuestionIndex]?.difficulty !== undefined ? resumeState.problems[resumeState.currentQuestionIndex].difficulty : config.difficulty) : config.difficulty
   );
   const [isPaused, setIsPaused] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   const [isRated, setIsRated] = useState(() => {
     if (resumeState && resumeState.config) {
       return resumeState.config.isRated !== false;
@@ -309,7 +310,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   }, [loading, currentQuestionIndex, problem]);
 
   useEffect(() => {
-    if (config.timeLimitStyle === 'none' || loading || !problem || workSubmitted || isPaused) return;
+    if (config.timeLimitStyle === 'none' || loading || !problem || workSubmitted || isPaused || !hasStarted) return;
 
     if (isWholeTestMode && totalTimeLeft <= 0) {
       handleGlobalTimeUp();
@@ -378,7 +379,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft, isPaused, activeSetIndex, setTimesLeft[activeSetIndex]]);
+  }, [loading, currentQuestionIndex, problem, workSubmitted, totalTimeLeft, isPaused, activeSetIndex, setTimesLeft[activeSetIndex], hasStarted]);
 
   const saveActiveExam = async (showLoader = false, updatedConfig = config) => {
     if (!config.username || config.username === 'default_user') return;
@@ -856,6 +857,93 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
         <h3>Generating Problems...</h3>
         <p style={{ color: 'var(--text-secondary)' }}>Preparing exam with {config.numQuestions} questions. This usually takes 1-2 min</p>
         {error && <p style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</p>}
+      </div>
+    );
+  }
+
+  if (!hasStarted) {
+    return (
+      <div className="glass-panel animate-fade-in" style={{
+        padding: 'var(--panel-padding-lg)',
+        textAlign: 'center',
+        maxWidth: '650px',
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '350px',
+        gap: '2rem'
+      }}>
+        <div style={{
+          width: '72px',
+          height: '72px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1))',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)',
+          color: 'var(--accent-primary)'
+        }}>
+          <Clock size={36} style={{ color: 'var(--accent-primary)' }} />
+        </div>
+        <div>
+          <h2 className="text-gradient" style={{ marginBottom: '0.75rem', fontSize: '2.2rem', fontWeight: '700' }}>
+            {resumeState ? 'Ready to Resume' : 'Exam Ready'}
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem', fontSize: '1.1rem', lineHeight: '1.6' }}>
+            {resumeState 
+              ? 'Your progress has been loaded. Click below to continue your assessment.' 
+              : 'All questions have been generated and the environment is prepared.'}
+          </p>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '1rem',
+            width: '100%',
+            maxWidth: '440px',
+            margin: '0 auto 0.5rem',
+            textAlign: 'left'
+          }}>
+            <div className="glass-panel" style={{ padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block' }}>Subject</span>
+              <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{config.subject}</strong>
+            </div>
+            <div className="glass-panel" style={{ padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block' }}>Questions</span>
+              <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{config.numQuestions} Qs</strong>
+            </div>
+            <div className="glass-panel" style={{ padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', gridColumn: 'span 2' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block' }}>Format & Mode</span>
+              <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>
+                {config.examFormat === 'free_response' ? 'Free Response' : config.examFormat === 'multiple_choice' ? 'Multiple Choice' : 'Mixed Format'}
+                {config.stressMode === 'strict' ? ' • Strict Stress Mode' : ''}
+              </strong>
+            </div>
+          </div>
+        </div>
+        
+        <button
+          className="btn btn-primary animate-pulse-subtle"
+          onClick={() => setHasStarted(true)}
+          style={{
+            padding: '1rem 3rem',
+            fontSize: '1.25rem',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)'
+          }}
+        >
+          <Play size={20} fill="currentColor" /> {resumeState ? 'Resume Exam' : 'Start Exam'}
+        </button>
       </div>
     );
   }
