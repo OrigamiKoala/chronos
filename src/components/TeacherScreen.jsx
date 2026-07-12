@@ -845,7 +845,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
       {/* Selected Student Analytics Area */}
       {studentAnalyticsUser && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '5vh', overflowY: 'auto', zIndex: 1001 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '95%', maxWidth: '1000px', marginBottom: '5vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '96%', maxWidth: '100%', marginBottom: '5vh', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 className="text-gradient" style={{ fontSize: '1.25rem', margin: 0 }}>
                 Student Analytics: {selectedStudent}

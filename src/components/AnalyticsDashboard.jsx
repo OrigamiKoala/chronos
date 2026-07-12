@@ -684,7 +684,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     : (missedADay ? 'var(--danger)' : 'var(--text-primary)');
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ width: '100%', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
@@ -756,15 +756,6 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         <>
           {/* Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-            <div className="glass-panel analytics-stat-card">
-              <Flame size={22} color="var(--warning)" />
-              <div>
-                <span className="analytics-stat-label">Current Streak</span>
-                <span className="analytics-stat-value" style={{ color: streakColor }}>
-                  {displayedStreak} {summary.streakType === 'correct' && !missedADay ? '🔥' : (missedADay ? '❄️' : '')}
-                </span>
-              </div>
-            </div>
 
             {selectedSubjectFilter === 'All' ? (
               <>
@@ -865,7 +856,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
               const entries = subjects.map(s => ({ subject: s, text: displayDetailedAnalysis[s] })).filter(e => e.text);
               if (!entries.length) return null;
               return entries.map(({ subject, text }) => (
-                <div key={subject} className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2', padding: 'var(--card-padding)', background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 4px 20px -2px rgba(168,85,247,0.1)' }}>
+                <div key={subject} className="glass-panel analytics-chart-panel" style={{ gridColumn: '1 / -1', padding: 'var(--card-padding)', background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.2)', boxShadow: '0 4px 20px -2px rgba(168,85,247,0.1)' }}>
                   <h4 className="analytics-chart-title" style={{ color: 'var(--accent-secondary)', marginBottom: '0.75rem' }}>
                     <Brain size={18} color="var(--accent-secondary)" /> {subject} Overview
                   </h4>
@@ -996,7 +987,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
             )}
 
             {/* Topic Mastery */}
-            <div className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2' }}>
+            <div className="glass-panel analytics-chart-panel" style={{ gridColumn: '1 / -1' }}>
               <h4 className="analytics-chart-title">
                 <BarChart3 size={18} color="var(--success)" /> Topic Breakdown
               </h4>

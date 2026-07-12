@@ -297,6 +297,9 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       ? [...currentMessages, { sender: 'user', text: userQuery }]
       : currentMessages;
 
+    const isFirstCall = !activeExplanations[index] || !previousInteractionIds[index];
+    const wasOriginallyWrong = isFirstCall ? !problemObj.isCorrect : (activeExplanations[index]?.wasOriginallyWrong ?? false);
+
     setActiveExplanations(prev => ({
       ...prev,
       [index]: {
@@ -304,7 +307,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         messages: history,
         query: '',
         loading: true,
-        error: null
+        error: null,
+        wasOriginallyWrong
       }
     }));
 
@@ -905,7 +909,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                     </button>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {activeExplanations[i].remarkedCorrect && (
+                      {activeExplanations[i].remarkedCorrect && activeExplanations[i].wasOriginallyWrong && (
                         <div style={{
                           background: 'rgba(52, 211, 153, 0.08)',
                           border: '1px solid var(--success)',
@@ -918,7 +922,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                           alignItems: 'center',
                           gap: '0.5rem'
                         }}>
-                          🎉 AI determined your answer was correct! This question has been remarked correct and analytics updated.
+                          🎉 AI determined your answer was correct!
                         </div>
                       )}
 

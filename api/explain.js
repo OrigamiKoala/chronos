@@ -77,6 +77,10 @@ Return strictly a valid JSON object with the following schema:
       explanationText = 'The AI did not return a response. The request may have been blocked by safety filters. Please try again.';
     }
 
+    if (isCorrect) {
+      shouldRemarkCorrectVal = false;
+    }
+
     return res.status(200).json({
       explanation: explanationText,
       shouldRemarkCorrect: shouldRemarkCorrectVal,
