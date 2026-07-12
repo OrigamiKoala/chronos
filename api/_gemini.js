@@ -16,18 +16,31 @@ function markKeyRateLimited(modelId, apiKey) {
 export async function executeWithRetry(models, apiCallFn) {
   const modelList = Array.isArray(models) ? models : [models];
   const keys = [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-    process.env.GEMINI_API_KEY_4,
-    process.env.GEMINI_API_KEY_5,
-    process.env.GEMINI_API_KEY_6,
-    process.env.GEMINI_API_KEY_7,
-    process.env.GEMINI_API_KEY_8,
-    process.env.GEMINI_API_KEY_9,
-    process.env.GEMINI_API_KEY_10,
-    process.env.GEMINI_API_KEY_11,
-    process.env.GEMINI_API_KEY_12
+    process.env.api_1,
+    process.env.api_2,
+    process.env.api_3,
+    process.env.api_4,
+    process.env.api_5,
+    process.env.api_6,
+    process.env.api_7,
+    process.env.api_8,
+    process.env.api_9,
+    process.env.api_10,
+    process.env.api_11,
+    process.env.api_12,
+    process.env.api_13,
+    process.env.api_14,
+    process.env.api_15,
+    process.env.api_16,
+    process.env.api_17,
+    process.env.api_18,
+    process.env.api_19,
+    process.env.api_20,
+    process.env.api_21,
+    process.env.api_22,
+    process.env.api_23,
+    process.env.api_24,
+    process.env.api_25
   ].filter(Boolean);
 
   if (keys.length === 0) {
