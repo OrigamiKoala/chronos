@@ -150,6 +150,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   const currentQuestionEntryTimeRef = useRef(0);
   const questionIntervalsRef = useRef([]);
   const submittedRef = useRef(false);
+  const globalTimeUpHandledRef = useRef(false);
+  const setTimeUpHandledRef = useRef({});
+  const questionTimeUpHandledRef = useRef({});
 
   const triggerFinish = (finalResults) => {
     if (submittedRef.current) return;
@@ -482,6 +485,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   };
 
   const handleTimeUp = () => {
+    if (questionTimeUpHandledRef.current[currentQuestionIndex]) return;
+    questionTimeUpHandledRef.current[currentQuestionIndex] = true;
+
     if (problem && problem.type === 'free_response') {
       handleAutoTimeoutSubmit();
     } else if (config.stressMode === 'strict') {
@@ -490,6 +496,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   };
 
   const handleGlobalTimeUp = async () => {
+    if (globalTimeUpHandledRef.current) return;
+    globalTimeUpHandledRef.current = true;
+
     recordActiveInterval(currentQuestionIndex);
     clearInterval(timerRef.current);
     alert("Test time limit reached! Auto-submitting your exam.");
@@ -541,6 +550,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   };
 
   const handleSetTimeUp = () => {
+    if (setTimeUpHandledRef.current[activeSetIndex]) return;
+    setTimeUpHandledRef.current[activeSetIndex] = true;
+
     recordActiveInterval(currentQuestionIndex);
     clearInterval(timerRef.current);
 
