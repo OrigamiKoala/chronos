@@ -39,13 +39,18 @@ export default async function handler(req, res) {
         FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`,
         UNNEST(JSON_EXTRACT_ARRAY(results_json)) AS q
         WHERE user_id = @targetUserId AND @targetUserId != 'default_user'
+      ),
+      uniquePregen AS (
+        SELECT *, ROW_NUMBER() OVER (PARTITION BY JSON_VALUE(question_json, '$.question') ORDER BY created_at DESC) as rn
+        FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
       )
       SELECT question_json
-      FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
-      WHERE subject = @subject
+      FROM uniquePregen
+      WHERE rn = 1
+        AND subject = @subject
         AND (
           @targetUserId = 'default_user'
-          OR JSON_VALUE(question_json, '$.id') NOT IN (SELECT qid FROM doneQuestions)
+          OR question_id NOT IN (SELECT qid FROM doneQuestions)
         )
       ORDER BY 
         CASE WHEN type IN UNNEST(@allowedTypes) THEN 0 ELSE 1 END,

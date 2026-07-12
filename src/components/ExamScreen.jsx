@@ -236,10 +236,13 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             // Append as they arrive in real-time
             setProblems(prev => {
               if (prev.length >= totalCount) return prev;
+              if (prev.some(p => p.id === question.id || p.question === question.question)) return prev;
               return [...prev, question];
             });
 
-            streamedQuestions.push(question);
+            if (!streamedQuestions.some(p => p.id === question.id || p.question === question.question)) {
+              streamedQuestions.push(question);
+            }
 
             if (!firstReceived) {
               firstReceived = true;
@@ -258,17 +261,20 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
         );
 
         if (generated && generated.length > 0) {
-          allGenerated = [...allGenerated, ...generated];
+          const newGenerated = generated.filter(q => !allGenerated.some(a => a.id === q.id || a.question === q.question));
+          allGenerated = [...allGenerated, ...newGenerated];
         } else {
           // If no questions returned, merge whatever was streamed and retry
           if (streamedQuestions.length > 0) {
-            allGenerated = [...allGenerated, ...streamedQuestions];
+            const newStreamed = streamedQuestions.filter(q => !allGenerated.some(a => a.id === q.id || a.question === q.question));
+            allGenerated = [...allGenerated, ...newStreamed];
           }
           retryCount++;
         }
       } catch (err) {
         if (streamedQuestions.length > 0) {
-          allGenerated = [...allGenerated, ...streamedQuestions];
+          const newStreamed = streamedQuestions.filter(q => !allGenerated.some(a => a.id === q.id || a.question === q.question));
+          allGenerated = [...allGenerated, ...newStreamed];
         }
         retryCount++;
         const isTimeout = err.message === 'Timeout' || err.message?.toLowerCase().includes('timeout') || err.message?.includes('504');
@@ -292,7 +298,15 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     // Set the final consolidated list
     setProblems(prev => {
       const shared = prev.slice(0, sharedQuestions.length);
-      return [...shared, ...allGenerated].slice(0, totalCount);
+      const uniqueAllGenerated = [];
+      for (const q of allGenerated) {
+        const isDuplicate = shared.some(s => s.id === q.id || s.question === q.question) ||
+                            uniqueAllGenerated.some(u => u.id === q.id || u.question === q.question);
+        if (!isDuplicate) {
+          uniqueAllGenerated.push(q);
+        }
+      }
+      return [...shared, ...uniqueAllGenerated].slice(0, totalCount);
     });
     setLoading(false);
   };

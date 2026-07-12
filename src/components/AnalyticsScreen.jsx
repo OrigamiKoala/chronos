@@ -302,6 +302,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       [index]: {
         ...prev[index],
         messages: history,
+        query: '',
         loading: true,
         error: null
       }
