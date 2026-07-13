@@ -72,7 +72,9 @@ export async function executeWithRetry(models, apiCallFn) {
           console.warn(`[API Rotation] Selected key failed. Rotating to backup key ${i + 1} for model ${currentModel}.`);
         }
         const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 300_000 } }); // 5-minute timeout
-        return await apiCallFn(ai, currentModel);
+        const result = await apiCallFn(ai, currentModel);
+        console.log(`[AI Success] Successfully received response from model ${currentModel}:`, JSON.stringify(result, null, 2));
+        return result;
       } catch (err) {
         lastError = err;
         let status = err.status || err.statusCode;

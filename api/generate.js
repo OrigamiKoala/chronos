@@ -1030,6 +1030,7 @@ export default async function handler(req, res) {
         types: { doneIds: ['STRING'] }
       });
       if (rows && rows.length > 0) {
+        console.log('[BigQuery] Successfully fetched pregenerated question from BigQuery:', rows[0].question_json);
         pregeneratedQuestion = JSON.parse(rows[0].question_json);
       }
     } catch (err) {
@@ -1354,6 +1355,7 @@ Follow these strict rules:
           }
         });
         if (rows && rows.length > 0) {
+          console.log(`[BigQuery] Successfully fetched ${rows.length} fallback questions from BigQuery.`);
           for (const r of rows) {
             try {
               allQuestions.push(JSON.parse(r.question_json));

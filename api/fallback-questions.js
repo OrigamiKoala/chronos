@@ -76,6 +76,7 @@ export default async function handler(req, res) {
 
     const questions = [];
     if (rows && rows.length > 0) {
+      console.log(`[BigQuery] Successfully fetched ${rows.length} fallback questions from BigQuery.`);
       for (const r of rows) {
         try {
           questions.push(JSON.parse(r.question_json));
