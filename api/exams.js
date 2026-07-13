@@ -780,9 +780,11 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           };
         } catch (err) {
           const isOverload = err.status === 503 || 
+                             err.status === 500 ||
                              err.status === 429 ||
                              (err.message && (err.message.toLowerCase().includes('demand') ||
                                               err.message.includes('503') || 
+                                              err.message.includes('500') ||
                                               err.message.includes('429') || 
                                               err.message.includes('overloaded') || 
                                               err.message.includes('busy') ||
@@ -1147,9 +1149,11 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
   } catch (err) {
     console.error('Submit exam error:', err);
     const isOverload = err.status === 503 || 
+                       err.status === 500 ||
                        err.status === 429 ||
                        (err.message && (err.message.toLowerCase().includes('demand') ||
                                         err.message.includes('503') || 
+                                        err.message.includes('500') ||
                                         err.message.includes('429') || 
                                         err.message.includes('overloaded') || 
                                         err.message.includes('busy') || 
