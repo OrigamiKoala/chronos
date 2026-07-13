@@ -1,6 +1,5 @@
 /* eslint-disable */
 import { useState, useEffect, useRef } from 'react';
-import { generateProblems } from '../services/gemini';
 import { Loader2, Clock, AlertTriangle, ArrowRight, Upload, Type, Image as ImageIcon, ArrowLeft, Pause, Play } from 'lucide-react';
 import { ChemicalText, SmilesRenderer } from './ChemicalText';
 import { isSmiles } from './chemicalHelpers.js';
@@ -72,7 +71,182 @@ function isAnswerCorrect(prob, ans) {
   }
   return normalizeAnswer(ans) === normalizeAnswer(prob.answer);
 }
+async function readSSEStream(response, onQuestion) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  const questions = [];
 
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (value) {
+      buffer += decoder.decode(value, { stream: !done });
+
+      // Split on double-newlines to isolate complete SSE frames
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop(); // keep any trailing incomplete frame
+
+      for (const frame of frames) {
+        const trimmed = frame.trim();
+        if (!trimmed.startsWith('data:')) continue;
+
+        try {
+          const colonIdx = trimmed.indexOf(':');
+          const jsonPayload = trimmed.slice(colonIdx + 1).trim();
+          const event = JSON.parse(jsonPayload);
+
+          if (event.type === 'question' && event.data) {
+            questions.push(event.data);
+            if (onQuestion) onQuestion(event.data, questions.length - 1);
+          }
+        } catch {
+        }
+      }
+    }
+
+    if (done) {
+      // Process any remaining buffer content
+      if (buffer.trim()) {
+        const frames = buffer.split('\n\n');
+        for (const frame of frames) {
+          const trimmed = frame.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          try {
+            const colonIdx = trimmed.indexOf(':');
+            const jsonPayload = trimmed.slice(colonIdx + 1).trim();
+            const event = JSON.parse(jsonPayload);
+            if (event.type === 'question' && event.data) {
+              questions.push(event.data);
+              if (onQuestion) onQuestion(event.data, questions.length - 1);
+            }
+          } catch {}
+        }
+      }
+      break;
+    }
+  }
+
+  return questions;
+}
+
+export async function generateProblems(count, difficulty, subject = "Math", username = "default_user", onQuestion = null, freeResponseMode = false, examFormat = 'mix', lessonTitle = null, lessonDescription = null, topics = '', assignmentId = null) {
+  try {
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        count,
+        difficulty,
+        subject,
+        targetUserId: username,
+        freeResponseMode,
+        examFormat,
+        lessonTitle,
+        lessonDescription,
+        topics,
+        assignmentId
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(`Vercel API returned status ${response.status}.`);
+      if (response.status === 504) {
+        throw new Error("Timeout");
+      }
+      throw new Error(`API call failed with status ${response.status}`);
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('text/event-stream')) {
+      // SSE streaming path
+      const wrappedOnQuestion = onQuestion
+        ? (q, idx) => {
+          if (idx < count) {
+            onQuestion(q, idx);
+          }
+        }
+        : null;
+      const resQuestions = await readSSEStream(response, wrappedOnQuestion);
+      return resQuestions.slice(0, count);
+    } else {
+      // Legacy non-streaming JSON fallback
+      const data = await response.json();
+      const questions = (Array.isArray(data) ? data : [data]).slice(0, count);
+      if (onQuestion) questions.forEach((q, i) => onQuestion(q, i));
+      return questions;
+    }
+  } catch (error) {
+    console.error("Failed to connect to API:", error);
+    try {
+      console.warn("Attempting to fetch fallback questions from BigQuery...");
+      const fallbackResponse = await fetch('/api/fallback-questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          count,
+          difficulty,
+          subject,
+          targetUserId: username,
+          examFormat,
+        }),
+      });
+      if (fallbackResponse.ok) {
+        const data = await fallbackResponse.json();
+        const questions = (Array.isArray(data) ? data : [data]).slice(0, count);
+        if (onQuestion) questions.forEach((q, i) => onQuestion(q, i));
+        return questions;
+      } else {
+        console.warn(`BigQuery fallback endpoint returned status ${fallbackResponse.status}.`);
+      }
+    } catch (fallbackError) {
+      console.error("Failed to fetch fallback questions from BigQuery:", fallbackError);
+    }
+
+    // Fallback for missing API key or network error to allow UI testing
+    console.warn("Using fallback mock data due to API/BigQuery failure.");
+    const mockProblems = [];
+    for (let i = 0; i < count; i++) {
+      const offset = (i % 5) - 2; // yields -2, -1, 0, 1, 2
+      const diff = Math.min(10, Math.max(0, difficulty + offset));
+      const format = examFormat || (freeResponseMode ? 'free_response' : 'mix');
+
+      if (format === 'free_response' || (format === 'mix' && i % 3 === 2)) {
+        mockProblems.push({
+          id: `${Date.now()}-${i}`,
+          question: `Mock ${subject} FRQ Problem ${i + 1} (Difficulty: ${diff}): Explain and solve for $x$ in the equation ${diff}x + ${i + 1} = ${diff * 2 + i + 1}$.`,
+          type: "free_response",
+          answer: `Subtract ${i + 1} from both sides to get ${diff}x = ${diff * 2}$. Then divide by ${diff}$ to get $x = 2$.`,
+          difficulty: diff
+        });
+      } else if (format === 'multiple_choice' || (format === 'mix' && i % 3 === 0)) {
+        mockProblems.push({
+          id: `${Date.now()}-${i}`,
+          question: `Mock ${subject} MCQ Problem ${i + 1} (Difficulty: ${diff}): What is ${i + 1} + ${diff}?`,
+          type: "multiple_choice",
+          options: [`${i + 1 + diff}`, `${i + 2 + diff}`, `${i + 3 + diff}`, `${i + 4 + diff}`],
+          answer: `${i + 1 + diff}`,
+          difficulty: diff
+        });
+      } else {
+        mockProblems.push({
+          id: `${Date.now()}-${i}`,
+          question: `Mock ${subject} Short Answer Problem ${i + 1} (Difficulty: ${diff}): What is ${i + 1} + ${diff}?`,
+          type: "short_answer",
+          answer: `${i + 1 + diff}`,
+          difficulty: diff
+        });
+      }
+    }
+    if (onQuestion) mockProblems.forEach((q, i) => onQuestion(q, i));
+    return mockProblems;
+  }
+}
 export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
   const isWholeTestMode = config.timeLimitStyle === 'whole_test';
   const isSetTimedMode = config.timeLimitStyle === 'per_set';

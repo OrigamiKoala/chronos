@@ -1355,7 +1355,6 @@ Follow these strict rules:
           }
         });
         if (rows && rows.length > 0) {
-          console.log(`[BigQuery] Successfully fetched ${rows.length} fallback questions from BigQuery.`);
           for (const r of rows) {
             try {
               allQuestions.push(JSON.parse(r.question_json));
