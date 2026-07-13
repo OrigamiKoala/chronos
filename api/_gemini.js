@@ -131,9 +131,15 @@ export function escapeLiteralNewlines(jsonStr) {
         result += '\\\\';
         i++;
       } else if ('nrtbfu/'.includes(nextCh)) {
-        // Valid JSON escape sequence (\n, \r, \t, \b, \f, \u, \/) — pass through unchanged
-        result += '\\' + nextCh;
-        i++;
+        // If it's n, r, t, b, f followed by a letter, it's likely a LaTeX command (like \nu, \rho, \text, \beta, \frac)
+        const nextNextCh = jsonStr.charAt(i + 2);
+        if ('nrtbf'.includes(nextCh) && /[a-zA-Z]/.test(nextNextCh)) {
+          result += '\\\\';
+        } else {
+          // Valid JSON escape sequence — pass through unchanged
+          result += '\\' + nextCh;
+          i++;
+        }
       } else {
         // Dangling backslash — escape it
         result += '\\\\';
