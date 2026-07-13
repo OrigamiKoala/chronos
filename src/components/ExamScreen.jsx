@@ -304,7 +304,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       const uniqueAllGenerated = [];
       for (const q of allGenerated) {
         const isDuplicate = shared.some(s => s.id === q.id || s.question === q.question) ||
-                            uniqueAllGenerated.some(u => u.id === q.id || u.question === q.question);
+          uniqueAllGenerated.some(u => u.id === q.id || u.question === q.question);
         if (!isDuplicate) {
           uniqueAllGenerated.push(q);
         }
@@ -712,11 +712,11 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     const activeAnswers = overrideAnswers || answers;
     const activeSubmissions = overrideSubmissions || frqSubmissions;
 
-    const hasTimeLeft = isWholeTestMode 
-      ? totalTimeLeft > 0 
-      : (isSetTimedMode 
-          ? (setTimesLeft[activeSetIndex] > 0) 
-          : true);
+    const hasTimeLeft = isWholeTestMode
+      ? totalTimeLeft > 0
+      : (isSetTimedMode
+        ? (setTimesLeft[activeSetIndex] > 0)
+        : true);
 
     if (hasTimeLeft && !strictResults && overrideSetsTimedOut === null) {
       const unansweredIndexes = [];
@@ -920,11 +920,11 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             {resumeState ? 'Ready to Resume' : 'Exam Ready'}
           </h2>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem', fontSize: '1.1rem', lineHeight: '1.6' }}>
-            {resumeState 
-              ? 'Your progress has been loaded. Click below to continue your assessment.' 
-              : 'All questions have been generated and the environment is prepared.'}
+            {resumeState
+              ? 'Your past progress has been loaded.'
+              : 'All questions have been generated.'}
           </p>
-          
+
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
@@ -951,7 +951,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             </div>
           </div>
         </div>
-        
+
         <button
           className="btn btn-primary animate-pulse-subtle"
           onClick={() => setHasStarted(true)}

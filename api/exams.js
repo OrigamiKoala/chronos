@@ -781,16 +781,15 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
         } catch (err) {
           const isOverload = err.status === 503 || 
                              err.status === 429 ||
-                             (err.message && (err.message.includes('503') || 
+                             (err.message && (err.message.toLowerCase().includes('demand') ||
+                                              err.message.includes('503') || 
                                               err.message.includes('429') || 
                                               err.message.includes('overloaded') || 
-                                              err.message.includes('high demand') ||
                                               err.message.includes('busy') ||
                                               err.message.includes('rate limit') ||
                                               err.message.includes('exhausted') ||
                                               err.message.includes('quota') ||
-                                              err.message.includes('failed or are rate limited') ||
-                                              err.message.includes('currently experiencing high demand')));
+                                              err.message.includes('failed or are rate limited')));
           if (isOverload) {
             throw err;
           }
@@ -1149,16 +1148,15 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
     console.error('Submit exam error:', err);
     const isOverload = err.status === 503 || 
                        err.status === 429 ||
-                       (err.message && (err.message.includes('503') || 
+                       (err.message && (err.message.toLowerCase().includes('demand') ||
+                                        err.message.includes('503') || 
                                         err.message.includes('429') || 
                                         err.message.includes('overloaded') || 
-                                        err.message.includes('high demand') ||
-                                        err.message.includes('busy') ||
-                                        err.message.includes('rate limit') ||
-                                        err.message.includes('exhausted') ||
-                                        err.message.includes('quota') ||
-                                        err.message.includes('failed or are rate limited') ||
-                                        err.message.includes('currently experiencing high demand')));
+                                        err.message.includes('busy') || 
+                                        err.message.includes('rate limit') || 
+                                        err.message.includes('exhausted') || 
+                                        err.message.includes('quota') || 
+                                        err.message.includes('failed or are rate limited')));
     if (isOverload) {
       try {
         const answers = results.map(r => r.userAnswer || '');

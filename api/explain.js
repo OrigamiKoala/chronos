@@ -89,12 +89,12 @@ Return strictly a valid JSON object with the following schema:
   } catch (err) {
     console.error('Explanation error:', err);
     const isBusyOrRateLimited = err.status === 503 || err.status === 429 || 
-                                (err.message && (err.message.includes('503') || 
+                                (err.message && (err.message.toLowerCase().includes('demand') ||
+                                                 err.message.includes('503') || 
                                                  err.message.includes('429') ||
                                                  err.message.includes('overloaded') || 
                                                  err.message.includes('rate limit') ||
                                                  err.message.includes('busy') ||
-                                                 err.message.includes('demand') ||
                                                  err.message.includes('limit')));
     if (isBusyOrRateLimited) {
       return res.status(503).json({
