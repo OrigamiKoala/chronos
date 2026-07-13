@@ -921,7 +921,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
           </h2>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem', fontSize: '1.1rem', lineHeight: '1.6' }}>
             {resumeState
-              ? 'Your past progress has been loaded.'
+              ? 'Your past exam progress has been loaded.'
               : 'All questions have been generated.'}
           </p>
 
