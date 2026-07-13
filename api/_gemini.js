@@ -134,7 +134,32 @@ export function escapeLiteralNewlines(jsonStr) {
         // If it's n, r, t, b, f followed by a letter, it's likely a LaTeX command (like \nu, \rho, \text, \beta, \frac)
         const nextNextCh = jsonStr.charAt(i + 2);
         if ('nrtbf'.includes(nextCh) && /[a-zA-Z]/.test(nextNextCh)) {
-          result += '\\\\';
+          let isLatex = true;
+          if (nextCh === 'n') {
+            const match = jsonStr.slice(i + 1).match(/^[a-zA-Z]+/);
+            if (match) {
+              const word = match[0];
+              const latexNCommands = new Set([
+                'nu', 'neg', 'neq', 'notin', 'nexists', 'nearrow', 'nabla', 'natural', 
+                'napprox', 'node', 'normalsize', 'nonumber', 'ncong', 'ni', 'nicefrac', 
+                'nsim', 'nsub', 'nsubset', 'nsubseteq', 'nsucc', 'nsqsube', 'nsqsupe', 
+                'nsupset', 'nsupseteq', 'ntriangle', 'nvar', 'nvdash', 'nvDash', 'nVDash',
+                'nano'
+              ]);
+              const isCommonNCommand = latexNCommands.has(word) || word.startsWith('new') || word.startsWith('num');
+              if (!isCommonNCommand) {
+                isLatex = false;
+              }
+            } else {
+              isLatex = false;
+            }
+          }
+          if (isLatex) {
+            result += '\\\\';
+          } else {
+            result += '\\n';
+            i++;
+          }
         } else {
           // Valid JSON escape sequence — pass through unchanged
           result += '\\' + nextCh;

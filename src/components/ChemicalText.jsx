@@ -139,7 +139,23 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
   const containerRef = useRef(null);
 
   // Replace literal '\n' (backslash followed by n) with actual newlines first, but NOT when followed by a letter (which indicates a LaTeX command like \nu)
-  const sanitizedText = typeof text === 'string' ? text.replace(/\\n(?![a-zA-Z])/g, '\n') : text;
+  const sanitizedText = typeof text === 'string'
+    ? text.replace(/\\n([a-zA-Z]*)/g, (match, word) => {
+        const latexNCommands = new Set([
+          'nu', 'neg', 'neq', 'notin', 'nexists', 'nearrow', 'nabla', 'natural', 
+          'napprox', 'node', 'normalsize', 'nonumber', 'ncong', 'ni', 'nicefrac', 
+          'nsim', 'nsub', 'nsubset', 'nsubseteq', 'nsucc', 'nsqsube', 'nsqsupe', 
+          'nsupset', 'nsupseteq', 'ntriangle', 'nvar', 'nvdash', 'nvDash', 'nVDash',
+          'nano'
+        ]);
+        const fullCommand = 'n' + word;
+        const isCommonNCommand = latexNCommands.has(fullCommand) || fullCommand.startsWith('new') || fullCommand.startsWith('num');
+        if (isCommonNCommand) {
+          return match;
+        }
+        return '\n' + word;
+      })
+    : text;
 
   // Trigger MathJax typesetting after render so LaTeX like $\text{H}_2\text{SO}_4$ renders
   useEffect(() => {
@@ -159,9 +175,9 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
   if (!sanitizedText) return null;
 
-  // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\]), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
+  // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\], \begin{env}...\end{env}), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
   // smiles tag blocks (<smiles>...</smiles>), and markdown bold (**...**) / italic (*...*) to keep them intact.
-  const parts = sanitizedText.split(/(\$\$[\s\S]*?\$\$|\$[^\$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
+  const parts = sanitizedText.split(/(\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\\\end\{[a-zA-Z]+\*?\}|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
 
   return (
     <span ref={containerRef} key={sanitizedText} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -234,7 +250,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         }
 
         // If this part is a LaTeX math block, render it directly as text so MathJax can process it
-        if (part.startsWith('$') || part.startsWith('\\(') || part.startsWith('\\[')) {
+        if (part.startsWith('$') || part.startsWith('\\(') || part.startsWith('\\[') || part.startsWith('\\begin')) {
           return <span key={partIndex}>{part}</span>;
         }
 
