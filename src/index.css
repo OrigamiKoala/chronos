@@ -125,7 +125,7 @@ input, select, textarea {
 
 /* Base App Layout */
 .app-container {
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: var(--app-padding);
   min-height: 100vh;
@@ -424,7 +424,7 @@ select.input-field {
   display: grid;
   grid-template-columns: 1fr;
   gap: 2rem;
-  max-width: 600px;
+  width: 100%;
   margin: 0 auto;
   align-items: stretch;
 }
@@ -432,7 +432,7 @@ select.input-field {
 @media (min-width: 769px) {
   .setup-grid.two-cols {
     grid-template-columns: 1fr 1fr;
-    max-width: 1200px;
+    width: 100%;
   }
 }
 

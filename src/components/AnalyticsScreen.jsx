@@ -576,7 +576,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const hasAnyTags = Object.keys(tags).length > 0;
 
   return (
-    <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', maxWidth: '850px', margin: '0 auto' }}>
+    <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', width: '100%', margin: '0 auto' }}>
 
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
         <h2 className="text-gradient" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Exam Complete</h2>

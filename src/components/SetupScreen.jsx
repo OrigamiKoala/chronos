@@ -342,7 +342,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
   };
 
   return (
-    <div className="glass-panel" style={{ padding: 'var(--panel-padding)', maxWidth: '600px', margin: '0 auto', height: '100%', boxSizing: 'border-box' }}>
+    <div className="glass-panel" style={{ padding: 'var(--panel-padding)', width: '100%', margin: '0 auto', height: '100%', boxSizing: 'border-box' }}>
       <div style={{ marginBottom: '1.5rem' }}>
         <h2>New Test</h2>
       </div>
