@@ -245,6 +245,7 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
             width: '100%',
             height: `${height}px`,
             cursor: tool === 'eraser' ? 'cell' : 'crosshair',
+            touchAction: 'none',
             userSelect: 'none',
             WebkitUserSelect: 'none',
             KhtmlUserSelect: 'none',
@@ -265,7 +266,10 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
           padding: 'var(--input-padding)', 
           background: 'var(--bg-tertiary)', 
           border: '1px solid var(--bg-glass-border)', 
-          borderRadius: 'var(--radius-md)' 
+          borderRadius: 'var(--radius-md)',
+          pointerEvents: isDrawing ? 'none' : 'auto',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
         }}
       >
         {/* Tools Selection */}
