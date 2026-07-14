@@ -826,36 +826,44 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         <h3 style={{ marginBottom: '1.5rem' }}>Question Breakdown</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {results.map((r, i) => {
-            const isPartial = r.score !== undefined && r.score > 0 && r.score < 1;
-            const statusColor = isPartial ? 'var(--warning)' : (r.isCorrect ? 'var(--success)' : 'var(--danger)');
-            return (
-              <div key={i} className="glass-panel" style={{ padding: 'var(--card-padding)', borderLeft: `4px solid ${statusColor}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>Question {i + 1} (Level {r.difficultyAtTime})</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: statusColor }}>
-                    {(() => {
-                      const qIntervals = (r.intervals && r.intervals.length > 0)
-                        ? r.intervals
-                        : (() => {
-                          let start = 0;
-                          for (let j = 0; j < i; j++) {
-                            start += results[j].timeSpent || 0;
-                          }
-                          return [{ start, end: start + (r.timeSpent || 0) }];
-                        })();
-                      return formatIntervals(qIntervals);
-                    })()} {isPartial ? (
-                      <>
-                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--warning)' }}>
-                          {Math.round(r.score * 100)}% Credit
-                        </span>
-                        <TriangleIcon size={18} color="var(--warning)" />
-                      </>
-                    ) : r.isCorrect ? (
-                      <CheckCircle2 size={18} />
-                    ) : (
-                      <XCircle size={18} />
-                    )}
+             const isGrading = r.isCorrect === null || r.isCorrect === undefined;
+             const isPartial = !isGrading && r.score !== undefined && r.score > 0 && r.score < 1;
+             const statusColor = isGrading ? 'var(--accent-primary)' : (isPartial ? 'var(--warning)' : (r.isCorrect ? 'var(--success)' : 'var(--danger)'));
+             return (
+               <div key={i} className="glass-panel" style={{ padding: 'var(--card-padding)', borderLeft: `4px solid ${statusColor}` }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                   <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>Question {i + 1} (Level {r.difficultyAtTime})</span>
+                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: statusColor }}>
+                     {(() => {
+                       const qIntervals = (r.intervals && r.intervals.length > 0)
+                         ? r.intervals
+                         : (() => {
+                           let start = 0;
+                           for (let j = 0; j < i; j++) {
+                             start += results[j].timeSpent || 0;
+                           }
+                           return [{ start, end: start + (r.timeSpent || 0) }];
+                         })();
+                       return formatIntervals(qIntervals);
+                     })()} {isGrading ? (
+                       <>
+                         <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--accent-primary)' }}>
+                           Grading...
+                         </span>
+                         <HelpCircle size={18} />
+                       </>
+                     ) : isPartial ? (
+                       <>
+                         <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--warning)' }}>
+                           {Math.round(r.score * 100)}% Credit
+                         </span>
+                         <TriangleIcon size={18} color="var(--warning)" />
+                       </>
+                     ) : r.isCorrect ? (
+                       <CheckCircle2 size={18} />
+                     ) : (
+                       <XCircle size={18} />
+                     )}
                   </span>
                 </div>
                 <p style={{ marginBottom: '1rem' }}><ChemicalText text={r.question} theme="dark" /></p>
