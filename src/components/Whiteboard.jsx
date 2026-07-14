@@ -194,7 +194,15 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
       if (!fc) return null;
       const origBg = fc.backgroundColor;
       fc.backgroundColor = '#0a0a0c';
-      const url = fc.toDataURL({ format: 'png', multiplier: 1 });
+      
+      // Mirroring the ochem-bot submission settings (format, quality, multiplier)
+      // but keeping it as a full data URL containing the base64 prefix
+      const url = fc.toDataURL({
+        format: 'jpeg',
+        quality: 0.85,
+        multiplier: 1.0
+      });
+      
       fc.backgroundColor = origBg;
       fc.renderAll();
       return url;
@@ -222,10 +230,6 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
       >
         <canvas id={canvasId.current} />
       </div>
-
-      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
-        ✏️ Draw with one finger or stylus &nbsp;·&nbsp; 🤌 Scroll with two fingers
-      </p>
 
       {/* Toolbar */}
       <div style={{
