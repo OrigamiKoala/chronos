@@ -620,7 +620,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     const filtered = (selectedSubjectFilter === 'All'
       ? data.topicMastery
       : data.topicMastery.filter(t => t.subject === selectedSubjectFilter)
-    ).filter(t => t.total_count > 0);
+    ).filter(t => t.total_count > 0)
+     .sort((a, b) => a.accuracy_rate - b.accuracy_rate); // lowest accuracy on top
 
     return {
       labels: filtered.map(t => t.sub_category),
