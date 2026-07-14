@@ -157,8 +157,8 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
   if (!text) return null;
 
   // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\], \begin{env}...\end{env}), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
-  // smiles tag blocks (<smiles>...</smiles>), and markdown bold (**...**) / italic (*...*) to keep them intact.
-  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\\\end\{[a-zA-Z]+\*?\}|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
+  // smiles tag blocks (<smiles>...</smiles>), and markdown bold (**...**) / italic (*...*)
+  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\end\{[a-zA-Z]+\*?\}|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
 
   return (
     <span ref={containerRef} key={text} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -233,6 +233,12 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         // If this part is a LaTeX math block, render it directly as text so MathJax can process it
         if (part.startsWith('$') || part.startsWith('\\(') || part.startsWith('\\[') || part.startsWith('\\begin')) {
           return <span key={partIndex}>{part}</span>;
+        }
+        // Detect raw LaTeX commands (e.g., \textbf, \qquad) not wrapped in delimiters and wrap them for MathJax
+        if (/^\\[a-zA-Z]+/.test(part)) {
+          // Wrap the raw command in inline math delimiters
+          const wrapped = `$${part}$`;
+          return <span key={partIndex}>{wrapped}</span>;
         }
 
         // If this part is markdown bold (**...**), render as <strong>
