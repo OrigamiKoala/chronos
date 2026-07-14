@@ -1748,7 +1748,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Difficulty (1-10)</label>
-                      <input type="number" min="1" max="10" value={hwDifficulty} onChange={(e) => { setHwDifficulty(Number(e.target.value)); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
+                      <input type="number" min="0" max="10" value={hwDifficulty} onChange={(e) => { setHwDifficulty(Number(e.target.value)); setHwPreset('custom'); }} className="input-field" style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Stress Mode</label>

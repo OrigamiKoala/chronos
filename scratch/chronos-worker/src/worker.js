@@ -1580,14 +1580,13 @@ export default {
     }
 
     if (action === 'generate_homework') {
-      // Return immediately; run in background via waitUntil
-      ctx.waitUntil(generateHomework(payload, projectId, accessToken, env));
-      return jsonResponse({ success: true, message: 'Homework generation started' });
+      await generateHomework(payload, projectId, accessToken, env);
+      return jsonResponse({ success: true, message: 'Homework generation complete' });
     }
 
     if (action === 'async_grade_exam') {
-      ctx.waitUntil(gradeExam(payload.payload, projectId, accessToken, env));
-      return jsonResponse({ success: true, message: 'Exam grading started' });
+      await gradeExam(payload.payload, projectId, accessToken, env);
+      return jsonResponse({ success: true, message: 'Exam grading complete' });
     }
 
     return jsonResponse({ error: 'Unknown action' }, 400);
