@@ -681,7 +681,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     let imagePayload = null;
     if (problems[currentQuestionIndex]?.type === 'free_response') {
       if (whiteboardRef.current) {
-        imagePayload = whiteboardRef.current.getDataURL();
+        imagePayload = whiteboardRef.current.getFullWorkspaceDataURL();
       }
       if (imagePayload) {
         activeQuestionFinalVal = '[Drawing Submission]';
@@ -702,10 +702,17 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     finalAnswers[currentQuestionIndex] = activeQuestionFinalVal || '[Time Out]';
 
     const finalResults = problems.map((prob, idx) => {
-      const userAnswer = finalAnswers[idx] || '';
+      const sub = idx === currentQuestionIndex ? updatedSubmissions[currentQuestionIndex] : frqSubmissions[idx];
+      let userAnswer = finalAnswers[idx] || '';
+      let isTimeout = idx === currentQuestionIndex || !userAnswer;
+
+      if (prob.type === 'free_response' && sub && sub.value && sub.value.startsWith('data:image/')) {
+        userAnswer = '[Drawing Submission]';
+        isTimeout = false;
+      }
+
       const intervals = questionIntervalsRef.current[idx] || [];
       const timeSpent = intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0);
-      const isTimeout = idx === currentQuestionIndex || !userAnswer;
       const isCorrect = prob.type === 'free_response' ? null : (!isTimeout && isAnswerCorrect(prob, userAnswer));
 
       return {
@@ -716,7 +723,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
         intervals,
         timeOut: isTimeout,
         difficultyAtTime: prob.difficulty !== undefined ? prob.difficulty : config.difficulty,
-        frqSubmission: idx === currentQuestionIndex ? updatedSubmissions[currentQuestionIndex] : frqSubmissions[idx]
+        frqSubmission: sub
       };
     });
 
@@ -786,7 +793,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     let finalValue = '[Time Out]';
     let imagePayload = null;
     if (whiteboardRef.current) {
-      imagePayload = whiteboardRef.current.getDataURL();
+      imagePayload = whiteboardRef.current.getFullWorkspaceDataURL();
     }
 
     if (imagePayload) {
@@ -924,15 +931,22 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       const activeSubmissions = overrideSubmissions || frqSubmissions;
       const activeSetsTimedOut = overrideSetsTimedOut || setsTimedOut;
       finalResults = problems.map((prob, idx) => {
-        const userAnswer = activeAnswers[idx] || '';
+        const sub = activeSubmissions[idx] || null;
+        let userAnswer = activeAnswers[idx] || '';
         const intervals = questionIntervalsRef.current[idx] || [];
         const timeSpent = intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0);
         const setIdx = Math.floor(idx / questionsPerSet);
-        const isTimeout = isSetTimedMode
+        let isTimeout = isSetTimedMode
           ? (activeSetsTimedOut[setIdx] && !userAnswer)
           : (isWholeTestMode
             ? (totalTimeLeft <= 0)
             : (questionTimesLeft[idx] <= 0));
+
+        if (prob.type === 'free_response' && sub && sub.value && sub.value.startsWith('data:image/')) {
+          userAnswer = '[Drawing Submission]';
+          isTimeout = false;
+        }
+
         const isCorrect = prob.type === 'free_response'
           ? null
           : (!isTimeout && isAnswerCorrect(prob, userAnswer));
@@ -945,7 +959,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
           intervals,
           timeOut: isTimeout,
           difficultyAtTime: prob.difficulty !== undefined ? prob.difficulty : config.difficulty,
-          frqSubmission: activeSubmissions[idx] || null
+          frqSubmission: sub
         };
       });
     }
