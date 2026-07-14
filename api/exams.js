@@ -956,7 +956,7 @@ export default async function handler(req, res) {
           }
         }
 
-        if (!r.isCorrect) {
+        if (r.isCorrect === false) {
           const topic = r.topic || 'General';
           wrongInsertPromises.push(
             bq.query({

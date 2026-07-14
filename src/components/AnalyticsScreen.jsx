@@ -117,9 +117,11 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const newRating = localNewRating;
   const ratingChange = localRatingChange;
   const results = localResults;
-  const totalQuestions = results.length || 1; // Guard against division by zero
-  const correctAnswers = results.filter(r => r.isCorrect).length;
-  const accuracy = Math.round((correctAnswers / totalQuestions) * 100);
+  const gradedQuestions = results.filter(r => r.isCorrect !== null && r.isCorrect !== undefined);
+  const totalQuestions = gradedQuestions.length || 1;
+  const correctAnswers = gradedQuestions.filter(r => r.isCorrect).length;
+  const hasOnlyUngraded = results.length > 0 && gradedQuestions.length === 0;
+  const accuracy = hasOnlyUngraded ? 'Pending' : Math.round((correctAnswers / totalQuestions) * 100);
 
   const totalTime = results.reduce((acc, curr) => acc + curr.timeSpent, 0);
   const avgTime = Math.round(totalTime / totalQuestions);
@@ -608,8 +610,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         <div className="glass-panel" style={{ padding: 'var(--card-padding-sm)', textAlign: 'center', background: 'var(--bg-tertiary)' }}>
           <Activity size={28} color="var(--accent-primary)" style={{ margin: '0 auto 0.75rem' }} />
           <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem', fontSize: '0.85rem' }}>Accuracy</h4>
-          <span style={{ fontSize: '1.75rem', fontWeight: '700', color: accuracy > 70 ? 'var(--success)' : accuracy > 40 ? 'var(--warning)' : 'var(--danger)' }}>
-            {accuracy}%
+          <span style={{ fontSize: '1.75rem', fontWeight: '700', color: accuracy === 'Pending' ? 'var(--warning)' : (accuracy > 70 ? 'var(--success)' : accuracy > 40 ? 'var(--warning)' : 'var(--danger)') }}>
+            {accuracy === 'Pending' ? accuracy : `${accuracy}%`}
           </span>
         </div>
 
