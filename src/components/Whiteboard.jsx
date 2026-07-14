@@ -26,6 +26,9 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
   const [history, setHistory] = useState([]);  // array of JSON snapshots
   const historyRef = useRef([]);
 
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   const workspaceH = VISIBLE_HEIGHT * WORKSPACE_MULTIPLIER;
 
   // ── Init Fabric.js ────────────────────────────────────────────────────────
@@ -127,7 +130,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
       const snap = JSON.stringify(fc.toJSON());
       historyRef.current = [...historyRef.current, snap];
       setHistory([...historyRef.current]);
-      if (onChange) onChange();
+      if (onChangeRef.current) onChangeRef.current();
     });
 
     // Load initial image if provided
@@ -148,7 +151,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
       container.removeEventListener('wheel', onWheel);
       fc.dispose();
     };
-  }, [onChange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sync brush color / width / eraser ────────────────────────────────────
   useEffect(() => {

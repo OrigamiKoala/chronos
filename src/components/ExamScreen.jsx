@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2, Clock, AlertTriangle, ArrowRight, Upload, Type, Image as ImageIcon, ArrowLeft, Pause, Play } from 'lucide-react';
 import { ChemicalText, SmilesRenderer } from './ChemicalText';
 import { isSmiles } from './chemicalHelpers.js';
@@ -613,7 +613,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     }
   }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config, isRated, activeSetIndex, setTimesLeft, setsTimedOut]);
 
-  const saveCurrentFRQState = () => {
+  const saveCurrentFRQState = useCallback(() => {
     if (!problem || problem.type !== 'free_response') {
       return { answers, frqSubmissions };
     }
@@ -656,7 +656,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     }
 
     return { answers, frqSubmissions };
-  };
+  }, [problem, submitType, whiteboardPreview, uploadedImage, typedWork, frqSubmissions, currentQuestionIndex, answers]);
 
   const handleTimeUp = () => {
     if (questionTimeUpHandledRef.current[currentQuestionIndex]) return;
