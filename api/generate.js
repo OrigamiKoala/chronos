@@ -1,4 +1,5 @@
 import { BigQuery } from '@google-cloud/bigquery';
+import crypto from 'crypto';
 import { executeWithRetry, parseJSONResponse } from './_gemini.js';
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
@@ -10,6 +11,14 @@ const bq = new BigQuery({
     private_key: process.env.BIGQUERY_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   },
 });
+
+function generateQuestionId(questionText, subject) {
+  const hash = crypto.createHash('md5')
+    .update(`${subject || ''}:${questionText}`)
+    .digest('hex');
+  const cleanSubject = String(subject || 'gen').trim().toLowerCase().substring(0, 5);
+  return `${cleanSubject}_${hash.substring(0, 16)}`;
+}
 
 const mathExemplars = [
   {
@@ -1197,6 +1206,9 @@ Follow these strict rules:
 
       const list = Array.isArray(parsed) ? parsed : [parsed];
       for (const q of list) {
+        if (q && q.question) {
+          q.id = generateQuestionId(q.question, normSubject);
+        }
         if (allQuestions.length < count) {
           allQuestions.push(q);
         }

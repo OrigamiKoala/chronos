@@ -29,6 +29,14 @@
       "destination": "/api/teacher-data?route=student-homework"
     },
     {
+      "source": "/api/chat",
+      "destination": "/api/explain?route=chat"
+    },
+    {
+      "source": "/api/reset-password",
+      "destination": "/api/login?route=reset-password"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*"
     },

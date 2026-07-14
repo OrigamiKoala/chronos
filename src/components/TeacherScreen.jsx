@@ -15,7 +15,7 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    const response = await fetch('/api/chat', {
+    const response = await fetch('/api/explain?route=chat', {
       method: 'POST',
       headers,
       body: JSON.stringify({

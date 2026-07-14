@@ -8,6 +8,7 @@ export function ReviewScreen({ user, onBack }) {
   const [wrongQuestions, setWrongQuestions] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
+  const [selectedTag, setSelectedTag] = useState('all');
 
   // Reload trigger for updating data from event handlers
   const [reloadTrigger, setReloadTrigger] = useState(0);
@@ -88,12 +89,14 @@ export function ReviewScreen({ user, onBack }) {
   // Get distinct topics based on wrong questions
   const topicsList = Array.from(new Set(wrongQuestions.map(q => q.topic).filter(Boolean)));
   const subjectsList = Array.from(new Set(wrongQuestions.map(q => q.subject).filter(Boolean)));
+  const tagsList = Array.from(new Set(wrongQuestions.map(q => q.tag).filter(Boolean)));
 
   // Filter wrong questions
   const filteredWrong = wrongQuestions.filter(q => {
     const topicMatch = selectedTopic === 'all' || q.topic === selectedTopic;
     const subjectMatch = selectedSubject === 'all' || q.subject === selectedSubject;
-    return topicMatch && subjectMatch;
+    const tagMatch = selectedTag === 'all' || q.tag === selectedTag;
+    return topicMatch && subjectMatch && tagMatch;
   });
 
   // Request explanation for a question in the main list
@@ -162,11 +165,12 @@ export function ReviewScreen({ user, onBack }) {
 
   // Start review test
   const startReviewTest = () => {
-    // Select questions that are wrong and filter them by subject/topic if selected
+    // Select questions that are wrong and filter them by subject/topic/tag if selected
     let candidates = wrongQuestions.filter(q => {
       const topicMatch = selectedTopic === 'all' || q.topic === selectedTopic;
       const subjectMatch = selectedSubject === 'all' || q.subject === selectedSubject;
-      return topicMatch && subjectMatch;
+      const tagMatch = selectedTag === 'all' || q.tag === selectedTag;
+      return topicMatch && subjectMatch && tagMatch;
     });
 
     if (candidates.length === 0) return;
@@ -719,6 +723,28 @@ export function ReviewScreen({ user, onBack }) {
                 <option value="all">All Topics</option>
                 {topicsList.map((t, i) => (
                   <option key={i} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tag:</span>
+              <select
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value)}
+                style={{
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '0.35rem 1.5rem 0.35rem 0.75rem',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="all">All Tags</option>
+                {tagsList.map((t, i) => (
+                  <option key={i} value={t}>{t === 'silly' ? 'Silly Mistake' : t === 'concept' ? 'Concept Problem' : t === 'time' ? 'Out of Time' : t}</option>
                 ))}
               </select>
             </div>

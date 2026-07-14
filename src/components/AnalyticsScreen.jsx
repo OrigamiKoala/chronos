@@ -214,7 +214,30 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const debounceTimerRef = useRef(null);
 
   const autoSaveTags = async (updatedTags) => {
-    if (!user || !examId) return;
+    if (!examId) return;
+    if (!user) {
+      try {
+        const guestWrong = JSON.parse(localStorage.getItem('chronos_guest_wrong_problems') || '[]');
+        const updatedGuestWrong = guestWrong.map(item => {
+          if (item.exam_id === examId) {
+            const resultsIndex = results.findIndex(r => r.id === item.question_id || r.question === item.question_text);
+            if (resultsIndex !== -1) {
+              const currentTag = updatedTags[resultsIndex];
+              return { ...item, tag: currentTag || null };
+            }
+          }
+          return item;
+        });
+        localStorage.setItem('chronos_guest_wrong_problems', JSON.stringify(updatedGuestWrong));
+        setTagsSaved(true);
+        setTagsSaving(false);
+      } catch (err) {
+        console.error('Guest auto-save tags error:', err);
+        setTagsSaving(false);
+      }
+      return;
+    }
+
     latestTagsRef.current = updatedTags;
     if (isSavingRef.current) return;
 
@@ -239,7 +262,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           };
         });
 
-        await fetch('/api/save-tags', {
+        await fetch('/api/exams?route=save-tags', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
