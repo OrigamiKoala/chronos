@@ -642,7 +642,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         }),
         borderWidth: 1,
         borderRadius: 4,
-        barPercentage: 0.6
+        barPercentage: 0.6,
+        minBarLength: 4
       }]
     };
   }, [data, selectedSubjectFilter]);
