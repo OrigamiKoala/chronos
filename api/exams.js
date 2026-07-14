@@ -27,6 +27,18 @@ function generateJWT(payload, secret) {
   return `${headerEncoded}.${payloadEncoded}.${signature}`;
 }
 
+async function fetchWithPostRedirect(url, options = {}) {
+  const res = await fetch(url, { ...options, redirect: 'manual' });
+  if ([301, 302, 307, 308].includes(res.status)) {
+    const location = res.headers.get('location');
+    if (location) {
+      const resolvedUrl = new URL(location, url).toString();
+      return fetchWithPostRedirect(resolvedUrl, options);
+    }
+  }
+  return res;
+}
+
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const ELO_ALGORITHM_VERSION = 3;
 let tablesEnsured = false;
@@ -1048,7 +1060,7 @@ export default async function handler(req, res) {
               exp: Math.floor(Date.now() / 1000) + 7200 // 2 hours
             }, jwtSecret);
 
-            fetch(WEBHOOK_URL, {
+            fetchWithPostRedirect(WEBHOOK_URL, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -1171,7 +1183,7 @@ export default async function handler(req, res) {
           exp: Math.floor(Date.now() / 1000) + 7200 // 2 hours
         }, jwtSecret);
 
-        fetch(WEBHOOK_URL, {
+        fetchWithPostRedirect(WEBHOOK_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
