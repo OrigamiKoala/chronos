@@ -99,20 +99,7 @@ async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homework
         lessonDescription: lessonDescription,
         studentIds: studentIds,
         homeworks: homeworks,
-        geminiApiKeys: [
-          process.env.GEMINI_API_KEY,
-          process.env.GEMINI_API_KEY_2,
-          process.env.GEMINI_API_KEY_3,
-          process.env.GEMINI_API_KEY_4,
-          process.env.GEMINI_API_KEY_5,
-          process.env.GEMINI_API_KEY_6,
-          process.env.GEMINI_API_KEY_7,
-          process.env.GEMINI_API_KEY_8,
-          process.env.GEMINI_API_KEY_9,
-          process.env.GEMINI_API_KEY_10,
-          process.env.GEMINI_API_KEY_11,
-          process.env.GEMINI_API_KEY_12
-        ].filter(Boolean)
+        geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
       })
     }).catch(err => console.error("Worker fetch failed in trigger:", err));
 
