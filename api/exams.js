@@ -700,122 +700,16 @@ export default async function handler(req, res) {
       }
 
       if (r.type === 'free_response') {
-        try {
-          const isImage = r.frqSubmission && (r.frqSubmission.type === 'whiteboard' || r.frqSubmission.type === 'image') && r.frqSubmission.value && r.frqSubmission.value.startsWith('data:image/');
-
-          let gradingPrompt = `You are a world-class grading examiner. You are grading a student's free-response solution for a competitive Olympiad-level exam.
-
-Question Details:
-Subject: ${subject}
-Topic: ${r.topic || 'General'}
-Question Text: ${r.question}
-`;
-
-          if (r.detailedSolution) {
-            gradingPrompt += `\nDetailed Correct Solution (for your reference): ${r.detailedSolution}\n`;
-          }
-
-          if (isImage) {
-            gradingPrompt += `\nThe student submitted their solution as a handwritten drawing or uploaded image of their scratch work/whiteboard.
-Analyze the image carefully to understand their step-by-step logic, calculation progress, and final proof.`;
-          } else {
-            const textAns = r.frqSubmission?.value || r.userAnswer || 'No answer submitted.';
-            gradingPrompt += `\nStudent's typed solution process:
-${textAns}`;
-          }
-
-          gradingPrompt += `\n\nYour tasks:
-1. Solve the question completely from scratch first to determine the correct step-by-step solution, the correct final answer, and establish a clear grading rubric.
-2. Critically evaluate the student's solution against the correct solution. Compare both their explanation/process and final answer.
-3. Award a partial credit score between 0.0 and 1.0 (where 1.0 is fully correct, 0.0 is completely wrong/timeout, and in-between represents partial credit based on correct logical steps shown). Give partial credit generously for valid logical steps, calculations, or methods, even if their final answer was incorrect.
-4. Set 'isCorrect' to true if the score is greater than or equal to 0.7 (conceptually correct / very good progress), otherwise set it to false.
-5. Provide clear, professional, pedagogical feedback explaining where they made mistakes and what they did well.
-${isImage ? `6. Provide an extensive transcription/summary of the user's handwritten work, calculations, logic, and final proof shown in the image in the 'transcription' field.` : ''}
-
-Return strictly a valid JSON object with the following schema:
-{
-  "correctSolution": "Your fully derived step-by-step correct solution",
-  "correctAnswer": "The correct final answer",
-  "score": 0.5,
-  "isCorrect": true,
-  "feedback": "Detailed grading feedback"${isImage ? `,\n  "transcription": "Extensive transcription of the user's work and proof in the image"` : ''}
-}
-Do NOT include markdown headers or backticks in the response. Return ONLY the raw JSON object.`;
-
-          const input = [];
-          if (isImage) {
-            const parts = r.frqSubmission.value.split(',');
-            const base64Data = parts[1] || r.frqSubmission.value;
-            let mimeType = 'image/png';
-            const mimeMatch = parts[0].match(/data:(.*?);/);
-            if (mimeMatch) {
-              mimeType = mimeMatch[1];
-            }
-            input.push({
-              type: 'image',
-              mime_type: mimeType,
-              data: base64Data
-            });
-          }
-          input.push({
-            type: 'text',
-            text: gradingPrompt
-          });
-
-          const models = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'];
-          const gradingResponse = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
-            model: currentModel,
-            input: input,
-            response_format: {
-              type: 'text',
-              mime_type: 'application/json'
-            },
-            generation_config: {
-              temperature: 0.2
-            }
-          }), req);
-
-          const graded = parseJSONResponse(gradingResponse.output_text);
-          if (!graded) {
-            throw new Error('Failed to parse grading response from Gemini');
-          }
-          return {
-            ...r,
-            isCorrect: !!graded.isCorrect,
-            score: Number(graded.score) || 0,
-            feedback: graded.feedback,
-            answer: graded.correctAnswer || r.answer || '',
-            solution: graded.correctSolution,
-            userAnswer: isImage ? (graded.transcription || r.userAnswer) : r.userAnswer
-          };
-        } catch (err) {
-          const isOverload = err.status === 503 || 
-                             err.status === 500 ||
-                             err.status === 429 ||
-                             (err.message && (err.message.toLowerCase().includes('demand') ||
-                                              err.message.includes('503') || 
-                                              err.message.includes('500') ||
-                                              err.message.includes('429') || 
-                                              err.message.includes('overloaded') || 
-                                              err.message.includes('busy') ||
-                                              err.message.includes('rate limit') ||
-                                              err.message.includes('exhausted') ||
-                                              err.message.includes('quota') ||
-                                              err.message.includes('failed or are rate limited')));
-          if (isOverload) {
-            throw err;
-          }
-          console.error('Error grading FRQ question:', r.id, err);
-          return {
-            ...r,
-            isCorrect: false,
-            score: 0,
-            feedback: 'Grading failed due to an error.',
-          };
-        }
+        return {
+          ...r,
+          isCorrect: null,
+          score: 0.0,
+          feedback: 'Grading in progress...'
+        };
       }
-      return r;
     }));
+
+    // Assign content-based unique IDs to graded results to ensure consistency across tables
 
     // Recompute ELO if there are free_response questions to accurately reflect AI grading & partial credits!
     let finalAccuracy = accuracy;
@@ -843,8 +737,9 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
         }
       }
     } else if (hasFRQ) {
-      const totalQuestions = gradedResults.length;
-      const totalScore = gradedResults.reduce((acc, r) => acc + (r.score !== undefined ? r.score : (r.isCorrect ? 1 : 0)), 0);
+      const gradedOnlyResults = gradedResults.filter(r => r.isCorrect !== null && r.isCorrect !== undefined);
+      const totalQuestions = gradedOnlyResults.length || 1;
+      const totalScore = gradedOnlyResults.reduce((acc, r) => acc + (r.score !== undefined ? r.score : (r.isCorrect ? 1 : 0)), 0);
       finalAccuracy = totalScore / totalQuestions;
 
       let ratingColumn = 'math_rating';
@@ -870,7 +765,7 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
         return eloMap.get(Math.round(d)) || 1000;
       };
 
-      const sumQuestionRatings = gradedResults.reduce((acc, r) => acc + getQuestionRating(subject, r.difficulty || 5), 0);
+      const sumQuestionRatings = gradedOnlyResults.reduce((acc, r) => acc + getQuestionRating(subject, r.difficulty || 5), 0);
       const avgQuestionRating = sumQuestionRatings / totalQuestions;
 
       let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
@@ -1130,6 +1025,61 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
         false,
         req
       );
+
+      if (hasFRQ) {
+        try {
+          const WEBHOOK_URL = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL;
+          if (!WEBHOOK_URL) {
+            console.warn('GOOGLE_APPS_SCRIPT_WEBHOOK_URL is not configured. Skipping background exam grading.');
+          } else {
+            const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
+            const accessToken = generateJWT({
+              teacherId: 'SYSTEM',
+              exp: Math.floor(Date.now() / 1000) + 7200 // 2 hours
+            }, jwtSecret);
+
+            fetch(WEBHOOK_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+              },
+              body: JSON.stringify({
+                action: 'async_grade_exam',
+                teacherId: 'SYSTEM',
+                payload: {
+                  username,
+                  subject,
+                  examId,
+                  accuracy: finalAccuracy,
+                  avgTime,
+                  ratingChange: finalRatingChange,
+                  newRating: finalNewRating,
+                  isRated,
+                  assignmentId,
+                  results: gradedResults,
+                  geminiApiKeys: [
+                    process.env.GEMINI_API_KEY,
+                    process.env.GEMINI_API_KEY_2,
+                    process.env.GEMINI_API_KEY_3,
+                    process.env.GEMINI_API_KEY_4,
+                    process.env.GEMINI_API_KEY_5,
+                    process.env.GEMINI_API_KEY_6,
+                    process.env.GEMINI_API_KEY_7,
+                    process.env.GEMINI_API_KEY_8,
+                    process.env.GEMINI_API_KEY_9,
+                    process.env.GEMINI_API_KEY_10,
+                    process.env.GEMINI_API_KEY_11,
+                    process.env.GEMINI_API_KEY_12
+                  ].filter(Boolean)
+                }
+              })
+            }).catch(err => console.error("Worker fetch failed in trigger:", err));
+          }
+        } catch (triggerErr) {
+          console.error('Failed to trigger background grading:', triggerErr);
+        }
+      }
 
       return res.status(200).json({ 
         success: true, 

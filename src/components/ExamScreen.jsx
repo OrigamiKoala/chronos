@@ -706,7 +706,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       const intervals = questionIntervalsRef.current[idx] || [];
       const timeSpent = intervals.reduce((acc, inv) => acc + (inv.end - inv.start), 0);
       const isTimeout = idx === currentQuestionIndex || !userAnswer;
-      const isCorrect = prob.type !== 'free_response' && !isTimeout && isAnswerCorrect(prob, userAnswer);
+      const isCorrect = prob.type === 'free_response' ? null : (!isTimeout && isAnswerCorrect(prob, userAnswer));
 
       return {
         ...prob,
@@ -934,7 +934,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             ? (totalTimeLeft <= 0)
             : (questionTimesLeft[idx] <= 0));
         const isCorrect = prob.type === 'free_response'
-          ? false
+          ? null
           : (!isTimeout && isAnswerCorrect(prob, userAnswer));
 
         return {

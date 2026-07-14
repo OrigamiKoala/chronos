@@ -436,11 +436,12 @@ function App() {
       return eloMap[Math.round(d)] || 1000;
     };
 
-    const totalQuestions = results.length;
-    const correctAnswers = results.filter(r => r.isCorrect).length;
+    const gradedResults = results.filter(r => r.isCorrect !== null && r.isCorrect !== undefined);
+    const totalQuestions = gradedResults.length || 1;
+    const correctAnswers = gradedResults.filter(r => r.isCorrect).length;
     const score = correctAnswers / totalQuestions;
 
-    const sumQuestionRatings = results.reduce((acc, r) => acc + getQuestionRating(subject, r.difficulty !== undefined ? r.difficulty : 5), 0);
+    const sumQuestionRatings = gradedResults.reduce((acc, r) => acc + getQuestionRating(subject, r.difficulty !== undefined ? r.difficulty : 5), 0);
     const avgQuestionRating = sumQuestionRatings / totalQuestions;
 
     let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));

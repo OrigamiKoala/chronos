@@ -13,7 +13,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle as TriangleIcon, BookOpen, Save, Check, Clock } from 'lucide-react';
+import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle as TriangleIcon, BookOpen, Save, Check, Clock, Info } from 'lucide-react';
 import { ChemicalText, SmilesRenderer } from './ChemicalText';
 import { isSmiles } from './chemicalHelpers';
 import { normalizeAnswer } from './ExamScreen';
@@ -582,6 +582,26 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         <h2 className="text-gradient" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Exam Complete</h2>
         <p style={{ color: 'var(--text-secondary)' }}>Review your performance</p>
       </div>
+
+      {results.some(r => r.type === 'free_response') && (
+        <div className="glass-panel animate-fade-in" style={{
+          padding: '1rem',
+          background: 'rgba(52, 152, 219, 0.1)',
+          borderColor: 'rgba(52, 152, 219, 0.3)',
+          borderRadius: '8px',
+          marginBottom: '2rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          fontSize: '0.9rem',
+          color: 'var(--text-primary)'
+        }}>
+          <Info size={20} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+          <div>
+            <strong>Grading in Progress:</strong> This exam contains Free Response Questions (FRQ) that are evaluated in the background. Your scores, feedback, and ELO calculations may take 10–20 seconds to finalize. Please reload/refresh this page in a moment to see your complete results.
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
 

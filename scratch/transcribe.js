@@ -1,4 +1,4 @@
-import { executeWithRetry } from './_gemini.js';
+import { executeWithRetry } from '../api/_gemini.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
