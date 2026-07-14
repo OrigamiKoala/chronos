@@ -878,36 +878,34 @@ function jsonResponse(data, status = 200) {
 // All UrlFetchApp.fetch() → native fetch()
 // ------------------------------------
 
-async function callGemini(contents, apiKeys, models, temperature, systemInstruction) {
-  let requestContents;
-  if (typeof contents === 'string') {
-    requestContents = [{ parts: [{ text: contents }] }];
-  } else if (Array.isArray(contents)) {
-    const parts = [];
-    for (const item of contents) {
-      if (typeof item === 'string') {
-        parts.push({ text: item });
-      } else if (item?.inlineData) {
-        parts.push({ inlineData: item.inlineData });
-      }
-    }
-    requestContents = [{ parts }];
+async function callGemini(input, apiKeys, models, temperature, systemInstruction) {
+  // Build a plain-text prompt string from the contents argument
+  let prompt;
+  if (typeof input === 'string') {
+    prompt = input;
+  } else if (Array.isArray(input)) {
+    prompt = input
+      .map((item) => (typeof item === 'string' ? item : item?.text ?? ''))
+      .join('\n');
+  } else {
+    prompt = String(input ?? '');
   }
 
-  const defaultModels = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+  const defaultModels = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'];
   const targetModels = models?.length > 0 ? models : defaultModels;
-  const temp = temperature !== undefined ? temperature : 0.85;
 
   for (const model of targetModels) {
     for (const key of apiKeys) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/interactions?key=${key}`;
         const body = {
-          contents: requestContents,
-          generationConfig: { responseMimeType: 'application/json', temperature: temp },
+          model,
+          input: prompt,
+          response_format: { type: 'text', mime_type: 'application/json' },
+          generation_config: { temperature: temperature ?? 1.5, thinking_level: 'low' },
         };
         if (systemInstruction) {
-          body.systemInstruction = { parts: [{ text: systemInstruction }] };
+          body.system_instruction = systemInstruction;
         }
 
         const resp = await fetch(url, {
@@ -918,10 +916,14 @@ async function callGemini(contents, apiKeys, models, temperature, systemInstruct
 
         if (resp.ok) {
           const data = await resp.json();
-          return data.candidates[0].content.parts[0].text;
+          return data.output_text ?? null;
         } else if (resp.status >= 500) {
           console.warn(`Gemini 5xx for ${model}: ${resp.status} — skipping model`);
-          break; // don't rotate keys on 5xx, downgrade model
+          break; // model overloaded, try next model not next key
+        } else if (resp.status === 429) {
+          const errText = await resp.text();
+          console.warn(`Gemini 429 for ${model}:`, errText.substring(0, 200));
+          // rotate to next key
         } else {
           const errText = await resp.text();
           console.warn(`Gemini ${resp.status} for ${model}:`, errText.substring(0, 200));
