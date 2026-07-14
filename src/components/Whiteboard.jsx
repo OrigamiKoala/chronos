@@ -144,10 +144,12 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
     if (initialImage) {
       window.fabric.Image.fromURL(initialImage)
         .then((img) => {
-          fc.setBackgroundImage(img, fc.renderAll.bind(fc), {
+          img.set({
             scaleX: fc.width / img.width,
             scaleY: fc.height / img.height,
           });
+          fc.backgroundImage = img;
+          fc.renderAll();
         })
         .catch((err) => {
           console.error('Failed to load initial image:', err);
@@ -185,10 +187,14 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
     fc.clear();
     fc.backgroundColor = 'transparent';
     if (prev.length > 0) {
-      fc.loadFromJSON(prev[prev.length - 1], () => {
-        fc.renderAll();
-        if (onChange) onChange();
-      });
+      fc.loadFromJSON(prev[prev.length - 1])
+        .then(() => {
+          fc.renderAll();
+          if (onChange) onChange();
+        })
+        .catch(err => {
+          console.error("Undo loadFromJSON failed:", err);
+        });
     } else {
       fc.renderAll();
       if (onChange) onChange();
