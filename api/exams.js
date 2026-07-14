@@ -169,7 +169,8 @@ export default async function handler(req, res) {
           ADD COLUMN IF NOT EXISTS repetitions INT64,
           ADD COLUMN IF NOT EXISTS interval_days INT64,
           ADD COLUMN IF NOT EXISTS ease_factor FLOAT64,
-          ADD COLUMN IF NOT EXISTS next_review_at TIMESTAMP
+          ADD COLUMN IF NOT EXISTS next_review_at TIMESTAMP,
+          ADD COLUMN IF NOT EXISTS frq_submission_json STRING
         `)
       ]);
       tablesEnsured = true;
@@ -964,9 +965,9 @@ export default async function handler(req, res) {
             bq.query({
               query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
                 (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at,
-                 options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at)
+                 options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at, frq_submission_json)
                 VALUES (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP(),
-                        @options, @questionType, @aiExplanation, 0, 0, 2.5, CURRENT_TIMESTAMP())`,
+                        @options, @questionType, @aiExplanation, 0, 0, 2.5, CURRENT_TIMESTAMP(), @frqSubmissionJson)`,
               params: {
                 username: sanitizedUser, examId,
                 questionId: r.id || String(Date.now()),
@@ -976,11 +977,13 @@ export default async function handler(req, res) {
                 correctAnswer: r.answer || '',
                 options: r.options ? JSON.stringify(r.options) : null,
                 questionType: r.type || 'multiple_choice',
-                aiExplanation: r.aiExplanation || null
+                aiExplanation: r.aiExplanation || null,
+                frqSubmissionJson: r.frqSubmission ? JSON.stringify(r.frqSubmission) : null
               },
               types: {
                 options: 'STRING',
-                aiExplanation: 'STRING'
+                aiExplanation: 'STRING',
+                frqSubmissionJson: 'STRING'
               }
             })
           );

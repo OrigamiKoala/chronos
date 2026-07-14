@@ -25,7 +25,8 @@ export default async function handler(req, res) {
         ADD COLUMN IF NOT EXISTS repetitions INT64,
         ADD COLUMN IF NOT EXISTS interval_days INT64,
         ADD COLUMN IF NOT EXISTS ease_factor FLOAT64,
-        ADD COLUMN IF NOT EXISTS next_review_at TIMESTAMP
+        ADD COLUMN IF NOT EXISTS next_review_at TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS frq_submission_json STRING
       `);
       schemaEnsured = true;
     } catch (err) {
@@ -44,7 +45,8 @@ export default async function handler(req, res) {
       // 1. Fetch wrong problems
       const wrongProblemsQuery = `
         SELECT exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at,
-               options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at
+               options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at,
+               frq_submission_json
         FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
         WHERE user_id = @username
       `;
@@ -121,6 +123,12 @@ export default async function handler(req, res) {
         }
         let questionType = w.question_type || 'multiple_choice';
         let aiExplanation = w.ai_explanation || null;
+        let frqSubmission = null;
+        try {
+          frqSubmission = w.frq_submission_json ? JSON.parse(w.frq_submission_json) : null;
+        } catch {
+          console.warn("Failed to parse frq_submission_json", w.frq_submission_json);
+        }
 
         if (idx !== -1 && resultsMap[examId] && resultsMap[examId][idx]) {
           const qObj = resultsMap[examId][idx];
@@ -132,6 +140,10 @@ export default async function handler(req, res) {
           }
           if (!aiExplanation && qObj.aiExplanation) {
             aiExplanation = qObj.aiExplanation;
+          }
+          // Fallback: pull frq submission from results_json if not stored directly
+          if (!w.frq_submission_json && qObj.frqSubmission) {
+            frqSubmission = qObj.frqSubmission;
           }
         }
 
@@ -146,6 +158,7 @@ export default async function handler(req, res) {
           user_answer: w.user_answer,
           correct_answer: w.correct_answer,
           ai_explanation: aiExplanation,
+          frq_submission: frqSubmission,
           tag,
           created_at: w.created_at?.value || w.created_at,
           spaced_rep: {

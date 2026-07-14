@@ -788,6 +788,46 @@ export function ReviewScreen({ user, onBack }) {
                     <ChemicalText text={q.question_text} />
                   </div>
 
+                  {/* FRQ student submission */}
+                  {q.question_type === 'free_response' && (
+                    <div style={{
+                      marginBottom: '1.5rem',
+                      padding: '1rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid rgba(255,255,255,0.06)'
+                    }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.6rem', fontWeight: '500' }}>
+                        Your Submitted Answer:
+                      </div>
+                      {q.frq_submission?.type === 'whiteboard' && q.frq_submission.value?.startsWith('data:image/') ? (
+                        <img
+                          src={q.frq_submission.value}
+                          alt="Student whiteboard submission"
+                          style={{ maxWidth: '100%', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.08)' }}
+                        />
+                      ) : q.frq_submission?.type === 'upload' && q.frq_submission.value?.startsWith('data:image/') ? (
+                        <img
+                          src={q.frq_submission.value}
+                          alt="Student uploaded submission"
+                          style={{ maxWidth: '100%', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.08)' }}
+                        />
+                      ) : q.frq_submission?.value && q.frq_submission.value !== '[Time Out]' ? (
+                        <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                          {q.frq_submission.value}
+                        </div>
+                      ) : q.user_answer === '[Drawing Submission]' ? (
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          Drawing submitted (image not available for older attempts)
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          No submission recorded
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
