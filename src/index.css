@@ -434,6 +434,12 @@ select.input-field {
     grid-template-columns: 1fr 1fr;
     width: 100%;
   }
+  .dashboard-panel-wrapper {
+    height: 0;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 768px) {

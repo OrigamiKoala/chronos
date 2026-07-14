@@ -883,7 +883,8 @@ function App() {
               <div className={`setup-grid ${user ? 'two-cols' : ''}`}>
                 <SetupScreen onStart={startExam} ratings={ratings} onSubjectChange={setSelectedSubject} user={user} />
                 {user && (
-                  <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', minHeight: 0, overflow: 'hidden' }}>
+                  <div className="dashboard-panel-wrapper">
+                    <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
                     <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       {user.user_id}'s {selectedSubject} Dashboard
                     </h3>
@@ -1082,7 +1083,8 @@ function App() {
                       )}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
               </div>
             )}
             {currentScreen === 'exam' && examConfig && (

@@ -987,7 +987,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
             )}
 
             {/* Topic Mastery */}
-            <div className="glass-panel analytics-chart-panel" style={{ gridColumn: '1 / -1' }}>
+            <div className="topic-breakdown-grid">
+          <div className="glass-panel analytics-chart-panel" style={{ gridColumn: '1 / -1' }}>
               <h4 className="analytics-chart-title">
                 <BarChart3 size={18} color="var(--success)" /> Topic Breakdown
               </h4>
@@ -1007,6 +1008,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 <p className="analytics-empty">Complete exams to build topic mastery data</p>
               )}
             </div>
+        </div>
           </div>
 
           {/* Strengths & Weaknesses */}
