@@ -874,12 +874,89 @@ function jsonResponse(data, status = 200) {
 }
 
 // ------------------------------------
-// Gemini API — replaces callGemini()
-// All UrlFetchApp.fetch() → native fetch()
+// Gemini API — mirrors executeWithRetry() + interactions API from _gemini.js
 // ------------------------------------
 
+const rateLimitRegistry = new Map();
+
+function isKeyRateLimited(modelId, apiKey) {
+  const today = new Date().toDateString();
+  return rateLimitRegistry.get(`${modelId}:${apiKey}`) === today;
+}
+
+function markKeyRateLimited(modelId, apiKey) {
+  const today = new Date().toDateString();
+  rateLimitRegistry.set(`${modelId}:${apiKey}`, today);
+  console.warn(`[API Rotation] Key marked rate-limited for model ${modelId} today.`);
+}
+
+async function executeWithRetry(apiKeys, models, apiCallFn) {
+  const modelList = Array.isArray(models) ? models : [models];
+
+  if (!apiKeys || apiKeys.length === 0) {
+    throw new Error('GEMINI_API_KEYs are missing');
+  }
+
+  // Random starting index for rotation
+  const selectedIndex = Math.floor(Math.random() * apiKeys.length);
+  const keysOrder = [];
+  for (let i = 0; i < apiKeys.length; i++) {
+    keysOrder.push(apiKeys[(selectedIndex + i) % apiKeys.length]);
+  }
+
+  let lastError;
+  let all503 = true;
+
+  for (const currentModel of modelList) {
+    for (let i = 0; i < keysOrder.length; i++) {
+      const apiKey = keysOrder[i];
+      if (isKeyRateLimited(currentModel, apiKey)) {
+        continue;
+      }
+
+      try {
+        if (i > 0) {
+          console.warn(`[API Rotation] Selected key failed. Rotating to backup key ${i + 1} for model ${currentModel}.`);
+        }
+        const result = await apiCallFn(apiKey, currentModel);
+        console.log(`[AI Success] Successfully received response from model ${currentModel}`);
+        return result;
+      } catch (err) {
+        lastError = err;
+        let status = err.status || err.statusCode;
+        const msg = err.message ? err.message.toLowerCase() : '';
+        if (status === 500 || status === 503 || msg.includes('demand') || msg.includes('500') || msg.includes('503') || msg.includes('overloaded') || msg.includes('unavailable') || msg.includes('busy')) {
+          status = 503;
+        } else if (status === 429 || msg.includes('429') || msg.includes('exhausted') || msg.includes('rate limit')) {
+          status = 429;
+        }
+
+        if (status !== 503) {
+          all503 = false;
+        }
+
+        if (status === 503) {
+          console.warn(`[503] Model overloaded for ${currentModel}. Breaking out of key loop to try next model.`);
+          break;
+        } else if (status === 429) {
+          console.warn(`[429] Rate limit hit for ${currentModel} on key.`);
+          markKeyRateLimited(currentModel, apiKey);
+        } else {
+          console.warn(`[API Rotation] Error for ${currentModel}: ${err.message}. Trying next key...`);
+        }
+      }
+    }
+  }
+
+  if (all503 && lastError) {
+    throw new Error('Models are currently experiencing high demand. Please try again later.');
+  }
+
+  throw lastError || new Error('All API keys failed or are rate limited');
+}
+
 async function callGemini(input, apiKeys, models, temperature, systemInstruction) {
-  // Build a plain-text prompt string from the contents argument
+  // Build a plain-text prompt string
   let prompt;
   if (typeof input === 'string') {
     prompt = input;
@@ -894,47 +971,41 @@ async function callGemini(input, apiKeys, models, temperature, systemInstruction
   const defaultModels = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'];
   const targetModels = models?.length > 0 ? models : defaultModels;
 
-  for (const model of targetModels) {
-    for (const key of apiKeys) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/interactions?key=${key}`;
-        const body = {
-          model,
-          input: prompt,
-          response_format: { type: 'text', mime_type: 'application/json' },
-          generation_config: { temperature: temperature ?? 1.5, thinking_level: 'low' },
-        };
-        if (systemInstruction) {
-          body.system_instruction = systemInstruction;
-        }
-
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-
-        if (resp.ok) {
-          const data = await resp.json();
-          return data.output_text ?? null;
-        } else if (resp.status >= 500) {
-          console.warn(`Gemini 5xx for ${model}: ${resp.status} — skipping model`);
-          break; // model overloaded, try next model not next key
-        } else if (resp.status === 429) {
-          const errText = await resp.text();
-          console.warn(`Gemini 429 for ${model}:`, errText.substring(0, 200));
-          // rotate to next key
-        } else {
-          const errText = await resp.text();
-          console.warn(`Gemini ${resp.status} for ${model}:`, errText.substring(0, 200));
-        }
-      } catch (err) {
-        console.warn(`Gemini request error for ${model}:`, err.message);
+  try {
+    return await executeWithRetry(apiKeys, targetModels, async (apiKey, model) => {
+      const url = `https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`;
+      const body = {
+        model,
+        input: prompt,
+        response_format: { type: 'text', mime_type: 'application/json' },
+        generation_config: { temperature: temperature ?? 1.5, thinking_level: 'low' },
+      };
+      if (systemInstruction) {
+        body.system_instruction = systemInstruction;
       }
-    }
+
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        const err = new Error(`HTTP ${resp.status}: ${errText.substring(0, 200)}`);
+        err.status = resp.status;
+        throw err;
+      }
+
+      const data = await resp.json();
+      return data.output_text ?? null;
+    });
+  } catch (err) {
+    console.warn('[callGemini] All models/keys failed:', err.message);
+    return null;
   }
-  return null;
 }
+
 
 // ------------------------------------
 // Homework Generation
@@ -1160,12 +1231,7 @@ The output must be a pure JSON array with the following schema for each object:
         const needed = aiCount - allQuestions.length;
         const dynamicPrompt = buildDynamicPrompt(needed);
 
-        let responseText = await callGemini(dynamicPrompt, geminiApiKeys, ['gemini-2.5-flash'], 1.5, systemInstruction);
-
-        if (!responseText) {
-          console.warn('Primary model failed, trying fallbacks');
-          responseText = await callGemini(dynamicPrompt, geminiApiKeys, ['gemini-2.0-flash', 'gemini-1.5-flash'], 1.5, systemInstruction);
-        }
+        let responseText = await callGemini(dynamicPrompt, geminiApiKeys, ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'], 1.5, systemInstruction);
 
         if (responseText) {
           try {
@@ -1334,7 +1400,7 @@ Return ONLY a valid JSON array (one object per Question ID):
       const responseText = await callGemini(
         contents,
         geminiApiKeys,
-        ['gemini-2.0-flash', 'gemini-1.5-flash']
+        ['gemini-3.1-flash-lite', 'gemini-3-flash-preview']
       );
 
       if (!responseText) throw new Error('No response from Gemini during batch grading');
