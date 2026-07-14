@@ -138,28 +138,9 @@ export function ReactionRenderer({ reaction, theme = 'dark' }) {
 export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, defaultHeight = 130 }) {
   const containerRef = useRef(null);
 
-  // Replace literal '\n' (backslash followed by n) with actual newlines first, but NOT when followed by a letter (which indicates a LaTeX command like \nu)
-  const sanitizedText = typeof text === 'string'
-    ? text.replace(/\\n([a-zA-Z]*)/g, (match, word) => {
-        const latexNCommands = new Set([
-          'nu', 'neg', 'neq', 'notin', 'nexists', 'nearrow', 'nabla', 'natural', 
-          'napprox', 'node', 'normalsize', 'nonumber', 'ncong', 'ni', 'nicefrac', 
-          'nsim', 'nsub', 'nsubset', 'nsubseteq', 'nsucc', 'nsqsube', 'nsqsupe', 
-          'nsupset', 'nsupseteq', 'ntriangle', 'nvar', 'nvdash', 'nvDash', 'nVDash',
-          'nano'
-        ]);
-        const fullCommand = 'n' + word;
-        const isCommonNCommand = latexNCommands.has(fullCommand) || fullCommand.startsWith('new') || fullCommand.startsWith('num');
-        if (isCommonNCommand) {
-          return match;
-        }
-        return '\n' + word;
-      })
-    : text;
-
   // Trigger MathJax typesetting after render so LaTeX like $\text{H}_2\text{SO}_4$ renders
   useEffect(() => {
-    if (!containerRef.current || !sanitizedText) return;
+    if (!containerRef.current || !text) return;
     if (window.MathJax && window.MathJax.typesetPromise) {
       try {
         window.MathJax.typesetClear([containerRef.current]);
@@ -171,16 +152,16 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         console.error('MathJax typeset error:', err);
       });
     }
-  }, [sanitizedText]);
+  }, [text]);
 
-  if (!sanitizedText) return null;
+  if (!text) return null;
 
   // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\], \begin{env}...\end{env}), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
   // smiles tag blocks (<smiles>...</smiles>), and markdown bold (**...**) / italic (*...*) to keep them intact.
-  const parts = sanitizedText.split(/(\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\\\end\{[a-zA-Z]+\*?\}|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
+  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\\\end\{[a-zA-Z]+\*?\}|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
 
   return (
-    <span ref={containerRef} key={sanitizedText} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
+    <span ref={containerRef} key={text} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
       {parts.map((part, partIndex) => {
         let isSvg = false;
         let svgContent = part;
@@ -267,7 +248,8 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         }
 
         // For non-math text, split by whitespace to detect newlines and space spacing properly
-        const tokens = part.split(/(\s+)/);
+        const cleanPart = typeof part === 'string' ? part.replace(/\\+n/g, '\n').replace(/\\+r/g, '\r') : part;
+        const tokens = cleanPart.split(/(\s+)/);
         return (
           <span key={partIndex}>
             {tokens.map((token, index) => {
