@@ -1740,7 +1740,7 @@ function callGemini(contents, apiKeys, models, temperature, systemInstruction) {
           console.warn('Gemini 5xx for', model, ':', response.getResponseCode(), '- skipping to next model');
           break;
         } else {
-          console.warn('Gemini request failed for', model, ':', response.getResponseCode());
+          console.warn('Gemini request failed for', model, ':', response.getResponseCode(), 'body:', response.getContentText());
         }
       } catch (err) {
         console.warn('Gemini request failed:', err);
