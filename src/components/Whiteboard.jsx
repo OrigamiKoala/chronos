@@ -205,6 +205,11 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
       const origBg = fc.backgroundColor;
       fc.backgroundColor = '#0a0a0c';
 
+      // Save the current viewport transform
+      const origVpt = [...fc.viewportTransform];
+      // Reset viewport transform so that absolute coordinates map 1:1 on export
+      fc.setViewportTransform([1, 0, 0, 1, 0, 0]);
+
       const objects = fc.getObjects();
       let exportOptions = {
         format: 'jpeg',
@@ -243,8 +248,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
         };
       } else {
         // Fallback if canvas is empty: export the current visible viewport height
-        const vpt = fc.viewportTransform;
-        const currentScrollY = -vpt[5];
+        const currentScrollY = -origVpt[5];
         exportOptions = {
           ...exportOptions,
           left: 0,
@@ -256,7 +260,9 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
       
       const url = fc.toDataURL(exportOptions);
       
+      // Restore original background color and viewport transform
       fc.backgroundColor = origBg;
+      fc.setViewportTransform(origVpt);
       fc.renderAll();
       return url;
     },
