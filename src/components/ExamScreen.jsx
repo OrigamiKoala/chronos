@@ -1344,8 +1344,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             </strong>
           </div>
 
-          {problem?.type !== 'free_response' && (
-            <button
+          <button
               onClick={handlePause}
               className="btn btn-outline"
               style={{
@@ -1360,7 +1359,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             >
               <Pause size={14} /> Pause
             </button>
-          )}
+
 
           {isWholeTestMode && (
             <div className="glass-panel" style={{
