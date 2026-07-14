@@ -1,94 +1,88 @@
-import { useRef, useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { RotateCcw, Trash2, Edit3, Eraser } from 'lucide-react';
 
-const VISIBLE_HEIGHT = 450; // px — the clipping viewport
-const WORKSPACE_MULTIPLIER = 3; // canvas is 3× taller
+const VISIBLE_HEIGHT = 450;        // px — clipping viewport
+const WORKSPACE_MULTIPLIER = 3;    // canvas is 3× taller
+
+const COLORS = [
+  { value: '#ffffff', label: 'White' },
+  { value: '#6366f1', label: 'Indigo' },
+  { value: '#10b981', label: 'Emerald' },
+  { value: '#f59e0b', label: 'Amber' },
+  { value: '#ef4444', label: 'Rose' },
+];
+
+// Unique canvas ID per mount (avoids conflicts if component is re-used)
+let instanceCounter = 0;
 
 export const Whiteboard = forwardRef(({ initialImage }, ref) => {
-  const canvasRef = useRef(null);
-  const contextRef = useRef(null);
   const containerRef = useRef(null);
+  const fabricRef = useRef(null);   // Fabric.Canvas instance
+  const canvasId = useRef(`wb-canvas-${++instanceCounter}`);
 
-  const [isDrawing, setIsDrawing] = useState(false);
-  const isDrawingRef = useRef(false);
+  const [isEraser, setIsEraser] = useState(false);
   const [color, setColor] = useState('#ffffff');
-  const [tool, setTool] = useState('pencil');
   const [lineWidth, setLineWidth] = useState(4);
-  const [history, setHistory] = useState([]);
-
-  // Scroll offset: translateY applied to canvas (always <= 0)
-  const scrollOffsetRef = useRef(0);
-
-  const colorRef = useRef(color);
-  const lineWidthRef = useRef(lineWidth);
-  const toolRef = useRef(tool);
-  colorRef.current = color;
-  lineWidthRef.current = lineWidth;
-  toolRef.current = tool;
-
-  const colors = [
-    { value: '#ffffff', label: 'White' },
-    { value: '#6366f1', label: 'Indigo' },
-    { value: '#10b981', label: 'Emerald' },
-    { value: '#f59e0b', label: 'Amber' },
-    { value: '#ef4444', label: 'Rose' },
-  ];
+  const [history, setHistory] = useState([]);  // array of JSON snapshots
+  const historyRef = useRef([]);
 
   const workspaceH = VISIBLE_HEIGHT * WORKSPACE_MULTIPLIER;
 
-  const applyScroll = (offset) => {
-    scrollOffsetRef.current = offset;
-    if (canvasRef.current) canvasRef.current.style.transform = `translateY(${offset}px)`;
-  };
-
-  const clampScroll = (raw) => {
-    const min = -(workspaceH - VISIBLE_HEIGHT);
-    return Math.min(0, Math.max(min, raw));
-  };
-
+  // ── Init Fabric.js ────────────────────────────────────────────────────────
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!window.fabric) {
+      console.error('Fabric.js not loaded');
+      return;
+    }
+    const container = containerRef.current;
+    if (!container) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.style.width = '100%';
-    canvas.style.height = `${workspaceH}px`;
+    const fc = new window.fabric.Canvas(canvasId.current, {
+      isDrawingMode: true,
+      backgroundColor: 'transparent',
+      selection: false,
+    });
 
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = workspaceH * dpr;
+    fc.freeDrawingBrush = new window.fabric.PencilBrush(fc);
+    fc.freeDrawingBrush.color = '#ffffff';
+    fc.freeDrawingBrush.width = 4;
+    fc.freeDrawingBrush.strokeLineCap = 'round';
+    fc.freeDrawingBrush.strokeLineJoin = 'round';
 
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = colorRef.current;
-    ctx.lineWidth = lineWidthRef.current;
-    contextRef.current = ctx;
+    fabricRef.current = fc;
 
-    setHistory([canvas.toDataURL()]);
+    // Size the canvas
+    function resize() {
+      const w = container.clientWidth;
+      fc.setWidth(w);
+      fc.setHeight(workspaceH);
+      fc._visibleHeight = VISIBLE_HEIGHT;
+      fc._workspaceHeight = workspaceH;
+      fc.renderAll();
+    }
+    setTimeout(resize, 0);
+    window.addEventListener('resize', resize);
 
-    if (initialImage) {
-      const img = new Image();
-      img.onload = () => {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.drawImage(img, 0, 0, rect.width, workspaceH);
-        setHistory([canvas.toDataURL()]);
-      };
-      img.src = initialImage;
+    // Viewport clamp helper
+    function clampVpt() {
+      const vpt = fc.viewportTransform;
+      const maxY = 0;
+      const minY = -(workspaceH - VISIBLE_HEIGHT);
+      if (vpt[5] > maxY) vpt[5] = maxY;
+      if (vpt[5] < minY) vpt[5] = minY;
+      vpt[4] = 0;
     }
 
-    // ── Two-finger pan (ochem-bot pattern) ───────────────────────────────
+    // ── Two-finger pan / one-finger draw (ochem-bot pattern) ────────────────
     let isPanning = false;
     let lastPanY = 0;
+
+    const upperCanvas = fc.upperCanvasEl || fc.wrapperEl;
 
     function onTouchStart(e) {
       if (e.touches.length >= 2) {
         isPanning = true;
-        // cancel any in-progress stroke
-        isDrawingRef.current = false;
-        setIsDrawing(false);
-        contextRef.current?.closePath();
+        fc.isDrawingMode = false;
         lastPanY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         e.preventDefault();
       }
@@ -96,146 +90,114 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
     function onTouchMove(e) {
       if (isPanning && e.touches.length >= 2) {
         const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        applyScroll(clampScroll(scrollOffsetRef.current + (midY - lastPanY)));
+        const delta = midY - lastPanY;
         lastPanY = midY;
+        const vpt = fc.viewportTransform;
+        vpt[5] += delta;
+        clampVpt();
+        fc.setViewportTransform(vpt);
+        fc.requestRenderAll();
         e.preventDefault();
       }
     }
     function onTouchEnd(e) {
-      if (isPanning && e.touches.length < 2) isPanning = false;
+      if (isPanning && e.touches.length < 2) {
+        isPanning = false;
+        fc.isDrawingMode = true;
+      }
     }
 
-    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-    canvas.addEventListener('touchend', onTouchEnd);
+    upperCanvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    upperCanvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    upperCanvas.addEventListener('touchend', onTouchEnd);
 
     // Mouse-wheel scroll
     function onWheel(e) {
       e.preventDefault();
-      applyScroll(clampScroll(scrollOffsetRef.current - e.deltaY));
+      const vpt = fc.viewportTransform;
+      vpt[5] -= e.deltaY;
+      clampVpt();
+      fc.setViewportTransform(vpt);
+      fc.requestRenderAll();
     }
-    canvas.addEventListener('wheel', onWheel, { passive: false });
+    container.addEventListener('wheel', onWheel, { passive: false });
 
-    // Resize
-    function handleResize() {
-      const snapshot = canvas.toDataURL();
-      const r = canvas.getBoundingClientRect();
-      const oldStroke = ctx.strokeStyle;
-      const oldW = ctx.lineWidth;
-      const oldGco = ctx.globalCompositeOperation;
-      canvas.width = r.width * dpr;
-      canvas.height = workspaceH * dpr;
-      ctx.scale(dpr, dpr);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = oldStroke;
-      ctx.lineWidth = oldW;
-      ctx.globalCompositeOperation = oldGco;
-      const img = new Image();
-      img.onload = () => ctx.drawImage(img, 0, 0, r.width, workspaceH);
-      img.src = snapshot;
+    // Save history on each stroke
+    fc.on('path:created', () => {
+      const snap = JSON.stringify(fc.toJSON());
+      historyRef.current = [...historyRef.current, snap];
+      setHistory([...historyRef.current]);
+    });
+
+    // Load initial image if provided
+    if (initialImage) {
+      window.fabric.Image.fromURL(initialImage, (img) => {
+        fc.setBackgroundImage(img, fc.renderAll.bind(fc), {
+          scaleX: fc.width / img.width,
+          scaleY: fc.height / img.height,
+        });
+      });
     }
-    window.addEventListener('resize', handleResize);
 
     return () => {
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove', onTouchMove);
-      canvas.removeEventListener('touchend', onTouchEnd);
-      canvas.removeEventListener('wheel', onWheel);
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', resize);
+      upperCanvas.removeEventListener('touchstart', onTouchStart);
+      upperCanvas.removeEventListener('touchmove', onTouchMove);
+      upperCanvas.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('wheel', onWheel);
+      fc.dispose();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Sync brush color / width / eraser ────────────────────────────────────
   useEffect(() => {
-    if (!contextRef.current) return;
-    contextRef.current.strokeStyle = color;
-    contextRef.current.globalCompositeOperation =
-      tool === 'pencil' ? 'source-over' : 'destination-out';
-  }, [color, tool]);
+    const fc = fabricRef.current;
+    if (!fc || !window.fabric) return;
+    fc.freeDrawingBrush = new window.fabric.PencilBrush(fc);
+    fc.freeDrawingBrush.color = isEraser ? '#0a0a0c' : color;
+    fc.freeDrawingBrush.width = isEraser ? lineWidth * 4 : lineWidth;
+    fc.freeDrawingBrush.strokeLineCap = 'round';
+    fc.freeDrawingBrush.strokeLineJoin = 'round';
+  }, [color, lineWidth, isEraser]);
 
-  useEffect(() => {
-    if (!contextRef.current) return;
-    contextRef.current.lineWidth = lineWidth;
-  }, [lineWidth]);
-
-  const saveState = () => {
-    if (canvasRef.current) setHistory(p => [...p, canvasRef.current.toDataURL()]);
-  };
-
+  // ── Undo ─────────────────────────────────────────────────────────────────
   const undo = () => {
-    if (history.length <= 1) return;
-    const prev = history.slice(0, -1);
-    setHistory(prev);
-    const canvas = canvasRef.current;
-    const ctx = contextRef.current;
-    if (!canvas || !ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const img = new Image();
-    img.onload = () => {
-      const r = canvas.getBoundingClientRect();
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.drawImage(img, 0, 0, r.width, workspaceH);
-      ctx.globalCompositeOperation = toolRef.current === 'pencil' ? 'source-over' : 'destination-out';
-    };
-    img.src = prev[prev.length - 1];
+    const fc = fabricRef.current;
+    if (!fc || historyRef.current.length === 0) return;
+    const prev = historyRef.current.slice(0, -1);
+    historyRef.current = prev;
+    setHistory([...prev]);
+    fc.clear();
+    fc.backgroundColor = 'transparent';
+    if (prev.length > 0) {
+      fc.loadFromJSON(prev[prev.length - 1], () => fc.renderAll());
+    } else {
+      fc.renderAll();
+    }
   };
 
+  // ── Clear ─────────────────────────────────────────────────────────────────
   const clear = () => {
-    const canvas = canvasRef.current;
-    const ctx = contextRef.current;
-    if (!canvas || !ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    saveState();
+    const fc = fabricRef.current;
+    if (!fc) return;
+    fc.clear();
+    fc.backgroundColor = 'transparent';
+    fc.renderAll();
+    historyRef.current = [];
+    setHistory([]);
   };
 
-  // ── Pointer events: one-touch or stylus draws ────────────────────────────
-  const startDrawing = (e) => {
-    if (e.nativeEvent?.touches?.length >= 2) return; // two-finger → let touch handlers pan
-    const canvas = canvasRef.current;
-    if (!canvas || !contextRef.current) return;
-    canvas.setPointerCapture(e.pointerId);
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top - scrollOffsetRef.current;
-    contextRef.current.beginPath();
-    contextRef.current.moveTo(x, y);
-    isDrawingRef.current = true;
-    setIsDrawing(true);
-    e.preventDefault();
-  };
-
-  const draw = (e) => {
-    if (!isDrawingRef.current) return;
-    const canvas = canvasRef.current;
-    if (!canvas || !contextRef.current) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top - scrollOffsetRef.current;
-    contextRef.current.lineTo(x, y);
-    contextRef.current.stroke();
-    e.preventDefault();
-  };
-
-  const stopDrawing = () => {
-    if (!isDrawingRef.current) return;
-    isDrawingRef.current = false;
-    setIsDrawing(false);
-    contextRef.current?.closePath();
-    saveState();
-  };
-
+  // ── Expose to parent ─────────────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
     getDataURL: () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
-      const tmp = document.createElement('canvas');
-      tmp.width = canvas.width;
-      tmp.height = canvas.height;
-      const tctx = tmp.getContext('2d');
-      tctx.fillStyle = '#0a0a0c';
-      tctx.fillRect(0, 0, tmp.width, tmp.height);
-      tctx.drawImage(canvas, 0, 0);
-      return tmp.toDataURL('image/png');
+      const fc = fabricRef.current;
+      if (!fc) return null;
+      const origBg = fc.backgroundColor;
+      fc.backgroundColor = '#0a0a0c';
+      const url = fc.toDataURL({ format: 'png', multiplier: 1 });
+      fc.backgroundColor = origBg;
+      fc.renderAll();
+      return url;
     },
     clearWhiteboard: () => clear(),
   }));
@@ -258,22 +220,7 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
           WebkitUserSelect: 'none',
         }}
       >
-        <canvas
-          ref={canvasRef}
-          onPointerDown={startDrawing}
-          onPointerMove={draw}
-          onPointerUp={stopDrawing}
-          onPointerCancel={stopDrawing}
-          style={{
-            display: 'block',
-            width: '100%',
-            cursor: tool === 'eraser' ? 'cell' : 'crosshair',
-            transformOrigin: 'top left',
-            touchAction: 'none',
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-          }}
-        />
+        <canvas id={canvasId.current} />
       </div>
 
       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
@@ -281,45 +228,35 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
       </p>
 
       {/* Toolbar */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '1rem',
-          padding: 'var(--input-padding)',
-          background: 'var(--bg-tertiary)',
-          border: '1px solid var(--bg-glass-border)',
-          borderRadius: 'var(--radius-md)',
-          pointerEvents: isDrawing ? 'none' : 'auto',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-        }}
-      >
-        {/* Tools */}
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
+        alignItems: 'center', gap: '1rem',
+        padding: 'var(--input-padding)',
+        background: 'var(--bg-tertiary)',
+        border: '1px solid var(--bg-glass-border)',
+        borderRadius: 'var(--radius-md)',
+        userSelect: 'none', WebkitUserSelect: 'none',
+      }}>
+        {/* Pencil / Eraser */}
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <button type="button" className={`btn ${tool === 'pencil' ? 'btn-primary' : 'btn-outline'}`}
+          <button type="button" className={`btn ${!isEraser ? 'btn-primary' : 'btn-outline'}`}
             style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
-            onClick={() => setTool('pencil')} title="Pencil">
+            onClick={() => setIsEraser(false)}>
             <Edit3 size={15} /> Pencil
           </button>
-          <button type="button" className={`btn ${tool === 'eraser' ? 'btn-primary' : 'btn-outline'}`}
+          <button type="button" className={`btn ${isEraser ? 'btn-primary' : 'btn-outline'}`}
             style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
-            onClick={() => setTool('eraser')} title="Eraser">
+            onClick={() => setIsEraser(true)}>
             <Eraser size={15} /> Eraser
           </button>
         </div>
 
-        {/* Colors */}
-        {tool === 'pencil' && (
+        {/* Color palette */}
+        {!isEraser && (
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {colors.map((c) => (
-              <button
-                key={c.value}
-                type="button"
+            {COLORS.map((c) => (
+              <button key={c.value} type="button"
                 onClick={() => setColor(c.value)}
-                onPointerDown={(e) => e.stopPropagation()}
                 style={{
                   width: '24px', height: '24px', borderRadius: '50%',
                   backgroundColor: c.value,
@@ -337,7 +274,7 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
           <span>Size:</span>
           <input type="range"
-            min={tool === 'pencil' ? 2 : 5} max={tool === 'pencil' ? 15 : 40}
+            min={2} max={isEraser ? 40 : 15}
             value={lineWidth} onChange={(e) => setLineWidth(Number(e.target.value))}
             style={{ cursor: 'pointer', accentColor: 'var(--accent-primary)', width: '80px', height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.1)' }}
           />
@@ -348,7 +285,7 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button type="button" className="btn btn-outline"
             style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
-            onClick={undo} disabled={history.length <= 1} title="Undo">
+            onClick={undo} disabled={history.length === 0} title="Undo">
             <RotateCcw size={15} /> Undo
           </button>
           <button type="button" className="btn btn-outline"
