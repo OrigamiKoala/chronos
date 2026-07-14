@@ -754,83 +754,10 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         renderOrgPortal()
       ) : (
         <>
-          {/* Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-
-            {selectedSubjectFilter === 'All' ? (
-              <>
-                {['Math', 'Physics', 'Chemistry'].map(s => (
-                  <div key={s} className="glass-panel analytics-stat-card">
-                    <TrendingUp size={22} color={CHART_COLORS[s].line} />
-                    <div>
-                      <span className="analytics-stat-label">{s} ELO</span>
-                      <span className="analytics-stat-value" style={{ color: CHART_COLORS[s].line }}>
-                        {user?.[`${s.toLowerCase()}_rating`] || 100}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                <div className="glass-panel analytics-stat-card">
-                  <Clock size={22} color="var(--danger)" />
-                  <div>
-                    <span className="analytics-stat-label">Unable to Finish (Time)</span>
-                    <span className="analytics-stat-value" style={{ color: 'var(--danger)' }}>
-                      {data?.overallTimeOutPercentage !== undefined ? `${data.overallTimeOutPercentage}%` : '0%'}
-                    </span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="glass-panel analytics-stat-card">
-                  <TrendingUp size={22} color={CHART_COLORS[selectedSubjectFilter].line} />
-                  <div>
-                    <span className="analytics-stat-label">{selectedSubjectFilter} ELO</span>
-                    <span className="analytics-stat-value" style={{ color: CHART_COLORS[selectedSubjectFilter].line }}>
-                      {user?.[`${selectedSubjectFilter.toLowerCase()}_rating`] || 100}
-                    </span>
-                  </div>
-                </div>
-                <div className="glass-panel analytics-stat-card">
-                  <Clock size={22} color="var(--accent-secondary)" />
-                  <div>
-                    <span className="analytics-stat-label">Average Time per Question</span>
-                    <span className="analytics-stat-value" style={{ color: 'var(--accent-secondary)' }}>
-                      {data?.avgTimePerSubject?.[selectedSubjectFilter] ? `${Math.round(data.avgTimePerSubject[selectedSubjectFilter])}s` : '0s'}
-                    </span>
-                  </div>
-                </div>
-                <div className="glass-panel analytics-stat-card">
-                  <Target size={22} color="var(--success)" />
-                  <div>
-                    <span className="analytics-stat-label">Overall Subject Accuracy</span>
-                    <span className="analytics-stat-value" style={{ color: 'var(--success)' }}>
-                      {(() => {
-                        const subjectHistory = (data?.eloHistory || []).filter(h => h.subject === selectedSubjectFilter);
-                        if (subjectHistory.length === 0) return '0%';
-                        const sum = subjectHistory.reduce((acc, h) => acc + (h.accuracy || 0), 0);
-                        return Math.round((sum / subjectHistory.length) * 100) + '%';
-                      })()}
-                    </span>
-                  </div>
-                </div>
-                <div className="glass-panel analytics-stat-card">
-                  <Clock size={22} color="var(--danger)" />
-                  <div>
-                    <span className="analytics-stat-label">Unable to Finish (Time)</span>
-                    <span className="analytics-stat-value" style={{ color: 'var(--danger)' }}>
-                      {data?.timeOutPercentagePerSubject?.[selectedSubjectFilter] !== undefined ? `${data.timeOutPercentagePerSubject[selectedSubjectFilter]}%` : '0%'}
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Charts Grid */}
-          <div className="analytics-grid">
-            {/* ELO Over Time */}
-            <div className="glass-panel analytics-chart-panel" style={{ gridColumn: 'span 2' }}>
+          {/* ELO Section: chart + stat boxes side by side on large screens */}
+          <div className="elo-section" style={{ marginBottom: '2rem' }}>
+            {/* ELO Over Time Chart */}
+            <div className="glass-panel analytics-chart-panel elo-chart">
               <h4 className="analytics-chart-title">
                 <TrendingUp size={18} color="var(--accent-primary)" /> ELO Rating Over Time
               </h4>
@@ -849,6 +776,82 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 <p className="analytics-empty">Take some exams to see your ELO trend</p>
               )}
             </div>
+
+            {/* Stat Boxes: 2x2 grid on large screens */}
+            <div className="elo-stat-boxes">
+              {selectedSubjectFilter === 'All' ? (
+                <>
+                  {['Math', 'Physics', 'Chemistry'].map(s => (
+                    <div key={s} className="glass-panel analytics-stat-card">
+                      <TrendingUp size={22} color={CHART_COLORS[s].line} />
+                      <div>
+                        <span className="analytics-stat-label">{s} ELO</span>
+                        <span className="analytics-stat-value" style={{ color: CHART_COLORS[s].line }}>
+                          {user?.[`${s.toLowerCase()}_rating`] || 100}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="glass-panel analytics-stat-card">
+                    <Clock size={22} color="var(--danger)" />
+                    <div>
+                      <span className="analytics-stat-label">Unable to Finish (Time)</span>
+                      <span className="analytics-stat-value" style={{ color: 'var(--danger)' }}>
+                        {data?.overallTimeOutPercentage !== undefined ? `${data.overallTimeOutPercentage}%` : '0%'}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="glass-panel analytics-stat-card">
+                    <TrendingUp size={22} color={CHART_COLORS[selectedSubjectFilter].line} />
+                    <div>
+                      <span className="analytics-stat-label">{selectedSubjectFilter} ELO</span>
+                      <span className="analytics-stat-value" style={{ color: CHART_COLORS[selectedSubjectFilter].line }}>
+                        {user?.[`${selectedSubjectFilter.toLowerCase()}_rating`] || 100}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="glass-panel analytics-stat-card">
+                    <Clock size={22} color="var(--accent-secondary)" />
+                    <div>
+                      <span className="analytics-stat-label">Average Time per Question</span>
+                      <span className="analytics-stat-value" style={{ color: 'var(--accent-secondary)' }}>
+                        {data?.avgTimePerSubject?.[selectedSubjectFilter] ? `${Math.round(data.avgTimePerSubject[selectedSubjectFilter])}s` : '0s'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="glass-panel analytics-stat-card">
+                    <Target size={22} color="var(--success)" />
+                    <div>
+                      <span className="analytics-stat-label">Overall Subject Accuracy</span>
+                      <span className="analytics-stat-value" style={{ color: 'var(--success)' }}>
+                        {(() => {
+                          const subjectHistory = (data?.eloHistory || []).filter(h => h.subject === selectedSubjectFilter);
+                          if (subjectHistory.length === 0) return '0%';
+                          const sum = subjectHistory.reduce((acc, h) => acc + (h.accuracy || 0), 0);
+                          return Math.round((sum / subjectHistory.length) * 100) + '%';
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="glass-panel analytics-stat-card">
+                    <Clock size={22} color="var(--danger)" />
+                    <div>
+                      <span className="analytics-stat-label">Unable to Finish (Time)</span>
+                      <span className="analytics-stat-value" style={{ color: 'var(--danger)' }}>
+                        {data?.timeOutPercentagePerSubject?.[selectedSubjectFilter] !== undefined ? `${data.timeOutPercentagePerSubject[selectedSubjectFilter]}%` : '0%'}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Charts Grid */}
+          <div className="analytics-grid">
 
             {/* Subject Diagnosis */}
             {(() => {

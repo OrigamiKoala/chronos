@@ -387,6 +387,42 @@ select.input-field {
   width: 100%;
 }
 
+/* ELO section: chart on left, 2x2 stat boxes on right */
+.elo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.elo-stat-boxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .elo-section {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .elo-chart {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .elo-stat-boxes {
+    flex: 0 0 320px;
+    width: 320px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 0.75rem;
+    align-content: stretch;
+  }
+  .elo-stat-boxes .analytics-stat-card {
+    height: auto;
+  }
+}
+
 .analytics-chart-title {
   display: flex;
   align-items: center;
