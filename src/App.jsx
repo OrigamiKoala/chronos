@@ -521,7 +521,8 @@ function App() {
           isCorrect: r.isCorrect,
           timeSpent: r.timeSpent,
           timeOut: r.timeOut,
-          difficultyAtTime: r.difficultyAtTime
+          difficultyAtTime: r.difficultyAtTime,
+          frqSubmission: r.frqSubmission
         }))
       })
     })
