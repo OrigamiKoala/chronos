@@ -142,12 +142,16 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
 
     // Load initial image if provided
     if (initialImage) {
-      window.fabric.Image.fromURL(initialImage, (img) => {
-        fc.setBackgroundImage(img, fc.renderAll.bind(fc), {
-          scaleX: fc.width / img.width,
-          scaleY: fc.height / img.height,
+      window.fabric.Image.fromURL(initialImage)
+        .then((img) => {
+          fc.setBackgroundImage(img, fc.renderAll.bind(fc), {
+            scaleX: fc.width / img.width,
+            scaleY: fc.height / img.height,
+          });
+        })
+        .catch((err) => {
+          console.error('Failed to load initial image:', err);
         });
-      });
     }
 
     return () => {
