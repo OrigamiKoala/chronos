@@ -873,6 +873,15 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                     <span style={{ color: 'var(--text-muted)' }}>Your Answer: </span>
                     <span style={{ color: statusColor }}>
                       {(() => {
+                        if (r.type === 'free_response' && r.frqSubmission) {
+                          const sub = r.frqSubmission;
+                          if (sub.value && (sub.value.startsWith('data:image/') || sub.value.startsWith('blob:'))) {
+                            return <img src={sub.value} alt="Your FRQ submission" style={{ maxWidth: '300px', maxHeight: '200px', borderRadius: '4px', border: '1px solid var(--border-color)' }} />;
+                          }
+                          if (sub.type === 'text' && sub.value) {
+                            return <ChemicalText text={sub.value} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                          }
+                        }
                         const ans = r.userAnswer;
                         if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
                           const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
