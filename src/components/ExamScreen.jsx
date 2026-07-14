@@ -348,7 +348,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
 
   useEffect(() => {
     const saved = frqSubmissions[currentQuestionIndex];
-    setWorkSubmitted(false); // Always start in editing mode so they can resume work
+    setWorkSubmitted(!!(saved && saved.submitted)); // Show the confirmation screen if they already submitted/saved this FRQ
     if (saved) {
       setSubmitType(saved.type || 'whiteboard');
       if (saved.type === 'whiteboard') {
@@ -644,7 +644,8 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       const updatedSubmissions = [...frqSubmissions];
       updatedSubmissions[currentQuestionIndex] = {
         type: submitType,
-        value: imagePayload || finalValue
+        value: imagePayload || finalValue,
+        submitted: false
       };
       setFrqSubmissions(updatedSubmissions);
 
@@ -803,7 +804,8 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     const updatedSubmissions = [...frqSubmissions];
     updatedSubmissions[currentQuestionIndex] = {
       type: 'whiteboard',
-      value: imagePayload || '[Time Out]'
+      value: imagePayload || '[Time Out]',
+      submitted: true
     };
     setFrqSubmissions(updatedSubmissions);
 
@@ -842,7 +844,8 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     const updatedSubmissions = [...frqSubmissions];
     updatedSubmissions[currentQuestionIndex] = {
       type: submitType,
-      value: imagePayload || finalValue
+      value: imagePayload || finalValue,
+      submitted: true
     };
     setFrqSubmissions(updatedSubmissions);
 
