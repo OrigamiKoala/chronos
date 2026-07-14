@@ -151,8 +151,11 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
     saveState();
   };
 
-  // Modern pointer event handling (mouse and touch support)
+  // Modern pointer event handling.
+  // Strategy: pen/mouse → draw; finger touch → let browser scroll naturally.
   const startDrawing = (e) => {
+    // Ignore finger touches so the scroll container can scroll with fingers
+    if (e.pointerType === 'touch') return;
     const canvas = canvasRef.current;
     if (!canvas || !contextRef.current) return;
     // Capture the pointer so all subsequent move/up events go to the canvas
@@ -171,6 +174,7 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
 
   const draw = (e) => {
     if (!isDrawing) return;
+    if (e.pointerType === 'touch') return;
     const canvas = canvasRef.current;
     if (!canvas || !contextRef.current) return;
 
@@ -224,9 +228,10 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
           borderRadius: 'var(--radius-md)', 
           background: 'rgba(10, 10, 12, 0.8)',
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)',
-          maxHeight: '450px',
+          height: '450px',
           overflowY: 'auto',
-          touchAction: 'none',
+          overscrollBehavior: 'contain',
+          touchAction: 'pan-y',
           userSelect: 'none',
           WebkitUserSelect: 'none',
           KhtmlUserSelect: 'none',
@@ -245,7 +250,7 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
             width: '100%',
             height: `${height}px`,
             cursor: tool === 'eraser' ? 'cell' : 'crosshair',
-            touchAction: 'none',
+            touchAction: 'pan-y',
             userSelect: 'none',
             WebkitUserSelect: 'none',
             KhtmlUserSelect: 'none',
