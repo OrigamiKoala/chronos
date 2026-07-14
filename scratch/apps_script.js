@@ -11,7 +11,7 @@ const PROJECT_ID = "chronos-stress-sandbox";
 function generateQuestionId(questionText, subject) {
   const inputStr = (subject || '') + ':' + questionText;
   const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, inputStr, Utilities.Charset.UTF_8);
-  
+
   let hex = '';
   for (let i = 0; i < digest.length; i++) {
     let byteVal = digest[i];
@@ -20,7 +20,7 @@ function generateQuestionId(questionText, subject) {
     if (byteHex.length === 1) byteHex = '0' + byteHex;
     hex += byteHex;
   }
-  
+
   const cleanSubject = String(subject || 'gen').trim().toLowerCase().substring(0, 5);
   return cleanSubject + '_' + hex.substring(0, 16);
 }
@@ -882,6 +882,7 @@ function doPost(e) {
     const payload = JSON.parse(e.postData.contents);
     const action = payload.action;
     const projectId = payload.projectId || PROJECT_ID;
+    console.log("Logging is active");
 
     if (action === 'generate_homework') {
       generateHomework(payload, projectId);
@@ -1180,7 +1181,7 @@ Follow these strict rules:
                   break;
                 }
               }
-            } catch (e) {}
+            } catch (e) { }
           }
         }
       } catch (err) {
@@ -1336,7 +1337,7 @@ Follow these strict rules:
                     allQuestions.push(qObj);
                   }
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
           }
         } catch (fallbackErr) {
@@ -1393,7 +1394,7 @@ Below are the details for each question:
 
       frqs.forEach((r) => {
         const isImage = r.frqSubmission && (r.frqSubmission.type === 'whiteboard' || r.frqSubmission.type === 'image') && r.frqSubmission.value && r.frqSubmission.value.startsWith('data:image/');
-        
+
         promptText += `\n---
 Question ID: ${r.id}
 Topic: ${r.topic || 'General'}
