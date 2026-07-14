@@ -192,16 +192,60 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
     getDataURL: () => {
       const fc = fabricRef.current;
       if (!fc) return null;
+      
       const origBg = fc.backgroundColor;
       fc.backgroundColor = '#0a0a0c';
-      
-      // Mirroring the ochem-bot submission settings (format, quality, multiplier)
-      // but keeping it as a full data URL containing the base64 prefix
-      const url = fc.toDataURL({
+
+      const objects = fc.getObjects();
+      let exportOptions = {
         format: 'jpeg',
         quality: 0.85,
         multiplier: 1.0
-      });
+      };
+
+      if (objects.length > 0) {
+        // Calculate bounding box of all paths/objects
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        objects.forEach(obj => {
+          const bounds = obj.getBoundingRect(true, true);
+          if (bounds.left < minX) minX = bounds.left;
+          if (bounds.top < minY) minY = bounds.top;
+          if (bounds.left + bounds.width > maxX) maxX = bounds.left + bounds.width;
+          if (bounds.top + bounds.height > maxY) maxY = bounds.top + bounds.height;
+        });
+
+        // Add padding (20px) around content
+        const padding = 20;
+        const left = Math.max(0, minX - padding);
+        const top = Math.max(0, minY - padding);
+        const width = Math.min(fc.width - left, (maxX - minX) + padding * 2);
+        const height = Math.min(fc.height - top, (maxY - minY) + padding * 2);
+
+        exportOptions = {
+          ...exportOptions,
+          left,
+          top,
+          width,
+          height
+        };
+      } else {
+        // Fallback if canvas is empty: export the current visible viewport height
+        const vpt = fc.viewportTransform;
+        const currentScrollY = -vpt[5];
+        exportOptions = {
+          ...exportOptions,
+          left: 0,
+          top: currentScrollY,
+          width: fc.width,
+          height: VISIBLE_HEIGHT
+        };
+      }
+      
+      const url = fc.toDataURL(exportOptions);
       
       fc.backgroundColor = origBg;
       fc.renderAll();

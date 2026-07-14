@@ -387,6 +387,9 @@ export default async function handler(req, res) {
             username: sanitizedUser, 
             resultsJson: JSON.stringify(results),
             interactionIdsJson: interactionIds ? JSON.stringify(interactionIds) : null
+          },
+          types: {
+            interactionIdsJson: 'STRING'
           }
         }),
         bq.query({
@@ -560,6 +563,9 @@ export default async function handler(req, res) {
           username: sanitizedUser, 
           resultsJson: JSON.stringify(results),
           interactionIdsJson: interactionIds ? JSON.stringify(interactionIds) : null
+        },
+        types: {
+          interactionIdsJson: 'STRING'
         }
       });
 
@@ -969,6 +975,10 @@ export default async function handler(req, res) {
                 options: r.options ? JSON.stringify(r.options) : null,
                 questionType: r.type || 'multiple_choice',
                 aiExplanation: r.aiExplanation || null
+              },
+              types: {
+                options: 'STRING',
+                aiExplanation: 'STRING'
               }
             })
           );
