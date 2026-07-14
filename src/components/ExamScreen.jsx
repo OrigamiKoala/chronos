@@ -1603,7 +1603,12 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <button
               className="btn btn-outline"
-              onClick={() => setWorkSubmitted(false)}
+              onClick={() => {
+                setWorkSubmitted(false);
+                setTimeout(() => {
+                  if (whiteboardRef.current) whiteboardRef.current.resizeCanvas();
+                }, 50);
+              }}
             >
               <ArrowLeft size={18} /> Edit Drawing
             </button>
@@ -1651,20 +1656,19 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
 
             {/* Navigation Buttons for Free Response */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              {config.stressMode !== 'strict' && (
-                <button
-                  className="btn btn-outline"
-                  disabled={currentQuestionIndex === 0 || (isSetTimedMode && currentQuestionIndex === activeSetIndex * questionsPerSet)}
-                  onClick={() => {
-                    saveCurrentFRQState();
-                    recordActiveInterval(currentQuestionIndex);
-                    clearInterval(timerRef.current);
-                    setCurrentQuestionIndex(prev => prev - 1);
-                  }}
-                >
-                  <ArrowLeft size={18} /> Previous
-                </button>
-              )}
+            {config.stressMode !== 'strict' && currentQuestionIndex > 0 && !(isSetTimedMode && currentQuestionIndex === activeSetIndex * questionsPerSet) && (
+              <button
+                className="btn btn-outline"
+                onClick={() => {
+                  saveCurrentFRQState();
+                  recordActiveInterval(currentQuestionIndex);
+                  clearInterval(timerRef.current);
+                  setCurrentQuestionIndex(prev => prev - 1);
+                }}
+              >
+                <ArrowLeft size={18} /> Previous
+              </button>
+            )}
 
               <div style={{ flex: 1 }} />
 
@@ -1777,10 +1781,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
           )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {config.stressMode !== 'strict' && (
+            {config.stressMode !== 'strict' && currentQuestionIndex > 0 && !(isSetTimedMode && currentQuestionIndex === activeSetIndex * questionsPerSet) && (
               <button
                 className="btn btn-outline"
-                disabled={currentQuestionIndex === 0 || (isSetTimedMode && currentQuestionIndex === activeSetIndex * questionsPerSet)}
                 onClick={() => {
                   recordActiveInterval(currentQuestionIndex);
                   clearInterval(timerRef.current);

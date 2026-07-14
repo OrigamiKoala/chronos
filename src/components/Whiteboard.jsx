@@ -56,11 +56,18 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
 
     // Size the canvas
     function resize() {
-      const w = container.clientWidth;
+      const w = container.clientWidth || 800;
       fc.setWidth(w);
       fc.setHeight(workspaceH);
       fc._visibleHeight = VISIBLE_HEIGHT;
       fc._workspaceHeight = workspaceH;
+      
+      if (fc.backgroundImage) {
+        fc.backgroundImage.set({
+          scaleX: w / fc.backgroundImage.width,
+          scaleY: workspaceH / fc.backgroundImage.height
+        });
+      }
       fc.renderAll();
     }
     setTimeout(resize, 0);
@@ -295,6 +302,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
       return url;
     },
     clearWhiteboard: () => clear(),
+    resizeCanvas: () => resize(),
   }));
 
   return (
