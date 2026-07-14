@@ -158,6 +158,16 @@ export default async function handler(req, res) {
             questions_json STRING NOT NULL,
             created_at TIMESTAMP NOT NULL
           )
+        `),
+        bq.query(`
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+          ADD COLUMN IF NOT EXISTS options STRING,
+          ADD COLUMN IF NOT EXISTS question_type STRING,
+          ADD COLUMN IF NOT EXISTS ai_explanation STRING,
+          ADD COLUMN IF NOT EXISTS repetitions INT64,
+          ADD COLUMN IF NOT EXISTS interval_days INT64,
+          ADD COLUMN IF NOT EXISTS ease_factor FLOAT64,
+          ADD COLUMN IF NOT EXISTS next_review_at TIMESTAMP
         `)
       ]);
       tablesEnsured = true;
@@ -1050,15 +1060,20 @@ Do NOT include markdown headers or backticks in the response. Return ONLY the ra
           wrongInsertPromises.push(
             bq.query({
               query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-                (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at)
-                VALUES (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP())`,
+                (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at,
+                 options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at)
+                VALUES (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP(),
+                        @options, @questionType, @aiExplanation, 0, 0, 2.5, CURRENT_TIMESTAMP())`,
               params: {
                 username: sanitizedUser, examId,
                 questionId: r.id || String(Date.now()),
                 subject, topic,
                 questionText: r.question,
                 userAnswer: r.userAnswer || '',
-                correctAnswer: r.answer || ''
+                correctAnswer: r.answer || '',
+                options: r.options ? JSON.stringify(r.options) : null,
+                questionType: r.type || 'multiple_choice',
+                aiExplanation: r.aiExplanation || null
               }
             })
           );

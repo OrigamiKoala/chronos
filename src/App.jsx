@@ -6,6 +6,7 @@ import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { AdminScreen } from './components/AdminScreen';
 import { TeacherScreen } from './components/TeacherScreen';
 import { TestScreen } from './components/TestScreen';
+import { ReviewScreen } from './components/ReviewScreen';
 import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
     if (path === '/teacher') return 'teacher';
     if (path === '/admin') return 'admin';
     if (path === '/test') return 'test';
+    if (path === '/review') return 'review';
     return 'setup';
   });
   const [examConfig, setExamConfig] = useState(null);
@@ -107,6 +109,8 @@ function App() {
       setCurrentScreen('admin');
     } else if (path === '/test') {
       setCurrentScreen('test');
+    } else if (path === '/review') {
+      setCurrentScreen('review');
     } else {
       setCurrentScreen('setup');
     }
@@ -121,6 +125,8 @@ function App() {
         setCurrentScreen('admin');
       } else if (path === '/test') {
         setCurrentScreen('test');
+      } else if (path === '/review') {
+        setCurrentScreen('review');
       } else {
         setCurrentScreen('setup');
       }
@@ -611,6 +617,29 @@ function App() {
           }
 
           if (submitData.results) {
+            const wrongProblems = submitData.results.filter(r => !r.isCorrect).map(r => ({
+              exam_id: examIdStr,
+              question_id: r.id || String(Date.now() + Math.random()),
+              subject,
+              topic: r.topic || 'General',
+              question_text: r.question,
+              options: r.options,
+              question_type: r.type,
+              user_answer: r.userAnswer || '',
+              correct_answer: r.answer || '',
+              ai_explanation: r.aiExplanation || null,
+              created_at: new Date().toISOString(),
+              repetitions: 0,
+              interval_days: 0,
+              ease_factor: 2.5,
+              next_review_at: new Date().toISOString()
+            }));
+            const existingWrong = JSON.parse(localStorage.getItem('chronos_guest_wrong_problems') || '[]');
+            const filteredExisting = existingWrong.filter(existing =>
+              !wrongProblems.some(w => w.question_id === existing.question_id || w.question_text === existing.question_text)
+            );
+            localStorage.setItem('chronos_guest_wrong_problems', JSON.stringify([...wrongProblems, ...filteredExisting]));
+
             const topicStats = {};
             const localStrengths = [];
             const localWeaknesses = [];
@@ -713,7 +742,14 @@ function App() {
           <BrainCircuit size={32} color="var(--accent-primary)" />
           Chronos
         </div>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            className={`btn ${currentScreen === 'review' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            onClick={() => navigateTo(currentScreen === 'review' ? '/' : '/review')}
+          >
+            <BookOpen size={16} /> Review
+          </button>
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <button
@@ -1096,6 +1132,9 @@ function App() {
             )}
             {currentScreen === 'test' && (
               <TestScreen onBack={restart} />
+            )}
+            {currentScreen === 'review' && (
+              <ReviewScreen user={user} onBack={restart} />
             )}
           </>
         )}

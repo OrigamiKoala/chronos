@@ -422,6 +422,21 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             })
             .catch(err => console.error('Failed to save explanation in database:', err));
         }
+      } else {
+        // Guest mode - update chronos_guest_wrong_problems in localStorage
+        const guestWrong = JSON.parse(localStorage.getItem('chronos_guest_wrong_problems') || '[]');
+        if (data.shouldRemarkCorrect) {
+          const nextWrong = guestWrong.filter(w => w.question_id !== problemObj.id && w.question_text !== problemObj.question);
+          localStorage.setItem('chronos_guest_wrong_problems', JSON.stringify(nextWrong));
+        } else {
+          const nextWrong = guestWrong.map(w => {
+            if (w.question_id === problemObj.id || w.question_text === problemObj.question) {
+              return { ...w, ai_explanation: data.explanation };
+            }
+            return w;
+          });
+          localStorage.setItem('chronos_guest_wrong_problems', JSON.stringify(nextWrong));
+        }
       }
 
       setTimeout(() => {
