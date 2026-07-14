@@ -15,7 +15,7 @@ const COLORS = [
 // Unique canvas ID per mount (avoids conflicts if component is re-used)
 let instanceCounter = 0;
 
-export const Whiteboard = forwardRef(({ initialImage }, ref) => {
+export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
   const containerRef = useRef(null);
   const fabricRef = useRef(null);   // Fabric.Canvas instance
   const canvasId = useRef(`wb-canvas-${++instanceCounter}`);
@@ -127,6 +127,7 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
       const snap = JSON.stringify(fc.toJSON());
       historyRef.current = [...historyRef.current, snap];
       setHistory([...historyRef.current]);
+      if (onChange) onChange();
     });
 
     // Load initial image if provided
@@ -147,7 +148,7 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
       container.removeEventListener('wheel', onWheel);
       fc.dispose();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onChange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sync brush color / width / eraser ────────────────────────────────────
   useEffect(() => {
@@ -170,9 +171,13 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
     fc.clear();
     fc.backgroundColor = 'transparent';
     if (prev.length > 0) {
-      fc.loadFromJSON(prev[prev.length - 1], () => fc.renderAll());
+      fc.loadFromJSON(prev[prev.length - 1], () => {
+        fc.renderAll();
+        if (onChange) onChange();
+      });
     } else {
       fc.renderAll();
+      if (onChange) onChange();
     }
   };
 
@@ -185,6 +190,7 @@ export const Whiteboard = forwardRef(({ initialImage }, ref) => {
     fc.renderAll();
     historyRef.current = [];
     setHistory([]);
+    if (onChange) onChange();
   };
 
   // ── Expose to parent ─────────────────────────────────────────────────────

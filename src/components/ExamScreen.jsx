@@ -1623,6 +1623,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                 key={currentQuestionIndex}
                 ref={whiteboardRef}
                 initialImage={frqSubmissions[currentQuestionIndex]?.type === 'whiteboard' ? frqSubmissions[currentQuestionIndex].value : null}
+                onChange={saveCurrentFRQState}
               />
             </div>
 
