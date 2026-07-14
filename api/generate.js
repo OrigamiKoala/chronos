@@ -752,6 +752,7 @@ const chem_excluded_topics = `
 - All calculus-based derivations or principles.
 - Graduate-level concepts entirely unless you explicitly provide the necessary first-principles background within the question text itself.
 - Advanced spectroscopy (e.g., 2D-NMR).
+- Slater's rules
 `
 
 const agents_description = `
@@ -1081,7 +1082,7 @@ ${chem_excluded_topics}
 
 ## IChO Style Exams (Difficulty 8+):
 
-Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high school knowldge (e.g. simple spectroscopy, organic chemistry mechanisms). You can also bring in more advanced knowledge, but it must be on a first-principles approach: you have to introduce the new concepts/ideas the student should not already know as a high school student.`;
+Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high school knowldge (e.g. simple spectroscopy, organic chemistry mechanisms). You can also bring in more advanced knowledge (like in the USNCO excluded topics), but it must be on a first-principles approach: you have to introduce the new concepts/ideas the student should not already know as a high school student.`;
       examples = formatExemplarsForPrompt(chemistryExemplars);
     }
 
