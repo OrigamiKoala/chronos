@@ -379,6 +379,14 @@ select.input-field {
   background: var(--bg-tertiary);
 }
 
+/* Topic breakdown: two charts side by side, full width */
+.topic-breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+}
+
 .analytics-chart-title {
   display: flex;
   align-items: center;
@@ -468,6 +476,9 @@ select.input-field {
   }
   .analytics-grid .analytics-chart-panel[style*="grid-column: span 2"] {
     grid-column: span 1;
+  }
+  .topic-breakdown-grid {
+    grid-template-columns: 1fr;
   }
 }
 

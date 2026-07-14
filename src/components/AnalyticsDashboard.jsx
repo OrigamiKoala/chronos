@@ -987,28 +987,51 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
             )}
 
             {/* Topic Mastery */}
-            <div className="topic-breakdown-grid">
-          <div className="glass-panel analytics-chart-panel" style={{ gridColumn: '1 / -1' }}>
-              <h4 className="analytics-chart-title">
-                <BarChart3 size={18} color="var(--success)" /> Topic Breakdown
-              </h4>
-              {topicChartData?.labels?.length ? (
-                <div style={{ height: Math.max(200, topicChartData.labels.length * 32) + 'px' }}>
-                  <Bar data={topicChartData} options={{
-                    ...baseChartOptions,
-                    indexAxis: 'y',
-                    plugins: { ...baseChartOptions.plugins, legend: { display: false }, title: { display: false } },
-                    scales: {
-                      ...baseChartOptions.scales,
-                      x: { ...baseChartOptions.scales.x, min: 0, max: 100 }
-                    }
-                  }} />
+            {topicChartData?.labels?.length ? (() => {
+              const mid = Math.ceil(topicChartData.labels.length / 2);
+              const leftData = {
+                labels: topicChartData.labels.slice(0, mid),
+                datasets: [{ ...topicChartData.datasets[0], data: topicChartData.datasets[0].data.slice(0, mid), backgroundColor: topicChartData.datasets[0].backgroundColor.slice(0, mid), borderColor: topicChartData.datasets[0].borderColor.slice(0, mid) }]
+              };
+              const rightData = {
+                labels: topicChartData.labels.slice(mid),
+                datasets: [{ ...topicChartData.datasets[0], data: topicChartData.datasets[0].data.slice(mid), backgroundColor: topicChartData.datasets[0].backgroundColor.slice(mid), borderColor: topicChartData.datasets[0].borderColor.slice(mid) }]
+              };
+              const chartOpts = {
+                ...baseChartOptions,
+                indexAxis: 'y',
+                plugins: { ...baseChartOptions.plugins, legend: { display: false }, title: { display: false } },
+                scales: { ...baseChartOptions.scales, x: { ...baseChartOptions.scales.x, min: 0, max: 100 } }
+              };
+              const rowHeight = 32;
+              const leftH = Math.max(200, mid * rowHeight);
+              const rightH = Math.max(200, (topicChartData.labels.length - mid) * rowHeight);
+              const panelH = Math.max(leftH, rightH);
+              return (
+                <div className="topic-breakdown-grid glass-panel analytics-chart-panel">
+                  <div>
+                    <h4 className="analytics-chart-title">
+                      <BarChart3 size={18} color="var(--success)" /> Topic Breakdown
+                    </h4>
+                    <div style={{ height: leftH + 'px' }}>
+                      <Bar data={leftData} options={chartOpts} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                    <div style={{ height: rightH + 'px' }}>
+                      <Bar data={rightData} options={chartOpts} />
+                    </div>
+                  </div>
                 </div>
-              ) : (
+              );
+            })() : (
+              <div className="glass-panel analytics-chart-panel">
+                <h4 className="analytics-chart-title">
+                  <BarChart3 size={18} color="var(--success)" /> Topic Breakdown
+                </h4>
                 <p className="analytics-empty">Complete exams to build topic mastery data</p>
-              )}
-            </div>
-        </div>
+              </div>
+            )}
           </div>
 
           {/* Strengths & Weaknesses */}
