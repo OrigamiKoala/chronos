@@ -1,0 +1,11 @@
+name = "chronos-worker"
+main = "src/worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+PROJECT_ID = "chronos-stress-sandbox"
+
+# Secrets — set once via CLI:
+#   npx wrangler secret put GCP_SA_KEY        (paste full service account JSON)
+#   npx wrangler secret put GEMINI_API_KEYS   (comma-separated keys)
