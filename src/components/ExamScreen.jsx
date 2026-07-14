@@ -623,7 +623,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
 
     if (submitType === 'whiteboard') {
       if (whiteboardRef.current) {
-        imagePayload = whiteboardRef.current.getDataURL() || whiteboardPreview;
+        imagePayload = whiteboardRef.current.getFullWorkspaceDataURL() || whiteboardPreview;
       } else {
         imagePayload = whiteboardPreview;
       }
@@ -819,7 +819,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
 
     if (submitType === 'whiteboard') {
       if (whiteboardRef.current) {
-        imagePayload = whiteboardRef.current.getDataURL() || whiteboardPreview;
+        imagePayload = whiteboardRef.current.getFullWorkspaceDataURL() || whiteboardPreview;
       } else {
         imagePayload = whiteboardPreview;
       }

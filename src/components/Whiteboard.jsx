@@ -266,6 +266,34 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
       fc.renderAll();
       return url;
     },
+    getFullWorkspaceDataURL: () => {
+      const fc = fabricRef.current;
+      if (!fc) return null;
+      
+      const origBg = fc.backgroundColor;
+      fc.backgroundColor = '#0a0a0c';
+
+      // Save the current viewport transform
+      const origVpt = [...fc.viewportTransform];
+      // Reset viewport transform so that absolute coordinates map 1:1 on export
+      fc.setViewportTransform([1, 0, 0, 1, 0, 0]);
+
+      const url = fc.toDataURL({
+        format: 'jpeg',
+        quality: 0.85,
+        multiplier: 1.0,
+        left: 0,
+        top: 0,
+        width: fc.width,
+        height: fc.height
+      });
+      
+      // Restore original background color and viewport transform
+      fc.backgroundColor = origBg;
+      fc.setViewportTransform(origVpt);
+      fc.renderAll();
+      return url;
+    },
     clearWhiteboard: () => clear(),
   }));
 
