@@ -155,6 +155,9 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas || !contextRef.current) return;
+    // Capture the pointer so all subsequent move/up events go to the canvas
+    // even if the pointer drifts over the toolbar (fixes iPad Apple Pencil issue)
+    canvas.setPointerCapture(e.pointerId);
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -295,6 +298,7 @@ export const Whiteboard = forwardRef(({ height = 1000, initialImage }, ref) => {
                 key={c.value}
                 type="button"
                 onClick={() => setColor(c.value)}
+                onPointerDown={(e) => e.stopPropagation()}
                 style={{
                   width: '24px',
                   height: '24px',
