@@ -348,7 +348,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
 
   useEffect(() => {
     const saved = frqSubmissions[currentQuestionIndex];
-    setWorkSubmitted(!!saved); // Show the confirmation screen if they already submitted/saved this FRQ
+    setWorkSubmitted(false); // Always start in editing mode so they can resume work
     if (saved) {
       setSubmitType(saved.type || 'whiteboard');
       if (saved.type === 'whiteboard') {
