@@ -1482,136 +1482,135 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
         </div>
       )}
 
-      {problem.type === 'free_response' ? (
-        workSubmitted ? (
-          <div>
-            <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
-              <h3 className="text-gradient" style={{ marginBottom: '0.5rem' }}>Select Submission Method</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Confirm how you would like to submit your solution for Question {currentQuestionIndex + 1}.</p>
-            </div>
-
-            {/* Tabs */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '2rem' }}>
-              <button
-                className={`btn ${submitType === 'whiteboard' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ flexDirection: 'column', padding: '1rem 0.5rem', height: 'auto', gap: '0.5rem' }}
-                onClick={() => setSubmitType('whiteboard')}
-              >
-                <ImageIcon size={24} />
-                <span style={{ fontSize: '0.9rem' }}>Submit Whiteboard</span>
-              </button>
-              <button
-                className={`btn ${submitType === 'image' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ flexDirection: 'column', padding: '1rem 0.5rem', height: 'auto', gap: '0.5rem' }}
-                onClick={() => setSubmitType('image')}
-              >
-                <Upload size={24} />
-                <span style={{ fontSize: '0.9rem' }}>Upload Image</span>
-              </button>
-              <button
-                className={`btn ${submitType === 'text' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ flexDirection: 'column', padding: '1rem 0.5rem', height: 'auto', gap: '0.5rem' }}
-                onClick={() => setSubmitType('text')}
-              >
-                <Type size={24} />
-                <span style={{ fontSize: '0.9rem' }}>Type It Out</span>
-              </button>
-            </div>
-
-            {/* Tab Content */}
-            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: 'var(--card-padding)', marginBottom: '2rem' }}>
-              {submitType === 'whiteboard' && (
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>Your whiteboard drawing preview:</p>
-                  {whiteboardPreview ? (
-                    <img
-                      src={whiteboardPreview}
-                      alt="Whiteboard Preview"
-                      style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }}
-                    />
-                  ) : (
-                    <p style={{ color: 'var(--text-muted)' }}>No drawing detected.</p>
-                  )}
-                </div>
-              )}
-
-              {submitType === 'image' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ border: '2px dashed var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: 'var(--panel-padding)', textAlign: 'center', cursor: 'pointer', position: 'relative' }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                          const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-                          if (file.size > MAX_FILE_SIZE) {
-                            alert('File is too large. Maximum size is 5MB.');
-                            e.target.value = '';
-                            return;
-                          }
-                          setUploadedFileName(file.name);
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            setUploadedImage(event.target.result);
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                    <Upload size={32} style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', margin: '0 auto' }} />
-                    <p style={{ fontSize: '0.9rem' }}>{uploadedFileName || "Click or drag file to upload work image"}</p>
-                  </div>
-                  {uploadedImage && (
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Image Preview:</p>
-                      <img
-                        src={uploadedImage}
-                        alt="Uploaded Preview"
-                        style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {submitType === 'text' && (
-                <div>
-                  <textarea
-                    placeholder="Type your equations, solution process, explanation, and final answer here..."
-                    className="input-field"
-                    style={{ width: '100%', height: '150px', resize: 'vertical' }}
-                    value={typedWork}
-                    onChange={(e) => setTypedWork(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button
-                className="btn btn-outline"
-                onClick={() => setWorkSubmitted(false)}
-              >
-                <ArrowLeft size={18} /> Edit Drawing
-              </button>
-
-              <button
-                className="btn btn-primary"
-                onClick={handleConfirmFRQSubmit}
-                disabled={
-                  isEditingLocked ||
-                  (submitType === 'image' && !uploadedImage) ||
-                  (submitType === 'text' && !typedWork.trim())
-                }
-              >
-                Confirm & Submit <ArrowRight size={18} />
-              </button>
-            </div>
+      {problem.type === 'free_response' && (
+        <div style={{ display: workSubmitted ? 'block' : 'none' }}>
+          <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+            <h3 className="text-gradient" style={{ marginBottom: '0.5rem' }}>Select Submission Method</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Confirm how you would like to submit your solution for Question {currentQuestionIndex + 1}.</p>
           </div>
-        ) : (
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '2rem' }}>
+            <button
+              className={`btn ${submitType === 'whiteboard' ? 'btn-primary' : 'btn-outline'}`}
+              style={{ flexDirection: 'column', padding: '1rem 0.5rem', height: 'auto', gap: '0.5rem' }}
+              onClick={() => setSubmitType('whiteboard')}
+            >
+              <ImageIcon size={24} />
+              <span style={{ fontSize: '0.9rem' }}>Submit Whiteboard</span>
+            </button>
+            <button
+              className={`btn ${submitType === 'image' ? 'btn-primary' : 'btn-outline'}`}
+              style={{ flexDirection: 'column', padding: '1rem 0.5rem', height: 'auto', gap: '0.5rem' }}
+              onClick={() => setSubmitType('image')}
+            >
+              <Upload size={24} />
+              <span style={{ fontSize: '0.9rem' }}>Upload Image</span>
+            </button>
+            <button
+              className={`btn ${submitType === 'text' ? 'btn-primary' : 'btn-outline'}`}
+              style={{ flexDirection: 'column', padding: '1rem 0.5rem', height: 'auto', gap: '0.5rem' }}
+              onClick={() => setSubmitType('text')}
+            >
+              <Type size={24} />
+              <span style={{ fontSize: '0.9rem' }}>Type It Out</span>
+            </button>
+          </div>
+
+          <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: 'var(--card-padding)', marginBottom: '2rem' }}>
+            {submitType === 'whiteboard' && (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>Your whiteboard drawing preview:</p>
+                {whiteboardPreview ? (
+                  <img
+                    src={whiteboardPreview}
+                    alt="Whiteboard Preview"
+                    style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }}
+                  />
+                ) : (
+                  <p style={{ color: 'var(--text-muted)' }}>No drawing detected.</p>
+                )}
+              </div>
+            )}
+
+            {submitType === 'image' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ border: '2px dashed var(--bg-glass-border)', borderRadius: 'var(--radius-md)', padding: 'var(--panel-padding)', textAlign: 'center', cursor: 'pointer', position: 'relative' }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+                        if (file.size > MAX_FILE_SIZE) {
+                          alert('File is too large. Maximum size is 5MB.');
+                          e.target.value = '';
+                          return;
+                        }
+                        setUploadedFileName(file.name);
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setUploadedImage(event.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <Upload size={32} style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', margin: '0 auto' }} />
+                  <p style={{ fontSize: '0.9rem' }}>{uploadedFileName || "Click or drag file to upload work image"}</p>
+                </div>
+                {uploadedImage && (
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Image Preview:</p>
+                    <img
+                      src={uploadedImage}
+                      alt="Uploaded Preview"
+                      style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--bg-glass-border)' }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {submitType === 'text' && (
+              <div>
+                <textarea
+                  placeholder="Type your equations, solution process, explanation, and final answer here..."
+                  className="input-field"
+                  style={{ width: '100%', height: '150px', resize: 'vertical' }}
+                  value={typedWork}
+                  onChange={(e) => setTypedWork(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button
+              className="btn btn-outline"
+              onClick={() => setWorkSubmitted(false)}
+            >
+              <ArrowLeft size={18} /> Edit Drawing
+            </button>
+
+            <button
+              className="btn btn-primary"
+              onClick={handleConfirmFRQSubmit}
+              disabled={
+                isEditingLocked ||
+                (submitType === 'image' && !uploadedImage) ||
+                (submitType === 'text' && !typedWork.trim())
+              }
+            >
+              Confirm & Submit <ArrowRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {problem.type === 'free_response' && (
+        <div style={{ display: workSubmitted ? 'none' : 'block' }}>
           <div>
             <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
               <p><ChemicalText text={problem.question} theme="dark" /></p>
@@ -1649,7 +1648,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                     setCurrentQuestionIndex(prev => prev - 1);
                   }}
                 >
-                  Previous
+                  <ArrowLeft size={18} /> Previous
                 </button>
               )}
 
@@ -1696,8 +1695,10 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
               )}
             </div>
           </div>
-        )
-      ) : (
+        </div>
+      )}
+
+      {problem.type !== 'free_response' && (
         <>
           <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
             <p><ChemicalText text={problem.question} theme="dark" /></p>
