@@ -27,17 +27,7 @@ function generateJWT(payload, secret) {
   return `${headerEncoded}.${payloadEncoded}.${signature}`;
 }
 
-async function fetchWithPostRedirect(url, options = {}) {
-  const res = await fetch(url, { ...options, redirect: 'manual' });
-  if ([301, 302, 307, 308].includes(res.status)) {
-    const location = res.headers.get('location');
-    if (location) {
-      const resolvedUrl = new URL(location, url).toString();
-      return fetchWithPostRedirect(resolvedUrl, options);
-    }
-  }
-  return res;
-}
+
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
 const bq = new BigQuery({
@@ -95,7 +85,7 @@ async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homework
       exp: Math.floor(Date.now() / 1000) + 7200 // 2-hour short-lived token
     }, jwtSecret);
 
-    fetchWithPostRedirect(WEBHOOK_URL, {
+    fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
