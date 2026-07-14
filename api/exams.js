@@ -1381,20 +1381,24 @@ Do NOT include markdown formatting, backticks, or any conversational text. Retur
             }));
           }
 
-          // Fire topic breakdowns
+          // Fire topic breakdowns sequentially to avoid concurrent update conflicts
           if (Array.isArray(topicBreakdowns)) {
             for (const b of topicBreakdowns) {
-              upsertPromises.push(bq.query({
-                query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
-                  USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
-                  ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-                  WHEN MATCHED THEN
-                    UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
-                  WHEN NOT MATCHED THEN
-                    INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
-                    VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
-                params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
-              }));
+              try {
+                await bq.query({
+                  query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+                    USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
+                    ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
+                    WHEN MATCHED THEN
+                      UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
+                    WHEN NOT MATCHED THEN
+                      INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
+                      VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
+                  params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
+                });
+              } catch (bQErr) {
+                console.error(`Error merging topic breakdown for ${b.topic}:`, bQErr);
+              }
             }
           }
 
