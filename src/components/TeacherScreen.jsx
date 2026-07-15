@@ -598,6 +598,8 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
       console.error(e);
       alert('Could not retrieve full exam details.');
     }
+    setStudentAnalyticsUser(null);
+    setSelectedStudent(null);
   };
 
   const toggleFormat = (f) => {
@@ -1259,6 +1261,15 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                       <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.15rem' }}>Student Answer:</span>
                       <span style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold' }}>
                         {(() => {
+                          if (r.type === 'free_response' && r.frqSubmission) {
+                            const sub = r.frqSubmission;
+                            if (sub.value && (sub.value.startsWith('data:image/') || sub.value.startsWith('blob:'))) {
+                              return <img src={sub.value} alt="Student FRQ submission" style={{ maxWidth: '300px', maxHeight: '200px', borderRadius: '4px', border: '1px solid var(--border-color)' }} />;
+                            }
+                            if (sub.type === 'text' && sub.value) {
+                              return <ChemicalText text={sub.value} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                            }
+                          }
                           const ans = r.userAnswer;
                           if (r.type === 'multiple_choice' && r.options && Array.isArray(r.options)) {
                             const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());

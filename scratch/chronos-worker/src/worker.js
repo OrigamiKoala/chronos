@@ -1339,8 +1339,6 @@ async function gradeExam(payload, projectId, accessToken, env) {
       let imageCounter = 0;
       let promptText = `You are a world-class grading examiner. You are grading multiple free-response questions for a competitive Olympiad-level exam in ${subject}.\n\nBelow are the details for each question:\n`;
 
-      const frqSubmission = r.frqSubmission || storedMap[r.id]?.frqSubmission || null;
-
       frqs.forEach((r) => {
         const sub = r.frqSubmission || storedMap[r.id]?.frqSubmission || null;
         const isImage =
