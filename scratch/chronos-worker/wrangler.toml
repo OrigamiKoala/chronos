@@ -9,3 +9,4 @@ PROJECT_ID = "chronos-stress-sandbox"
 # Secrets — set once via CLI:
 #   npx wrangler secret put GCP_SA_KEY        (paste full service account JSON)
 #   npx wrangler secret put GEMINI_API_KEYS   (comma-separated keys)
+#   npx wrangler secret put FALLBACK_WEBHOOK_URL  (optional: Google Apps Script URL for fallback)

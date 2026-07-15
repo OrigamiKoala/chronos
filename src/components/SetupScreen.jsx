@@ -426,271 +426,282 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-        <div>
-          <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-            <span>Subject</span>
-            <span style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>
-              Rating: {ratings[config.subject] || 100} ({getSubjectLevelName(config.subject, ratings[config.subject] || 100)})
-            </span>
-          </label>
-          <select name="subject" value={config.subject} onChange={handleChange} className="input-field">
-            <option value="Math">Math</option>
-            <option value="Physics">Physics</option>
-            <option value="Chemistry">Chemistry</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Rated?</label>
-          <select name="isRated" value={config.isRated === false ? 'false' : 'true'} onChange={(e) => {
-            const val = e.target.value === 'true';
-            setConfig(prev => ({ ...prev, isRated: val }));
-          }} className="input-field">
-            <option value="true">Rated</option>
-            <option value="false">Unrated</option>
-          </select>
-        </div>
-
-        {(config.subject === 'Math' || config.subject === 'Chemistry') && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-              Presets
-            </label>
-            <select
-              value={selectedPreset}
-              onChange={(e) => handleApplyPreset(e.target.value)}
-              className="input-field"
-              style={{ borderColor: selectedPreset !== 'custom' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.08)' }}
-            >
-              <option value="custom">Custom</option>
-              {config.subject === 'Math' && (
-                <>
-                  <option value="amc8">AMC 8 (25 MCQ, 40 min, Diff 2-4)</option>
-                  <option value="amc10">AMC 10 (25 MCQ, 75 min, Diff 3-5)</option>
-                  <option value="amc12">AMC 12 (25 MCQ, 75 min, Diff 4-6)</option>
-                  <option value="math_chapter_sprint">MATHCOUNTS Chapter Sprint (30 SAQ, 40 min, Diff 1)</option>
-                  <option value="math_state_sprint">MATHCOUNTS State Sprint (30 SAQ, 40 min, Diff 2)</option>
-                  <option value="math_nationals_sprint">MATHCOUNTS Nationals Sprint (30 SAQ, 40 min, Diff 3)</option>
-                  <option value="math_chapter_target">MATHCOUNTS Chapter Target (8 SAQ, 4 sets of 2, 6 min/set, Diff 1-3)</option>
-                  <option value="math_state_target">MATHCOUNTS State Target (8 SAQ, 4 sets of 2, 6 min/set, Diff 2-4)</option>
-                  <option value="math_nationals_target">MATHCOUNTS Nationals Target (8 SAQ, 4 sets of 2, 6 min/set, Diff 3-5)</option>
-                </>
-              )}
-              {config.subject === 'Chemistry' && (
-                <>
-                  <option value="chem_part_1">Part I (60 MCQ, 90 min, Diff 2-5)</option>
-                  <option value="chem_acs_lse">ACS LSE (60 MCQ, 110 min, Diff 1-4)</option>
-                  <option value="chem_part_2">Part II (8 FRQ, 105 min, Diff 3-6)</option>
-                </>
-              )}
-            </select>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Questions</label>
-            <input type="number" name="numQuestions" min="1" max="60" value={config.numQuestions} onChange={handleChange} className="input-field" />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Difficulty (0-10)</label>
-            <input type="number" name="difficulty" min="0" max="10" value={config.difficulty !== undefined ? config.difficulty : 5} onChange={handleChange} className="input-field" />
-          </div>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-            Target Topics (Optional)
-          </label>
-          <input
-            type="text"
-            name="topics"
-            placeholder="e.g. Geometry, Number Theory, Kinematics"
-            value={config.topics || ''}
-            onChange={handleChange}
-            className="input-field"
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Exam Format</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
-              <input
-                type="checkbox"
-                checked={config.examFormat.includes('multiple_choice')}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setConfig(prev => {
-                    const formats = checked
-                      ? [...prev.examFormat, 'multiple_choice']
-                      : prev.examFormat.filter(f => f !== 'multiple_choice');
-                    const next = { ...prev, examFormat: formats };
-                    delete next.assignmentId;
-                    delete next.lessonTitle;
-                    delete next.lessonDescription;
-                    return next;
-                  });
-                  setSelectedPreset('custom');
-                }}
-                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Multiple Choice</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
-              <input
-                type="checkbox"
-                checked={config.examFormat.includes('short_answer')}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setConfig(prev => {
-                    const formats = checked
-                      ? [...prev.examFormat, 'short_answer']
-                      : prev.examFormat.filter(f => f !== 'short_answer');
-                    const next = { ...prev, examFormat: formats };
-                    delete next.assignmentId;
-                    delete next.lessonTitle;
-                    delete next.lessonDescription;
-                    return next;
-                  });
-                  setSelectedPreset('custom');
-                }}
-                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Short Answer</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
-              <input
-                type="checkbox"
-                checked={config.examFormat.includes('free_response')}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setConfig(prev => {
-                    const formats = checked
-                      ? [...prev.examFormat, 'free_response']
-                      : prev.examFormat.filter(f => f !== 'free_response');
-                    const next = { ...prev, examFormat: formats };
-                    delete next.assignmentId;
-                    delete next.lessonTitle;
-                    delete next.lessonDescription;
-                    return next;
-                  });
-                  setSelectedPreset('custom');
-                }}
-                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Free Response</span>
-            </label>
-          </div>
-          {config.examFormat.length === 0 && (
-            <span style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: '0.35rem', display: 'block' }}>
-              ⚠️ You must select at least one format.
-            </span>
-          )}
-        </div>
-
-        {config.subject === 'Math' && (
-          <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
-            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
-              <div><strong>0:</strong> MATHCOUNTS School</div>
-              <div><strong>1:</strong> MATHCOUNTS Chapter/Sprint</div>
-              <div><strong>2:</strong> MATHCOUNTS States</div>
-              <div><strong>3:</strong> MATHCOUNTS National Sprint</div>
-              <div><strong>4:</strong> AMC 12 question 21-25</div>
-              <div><strong>5:</strong> AIME 11-13</div>
-              <div><strong>8:</strong> Medium USAMO</div>
-              <div><strong>10:</strong> Hardest IMO problems</div>
-            </div>
-          </div>
-        )}
-
-        {config.subject === 'Physics' && (
-          <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
-            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
-              <div><strong>1:</strong> Introductory level</div>
-              <div><strong>3:</strong> AP Physics C level</div>
-              <div><strong>5:</strong> F=ma level</div>
-              <div><strong>8:</strong> USAPhO level</div>
-              <div><strong>10:</strong> Hardest problem on IPhO</div>
-            </div>
-          </div>
-        )}
-
-        {config.subject === 'Chemistry' && (
-          <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
-            <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
-              <div><strong>1:</strong> Honors and early AP Chem</div>
-              <div><strong>3:</strong> Harder problems on ACS LSE</div>
-              <div><strong>5:</strong> Harder problems on USNCO</div>
-              <div><strong>10:</strong> Hardest problem on IChO</div>
-            </div>
-          </div>
-        )}
-
-        <div style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger-glass)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--danger)' }}>
-            <ShieldAlert size={20} />
-            <h3 style={{ margin: 0 }}>Timer</h3>
-          </div>
-
-          {config.timeLimitStyle !== 'none' && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Timer Display</label>
-              <select name="stressMode" value={config.stressMode} onChange={handleChange} className="input-field">
-                <option value="none">None (Standard Timer)</option>
-                <option value="hidden">Hidden Clock (Reveals last 10s)</option>
-                <option value="strict">Strict (Auto-skip on zero)</option>
-                <option value="dynamic">Dynamic (Visually speeds up near end)</option>
+        {!config.assignmentId ? (
+          <>
+            <div>
+              <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                <span>Subject</span>
+                <span style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>
+                  Rating: {ratings[config.subject] || 100} ({getSubjectLevelName(config.subject, ratings[config.subject] || 100)})
+                </span>
+              </label>
+              <select name="subject" value={config.subject} onChange={handleChange} className="input-field">
+                <option value="Math">Math</option>
+                <option value="Physics">Physics</option>
+                <option value="Chemistry">Chemistry</option>
               </select>
             </div>
-          )}
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Time Limit</label>
-            <select name="timeLimitStyle" value={config.timeLimitStyle} onChange={handleChange} className="input-field">
-              <option value="per_question">Time Limit Per Question</option>
-              <option value="whole_test">Time Limit For Whole Test</option>
-              <option value="per_set">Time Limit Per Set</option>
-              <option value="none">No Timer (Untimed)</option>
-            </select>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Rated?</label>
+              <select name="isRated" value={config.isRated === false ? 'false' : 'true'} onChange={(e) => {
+                const val = e.target.value === 'true';
+                setConfig(prev => ({ ...prev, isRated: val }));
+              }} className="input-field">
+                <option value="true">Rated</option>
+                <option value="false">Unrated</option>
+              </select>
+            </div>
+
+            {(config.subject === 'Math' || config.subject === 'Chemistry') && (
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                  Presets
+                </label>
+                <select
+                  value={selectedPreset}
+                  onChange={(e) => handleApplyPreset(e.target.value)}
+                  className="input-field"
+                  style={{ borderColor: selectedPreset !== 'custom' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.08)' }}
+                >
+                  <option value="custom">Custom</option>
+                  {config.subject === 'Math' && (
+                    <>
+                      <option value="amc8">AMC 8 (25 MCQ, 40 min, Diff 2-4)</option>
+                      <option value="amc10">AMC 10 (25 MCQ, 75 min, Diff 3-5)</option>
+                      <option value="amc12">AMC 12 (25 MCQ, 75 min, Diff 4-6)</option>
+                      <option value="math_chapter_sprint">MATHCOUNTS Chapter Sprint (30 SAQ, 40 min, Diff 1)</option>
+                      <option value="math_state_sprint">MATHCOUNTS State Sprint (30 SAQ, 40 min, Diff 2)</option>
+                      <option value="math_nationals_sprint">MATHCOUNTS Nationals Sprint (30 SAQ, 40 min, Diff 3)</option>
+                      <option value="math_chapter_target">MATHCOUNTS Chapter Target (8 SAQ, 4 sets of 2, 6 min/set, Diff 1-3)</option>
+                      <option value="math_state_target">MATHCOUNTS State Target (8 SAQ, 4 sets of 2, 6 min/set, Diff 2-4)</option>
+                      <option value="math_nationals_target">MATHCOUNTS Nationals Target (8 SAQ, 4 sets of 2, 6 min/set, Diff 3-5)</option>
+                    </>
+                  )}
+                  {config.subject === 'Chemistry' && (
+                    <>
+                      <option value="chem_part_1">Part I (60 MCQ, 90 min, Diff 2-5)</option>
+                      <option value="chem_acs_lse">ACS LSE (60 MCQ, 110 min, Diff 1-4)</option>
+                      <option value="chem_part_2">Part II (8 FRQ, 105 min, Diff 3-6)</option>
+                    </>
+                  )}
+                </select>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Questions</label>
+                <input type="number" name="numQuestions" min="1" max="60" value={config.numQuestions} onChange={handleChange} className="input-field" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Difficulty (0-10)</label>
+                <input type="number" name="difficulty" min="0" max="10" value={config.difficulty !== undefined ? config.difficulty : 5} onChange={handleChange} className="input-field" />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                Target Topics (Optional)
+              </label>
+              <input
+                type="text"
+                name="topics"
+                placeholder="e.g. Geometry, Number Theory, Kinematics"
+                value={config.topics || ''}
+                onChange={handleChange}
+                className="input-field"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Exam Format</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={config.examFormat.includes('multiple_choice')}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setConfig(prev => {
+                        const formats = checked
+                          ? [...prev.examFormat, 'multiple_choice']
+                          : prev.examFormat.filter(f => f !== 'multiple_choice');
+                        const next = { ...prev, examFormat: formats };
+                        delete next.assignmentId;
+                        delete next.lessonTitle;
+                        delete next.lessonDescription;
+                        return next;
+                      });
+                      setSelectedPreset('custom');
+                    }}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Multiple Choice</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={config.examFormat.includes('short_answer')}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setConfig(prev => {
+                        const formats = checked
+                          ? [...prev.examFormat, 'short_answer']
+                          : prev.examFormat.filter(f => f !== 'short_answer');
+                        const next = { ...prev, examFormat: formats };
+                        delete next.assignmentId;
+                        delete next.lessonTitle;
+                        delete next.lessonDescription;
+                        return next;
+                      });
+                      setSelectedPreset('custom');
+                    }}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Short Answer</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={config.examFormat.includes('free_response')}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setConfig(prev => {
+                        const formats = checked
+                          ? [...prev.examFormat, 'free_response']
+                          : prev.examFormat.filter(f => f !== 'free_response');
+                        const next = { ...prev, examFormat: formats };
+                        delete next.assignmentId;
+                        delete next.lessonTitle;
+                        delete next.lessonDescription;
+                        return next;
+                      });
+                      setSelectedPreset('custom');
+                    }}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Free Response</span>
+                </label>
+              </div>
+              {config.examFormat.length === 0 && (
+                <span style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: '0.35rem', display: 'block' }}>
+                  ⚠️ You must select at least one format.
+                </span>
+              )}
+            </div>
+
+            {config.subject === 'Math' && (
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+                  <div><strong>0:</strong> MATHCOUNTS School</div>
+                  <div><strong>1:</strong> MATHCOUNTS Chapter/Sprint</div>
+                  <div><strong>2:</strong> MATHCOUNTS States</div>
+                  <div><strong>3:</strong> MATHCOUNTS National Sprint</div>
+                  <div><strong>4:</strong> AMC 12 question 21-25</div>
+                  <div><strong>5:</strong> AIME 11-13</div>
+                  <div><strong>8:</strong> Medium USAMO</div>
+                  <div><strong>10:</strong> Hardest IMO problems</div>
+                </div>
+              </div>
+            )}
+
+            {config.subject === 'Physics' && (
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+                  <div><strong>1:</strong> Introductory level</div>
+                  <div><strong>3:</strong> AP Physics C level</div>
+                  <div><strong>5:</strong> F=ma level</div>
+                  <div><strong>8:</strong> USAPhO level</div>
+                  <div><strong>10:</strong> Hardest problem on IPhO</div>
+                </div>
+              </div>
+            )}
+
+            {config.subject === 'Chemistry' && (
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+                  <div><strong>1:</strong> Honors and early AP Chem</div>
+                  <div><strong>3:</strong> Harder problems on ACS LSE</div>
+                  <div><strong>5:</strong> Harder problems on USNCO</div>
+                  <div><strong>10:</strong> Hardest problem on IChO</div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger-glass)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--danger)' }}>
+                <ShieldAlert size={20} />
+                <h3 style={{ margin: 0 }}>Timer</h3>
+              </div>
+
+              {config.timeLimitStyle !== 'none' && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Timer Display</label>
+                  <select name="stressMode" value={config.stressMode} onChange={handleChange} className="input-field">
+                    <option value="none">None (Standard Timer)</option>
+                    <option value="hidden">Hidden Clock (Reveals last 10s)</option>
+                    <option value="strict">Strict (Auto-skip on zero)</option>
+                    <option value="dynamic">Dynamic (Visually speeds up near end)</option>
+                  </select>
+                </div>
+              )}
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Time Limit</label>
+                <select name="timeLimitStyle" value={config.timeLimitStyle} onChange={handleChange} className="input-field">
+                  <option value="per_question">Time Limit Per Question</option>
+                  <option value="whole_test">Time Limit For Whole Test</option>
+                  <option value="per_set">Time Limit Per Set</option>
+                  <option value="none">No Timer (Untimed)</option>
+                </select>
+              </div>
+
+              {config.timeLimitStyle !== 'none' && (
+                config.timeLimitStyle === 'whole_test' ? (
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                      <Timer size={16} /> Test Time Limit (Minutes)
+                    </label>
+                    <input type="number" name="timeLimitWholeTest" min="1" max="180" value={config.timeLimitWholeTest} onChange={handleChange} className="input-field" />
+                  </div>
+                ) : config.timeLimitStyle === 'per_set' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                        <Timer size={16} /> Time Limit Per Set (Minutes)
+                      </label>
+                      <input type="number" name="timeLimitPerSet" min="1" max="180" value={config.timeLimitPerSet} onChange={handleChange} className="input-field" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                        Questions Per Set
+                      </label>
+                      <input type="number" name="questionsPerSet" min="1" max="60" value={config.questionsPerSet} onChange={handleChange} className="input-field" />
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                      <Timer size={16} /> Per Question Time Limit (Seconds)
+                    </label>
+                    <input type="number" name="timeLimitPerQuestion" min="10" max="300" value={config.timeLimitPerQuestion} onChange={handleChange} className="input-field" />
+                  </div>
+                )
+              )}
+            </div>
+          </>
+        ) : (
+          <div style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <p style={{ color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
+              {config.subject} • {config.numQuestions} Qs • Diff {config.difficulty} • {config.examFormat.includes('multiple_choice') ? 'MC ' : ''}{config.examFormat.includes('short_answer') ? 'SA ' : ''}{config.examFormat.includes('free_response') ? 'FR ' : ''}
+              {config.timeLimitStyle !== 'none' && `• ${config.timeLimitStyle === 'per_question' ? `${config.timeLimitPerQuestion}s/q` : config.timeLimitStyle === 'whole_test' ? `${config.timeLimitWholeTest} min` : `${config.timeLimitPerSet} min/set`}`}
+            </p>
           </div>
-
-          {config.timeLimitStyle !== 'none' && (
-            config.timeLimitStyle === 'whole_test' ? (
-              <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                  <Timer size={16} /> Test Time Limit (Minutes)
-                </label>
-                <input type="number" name="timeLimitWholeTest" min="1" max="180" value={config.timeLimitWholeTest} onChange={handleChange} className="input-field" />
-              </div>
-            ) : config.timeLimitStyle === 'per_set' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                    <Timer size={16} /> Time Limit Per Set (Minutes)
-                  </label>
-                  <input type="number" name="timeLimitPerSet" min="1" max="180" value={config.timeLimitPerSet} onChange={handleChange} className="input-field" />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                    Questions Per Set
-                  </label>
-                  <input type="number" name="questionsPerSet" min="1" max="60" value={config.questionsPerSet} onChange={handleChange} className="input-field" />
-                </div>
-              </div>
-            ) : (
-              <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-                  <Timer size={16} /> Per Question Time Limit (Seconds)
-                </label>
-                <input type="number" name="timeLimitPerQuestion" min="10" max="300" value={config.timeLimitPerQuestion} onChange={handleChange} className="input-field" />
-              </div>
-            )
-          )}
-        </div>
+        )}
 
         <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }}>
           <Play size={20} /> Start

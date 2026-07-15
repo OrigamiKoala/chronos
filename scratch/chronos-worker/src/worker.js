@@ -1016,10 +1016,45 @@ async function generateHomework(payload, projectId, accessToken, env) {
   const geminiApiKeys = (env.GEMINI_API_KEYS || '').split(',').map((k) => k.trim()).filter(Boolean);
   const tId = teacherId.trim().toLowerCase();
 
+  let subreqCount = 0;
+  let drainSkipped = false;
+  const BUDGET_LIMIT = 49;
+
+  function drain(sql, params) {
+    if (subreqCount >= BUDGET_LIMIT) { drainSkipped = true; return null; }
+    subreqCount++;
+    return runQuery(sql, params, projectId, accessToken);
+  }
+
+  function drainGemini(input, models, temperature, systemInstruction) {
+    if (subreqCount >= BUDGET_LIMIT) { drainSkipped = true; return null; }
+    subreqCount++;
+    return callGemini(input, geminiApiKeys, models, temperature, systemInstruction);
+  }
+
+  function triggerFallback(sanitizedStudent, hw) {
+    const fallbackUrl = env.FALLBACK_WEBHOOK_URL;
+    if (!fallbackUrl) { console.warn('No FALLBACK_WEBHOOK_URL configured'); return; }
+    fetch(fallbackUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'generate_homework',
+        teacherId, lessonId, lessonTitle, lessonDescription,
+        studentIds: [sanitizedStudent],
+        homeworks: [hw],
+        geminiApiKeys: payload.geminiApiKeys
+      })
+    }).catch(err => console.error('Fallback ping failed:', err));
+  }
+
   for (const studentId of studentIds) {
     const sanitizedStudent = studentId.trim().toLowerCase();
 
     for (const hw of homeworks) {
+      drainSkipped = false;
+
+
       const subject = hw.subject || 'Math';
       const normSubject = subject.toLowerCase();
       const numQuestions = hw.numQuestions || 5;
@@ -1029,34 +1064,51 @@ async function generateHomework(payload, projectId, accessToken, env) {
       const aiCount = numQuestions - sharedQuestionsCount;
 
       if (aiCount <= 0) {
-        await runQuery(
+        await drain(
           `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` WHERE assignment_id = @assignmentId AND student_id = @studentId`,
-          { assignmentId: hw.assignmentId, studentId: sanitizedStudent },
-          projectId, accessToken
+          { assignmentId: hw.assignmentId, studentId: sanitizedStudent }
         );
-        await runQuery(
+        await drain(
           `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` (assignment_id, student_id, questions_json, created_at) VALUES (@assignmentId, @studentId, @questionsJson, CURRENT_TIMESTAMP())`,
-          { assignmentId: hw.assignmentId, studentId: sanitizedStudent, questionsJson: '[]' },
-          projectId, accessToken
+          { assignmentId: hw.assignmentId, studentId: sanitizedStudent, questionsJson: '[]' }
         );
         continue;
       }
 
-      // Fetch student ELO rating
+      // Fetch student data
       let ratingColumn = 'math_rating';
       if (normSubject === 'physics') ratingColumn = 'physics_rating';
       else if (normSubject === 'chemistry') ratingColumn = 'chemistry_rating';
 
       let studentRating = 100;
+      let weaknesses = 'None', weaknessAnalysis = 'None', topicBreakdown = 'None', mistakeAnalysis = 'None';
+      let doneQuestionIds = [];
+      let pregeneratedQuestion = null;
+
       try {
-        const ratingRows = await runQuery(
-          `SELECT ${ratingColumn} FROM \`${projectId}\`.\`chronos_users\`.\`users\` WHERE user_id = @studentId`,
-          { studentId: sanitizedStudent },
+        const rows = await drain(
+          `SELECT * FROM (
+            SELECT (SELECT ${ratingColumn} FROM \`${projectId}\`.\`chronos_users\`.\`users\` WHERE user_id = @studentId) AS rating,
+            (SELECT COALESCE(STRING_AGG(FORMAT("Topic: %s (Accuracy: %d%%)", sub_category, CAST(accuracy_rate * 100 AS INT64)), "; "), "None") FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE accuracy_rate < 0.65 AND user_id = @studentId AND subject = @subject) AS weaknesses,
+            (SELECT detailed_analysis FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` WHERE user_id = @studentId AND subject = @subject ORDER BY updated_at DESC LIMIT 1) AS weakness_analysis,
+            (SELECT STRING_AGG(FORMAT("Topic: %s | Good: %s | Not good: %s", IFNULL(topic, ''), IFNULL(good_at, ''), IFNULL(not_good_at, '')), "\\n") FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @studentId AND subject = @subject) AS topic_breakdown,
+            (SELECT STRING_AGG(FORMAT("Pattern %d: %s", rn, IFNULL(mistake_patterns, '')), "\\n") FROM (SELECT mistake_patterns, ROW_NUMBER() OVER (ORDER BY created_at DESC) AS rn FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` WHERE user_id = @studentId AND subject = @subject LIMIT 3)) AS mistake_analysis,
+            (SELECT STRING_AGG(qid, ",") FROM (SELECT DISTINCT JSON_VALUE(q, '$.id') AS qid FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`, UNNEST(JSON_EXTRACT_ARRAY(results_json)) AS q WHERE user_id = @studentId)) AS done_ids
+          )`,
+          { studentId: sanitizedStudent, subject },
           projectId, accessToken
         );
-        if (ratingRows?.length > 0) studentRating = Number(ratingRows[0][ratingColumn]) || 100;
+        if (rows?.length > 0) {
+          const r = rows[0];
+          studentRating = Number(r.rating) || 100;
+          weaknesses = r.weaknesses || 'None';
+          weaknessAnalysis = r.weakness_analysis || 'None';
+          topicBreakdown = r.topic_breakdown || 'None';
+          mistakeAnalysis = r.mistake_analysis || 'None';
+          doneQuestionIds = r.done_ids ? r.done_ids.split(',').filter(Boolean) : [];
+        }
       } catch (err) {
-        console.error('Error fetching student rating:', err);
+        console.error('Error fetching student data:', err);
       }
 
       // Calculate adaptive difficulty
@@ -1066,59 +1118,6 @@ async function generateHomework(payload, projectId, accessToken, env) {
       const rawOffset = (studentRating - expectedR) / 300;
       const clampedOffset = Math.max(-1.5, Math.min(1.5, rawOffset));
       const studentDifficulty = Math.max(1, Math.min(10, Math.round(baseDiff + clampedOffset)));
-
-      // Fetch student context
-      let weaknesses = 'None', weaknessAnalysis = 'None', topicBreakdown = 'None', mistakeAnalysis = 'None';
-      let doneQuestionIds = [];
-
-      try {
-        const rows = await runQuery(
-          `SELECT COALESCE(STRING_AGG(FORMAT("Topic: %s (Accuracy: %d%%)", sub_category, CAST(accuracy_rate * 100 AS INT64)), "; "), "None") AS weaknesses FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE accuracy_rate < 0.65 AND user_id = @studentId AND subject = @subject`,
-          { studentId: sanitizedStudent, subject },
-          projectId, accessToken
-        );
-        if (rows?.length > 0) weaknesses = rows[0].weaknesses;
-      } catch (_) { }
-
-      try {
-        const rows = await runQuery(
-          `SELECT detailed_analysis FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` WHERE user_id = @studentId AND subject = @subject ORDER BY updated_at DESC LIMIT 1`,
-          { studentId: sanitizedStudent, subject },
-          projectId, accessToken
-        );
-        if (rows?.length > 0) weaknessAnalysis = rows[0].detailed_analysis;
-      } catch (_) { }
-
-      try {
-        const rows = await runQuery(
-          `SELECT topic, good_at, not_good_at FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @studentId AND subject = @subject`,
-          { studentId: sanitizedStudent, subject },
-          projectId, accessToken
-        );
-        if (rows?.length > 0) {
-          topicBreakdown = rows.map((r) => `Topic: ${r.topic} | Good: ${r.good_at} | Not good: ${r.not_good_at}`).join('\n');
-        }
-      } catch (_) { }
-
-      try {
-        const rows = await runQuery(
-          `SELECT mistake_patterns FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` WHERE user_id = @studentId AND subject = @subject ORDER BY created_at DESC LIMIT 3`,
-          { studentId: sanitizedStudent, subject },
-          projectId, accessToken
-        );
-        if (rows?.length > 0) {
-          mistakeAnalysis = rows.map((r, i) => `Pattern ${i + 1}: ${r.mistake_patterns}`).join('\n');
-        }
-      } catch (_) { }
-
-      try {
-        const rows = await runQuery(
-          `SELECT DISTINCT JSON_VALUE(q, '$.id') AS qid FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`, UNNEST(JSON_EXTRACT_ARRAY(results_json)) AS q WHERE user_id = @studentId`,
-          { studentId: sanitizedStudent },
-          projectId, accessToken
-        );
-        doneQuestionIds = rows.map((r) => r.qid).filter(Boolean);
-      } catch (_) { }
 
       // Build prompt components
       const allowedTypes = Array.isArray(hw.examFormat) ? hw.examFormat : [hw.examFormat || 'multiple_choice'];
@@ -1198,12 +1197,10 @@ The output must be a pure JSON array with the following schema for each object:
       };
 
       // Fetch 1 pregenerated question as seed
-      let pregeneratedQuestion = null;
       try {
-        const pregenRows = await runQuery(
+        const pregenRows = await drain(
           `SELECT question_json FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` WHERE subject = @subject AND difficulty = @difficulty ORDER BY RAND() LIMIT 50`,
-          { subject: normSubject, difficulty: studentDifficulty },
-          projectId, accessToken
+          { subject: normSubject, difficulty: studentDifficulty }
         );
         if (pregenRows?.length > 0) {
           for (const row of pregenRows) {
@@ -1226,55 +1223,27 @@ The output must be a pure JSON array with the following schema for each object:
       const allQuestions = pregeneratedQuestion ? [pregeneratedQuestion] : [];
       let attempts = 0;
 
-      while (allQuestions.length < aiCount && attempts < 3) {
+      while (allQuestions.length < aiCount && attempts < 2) {
         attempts++;
         const needed = aiCount - allQuestions.length;
         const dynamicPrompt = buildDynamicPrompt(needed);
 
-        let responseText = await callGemini(dynamicPrompt, geminiApiKeys, ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'], 1.5, systemInstruction);
+        let responseText = await drainGemini(dynamicPrompt, ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'], 1.5, systemInstruction);
 
         if (responseText) {
           try {
             const cleanText = responseText.trim().replace(/^```json/, '').replace(/```$/, '').trim();
             const questionsList = JSON.parse(cleanText);
             const list = Array.isArray(questionsList) ? questionsList : [questionsList];
-            const newlyGenerated = [];
 
             for (const q of list) {
               if (q?.question) {
                 q.id = generateQuestionId(q.question, normSubject);
                 if (allQuestions.length < aiCount) allQuestions.push(q);
-                newlyGenerated.push(q);
               }
             }
-
-            // MERGE newly generated questions into pregenerated_questions cache
-            if (newlyGenerated.length > 0) {
-              const selectClauses = [];
-              const mergeParams = {};
-              newlyGenerated.forEach((q, idx) => {
-                mergeParams[`qid_${idx}`] = String(q.id);
-                mergeParams[`sub_${idx}`] = String(normSubject);
-                mergeParams[`topic_${idx}`] = String(q.topic || 'General');
-                mergeParams[`diff_${idx}`] = Math.round(Number(q.difficulty ?? studentDifficulty));
-                mergeParams[`type_${idx}`] = String(q.type);
-                mergeParams[`json_${idx}`] = JSON.stringify(q);
-                selectClauses.push(`SELECT @qid_${idx} AS question_id, @sub_${idx} AS subject, @topic_${idx} AS topic, @diff_${idx} AS difficulty, @type_${idx} AS type, @json_${idx} AS question_json`);
-              });
-
-              await runQuery(
-                `MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
-                 USING (${selectClauses.join(' UNION ALL ')}) S
-                 ON T.question_id = S.question_id
-                 WHEN NOT MATCHED THEN
-                   INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
-                   VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())`,
-                mergeParams,
-                projectId, accessToken
-              );
-            }
           } catch (err) {
-            console.error('Failed to parse/save homework questions:', err);
+            console.error('Failed to parse homework questions:', err);
           }
         }
       }
@@ -1283,10 +1252,9 @@ The output must be a pure JSON array with the following schema for each object:
       if (allQuestions.length < aiCount) {
         console.warn(`Insufficient questions (${allQuestions.length}/${aiCount}), using DB fallback`);
         try {
-          const pregenFallback = await runQuery(
+          const pregenFallback = await drain(
             `SELECT question_json FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` WHERE subject = @subject ORDER BY ABS(difficulty - @difficulty) ASC, RAND() LIMIT 100`,
-            { subject: normSubject, difficulty: studentDifficulty },
-            projectId, accessToken
+            { subject: normSubject, difficulty: studentDifficulty }
           );
           for (const row of pregenFallback || []) {
             if (allQuestions.length >= aiCount) break;
@@ -1307,18 +1275,21 @@ The output must be a pure JSON array with the following schema for each object:
 
       // Save final question set
       try {
-        await runQuery(
+        await drain(
           `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` WHERE assignment_id = @assignmentId AND student_id = @studentId`,
-          { assignmentId: hw.assignmentId, studentId: sanitizedStudent },
-          projectId, accessToken
+          { assignmentId: hw.assignmentId, studentId: sanitizedStudent }
         );
-        await runQuery(
+        await drain(
           `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` (assignment_id, student_id, questions_json, created_at) VALUES (@assignmentId, @studentId, @questionsJson, CURRENT_TIMESTAMP())`,
-          { assignmentId: hw.assignmentId, studentId: sanitizedStudent, questionsJson: JSON.stringify(allQuestions) },
-          projectId, accessToken
+          { assignmentId: hw.assignmentId, studentId: sanitizedStudent, questionsJson: JSON.stringify(allQuestions) }
         );
       } catch (err) {
         console.error('Failed to save final homework questions:', err);
+      }
+
+      if (drainSkipped || allQuestions.length === 0) {
+        console.warn(`No questions/drain skipped for student ${sanitizedStudent}, assignment ${hw.assignmentId}. Will trigger fallback.`);
+        triggerFallback(sanitizedStudent, hw);
       }
     }
   }
