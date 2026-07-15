@@ -120,7 +120,7 @@ async function readSSEStream(response, onQuestion) {
               questions.push(event.data);
               if (onQuestion) onQuestion(event.data, questions.length - 1);
             }
-          } catch {}
+          } catch { }
         }
       }
       break;
@@ -1072,7 +1072,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       }}>
         <Loader2 className="animate-spin text-gradient" size={48} />
         <h3>Saving exam progress...</h3>
-        <p style={{ color: 'var(--text-secondary)' }}>Please wait while we save your questions and answers to BigQuery.</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Please wait while we save your questions and answers.</p>
       </div>
     );
   }
@@ -1372,20 +1372,20 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
           </div>
 
           <button
-              onClick={handlePause}
-              className="btn btn-outline"
-              style={{
-                padding: '0.4rem 0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                fontSize: '0.9rem',
-                borderColor: 'rgba(255, 255, 255, 0.15)',
-                background: 'rgba(255, 255, 255, 0.02)'
-              }}
-            >
-              <Pause size={14} /> Pause
-            </button>
+            onClick={handlePause}
+            className="btn btn-outline"
+            style={{
+              padding: '0.4rem 0.8rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontSize: '0.9rem',
+              borderColor: 'rgba(255, 255, 255, 0.15)',
+              background: 'rgba(255, 255, 255, 0.02)'
+            }}
+          >
+            <Pause size={14} /> Pause
+          </button>
 
 
           {isWholeTestMode && (
@@ -1669,19 +1669,19 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
 
             {/* Navigation Buttons for Free Response */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {config.stressMode !== 'strict' && currentQuestionIndex > 0 && !(isSetTimedMode && currentQuestionIndex === activeSetIndex * questionsPerSet) && (
-              <button
-                className="btn btn-outline"
-                onClick={() => {
-                  saveCurrentFRQState();
-                  recordActiveInterval(currentQuestionIndex);
-                  clearInterval(timerRef.current);
-                  setCurrentQuestionIndex(prev => prev - 1);
-                }}
-              >
-                <ArrowLeft size={18} /> Previous
-              </button>
-            )}
+              {config.stressMode !== 'strict' && currentQuestionIndex > 0 && !(isSetTimedMode && currentQuestionIndex === activeSetIndex * questionsPerSet) && (
+                <button
+                  className="btn btn-outline"
+                  onClick={() => {
+                    saveCurrentFRQState();
+                    recordActiveInterval(currentQuestionIndex);
+                    clearInterval(timerRef.current);
+                    setCurrentQuestionIndex(prev => prev - 1);
+                  }}
+                >
+                  <ArrowLeft size={18} /> Previous
+                </button>
+              )}
 
               <div style={{ flex: 1 }} />
 
