@@ -565,7 +565,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
         contentBased: (hw.content_based !== undefined ? hw.content_based : hw.contentBased) !== false,
         dueDate: (() => {
           const dObj = parseDate(hw.due_date || hw.dueDate);
-          return dObj ? dObj.toISOString().slice(0, 16) : '';
+          return dObj ? dObj.toISOString() : '';
         })(),
         sharedQuestions: hw.shared_questions_json ? JSON.parse(hw.shared_questions_json) : []
       }));
