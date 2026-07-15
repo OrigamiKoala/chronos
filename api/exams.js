@@ -1,31 +1,5 @@
 import { BigQuery } from '@google-cloud/bigquery';
 import { executeWithRetry, parseJSONResponse } from './_gemini.js';
-import crypto from 'crypto';
-
-// Helper function to generate HS256 JWT
-function generateJWT(payload, secret) {
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const base64UrlEncode = (obj) => {
-    return Buffer.from(JSON.stringify(obj))
-      .toString('base64')
-      .replace(/=/g, '')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_');
-  };
-
-  const headerEncoded = base64UrlEncode(header);
-  const payloadEncoded = base64UrlEncode(payload);
-
-  const signature = crypto
-    .createHmac('sha256', secret)
-    .update(`${headerEncoded}.${payloadEncoded}`)
-    .digest('base64')
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-
-  return `${headerEncoded}.${payloadEncoded}.${signature}`;
-}
 
 
 
@@ -1047,18 +1021,9 @@ export default async function handler(req, res) {
           if (!WEBHOOK_URL) {
             console.warn('GOOGLE_APPS_SCRIPT_WEBHOOK_URL is not configured. Skipping background exam grading.');
           } else {
-            const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
-            const accessToken = generateJWT({
-              teacherId: 'SYSTEM',
-              exp: Math.floor(Date.now() / 1000) + 7200 // 2 hours
-            }, jwtSecret);
-
-            fetch(WEBHOOK_URL, {
+            await fetch(WEBHOOK_URL, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 action: 'async_grade_exam',
                 teacherId: 'SYSTEM',
@@ -1072,11 +1037,14 @@ export default async function handler(req, res) {
                   newRating: finalNewRating,
                   isRated,
                   assignmentId,
-                  results: gradedResults,
+                  results: gradedResults.map(r => {
+                    const { frqSubmission, ...rest } = r;
+                    return rest;
+                  }),
                   geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
                 }
               })
-            }).catch(err => console.error("Worker fetch failed in trigger:", err));
+            });
           }
         } catch (triggerErr) {
           console.error('Failed to trigger background grading:', triggerErr);
@@ -1156,19 +1124,9 @@ export default async function handler(req, res) {
         if (!WEBHOOK_URL) {
           console.warn('GOOGLE_APPS_SCRIPT_WEBHOOK_URL is not configured. Skipping background exam grading.');
         } else {
-          const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
-        
-        const accessToken = generateJWT({
-          teacherId: 'SYSTEM',
-          exp: Math.floor(Date.now() / 1000) + 7200 // 2 hours
-        }, jwtSecret);
-
-        fetch(WEBHOOK_URL, {
+        await fetch(WEBHOOK_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'async_grade_exam',
             teacherId: 'SYSTEM',
@@ -1182,11 +1140,14 @@ export default async function handler(req, res) {
               newRating,
               isRated,
               assignmentId,
-              results,
+              results: results.map(r => {
+                const { frqSubmission, ...rest } = r;
+                return rest;
+              }),
              geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
             }
           })
-        }).catch(err => console.error("Worker fetch failed in trigger:", err));
+        });
         }
       } catch (triggerErr) {
         console.error('Failed to trigger background grading:', triggerErr);

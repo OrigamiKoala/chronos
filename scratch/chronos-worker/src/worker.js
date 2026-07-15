@@ -1304,6 +1304,23 @@ async function gradeExam(payload, projectId, accessToken, env) {
   const geminiApiKeys = (env.GEMINI_API_KEYS || '').split(',').map((k) => k.trim()).filter(Boolean);
   const sanitizedUser = username.trim().toLowerCase();
 
+  // Fetch frqSubmission from BigQuery (not sent in payload to keep it small)
+  let storedResults = [];
+  try {
+    const rows = await runQuery(
+      `SELECT results_json FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` WHERE exam_id = @examId AND user_id = @username LIMIT 1`,
+      { examId, username: sanitizedUser },
+      projectId, accessToken
+    );
+    if (rows?.length > 0) {
+      storedResults = JSON.parse(rows[0].results_json || '[]');
+    }
+  } catch (e) {
+    console.error('Failed to fetch stored exam results:', e);
+  }
+  const storedMap = {};
+  storedResults.forEach(r => { if (r.id) storedMap[r.id] = r; });
+
   const frqs = results.filter((r) => r.type === 'free_response');
   const nonFrqs = results.filter((r) => r.type !== 'free_response');
 
@@ -1322,25 +1339,28 @@ async function gradeExam(payload, projectId, accessToken, env) {
       let imageCounter = 0;
       let promptText = `You are a world-class grading examiner. You are grading multiple free-response questions for a competitive Olympiad-level exam in ${subject}.\n\nBelow are the details for each question:\n`;
 
+      const frqSubmission = r.frqSubmission || storedMap[r.id]?.frqSubmission || null;
+
       frqs.forEach((r) => {
+        const sub = r.frqSubmission || storedMap[r.id]?.frqSubmission || null;
         const isImage =
-          r.frqSubmission &&
-          (r.frqSubmission.type === 'whiteboard' || r.frqSubmission.type === 'image') &&
-          r.frqSubmission.value?.startsWith('data:image/');
+          sub &&
+          (sub.type === 'whiteboard' || sub.type === 'image') &&
+          sub.value?.startsWith('data:image/');
 
         promptText += `\n---\nQuestion ID: ${r.id}\nTopic: ${r.topic || 'General'}\nQuestion: ${r.question}\n`;
         if (r.detailedSolution) promptText += `Correct Solution Reference: ${r.detailedSolution}\n`;
 
         if (isImage) {
           imageCounter++;
-          const parts = r.frqSubmission.value.split(',');
-          const base64Data = parts[1] || r.frqSubmission.value;
+          const parts = sub.value.split(',');
+          const base64Data = parts[1] || sub.value;
           const mimeMatch = parts[0].match(/data:(.*?);/);
           const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
           contents.push({ inlineData: { data: base64Data, mimeType } });
           promptText += `Student Work: Handwritten drawing (Refer to Image #${imageCounter} attached above)\n`;
         } else {
-          const textAns = r.frqSubmission?.value || r.userAnswer || 'No answer submitted.';
+          const textAns = sub?.value || r.userAnswer || 'No answer submitted.';
           promptText += `Student Work: Typed solution:\n${textAns}\n`;
         }
       });
@@ -1386,7 +1406,8 @@ Return ONLY a valid JSON array (one object per Question ID):
       gradedFrqs = frqs.map((r) => {
         const graded = gradedMap[r.id];
         if (!graded) return { ...r, isCorrect: false, score: 0, feedback: 'Grading failed for this question.' };
-        const isImage = r.frqSubmission?.value?.startsWith('data:image/');
+        const sub = r.frqSubmission || storedMap[r.id]?.frqSubmission || null;
+        const isImage = sub?.value?.startsWith('data:image/');
         return {
           ...r,
           isCorrect: !!graded.isCorrect,
