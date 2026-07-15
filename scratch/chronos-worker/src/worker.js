@@ -998,7 +998,7 @@ async function callGemini(input, apiKeys, models, temperature, systemInstruction
       }
 
       const data = await resp.json();
-      return data.output_text ?? null;
+      return data.candidates?.[0]?.content?.parts?.[0]?.text ?? data.output_text ?? null;
     });
   } catch (err) {
     console.warn('[callGemini] All models/keys failed:', err.message);
