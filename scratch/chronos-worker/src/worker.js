@@ -956,18 +956,7 @@ async function executeWithRetry(apiKeys, models, apiCallFn) {
 }
 
 async function callGemini(input, apiKeys, models, temperature, systemInstruction) {
-  // Build a plain-text prompt string
-  let prompt;
-  if (typeof input === 'string') {
-    prompt = input;
-  } else if (Array.isArray(input)) {
-    prompt = input
-      .map((item) => (typeof item === 'string' ? item : item?.text ?? ''))
-      .join('\n');
-  } else {
-    prompt = String(input ?? '');
-  }
-
+  const hasMultimodal = Array.isArray(input) && input.some(item => item?.parts?.some(p => p?.inlineData));
   const defaultModels = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'];
   const targetModels = models?.length > 0 ? models : defaultModels;
 
@@ -976,10 +965,24 @@ async function callGemini(input, apiKeys, models, temperature, systemInstruction
       const url = `https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`;
       const body = {
         model,
-        input: prompt,
         response_format: { type: 'text', mime_type: 'application/json' },
         generation_config: { temperature: temperature ?? 1.5, thinking_level: 'low' },
       };
+
+      if (hasMultimodal) {
+        body.contents = input;
+      } else {
+        let prompt;
+        if (typeof input === 'string') {
+          prompt = input;
+        } else if (Array.isArray(input)) {
+          prompt = input.map((item) => (typeof item === 'string' ? item : item?.text ?? '')).join('\n');
+        } else {
+          prompt = String(input ?? '');
+        }
+        body.input = prompt;
+      }
+
       if (systemInstruction) {
         body.system_instruction = systemInstruction;
       }
@@ -1335,7 +1338,7 @@ async function gradeExam(payload, projectId, accessToken, env) {
   let gradedFrqs = [];
   if (frqs.length > 0) {
     try {
-      const contents = [];
+      const parts = [];
       let imageCounter = 0;
       let promptText = `You are a world-class grading examiner. You are grading multiple free-response questions for a competitive Olympiad-level exam in ${subject}.\n\nBelow are the details for each question:\n`;
 
@@ -1351,11 +1354,11 @@ async function gradeExam(payload, projectId, accessToken, env) {
 
         if (isImage) {
           imageCounter++;
-          const parts = sub.value.split(',');
-          const base64Data = parts[1] || sub.value;
-          const mimeMatch = parts[0].match(/data:(.*?);/);
+          const segments = sub.value.split(',');
+          const base64Data = segments[1] || sub.value;
+          const mimeMatch = segments[0].match(/data:(.*?);/);
           const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
-          contents.push({ inlineData: { data: base64Data, mimeType } });
+          parts.push({ inlineData: { data: base64Data, mimeType } });
           promptText += `Student Work: Handwritten drawing (Refer to Image #${imageCounter} attached above)\n`;
         } else {
           const textAns = sub?.value || r.userAnswer || 'No answer submitted.';
@@ -1384,7 +1387,9 @@ Return ONLY a valid JSON array (one object per Question ID):
   }
 ]`;
 
-      contents.push(promptText);
+      parts.push({ text: promptText });
+
+      const contents = [{ role: 'user', parts }];
 
       const responseText = await callGemini(
         contents,
