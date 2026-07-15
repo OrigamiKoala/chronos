@@ -877,6 +877,13 @@ export default async function handler(req, res) {
     const isGuest = sanitizedUser === 'default_user';
 
     if (!isGuest) {
+      // 0. Delete the active exam immediately so it never shows "Resume" after submit
+      await bq.query({
+        query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
+          WHERE user_id = @username AND exam_id = @examId`,
+        params: { username: sanitizedUser, examId }
+      });
+
       // 1. Fire history insert, results insert, and rating update in parallel
       let ratingColumn = 'math_rating';
       if (subject === 'Physics') ratingColumn = 'physics_rating';
@@ -896,11 +903,6 @@ export default async function handler(req, res) {
             VALUES (@username, @examId, @resultsJson, CURRENT_TIMESTAMP(), @assignmentId)`,
           params: { username: sanitizedUser, examId, resultsJson: JSON.stringify(gradedResults), assignmentId: assignmentId || null },
           types: { assignmentId: 'STRING' }
-        }),
-        bq.query({
-          query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
-            WHERE user_id = @username AND exam_id = @examId`,
-          params: { username: sanitizedUser, examId }
         })
       ];
 
