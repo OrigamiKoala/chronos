@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, BookOpen, Plus, Loader2, ShieldAlert, CheckCircle, XCircle, Sparkles, Send, Trash2, ThumbsUp } from 'lucide-react';
+import { Users, BookOpen, Plus, Loader2, ShieldAlert, CheckCircle, XCircle, Sparkles, Send, Trash2, ThumbsUp, HelpCircle } from 'lucide-react';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { StudentAIInsights } from './StudentAIInsights';
 import { ChemicalText, SmilesRenderer } from './ChemicalText';
@@ -1245,10 +1245,21 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Q{idx + 1} - {r.topic || 'General'}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      {r.isCorrect ? <CheckCircle size={16} color="var(--success)" /> : <XCircle size={16} color="var(--danger)" />}
-                      <span style={{ fontSize: '0.8rem', color: r.isCorrect ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold' }}>
-                        {r.isCorrect ? 'Correct' : 'Incorrect'} ({r.score !== undefined ? Math.round(r.score * 100) : (r.isCorrect ? 100 : 0)}% credit)
-                      </span>
+                      {r.isCorrect === null ? (
+                        <>
+                          <HelpCircle size={16} color="var(--text-muted)" />
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>
+                            Nullified
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          {r.isCorrect ? <CheckCircle size={16} color="var(--success)" /> : <XCircle size={16} color="var(--danger)" />}
+                          <span style={{ fontSize: '0.8rem', color: r.isCorrect ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold' }}>
+                            {r.isCorrect ? 'Correct' : 'Incorrect'} ({r.score !== undefined ? Math.round(r.score * 100) : (r.isCorrect ? 100 : 0)}% credit)
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -1259,7 +1270,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', background: 'rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', borderRadius: '4px' }}>
                     <div>
                       <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.15rem' }}>Student Answer:</span>
-                      <span style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold' }}>
+                      <span style={{ color: r.isCorrect === null ? 'var(--text-muted)' : (r.isCorrect ? 'var(--success)' : 'var(--danger)'), fontWeight: 'bold' }}>
                         {(() => {
                           if (r.type === 'free_response' && r.frqSubmission) {
                             const sub = r.frqSubmission;
@@ -1321,8 +1332,9 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                             if (!res.ok) { alert('Failed to remark question'); return; }
                             setReviewExam(prev => {
                               const newResults = prev.results.map(q => q.id === r.id ? { ...q, isCorrect: true } : q);
-                              const correctCount = newResults.filter(q => q.isCorrect).length;
-                              return { ...prev, results: newResults, accuracy: correctCount / newResults.length };
+                              const scoredResults = newResults.filter(q => q.isCorrect !== null);
+                              const correctCount = scoredResults.filter(q => q.isCorrect).length;
+                              return { ...prev, results: newResults, accuracy: correctCount / (scoredResults.length || 1) };
                             });
                           } catch (e) {
                             alert('Failed to connect to server');

@@ -42,40 +42,53 @@ export default async function handler(req, res) {
     const sanitizedUser = username.trim().toLowerCase();
 
     try {
-      // 1. Fetch wrong problems
-      const wrongProblemsQuery = `
-        SELECT exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at,
-               options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at,
-               frq_submission_json
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-        WHERE user_id = @username
+      // Fetch wrong problems, tags, and exam results in a single consolidated query using UNION ALL
+      const consolidatedQuery = `
+        WITH wrongProblems AS (
+          SELECT 'wrong' AS type, TO_JSON_STRING(STRUCT(
+            exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at,
+            options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at,
+            frq_submission_json
+          )) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+          WHERE user_id = @username
+        ),
+        tags AS (
+          SELECT 'tags' AS type, TO_JSON_STRING(STRUCT(exam_id, question_index, tag)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+          WHERE user_id = @username
+        ),
+        results AS (
+          SELECT 'results' AS type, TO_JSON_STRING(STRUCT(exam_id, results_json)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+          WHERE user_id = @username
+        )
+        SELECT type, data FROM wrongProblems
+        UNION ALL
+        SELECT type, data FROM tags
+        UNION ALL
+        SELECT type, data FROM results
       `;
-      const [wrongRows] = await bq.query({
-        query: wrongProblemsQuery,
+
+      const [rows] = await bq.query({
+        query: consolidatedQuery,
         params: { username: sanitizedUser }
       });
 
-      // 2. Fetch tags
-      const tagsQuery = `
-        SELECT exam_id, question_index, tag
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
-        WHERE user_id = @username
-      `;
-      const [tagRows] = await bq.query({
-        query: tagsQuery,
-        params: { username: sanitizedUser }
-      });
+      const wrongRows = [];
+      const tagRows = [];
+      const resultsRows = [];
 
-      // 3. Fetch exam results for fallback & indexing
-      const resultsQuery = `
-        SELECT exam_id, results_json
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-        WHERE user_id = @username
-      `;
-      const [resultsRows] = await bq.query({
-        query: resultsQuery,
-        params: { username: sanitizedUser }
-      });
+      for (const r of rows) {
+        try {
+          const parsed = JSON.parse(r.data);
+          if (r.type === 'wrong') wrongRows.push(parsed);
+          else if (r.type === 'tags') tagRows.push(parsed);
+          else if (r.type === 'results') resultsRows.push(parsed);
+        } catch (parseErr) {
+          console.error("Failed to parse row data in review query:", r, parseErr);
+        }
+      }
 
       // Build mapping structures:
       // Map: exam_id -> question_id -> questionIndex (index in results_json)

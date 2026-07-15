@@ -128,9 +128,12 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
 
   // Point efficiency calculation
   const rawPointsEarned = results.reduce((acc, r) => {
+    if (r.isCorrect === null && r.feedback !== 'Grading in progress...') {
+      return acc;
+    }
     if (r.type === 'free_response') {
       const difficulty = r.difficulty !== undefined ? r.difficulty : (r.difficultyAtTime !== undefined ? r.difficultyAtTime : 1);
-      const score = r.score !== undefined ? Number(r.score) : (r.isCorrect ? 1.0 : 0.0);
+      const score = r.score !== undefined && r.score !== null ? Number(r.score) : (r.isCorrect ? 1.0 : 0.0);
       return acc + (score * difficulty);
     } else {
       return acc + (r.isCorrect ? 1 : 0);
@@ -139,6 +142,9 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const pointsEarned = Math.round(rawPointsEarned * 10) / 10;
 
   const totalPoints = results.reduce((acc, r) => {
+    if (r.isCorrect === null && r.feedback !== 'Grading in progress...') {
+      return acc;
+    }
     if (r.type === 'free_response') {
       return acc + (r.difficulty !== undefined ? r.difficulty : (r.difficultyAtTime !== undefined ? r.difficultyAtTime : 1));
     } else {
@@ -149,7 +155,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   const efficiency = Math.round((pointsEarned / totalMinutes) * 10) / 10;
 
   // Panic Points
-  const panicPoints = results.filter(r => !r.isCorrect && r.timeSpent > (avgTime * 1.5));
+  const panicPoints = results.filter(r => r.isCorrect === false && r.timeSpent > (avgTime * 1.5));
 
   const [activeExplanations, setActiveExplanations] = useState(() => {
     const initial = {};
@@ -826,9 +832,10 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         <h3 style={{ marginBottom: '1.5rem' }}>Question Breakdown</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {results.map((r, i) => {
-             const isGrading = r.isCorrect === null || r.isCorrect === undefined;
-             const isPartial = !isGrading && r.score !== undefined && r.score > 0 && r.score < 1;
-             const statusColor = isGrading ? 'var(--accent-primary)' : (isPartial ? 'var(--warning)' : (r.isCorrect ? 'var(--success)' : 'var(--danger)'));
+             const isNullified = r.isCorrect === null && r.feedback !== 'Grading in progress...';
+             const isGrading = r.isCorrect === null && r.feedback === 'Grading in progress...';
+             const isPartial = !isGrading && !isNullified && r.score !== undefined && r.score > 0 && r.score < 1;
+             const statusColor = isNullified ? 'var(--text-muted)' : (isGrading ? 'var(--accent-primary)' : (isPartial ? 'var(--warning)' : (r.isCorrect ? 'var(--success)' : 'var(--danger)')));
              return (
                <div key={i} className="glass-panel" style={{ padding: 'var(--card-padding)', borderLeft: `4px solid ${statusColor}` }}>
                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -845,7 +852,14 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                            return [{ start, end: start + (r.timeSpent || 0) }];
                          })();
                        return formatIntervals(qIntervals);
-                     })()} {isGrading ? (
+                     })()} {isNullified ? (
+                       <>
+                         <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                           Nullified
+                         </span>
+                         <span style={{ fontWeight: 'bold' }}>—</span>
+                       </>
+                     ) : isGrading ? (
                        <>
                          <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--accent-primary)' }}>
                            Grading...

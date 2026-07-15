@@ -1368,6 +1368,7 @@ async function gradeExam(payload, projectId, accessToken, env) {
 4. Set 'isCorrect' to true if score >= 0.7.
 5. Provide clear, professional, pedagogical feedback.
 6. If the student work was an image, provide an extensive transcription in 'transcription'.
+7. IMPORTANT: If a question is invalid, ambiguous, has multiple correct interpretations, contains an error in the question prompt/options/solution template, or is otherwise unfair to grade, you can NULLIFY the question by setting 'isCorrect' to null (literal JSON null), 'score' to null (literal JSON null), and 'feedback' explaining the reason for nullification.
 
 Return ONLY a valid JSON array (one object per Question ID):
 [
@@ -1406,10 +1407,25 @@ Return ONLY a valid JSON array (one object per Question ID):
         if (!graded) return { ...r, isCorrect: false, score: 0, feedback: 'Grading failed for this question.' };
         const sub = r.frqSubmission || storedMap[r.id]?.frqSubmission || null;
         const isImage = sub?.value?.startsWith('data:image/');
+        
+        let finalIsCorrect = false;
+        if (graded.isCorrect === null || graded.isCorrect === undefined) {
+          finalIsCorrect = null;
+        } else {
+          finalIsCorrect = !!graded.isCorrect;
+        }
+
+        let finalScore = 0;
+        if (graded.score === null || graded.score === undefined) {
+          finalScore = null;
+        } else {
+          finalScore = Number(graded.score) || 0;
+        }
+
         return {
           ...r,
-          isCorrect: !!graded.isCorrect,
-          score: Number(graded.score) || 0,
+          isCorrect: finalIsCorrect,
+          score: finalScore,
           feedback: graded.feedback,
           answer: graded.correctAnswer || r.answer || '',
           solution: graded.correctSolution,
@@ -1435,10 +1451,71 @@ Return ONLY a valid JSON array (one object per Question ID):
   const isGuest = sanitizedUser === 'default_user';
 
   if (!isGuest) {
+    // 1. Database updates for FRQs (topic mastery delta & wrong problems)
+    const dbPromises = [];
+    for (const r of gradedFrqs) {
+      const topicStr = r.topic || 'General';
+      const topics = topicStr.split(',').map(t => t.trim()).filter(Boolean);
+      
+      if (r.isCorrect === true) {
+        for (const topic of topics) {
+          dbPromises.push(runQuery(
+            `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+             SET correct_count = correct_count + 1,
+                 accuracy_rate = SAFE_DIVIDE(correct_count + 1, total_count)
+             WHERE user_id = @username AND subject = @subject AND sub_category = @topic`,
+            { username: sanitizedUser, subject, topic },
+            projectId, accessToken
+          ));
+        }
+      } else if (r.isCorrect === false) {
+        const sub = r.frqSubmission || storedMap[r.id]?.frqSubmission || null;
+        dbPromises.push(runQuery(
+          `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+            (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at,
+             options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at, frq_submission_json)
+          VALUES (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP(),
+                  null, 'free_response', @feedback, 0, 0, 2.5, CURRENT_TIMESTAMP(), @frqSubmissionJson)`,
+          {
+            username: sanitizedUser,
+            examId,
+            questionId: String(r.id),
+            subject,
+            topic: r.topic || 'General',
+            questionText: r.question,
+            userAnswer: r.userAnswer || '',
+            correctAnswer: r.answer || '',
+            feedback: r.feedback || '',
+            frqSubmissionJson: sub ? JSON.stringify(sub) : null
+          },
+          projectId, accessToken
+        ));
+      } else if (r.isCorrect === null) {
+        for (const topic of topics) {
+          dbPromises.push(runQuery(
+            `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+             SET total_count = GREATEST(0, total_count - 1),
+                 accuracy_rate = SAFE_DIVIDE(correct_count, GREATEST(0, total_count - 1))
+             WHERE user_id = @username AND subject = @subject AND sub_category = @topic`,
+            { username: sanitizedUser, subject, topic },
+            projectId, accessToken
+          ));
+        }
+      }
+    }
+    if (dbPromises.length > 0) {
+      try {
+        await Promise.all(dbPromises);
+      } catch (e) {
+        console.error('Failed to update stats/wrong problems for FRQs:', e);
+      }
+    }
+
     const hasFRQ = gradedResults.some((r) => r.type === 'free_response');
     if (isRated !== false && hasFRQ) {
-      const totalQuestions = gradedResults.length;
-      const totalScore = gradedResults.reduce((acc, r) => acc + (r.score ?? (r.isCorrect ? 1 : 0)), 0);
+      const scoredResults = gradedResults.filter((r) => r.isCorrect !== null && r.isCorrect !== undefined);
+      const totalQuestions = scoredResults.length || 1;
+      const totalScore = scoredResults.reduce((acc, r) => acc + (r.score ?? (r.isCorrect ? 1 : 0)), 0);
       finalAccuracy = totalScore / totalQuestions;
 
       let ratingColumn = 'math_rating';
@@ -1458,7 +1535,7 @@ Return ONLY a valid JSON array (one object per Question ID):
       const eloMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
       const getQuestionRating = (diff) => eloMap[Math.max(1, Math.min(10, Math.round(diff)))] || 1000;
 
-      const sumRatings = gradedResults.reduce((acc, r) => acc + getQuestionRating(r.difficulty || 5), 0);
+      const sumRatings = scoredResults.reduce((acc, r) => acc + getQuestionRating(r.difficulty || 5), 0);
       const avgQuestionRating = sumRatings / totalQuestions;
 
       let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));

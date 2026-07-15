@@ -69,84 +69,62 @@ export default async function handler(req, res) {
   // Ensure tables exist (once per cold start)
   if (!tablesEnsured) {
     try {
-      await Promise.all([
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` (
-            user_id STRING NOT NULL, exam_id STRING NOT NULL, question_id STRING NOT NULL,
-            subject STRING NOT NULL, topic STRING NOT NULL, question_text STRING NOT NULL,
-            user_answer STRING, correct_answer STRING NOT NULL, created_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
-            user_id STRING NOT NULL, subject STRING NOT NULL,
-            detailed_analysis STRING NOT NULL, updated_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` (
-            user_id STRING NOT NULL, exam_id STRING NOT NULL,
-            results_json STRING NOT NULL, created_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
-            user_id STRING NOT NULL, subject STRING NOT NULL, topic STRING NOT NULL,
-            good_at STRING NOT NULL, not_good_at STRING NOT NULL, updated_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` (
-            user_id STRING NOT NULL, exam_id STRING NOT NULL, subject STRING NOT NULL,
-            mistake_patterns STRING NOT NULL, created_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_active_exams\` (
-            user_id STRING NOT NULL,
-            exam_id STRING NOT NULL,
-            subject STRING NOT NULL,
-            config_json STRING NOT NULL,
-            problems_json STRING NOT NULL,
-            answers_json STRING NOT NULL,
-            frq_submissions_json STRING,
-            current_question_index INT64 NOT NULL,
-            created_at TIMESTAMP NOT NULL,
-            updated_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-          ADD COLUMN IF NOT EXISTS assignment_id STRING
-        `),
-        bq.query(`
-          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-          ADD COLUMN IF NOT EXISTS assignment_id STRING
-        `),
-        bq.query(`
-          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
-          ADD COLUMN IF NOT EXISTS interaction_ids_json STRING
-        `),
-        bq.query(`
-          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` (
-            assignment_id STRING NOT NULL,
-            student_id STRING NOT NULL,
-            questions_json STRING NOT NULL,
-            created_at TIMESTAMP NOT NULL
-          )
-        `),
-        bq.query(`
-          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-          ADD COLUMN IF NOT EXISTS options STRING,
-          ADD COLUMN IF NOT EXISTS question_type STRING,
-          ADD COLUMN IF NOT EXISTS ai_explanation STRING,
-          ADD COLUMN IF NOT EXISTS repetitions INT64,
-          ADD COLUMN IF NOT EXISTS interval_days INT64,
-          ADD COLUMN IF NOT EXISTS ease_factor FLOAT64,
-          ADD COLUMN IF NOT EXISTS next_review_at TIMESTAMP,
-          ADD COLUMN IF NOT EXISTS frq_submission_json STRING
-        `)
-      ]);
+      await bq.query(`
+        CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` (
+          user_id STRING NOT NULL, exam_id STRING NOT NULL, question_id STRING NOT NULL,
+          subject STRING NOT NULL, topic STRING NOT NULL, question_text STRING NOT NULL,
+          user_answer STRING, correct_answer STRING NOT NULL, created_at TIMESTAMP NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` (
+          user_id STRING NOT NULL, subject STRING NOT NULL,
+          detailed_analysis STRING NOT NULL, updated_at TIMESTAMP NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` (
+          user_id STRING NOT NULL, exam_id STRING NOT NULL,
+          results_json STRING NOT NULL, created_at TIMESTAMP NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
+          user_id STRING NOT NULL, subject STRING NOT NULL, topic STRING NOT NULL,
+          good_at STRING NOT NULL, not_good_at STRING NOT NULL, updated_at TIMESTAMP NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` (
+          user_id STRING NOT NULL, exam_id STRING NOT NULL, subject STRING NOT NULL,
+          mistake_patterns STRING NOT NULL, created_at TIMESTAMP NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_active_exams\` (
+          user_id STRING NOT NULL,
+          exam_id STRING NOT NULL,
+          subject STRING NOT NULL,
+          config_json STRING NOT NULL,
+          problems_json STRING NOT NULL,
+          answers_json STRING NOT NULL,
+          frq_submissions_json STRING,
+          current_question_index INT64 NOT NULL,
+          created_at TIMESTAMP NOT NULL,
+          updated_at TIMESTAMP NOT NULL
+        );
+        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+        ADD COLUMN IF NOT EXISTS assignment_id STRING;
+        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+        ADD COLUMN IF NOT EXISTS assignment_id STRING;
+        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
+        ADD COLUMN IF NOT EXISTS interaction_ids_json STRING;
+        CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` (
+          assignment_id STRING NOT NULL,
+          student_id STRING NOT NULL,
+          questions_json STRING NOT NULL,
+          created_at TIMESTAMP NOT NULL
+        );
+        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+        ADD COLUMN IF NOT EXISTS options STRING,
+        ADD COLUMN IF NOT EXISTS question_type STRING,
+        ADD COLUMN IF NOT EXISTS ai_explanation STRING,
+        ADD COLUMN IF NOT EXISTS repetitions INT64,
+        ADD COLUMN IF NOT EXISTS interval_days INT64,
+        ADD COLUMN IF NOT EXISTS ease_factor FLOAT64,
+        ADD COLUMN IF NOT EXISTS next_review_at TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS frq_submission_json STRING;
+      `);
       tablesEnsured = true;
     } catch (e) {
       console.warn("Alter table error or already exists in exams.js:", e);
@@ -320,8 +298,9 @@ export default async function handler(req, res) {
       }
 
       // 3. Recalculate accuracy
-      const correctCount = results.filter(r => r.isCorrect).length;
-      const totalCount = results.length;
+      const scoredResults = results.filter(r => r.isCorrect !== null && r.isCorrect !== undefined);
+      const correctCount = scoredResults.filter(r => r.isCorrect).length;
+      const totalCount = scoredResults.length || 1;
       const score = correctCount / totalCount;
       const newAccuracy = Math.round(score * 100) || 0;
 
@@ -388,33 +367,19 @@ export default async function handler(req, res) {
         })
       ]);
 
-      // 6. Update user_topic_mastery
+      // 6. Update user_topic_mastery in a single query
       const topics = topic.split(',').map(t => t.trim()).filter(Boolean);
-      for (const t of topics) {
-        const getMasteryQuery = `
-          SELECT correct_count, total_count
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-          WHERE user_id = @username AND sub_category = @topic AND subject = @subject
-          LIMIT 1
+      if (topics.length > 0) {
+        const updateMasteryQuery = `
+          UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+          SET correct_count = correct_count + 1,
+              accuracy_rate = SAFE_DIVIDE(correct_count + 1, total_count)
+          WHERE user_id = @username AND subject = @subject AND sub_category IN UNNEST(@topics)
         `;
-        const [masteryRows] = await bq.query({
-          query: getMasteryQuery,
-          params: { username: sanitizedUser, topic: t, subject }
+        await bq.query({
+          query: updateMasteryQuery,
+          params: { username: sanitizedUser, subject, topics }
         });
-
-        if (masteryRows && masteryRows.length > 0) {
-          const existing = masteryRows[0];
-          const nextCorrect = existing.correct_count + 1;
-          const nextTotal = existing.total_count;
-          const nextAccuracy = nextCorrect / nextTotal;
-
-          await bq.query({
-            query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-              SET correct_count = @nextCorrect, accuracy_rate = @nextAccuracy
-              WHERE user_id = @username AND sub_category = @topic AND subject = @subject`,
-            params: { username: sanitizedUser, topic: t, subject, nextCorrect, nextAccuracy }
-          });
-        }
       }
 
       return res.status(200).json({ success: true, newAccuracy, newRatingVal, newRatingChange });
@@ -450,33 +415,32 @@ export default async function handler(req, res) {
         tagsTableEnsured = true;
       }
 
-      // Delete any existing tags for this exam (allows re-tagging)
-      await bq.query({
-        query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
-          WHERE user_id = @username AND exam_id = @examId`,
-        params: { username: sanitizedUser, examId }
-      });
-
-      // Insert all tags in parallel
-      const insertQuery = `
+      // Delete any existing tags and insert new ones in a single query
+      const tagUpsertQuery = `
+        DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+        WHERE user_id = @username AND exam_id = @examId;
+        
         INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
           (user_id, exam_id, question_index, tag, is_correct, points_value, created_at)
-        VALUES
-          (@username, @examId, @questionIndex, @tag, @isCorrect, @pointsValue, CURRENT_TIMESTAMP())
+        SELECT @username, @examId, p.question_index, p.tag, p.is_correct, p.points_value, CURRENT_TIMESTAMP()
+        FROM UNNEST(@tags) p;
       `;
-      await Promise.all(tags.map(t =>
-        bq.query({
-          query: insertQuery,
-          params: {
-            username: sanitizedUser,
-            examId,
-            questionIndex: t.questionIndex,
-            tag: t.tag,
-            isCorrect: t.isCorrect,
-            pointsValue: t.pointsValue || 0
-          }
-        })
-      ));
+      
+      const tagsParam = tags.map(t => ({
+        question_index: Number(t.questionIndex),
+        tag: String(t.tag),
+        is_correct: Boolean(t.isCorrect),
+        points_value: Number(t.pointsValue || 0)
+      }));
+
+      await bq.query({
+        query: tagUpsertQuery,
+        params: {
+          username: sanitizedUser,
+          examId,
+          tags: tagsParam
+        }
+      });
 
       return res.status(200).json({ success: true });
     } catch (err) {
@@ -921,8 +885,11 @@ export default async function handler(req, res) {
 
       // 2. Record wrong problems + update topic mastery
       const topicStats = {};
-      const wrongInsertPromises = [];
+      const wrongProblemsToInsert = [];
       for (const r of gradedResults) {
+        if (r.isCorrect === null && r.type !== 'free_response') {
+          continue;
+        }
         const topicStr = r.topic || 'General';
         const topics = topicStr.split(',').map(t => t.trim()).filter(Boolean);
         for (const topic of topics) {
@@ -937,33 +904,41 @@ export default async function handler(req, res) {
 
         if (r.isCorrect === false) {
           const topic = r.topic || 'General';
-          wrongInsertPromises.push(
-            bq.query({
-              query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-                (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at,
-                 options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at, frq_submission_json)
-                VALUES (@username, @examId, @questionId, @subject, @topic, @questionText, @userAnswer, @correctAnswer, CURRENT_TIMESTAMP(),
-                        @options, @questionType, @aiExplanation, 0, 0, 2.5, CURRENT_TIMESTAMP(), @frqSubmissionJson)`,
-              params: {
-                username: sanitizedUser, examId,
-                questionId: r.id || String(Date.now()),
-                subject, topic,
-                questionText: r.question,
-                userAnswer: r.userAnswer || '',
-                correctAnswer: r.answer || '',
-                options: r.options ? JSON.stringify(r.options) : null,
-                questionType: r.type || 'multiple_choice',
-                aiExplanation: r.aiExplanation || null,
-                frqSubmissionJson: r.frqSubmission ? JSON.stringify(r.frqSubmission) : null
-              },
-              types: {
-                options: 'STRING',
-                aiExplanation: 'STRING',
-                frqSubmissionJson: 'STRING'
-              }
-            })
-          );
+          wrongProblemsToInsert.push({
+            question_id: String(r.id || Date.now()),
+            topic,
+            question_text: r.question,
+            user_answer: r.userAnswer || '',
+            correct_answer: r.answer || '',
+            options: r.options ? JSON.stringify(r.options) : null,
+            question_type: r.type || 'multiple_choice',
+            ai_explanation: r.aiExplanation || null,
+            frq_submission_json: r.frqSubmission ? JSON.stringify(r.frqSubmission) : null
+          });
         }
+      }
+
+      const wrongInsertPromises = [];
+      if (wrongProblemsToInsert.length > 0) {
+        const bulkInsertWrongQuery = `
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+            (user_id, exam_id, question_id, subject, topic, question_text, user_answer, correct_answer, created_at,
+             options, question_type, ai_explanation, repetitions, interval_days, ease_factor, next_review_at, frq_submission_json)
+          SELECT @username, @examId, p.question_id, @subject, p.topic, p.question_text, p.user_answer, p.correct_answer, CURRENT_TIMESTAMP(),
+                 p.options, p.question_type, p.ai_explanation, 0, 0, 2.5, CURRENT_TIMESTAMP(), p.frq_submission_json
+          FROM UNNEST(@wrongProblems) p
+        `;
+        wrongInsertPromises.push(
+          bq.query({
+            query: bulkInsertWrongQuery,
+            params: {
+              username: sanitizedUser,
+              examId,
+              subject,
+              wrongProblems: wrongProblemsToInsert
+            }
+          })
+        );
       }
 
       // Build and execute a single MERGE query for topic mastery to avoid DML concurrency/serialization errors in BigQuery
@@ -1311,25 +1286,32 @@ Do NOT include markdown formatting, backticks, or any conversational text. Retur
             }));
           }
 
-          // Fire topic breakdowns sequentially to avoid concurrent update conflicts
-          if (Array.isArray(topicBreakdowns)) {
-            for (const b of topicBreakdowns) {
-              try {
-                await bq.query({
-                  query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
-                    USING (SELECT @username AS user_id, @subject AS subject, @topic AS topic) S
-                    ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-                    WHEN MATCHED THEN
-                      UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP()
-                    WHEN NOT MATCHED THEN
-                      INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
-                      VALUES (@username, @subject, @topic, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
-                  params: { username, subject, topic: b.topic, goodAt: b.good_at, notGoodAt: b.not_good_at }
-                });
-              } catch (bQErr) {
-                console.error(`Error merging topic breakdown for ${b.topic}:`, bQErr);
-              }
-            }
+          // Fire topic breakdowns in a single bulk MERGE query to avoid concurrent update conflicts and multiple roundtrips
+          if (Array.isArray(topicBreakdowns) && topicBreakdowns.length > 0) {
+            const bulkBreakdownQuery = `
+              MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+              USING UNNEST(@breakdowns) S
+              ON T.user_id = @username AND T.subject = @subject AND T.topic = S.topic
+              WHEN MATCHED THEN
+                UPDATE SET good_at = S.good_at, not_good_at = S.not_good_at, updated_at = CURRENT_TIMESTAMP()
+              WHEN NOT MATCHED THEN
+                INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
+                VALUES (@username, @subject, S.topic, S.good_at, S.not_good_at, CURRENT_TIMESTAMP())
+            `;
+            upsertPromises.push(
+              bq.query({
+                query: bulkBreakdownQuery,
+                params: {
+                  username,
+                  subject,
+                  breakdowns: topicBreakdowns.map(b => ({
+                    topic: String(b.topic),
+                    good_at: String(b.good_at || ''),
+                    not_good_at: String(b.not_good_at || '')
+                  }))
+                }
+              })
+            );
           }
 
           // Fire weakness analysis merge

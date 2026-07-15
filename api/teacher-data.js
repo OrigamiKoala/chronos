@@ -124,26 +124,11 @@ export default async function handler(req, res) {
       const lessonId = `lesson_${Date.now()}`;
 
       try {
-        // Insert lesson plan
-        const insertLessonQuery = `
-          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`lessons\` (lesson_id, teacher_id, organization, title, description, created_at)
-          VALUES (@lessonId, @teacherId, @organization, @title, @description, CURRENT_TIMESTAMP())
-        `;
-        await bq.query({
-          query: insertLessonQuery,
-          params: {
-            lessonId,
-            teacherId: tId,
-            organization: org,
-            title: title.trim(),
-            description: description.trim()
-          }
-        });
-
-        // Insert homework assignments if provided
         const assignmentsPayload = [];
+        const assignmentsToInsert = [];
+
         if (Array.isArray(homework) && homework.length > 0) {
-          const assignmentPromises = homework.map((hw, index) => {
+          homework.forEach((hw, index) => {
             const assignmentId = `assign_${Date.now()}_${index}`;
             const formatsStr = Array.isArray(hw.examFormat) ? hw.examFormat.join(',') : String(hw.examFormat || 'multiple_choice');
             const dueDate = hw.dueDate ? hw.dueDate : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -164,38 +149,52 @@ export default async function handler(req, res) {
               sharedQuestions: hw.sharedQuestions || []
             });
 
-            const insertAssignmentQuery = `
-              INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
-                (assignment_id, lesson_id, title, subject, num_questions, difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
-              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @difficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson, @questionsPerSet)
-            `;
-
-            return bq.query({
-              query: insertAssignmentQuery,
-              params: {
-                assignmentId,
-                lessonId,
-                title: hw.title ? hw.title.trim() : `Homework for ${title}`,
-                subject: hw.subject || 'Math',
-                numQuestions: Number(hw.numQuestions) || 5,
-                difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
-                examFormat: formatsStr,
-                timeLimitStyle: hw.timeLimitStyle || 'per_question',
-                timeLimitValue: Number(hw.timeLimitValue) || 60,
-                stressMode: hw.stressMode || 'none',
-                contentBased: hw.contentBased !== false,
-                dueDate,
-                sharedQuestionsJson: sharedQJson,
-                questionsPerSet: Number(hw.questionsPerSet) || 2
-              },
-              types: {
-                sharedQuestionsJson: 'STRING'
-              }
+            assignmentsToInsert.push({
+              assignment_id: assignmentId,
+              title: hw.title ? hw.title.trim() : `Homework for ${title}`,
+              subject: hw.subject || 'Math',
+              num_questions: Number(hw.numQuestions) || 5,
+              difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
+              exam_format: formatsStr,
+              time_limit_style: hw.timeLimitStyle || 'per_question',
+              time_limit_value: Number(hw.timeLimitValue) || 60,
+              stress_mode: hw.stressMode || 'none',
+              content_based: hw.contentBased !== false,
+              due_date: dueDate,
+              shared_questions_json: sharedQJson,
+              questions_per_set: Number(hw.questionsPerSet) || 2
             });
           });
-
-          await Promise.all(assignmentPromises);
         }
+
+        // Insert lesson plan and all assignments in a single query transaction script
+        let postScript = `
+          INSERT INTO \`${projectId}\`.\`chronos_users\`.\`lessons\` (lesson_id, teacher_id, organization, title, description, created_at)
+          VALUES (@lessonId, @teacherId, @organization, @title, @description, CURRENT_TIMESTAMP());
+        `;
+
+        const queryParams = {
+          lessonId,
+          teacherId: tId,
+          organization: org,
+          title: title.trim(),
+          description: description.trim()
+        };
+
+        if (assignmentsToInsert.length > 0) {
+          postScript += `
+            INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
+              (assignment_id, lesson_id, title, subject, num_questions, difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
+            SELECT p.assignment_id, @lessonId, p.title, p.subject, p.num_questions, p.difficulty, p.exam_format, p.time_limit_style, p.time_limit_value, p.stress_mode, p.content_based, CAST(p.due_date AS TIMESTAMP), CURRENT_TIMESTAMP(), p.shared_questions_json, p.questions_per_set
+            FROM UNNEST(@assignments) p;
+          `;
+          queryParams.assignments = assignmentsToInsert;
+        }
+
+        await bq.query({
+          query: postScript,
+          params: queryParams
+        });
 
         if (assignmentsPayload.length > 0) {
           triggerBackgroundHomeworkGeneration(tId, lessonId, assignmentsPayload, bq, projectId, title, description);
@@ -215,60 +214,18 @@ export default async function handler(req, res) {
       const tId = teacherId ? teacherId.trim().toLowerCase() : '';
 
       try {
-        // Update lesson plan
-        const updateLessonQuery = `
-          UPDATE \`${projectId}\`.\`chronos_users\`.\`lessons\`
-          SET title = @title, description = @description
-          WHERE lesson_id = @lessonId
-        `;
-        await bq.query({
-          query: updateLessonQuery,
-          params: {
-            lessonId,
-            title: title.trim(),
-            description: description.trim()
-          }
-        });
-
-        // Manage homework assignments
-        const getAssignsQuery = `
-          SELECT assignment_id FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
-          WHERE lesson_id = @lessonId
-        `;
-        const [existingRows] = await bq.query({
-          query: getAssignsQuery,
-          params: { lessonId }
-        });
-        const existingIds = existingRows.map(r => r.assignment_id);
-
         const updatedHomework = Array.isArray(homework) ? homework : [];
-        const updatedIds = updatedHomework.map(h => h.assignment_id).filter(Boolean);
-
-        // Delete removed homework assignments
-        const idsToDelete = existingIds.filter(id => !updatedIds.includes(id));
-        if (idsToDelete.length > 0) {
-          const deleteHwsQuery = `
-            DELETE FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
-            WHERE assignment_id IN UNNEST(@idsToDelete)
-          `;
-          await bq.query({
-            query: deleteHwsQuery,
-            params: { idsToDelete }
-          });
-        }
-
-        // Upsert assignments
+        const updatedIds = [];
         const assignmentsPayload = [];
-        const assignmentPromises = updatedHomework.map((hw, index) => {
+        const assignmentsToUpsert = [];
+
+        updatedHomework.forEach((hw, index) => {
           const formatsStr = Array.isArray(hw.examFormat) ? hw.examFormat.join(',') : String(hw.examFormat || 'multiple_choice');
           const dueDate = hw.dueDate ? hw.dueDate : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
           const sharedQJson = hw.sharedQuestions ? JSON.stringify(hw.sharedQuestions) : null;
 
-          let assignmentId = hw.assignment_id;
-          const isNew = !assignmentId || !existingIds.includes(assignmentId);
-          if (isNew) {
-            assignmentId = `assign_${Date.now()}_${index}`;
-          }
+          const assignmentId = hw.assignment_id || `assign_${Date.now()}_${index}`;
+          updatedIds.push(assignmentId);
 
           assignmentsPayload.push({
             assignmentId,
@@ -285,69 +242,71 @@ export default async function handler(req, res) {
             sharedQuestions: hw.sharedQuestions || []
           });
 
-          if (!isNew) {
-            const updateAssignmentQuery = `
-              UPDATE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
-              SET title = @title, subject = @subject, num_questions = @numQuestions, 
-                  difficulty = @difficulty, exam_format = @examFormat, 
-                  time_limit_style = @timeLimitStyle, time_limit_value = @timeLimitValue, 
-                  stress_mode = @stressMode, content_based = @contentBased, due_date = CAST(@dueDate AS TIMESTAMP),
-                  shared_questions_json = @sharedQuestionsJson, questions_per_set = @questionsPerSet
-              WHERE assignment_id = @assignmentId
-            `;
-            return bq.query({
-              query: updateAssignmentQuery,
-              params: {
-                assignmentId,
-                title: hw.title ? hw.title.trim() : `Homework for ${title}`,
-                subject: hw.subject || 'Math',
-                numQuestions: Number(hw.numQuestions) || 5,
-                difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
-                examFormat: formatsStr,
-                timeLimitStyle: hw.timeLimitStyle || 'per_question',
-                timeLimitValue: Number(hw.timeLimitValue) || 60,
-                stressMode: hw.stressMode || 'none',
-                contentBased: hw.contentBased !== false,
-                dueDate,
-                sharedQuestionsJson: sharedQJson,
-                questionsPerSet: Number(hw.questionsPerSet) || 2
-              },
-              types: {
-                sharedQuestionsJson: 'STRING'
-              }
-            });
-          } else {
-            const insertAssignmentQuery = `
-              INSERT INTO \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` 
-                (assignment_id, lesson_id, title, subject, num_questions, difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
-              VALUES (@assignmentId, @lessonId, @title, @subject, @numQuestions, @difficulty, @examFormat, @timeLimitStyle, @timeLimitValue, @stressMode, @contentBased, CAST(@dueDate AS TIMESTAMP), CURRENT_TIMESTAMP(), @sharedQuestionsJson, @questionsPerSet)
-            `;
-            return bq.query({
-              query: insertAssignmentQuery,
-              params: {
-                assignmentId,
-                lessonId,
-                title: hw.title ? hw.title.trim() : `Homework for ${title}`,
-                subject: hw.subject || 'Math',
-                numQuestions: Number(hw.numQuestions) || 5,
-                difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
-                examFormat: formatsStr,
-                timeLimitStyle: hw.timeLimitStyle || 'per_question',
-                timeLimitValue: Number(hw.timeLimitValue) || 60,
-                stressMode: hw.stressMode || 'none',
-                contentBased: hw.contentBased !== false,
-                dueDate,
-                sharedQuestionsJson: sharedQJson,
-                questionsPerSet: Number(hw.questionsPerSet) || 2
-              },
-              types: {
-                sharedQuestionsJson: 'STRING'
-              }
-            });
-          }
+          assignmentsToUpsert.push({
+            assignment_id: assignmentId,
+            title: hw.title ? hw.title.trim() : `Homework for ${title}`,
+            subject: hw.subject || 'Math',
+            num_questions: Number(hw.numQuestions) || 5,
+            difficulty: Number(hw.difficulty !== undefined ? hw.difficulty : 5),
+            exam_format: formatsStr,
+            time_limit_style: hw.timeLimitStyle || 'per_question',
+            time_limit_value: Number(hw.timeLimitValue) || 60,
+            stress_mode: hw.stressMode || 'none',
+            content_based: hw.contentBased !== false,
+            due_date: dueDate,
+            shared_questions_json: sharedQJson,
+            questions_per_set: Number(hw.questionsPerSet) || 2
+          });
         });
 
-        await Promise.all(assignmentPromises);
+        // Build single script for PUT updates to update lesson, delete removed, and upsert modified/new homework
+        let putScript = `
+          UPDATE \`${projectId}\`.\`chronos_users\`.\`lessons\`
+          SET title = @title, description = @description
+          WHERE lesson_id = @lessonId;
+        `;
+
+        const queryParams = {
+          lessonId,
+          title: title.trim(),
+          description: description.trim(),
+          updatedIds
+        };
+
+        if (updatedIds.length > 0) {
+          putScript += `
+            DELETE FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+            WHERE lesson_id = @lessonId AND assignment_id NOT IN UNNEST(@updatedIds);
+          `;
+        } else {
+          putScript += `
+            DELETE FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+            WHERE lesson_id = @lessonId;
+          `;
+        }
+
+        if (assignmentsToUpsert.length > 0) {
+          putScript += `
+            MERGE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` T
+            USING UNNEST(@assignments) S
+            ON T.assignment_id = S.assignment_id
+            WHEN MATCHED THEN
+              UPDATE SET title = S.title, subject = S.subject, num_questions = S.num_questions, 
+                         difficulty = S.difficulty, exam_format = S.exam_format, 
+                         time_limit_style = S.time_limit_style, time_limit_value = S.time_limit_value, 
+                         stress_mode = S.stress_mode, content_based = S.content_based, due_date = CAST(S.due_date AS TIMESTAMP),
+                         shared_questions_json = S.shared_questions_json, questions_per_set = S.questions_per_set
+            WHEN NOT MATCHED THEN
+              INSERT (assignment_id, lesson_id, title, subject, num_questions, difficulty, exam_format, time_limit_style, time_limit_value, stress_mode, content_based, due_date, created_at, shared_questions_json, questions_per_set)
+              VALUES (S.assignment_id, @lessonId, S.title, S.subject, S.num_questions, S.difficulty, S.exam_format, S.time_limit_style, S.time_limit_value, S.stress_mode, S.content_based, CAST(S.due_date AS TIMESTAMP), CURRENT_TIMESTAMP(), S.shared_questions_json, S.questions_per_set);
+          `;
+          queryParams.assignments = assignmentsToUpsert;
+        }
+
+        await bq.query({
+          query: putScript,
+          params: queryParams
+        });
 
         if (assignmentsPayload.length > 0 && tId) {
           triggerBackgroundHomeworkGeneration(tId, lessonId, assignmentsPayload, bq, projectId, title, description);
@@ -365,23 +324,16 @@ export default async function handler(req, res) {
       }
 
       try {
-        // Delete assignments
-        const deleteAssignmentsQuery = `
+        // Delete assignments and lesson in a single query script
+        const deleteScript = `
           DELETE FROM \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
-          WHERE lesson_id = @lessonId
-        `;
-        await bq.query({
-          query: deleteAssignmentsQuery,
-          params: { lessonId }
-        });
-
-        // Delete lesson
-        const deleteLessonQuery = `
+          WHERE lesson_id = @lessonId;
+          
           DELETE FROM \`${projectId}\`.\`chronos_users\`.\`lessons\`
-          WHERE lesson_id = @lessonId
+          WHERE lesson_id = @lessonId;
         `;
         await bq.query({
-          query: deleteLessonQuery,
+          query: deleteScript,
           params: { lessonId }
         });
 
@@ -730,52 +682,17 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
     const sanitizedUser = username.trim().toLowerCase();
 
     try {
-      // Verify user is a teacher or admin and get organization
-      const checkUserQuery = `
-        SELECT user_role, user_organization
-        FROM \`${projectId}\`.\`chronos_users\`.\`users\`
-        WHERE user_id = @username
-      `;
-      const [users] = await bq.query({
-        query: checkUserQuery,
-        params: { username: sanitizedUser }
-      });
-
-      if (users.length === 0) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const user = users[0];
-      if (user.user_role !== 'teacher' && user.user_role !== 'admin') {
-        return res.status(403).json({ error: 'Access denied. Only coaches and admins can access teacher portal data.' });
-      }
-
-      const organization = user.user_organization;
-      const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
-      const accessToken = generateJWT({
-        teacherId: sanitizedUser,
-        exp: Math.floor(Date.now() / 1000) + 7200 // 2-hour short-lived token
-      }, jwtSecret);
-
-      if (!organization) {
-        return res.status(200).json({
-          orgStudents: [],
-          claimedStudentIds: [],
-          lessons: [],
-          assignments: [],
-          submissions: [],
-          collectiveStats: { avgMath: 100, avgPhys: 100, avgChem: 100, overallAvg: 100, totalExams: 0, avgAccuracy: 0, strengths: [], weaknesses: [] },
-          collectiveTopicBreakdowns: {},
-          accessToken
-        });
-      }
-
-      // Fetch all data in a single consolidated BigQuery query
+      // Fetch all data including authorization, dashboard data, and student stats in a single consolidated BigQuery query
       const consolidatedQuery = `
-        WITH orgStudents AS (
+        WITH user_org AS (
+          SELECT user_role, user_organization
+          FROM \`${projectId}\`.\`chronos_users\`.\`users\`
+          WHERE user_id = @username
+        ),
+        orgStudents AS (
           SELECT 'orgStudents' AS type, TO_JSON_STRING(STRUCT(user_id, math_rating, physics_rating, chemistry_rating, created_at)) AS data
           FROM \`${projectId}\`.\`chronos_users\`.\`users\`
-          WHERE user_organization = @organization AND user_role = 'student'
+          WHERE user_organization = (SELECT user_organization FROM user_org) AND user_role = 'student'
         ),
         claimedStudents AS (
           SELECT 'claimedStudents' AS type, TO_JSON_STRING(STRUCT(student_id)) AS data
@@ -803,7 +720,36 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
               SELECT lesson_id FROM \`${projectId}\`.\`chronos_users\`.\`lessons\` WHERE teacher_id = @username
             )
           )
+        ),
+        myStudents AS (
+          SELECT user_id FROM \`${projectId}\`.\`chronos_users\`.\`users\`
+          WHERE user_organization = (SELECT user_organization FROM user_org)
+            AND user_role = 'student'
+            AND user_id IN (
+              SELECT student_id FROM \`${projectId}\`.\`chronos_users\`.\`teacher_students\` WHERE teacher_id = @username
+            )
+        ),
+        collectiveHistory AS (
+          SELECT 'collectiveHistory' AS type, TO_JSON_STRING(STRUCT(accuracy)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+          WHERE user_id IN (SELECT user_id FROM myStudents)
+        ),
+        collectiveMastery AS (
+          SELECT 'collectiveMastery' AS type, TO_JSON_STRING(STRUCT(sub_category, subject, correct, total)) AS data
+          FROM (
+            SELECT sub_category, subject, SUM(correct_count) as correct, SUM(total_count) as total
+            FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+            WHERE user_id IN (SELECT user_id FROM myStudents)
+            GROUP BY sub_category, subject
+          )
+        ),
+        collectiveBreakdowns AS (
+          SELECT 'collectiveBreakdowns' AS type, TO_JSON_STRING(STRUCT(user_id, topic, good_at, not_good_at)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+          WHERE user_id IN (SELECT user_id FROM myStudents)
         )
+        SELECT 'user_info' AS type, TO_JSON_STRING(STRUCT(user_role, user_organization)) AS data FROM user_org
+        UNION ALL
         SELECT type, data FROM orgStudents
         UNION ALL
         SELECT type, data FROM claimedStudents
@@ -813,30 +759,72 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
         SELECT type, data FROM assignments
         UNION ALL
         SELECT type, data FROM submissions
+        UNION ALL
+        SELECT type, data FROM collectiveHistory
+        UNION ALL
+        SELECT type, data FROM collectiveMastery
+        UNION ALL
+        SELECT type, data FROM collectiveBreakdowns
       `;
 
       const [rows] = await bq.query({
         query: consolidatedQuery,
-        params: { organization, username: sanitizedUser }
+        params: { username: sanitizedUser }
       });
 
+      let userRecord = null;
       const orgStudents = [];
       const claimedStudentIds = [];
       const lessons = [];
       let assignments = [];
       let submissions = [];
+      const historyRows = [];
+      const masteryRows = [];
+      const breakdownRows = [];
 
       for (const r of rows) {
         try {
           const parsed = JSON.parse(r.data);
-          if (r.type === 'orgStudents') orgStudents.push(parsed);
+          if (r.type === 'user_info') userRecord = parsed;
+          else if (r.type === 'orgStudents') orgStudents.push(parsed);
           else if (r.type === 'claimedStudents') claimedStudentIds.push(parsed.student_id);
           else if (r.type === 'lessons') lessons.push(parsed);
           else if (r.type === 'assignments') assignments.push(parsed);
           else if (r.type === 'submissions') submissions.push(parsed);
+          else if (r.type === 'collectiveHistory') historyRows.push(parsed);
+          else if (r.type === 'collectiveMastery') masteryRows.push(parsed);
+          else if (r.type === 'collectiveBreakdowns') breakdownRows.push(parsed);
         } catch (parseErr) {
           console.error("Failed to parse row data in teacher-data:", r, parseErr);
         }
+      }
+
+      if (!userRecord) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (userRecord.user_role !== 'teacher' && userRecord.user_role !== 'admin') {
+        return res.status(403).json({ error: 'Access denied. Only coaches and admins can access teacher portal data.' });
+      }
+
+      const organization = userRecord.user_organization;
+      const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
+      const accessToken = generateJWT({
+        teacherId: sanitizedUser,
+        exp: Math.floor(Date.now() / 1000) + 7200 // 2-hour short-lived token
+      }, jwtSecret);
+
+      if (!organization) {
+        return res.status(200).json({
+          orgStudents: [],
+          claimedStudentIds: [],
+          lessons: [],
+          assignments: [],
+          submissions: [],
+          collectiveStats: { avgMath: 100, avgPhys: 100, avgChem: 100, overallAvg: 100, totalExams: 0, avgAccuracy: 0, strengths: [], weaknesses: [] },
+          collectiveTopicBreakdowns: {},
+          accessToken
+        });
       }
 
       // Sort results to match original ordering
@@ -863,34 +851,11 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
         collectiveStats.avgChem = Math.round(chemSum / myStudents.length);
         collectiveStats.overallAvg = Math.round((collectiveStats.avgMath + collectiveStats.avgPhys + collectiveStats.avgChem) / 3);
 
-        // Fetch aggregate exam history for these students
-        const getCollectiveHistoryQuery = `
-          SELECT accuracy
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-          WHERE user_id IN UNNEST(@studentIds)
-        `;
-        const [historyRows] = await bq.query({
-          query: getCollectiveHistoryQuery,
-          params: { studentIds }
-        });
-
         collectiveStats.totalExams = historyRows.length;
         if (historyRows.length > 0) {
           const accSum = historyRows.reduce((acc, h) => acc + (h.accuracy || 0), 0);
           collectiveStats.avgAccuracy = Math.round((accSum / historyRows.length) * 100);
         }
-
-        // Fetch collective topic mastery
-        const getCollectiveMasteryQuery = `
-          SELECT sub_category, subject, SUM(correct_count) as correct, SUM(total_count) as total
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-          WHERE user_id IN UNNEST(@studentIds)
-          GROUP BY sub_category, subject
-        `;
-        const [masteryRows] = await bq.query({
-          query: getCollectiveMasteryQuery,
-          params: { studentIds }
-        });
 
         const collectiveStrengths = [];
         const collectiveWeaknesses = [];
@@ -907,17 +872,8 @@ Do NOT include markdown headers, backticks, or any conversational text. Return O
         collectiveStats.strengths = collectiveStrengths;
         collectiveStats.weaknesses = collectiveWeaknesses;
 
-        // Fetch collective topic breakdowns
-        const getCollectiveBreakdownsQuery = `
-          SELECT user_id, topic, good_at, not_good_at
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-          WHERE user_id IN UNNEST(@studentIds)
-        `;
         try {
-          const [breakdownRows] = await bq.query({
-            query: getCollectiveBreakdownsQuery,
-            params: { studentIds }
-          });
+          const breakdownRowsProcessed = breakdownRows;
           
           for (const row of breakdownRows) {
             const topic = row.topic;

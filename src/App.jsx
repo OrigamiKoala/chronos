@@ -9,6 +9,36 @@ import { TestScreen } from './components/TestScreen';
 import { ReviewScreen } from './components/ReviewScreen';
 import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
 
+// Cookie helpers
+function setCookie(name, value, days = 30) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+}
+
+function getCookie(name) {
+  if (typeof document === 'undefined') return '';
+  return document.cookie.split('; ').reduce((r, v) => {
+    const parts = v.split('=');
+    return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+  }, '');
+}
+
+function eraseCookie(name) {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+}
+
+// Cache helper
+const getCachedItem = (key, fallback) => {
+  if (typeof window === 'undefined') return fallback;
+  const val = localStorage.getItem(key);
+  if (!val) return fallback;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return fallback;
+  }
+};
+
 function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
     const path = typeof window !== 'undefined' ? window.location.pathname : '/';
@@ -20,33 +50,51 @@ function App() {
   });
   const [examConfig, setExamConfig] = useState(null);
   const [examResults, setExamResults] = useState(null);
+
+  // Initialize cached user cookie first to determine which storage namespace to use
+  const initialUser = typeof window !== 'undefined' ? (() => {
+    const cookieUser = getCookie('chronos_user_data');
+    return cookieUser ? JSON.parse(cookieUser) : null;
+  })() : null;
+
+  const [user, setUser] = useState(initialUser);
+
   const [ratings, setRatings] = useState(() => {
-    const saved = localStorage.getItem('mock_exam_ratings');
-    return saved ? JSON.parse(saved) : { Math: 100, Physics: 100, Chemistry: 100 };
+    return initialUser
+      ? getCachedItem('chronos_cache_ratings', { Math: 100, Physics: 100, Chemistry: 100 })
+      : getCachedItem('mock_exam_ratings', { Math: 100, Physics: 100, Chemistry: 100 });
   });
 
-  // New Database & Login States
-  const [user, setUser] = useState(null);
   const [strengths, setStrengths] = useState(() => {
-    const saved = localStorage.getItem('chronos_guest_strengths');
-    return saved ? JSON.parse(saved) : [];
+    return initialUser
+      ? getCachedItem('chronos_cache_strengths', [])
+      : getCachedItem('chronos_guest_strengths', []);
   });
+
   const [weaknesses, setWeaknesses] = useState(() => {
-    const saved = localStorage.getItem('chronos_guest_weaknesses');
-    return saved ? JSON.parse(saved) : [];
+    return initialUser
+      ? getCachedItem('chronos_cache_weaknesses', [])
+      : getCachedItem('chronos_guest_weaknesses', []);
   });
+
   const [detailedAnalysis, setDetailedAnalysis] = useState(() => {
-    const saved = localStorage.getItem('chronos_guest_detailed_analysis');
-    return saved ? JSON.parse(saved) : {};
+    return initialUser
+      ? getCachedItem('chronos_cache_detailed_analysis', {})
+      : getCachedItem('chronos_guest_detailed_analysis', {});
   });
+
   const [topicBreakdowns, setTopicBreakdowns] = useState(() => {
-    const saved = localStorage.getItem('chronos_guest_topic_breakdowns');
-    return saved ? JSON.parse(saved) : {};
+    return initialUser
+      ? getCachedItem('chronos_cache_topic_breakdowns', {})
+      : getCachedItem('chronos_guest_topic_breakdowns', {});
   });
+
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
+
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('chronos_guest_history');
-    return saved ? JSON.parse(saved) : [];
+    return initialUser
+      ? getCachedItem('chronos_cache_history', [])
+      : getCachedItem('chronos_guest_history', []);
   });
   const [selectedSubject, setSelectedSubject] = useState('Math');
   const [showConversionPrompt, setShowConversionPrompt] = useState(false);
@@ -77,14 +125,17 @@ function App() {
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [autoLoginLoading, setAutoLoginLoading] = useState(() => {
-    const savedUser = typeof window !== 'undefined' ? localStorage.getItem('chronos_logged_user') : null;
-    const savedToken = typeof window !== 'undefined' ? localStorage.getItem('chronos_logged_token') : null;
-    return !!(savedUser && savedToken);
+    if (typeof window === 'undefined') return false;
+    const cookieUser = getCookie('chronos_user_data');
+    const savedToken = getCookie('chronos_logged_token');
+    return !!(savedToken && !cookieUser);
   });
   const [loadingExamId, setLoadingExamId] = useState(null);
   const [currentExamId, setCurrentExamId] = useState(null);
   const [gradingLoading, setGradingLoading] = useState(false);
-  const [activeExam, setActiveExam] = useState(null);
+  const [activeExam, setActiveExam] = useState(() => {
+    return getCachedItem('chronos_cache_active_exam', null);
+  });
 
   const formatDate = (dateVal) => {
     if (!dateVal) return '';
@@ -135,10 +186,10 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Auto-login on mount
+  // Auto-login on mount (silent background sync)
   useEffect(() => {
-    const savedUser = localStorage.getItem('chronos_logged_user');
-    const savedToken = localStorage.getItem('chronos_logged_token');
+    const savedUser = getCookie('chronos_logged_user');
+    const savedToken = getCookie('chronos_logged_token');
     if (savedUser && savedToken) {
       fetch('/api/login', {
         method: 'POST',
@@ -157,12 +208,24 @@ function App() {
             setDetailedAnalysis(data.detailedAnalysis || {});
             setTopicBreakdowns(data.topicBreakdowns || {});
             setHistory(data.history);
-            setRatings({
+            const userRatings = {
               Math: data.user.math_rating || 100,
               Physics: data.user.physics_rating || 100,
               Chemistry: data.user.chemistry_rating || 100
-            });
+            };
+            setRatings(userRatings);
             setActiveExam(data.activeExam || null);
+
+            // Cache data in cookies and localStorage
+            setCookie('chronos_logged_user', data.user.user_id);
+            setCookie('chronos_user_data', JSON.stringify(data.user));
+            localStorage.setItem('chronos_cache_ratings', JSON.stringify(userRatings));
+            localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
+            localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
+            localStorage.setItem('chronos_cache_detailed_analysis', JSON.stringify(data.detailedAnalysis || {}));
+            localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns || {}));
+            localStorage.setItem('chronos_cache_history', JSON.stringify(data.history));
+            localStorage.setItem('chronos_cache_active_exam', JSON.stringify(data.activeExam || null));
           }
           setAutoLoginLoading(false);
         })
@@ -234,16 +297,28 @@ function App() {
           setDetailedAnalysis(data.detailedAnalysis || {});
           setTopicBreakdowns(data.topicBreakdowns || {});
           setHistory(data.history);
-          setRatings({
+          const userRatings = {
             Math: data.user.math_rating || 100,
             Physics: data.user.physics_rating || 100,
             Chemistry: data.user.chemistry_rating || 100
-          });
+          };
+          setRatings(userRatings);
           setActiveExam(data.activeExam || null);
-          localStorage.setItem('chronos_logged_user', data.user.user_id);
+
+          // Store login credentials and data in cookies and cache
+          setCookie('chronos_logged_user', data.user.user_id);
+          setCookie('chronos_user_data', JSON.stringify(data.user));
           if (data.token) {
-            localStorage.setItem('chronos_logged_token', data.token);
+            setCookie('chronos_logged_token', data.token);
           }
+          localStorage.setItem('chronos_cache_ratings', JSON.stringify(userRatings));
+          localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
+          localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
+          localStorage.setItem('chronos_cache_detailed_analysis', JSON.stringify(data.detailedAnalysis || {}));
+          localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns || {}));
+          localStorage.setItem('chronos_cache_history', JSON.stringify(data.history));
+          localStorage.setItem('chronos_cache_active_exam', JSON.stringify(data.activeExam || null));
+
           localStorage.removeItem('chronos_guest_history');
           localStorage.removeItem('chronos_guest_strengths');
           localStorage.removeItem('chronos_guest_weaknesses');
@@ -350,13 +425,21 @@ function App() {
     setTopicBreakdowns(guestTopicBreakdowns ? JSON.parse(guestTopicBreakdowns) : {});
     setSelectedTopicDetail(null);
     setActiveExam(null);
-    localStorage.removeItem('chronos_logged_user');
-    localStorage.removeItem('chronos_logged_token');
+    eraseCookie('chronos_logged_user');
+    eraseCookie('chronos_logged_token');
+    eraseCookie('chronos_user_data');
+    localStorage.removeItem('chronos_cache_ratings');
+    localStorage.removeItem('chronos_cache_strengths');
+    localStorage.removeItem('chronos_cache_weaknesses');
+    localStorage.removeItem('chronos_cache_detailed_analysis');
+    localStorage.removeItem('chronos_cache_topic_breakdowns');
+    localStorage.removeItem('chronos_cache_history');
+    localStorage.removeItem('chronos_cache_active_exam');
   };
 
   const refreshUserData = () => {
     if (!user) return;
-    const token = localStorage.getItem('chronos_logged_token') || '';
+    const token = getCookie('chronos_logged_token') || '';
     fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -371,12 +454,23 @@ function App() {
           setDetailedAnalysis(loginData.detailedAnalysis || {});
           setTopicBreakdowns(loginData.topicBreakdowns || {});
           setHistory(loginData.history || []);
-          setRatings({
+          const userRatings = {
             Math: loginData.user.math_rating,
             Physics: loginData.user.physics_rating,
             Chemistry: loginData.user.chemistry_rating
-          });
+          };
+          setRatings(userRatings);
           setActiveExam(loginData.activeExam || null);
+
+          // Update cache
+          setCookie('chronos_user_data', JSON.stringify(loginData.user));
+          localStorage.setItem('chronos_cache_ratings', JSON.stringify(userRatings));
+          localStorage.setItem('chronos_cache_strengths', JSON.stringify(loginData.strengths || []));
+          localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(loginData.weaknesses || []));
+          localStorage.setItem('chronos_cache_detailed_analysis', JSON.stringify(loginData.detailedAnalysis || {}));
+          localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(loginData.topicBreakdowns || {}));
+          localStorage.setItem('chronos_cache_history', JSON.stringify(loginData.history || []));
+          localStorage.setItem('chronos_cache_active_exam', JSON.stringify(loginData.activeExam || null));
         }
       }).catch(err => console.error("Failed to refresh user data:", err));
   };
@@ -620,7 +714,7 @@ function App() {
           }
 
           if (submitData.results) {
-            const wrongProblems = submitData.results.filter(r => !r.isCorrect).map(r => ({
+            const wrongProblems = submitData.results.filter(r => r.isCorrect === false).map(r => ({
               exam_id: examIdStr,
               question_id: r.id || String(Date.now() + Math.random()),
               subject,
@@ -648,6 +742,7 @@ function App() {
             const localWeaknesses = [];
 
             for (const r of submitData.results) {
+              if (r.isCorrect === null || r.isCorrect === undefined) continue;
               const topic = r.topic || 'General';
               if (!topicStats[topic]) topicStats[topic] = { correct: 0, total: 0 };
               topicStats[topic].total += 1;

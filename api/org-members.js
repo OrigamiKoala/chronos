@@ -51,38 +51,30 @@ export default async function handler(req, res) {
     }
 
     try {
-      // Verify operator is an admin in the target user's organization
-      const checkOpQuery = `
-        SELECT user_role, user_organization
+      // Verify operator and target users in a single SELECT query
+      const checkUsersQuery = `
+        SELECT user_id, user_role, user_organization
         FROM \`${projectId}\`.\`chronos_users\`.\`users\`
-        WHERE user_id = @operator
+        WHERE user_id = @operator OR user_id IN UNNEST(@targets)
       `;
-      const [opUsers] = await bq.query({
-        query: checkOpQuery,
-        params: { operator }
+      const [users] = await bq.query({
+        query: checkUsersQuery,
+        params: { operator, targets }
       });
 
-      if (opUsers.length === 0) {
+      const opUser = users.find(u => u.user_id === operator);
+      if (!opUser) {
         return res.status(403).json({ error: 'Operator user not found' });
       }
 
-      const opUser = opUsers[0];
       const isSelfUpdate = targets.length === 1 && targets[0] === operator;
 
       if (opUser.user_role !== 'admin' && !isSelfUpdate) {
         return res.status(403).json({ error: 'Permission denied. Only admins can update user profiles.' });
       }
 
-      // Fetch target users' organization and role to ensure they belong to the same organization
-      const checkTargetQuery = `
-        SELECT user_id, user_role, user_organization
-        FROM \`${projectId}\`.\`chronos_users\`.\`users\`
-        WHERE user_id IN UNNEST(@targets)
-      `;
-      const [targetUsers] = await bq.query({
-        query: checkTargetQuery,
-        params: { targets }
-      });
+      // Filter target users from the unified query result
+      const targetUsers = users.filter(u => targets.includes(u.user_id));
 
       if (targetUsers.length === 0) {
         return res.status(404).json({ error: 'Target users not found' });

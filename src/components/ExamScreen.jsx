@@ -613,15 +613,24 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     }
   };
 
+  // 1. Debounced autosave for answer edits and config changes (unrated & rated)
   useEffect(() => {
-    const isUnrated = !isRated || config.timeLimitStyle === 'none';
-    if (isUnrated && problems.length > 0 && !loading) {
+    if (problems.length > 0 && !loading) {
       const delayDebounce = setTimeout(() => {
         saveActiveExam(false, { ...config, isRated });
       }, 3000);
       return () => clearTimeout(delayDebounce);
     }
-  }, [answers, frqSubmissions, currentQuestionIndex, problems, loading, config, isRated, activeSetIndex, setTimesLeft, setsTimedOut]);
+  }, [answers, frqSubmissions, problems, loading, config, isRated, activeSetIndex, setTimesLeft, setsTimedOut]);
+
+  // 2. Immediate autosave when currentQuestionIndex changes (user moves on to next question)
+  const lastSavedIndexRef = useRef(currentQuestionIndex);
+  useEffect(() => {
+    if (problems.length > 0 && !loading && lastSavedIndexRef.current !== currentQuestionIndex) {
+      saveActiveExam(false, { ...config, isRated });
+      lastSavedIndexRef.current = currentQuestionIndex;
+    }
+  }, [currentQuestionIndex, problems, loading, config, isRated]);
 
   const saveCurrentFRQState = useCallback(() => {
     if (!problem || problem.type !== 'free_response') {

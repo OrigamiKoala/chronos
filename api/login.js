@@ -142,113 +142,89 @@ export default async function handler(req, res) {
     // 0. Ensure recovery and password columns exist (once per cold start)
     if (!schemaEnsured) {
       try {
-        const alterQuery = `
+        const setupQuery = `
           ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`users\`
           ADD COLUMN IF NOT EXISTS password STRING,
           ADD COLUMN IF NOT EXISTS recovery_question STRING,
           ADD COLUMN IF NOT EXISTS recovery_answer STRING,
           ADD COLUMN IF NOT EXISTS elo_version INT64,
           ADD COLUMN IF NOT EXISTS user_role STRING,
-          ADD COLUMN IF NOT EXISTS user_organization STRING
-        `;
-        await bq.query(alterQuery);
+          ADD COLUMN IF NOT EXISTS user_organization STRING;
 
-        await Promise.all([
-          bq.query(`
-            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`teacher_students\` (
-              teacher_id STRING,
-              student_id STRING,
-              created_at TIMESTAMP
-            )
-          `),
-          bq.query(`
-            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`lessons\` (
-              lesson_id STRING,
-              teacher_id STRING,
-              organization STRING,
-              title STRING,
-              description STRING,
-              created_at TIMESTAMP
-            )
-          `),
-          bq.query(`
-            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` (
-              assignment_id STRING,
-              lesson_id STRING,
-              title STRING,
-              subject STRING,
-              num_questions INT64,
-              difficulty INT64,
-              exam_format STRING,
-              time_limit_style STRING,
-              time_limit_value INT64,
-              stress_mode STRING,
-              due_date TIMESTAMP,
-              created_at TIMESTAMP
-            )
-          `),
-          bq.query(`
-            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
-            ADD COLUMN IF NOT EXISTS content_based BOOL
-          `),
-          bq.query(`
-            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
-            ADD COLUMN IF NOT EXISTS shared_questions_json STRING
-          `),
-          bq.query(`
-            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
-            ADD COLUMN IF NOT EXISTS questions_per_set INT64
-          `),
-          bq.query(`
-            ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
-            ADD COLUMN IF NOT EXISTS assignment_id STRING
-          `),
-          bq.query(`
-            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_active_exams\` (
-              user_id STRING NOT NULL,
-              exam_id STRING NOT NULL,
-              subject STRING NOT NULL,
-              config_json STRING NOT NULL,
-              problems_json STRING NOT NULL,
-              answers_json STRING NOT NULL,
-              frq_submissions_json STRING,
-              current_question_index INT64 NOT NULL,
-              created_at TIMESTAMP NOT NULL,
-              updated_at TIMESTAMP NOT NULL
-            )
-          `),
-          bq.query(`
-            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_insights\` (
-              insight_id STRING NOT NULL,
-              student_id STRING NOT NULL,
-              teacher_id STRING NOT NULL,
-              lesson_id STRING NOT NULL,
-              summary STRING NOT NULL,
-              suggestions STRING NOT NULL,
-              progress_status STRING NOT NULL,
-              created_at TIMESTAMP NOT NULL
-            )
-          `),
-          bq.query(`
-            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` (
-              question_id STRING NOT NULL,
-              subject STRING NOT NULL,
-              topic STRING NOT NULL,
-              difficulty INT64 NOT NULL,
-              type STRING NOT NULL,
-              question_json STRING NOT NULL,
-              created_at TIMESTAMP NOT NULL
-            )
-          `),
-          bq.query(`
-            CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` (
-              assignment_id STRING NOT NULL,
-              student_id STRING NOT NULL,
-              questions_json STRING NOT NULL,
-              created_at TIMESTAMP NOT NULL
-            )
-          `)
-        ]);
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`teacher_students\` (
+            teacher_id STRING,
+            student_id STRING,
+            created_at TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`lessons\` (
+            lesson_id STRING,
+            teacher_id STRING,
+            organization STRING,
+            title STRING,
+            description STRING,
+            created_at TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`homework_assignments\` (
+            assignment_id STRING,
+            lesson_id STRING,
+            title STRING,
+            subject STRING,
+            num_questions INT64,
+            difficulty INT64,
+            exam_format STRING,
+            time_limit_style STRING,
+            time_limit_value INT64,
+            stress_mode STRING,
+            due_date TIMESTAMP,
+            created_at TIMESTAMP
+          );
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+          ADD COLUMN IF NOT EXISTS content_based BOOL;
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+          ADD COLUMN IF NOT EXISTS shared_questions_json STRING;
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`homework_assignments\`
+          ADD COLUMN IF NOT EXISTS questions_per_set INT64;
+          ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_exam_history\`
+          ADD COLUMN IF NOT EXISTS assignment_id STRING;
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_active_exams\` (
+            user_id STRING NOT NULL,
+            exam_id STRING NOT NULL,
+            subject STRING NOT NULL,
+            config_json STRING NOT NULL,
+            problems_json STRING NOT NULL,
+            answers_json STRING NOT NULL,
+            frq_submissions_json STRING,
+            current_question_index INT64 NOT NULL,
+            created_at TIMESTAMP NOT NULL,
+            updated_at TIMESTAMP NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_insights\` (
+            insight_id STRING NOT NULL,
+            student_id STRING NOT NULL,
+            teacher_id STRING NOT NULL,
+            lesson_id STRING NOT NULL,
+            summary STRING NOT NULL,
+            suggestions STRING NOT NULL,
+            progress_status STRING NOT NULL,
+            created_at TIMESTAMP NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` (
+            question_id STRING NOT NULL,
+            subject STRING NOT NULL,
+            topic STRING NOT NULL,
+            difficulty INT64 NOT NULL,
+            type STRING NOT NULL,
+            question_json STRING NOT NULL,
+            created_at TIMESTAMP NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`student_homework_questions\` (
+            assignment_id STRING NOT NULL,
+            student_id STRING NOT NULL,
+            questions_json STRING NOT NULL,
+            created_at TIMESTAMP NOT NULL
+          );
+        `;
+        await bq.query(setupQuery);
       } catch (e) {
         console.warn("Alter table error or already exists:", e);
       }
