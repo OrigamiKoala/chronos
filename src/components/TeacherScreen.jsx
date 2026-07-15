@@ -49,6 +49,10 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
 export function TeacherScreen({ user, onBack, autoLoginLoading }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [savingTailoredHw, setSavingTailoredHw] = useState(false);
+  const [claimingStudentId, setClaimingStudentId] = useState(null);
+  const [deletingLessonId, setDeletingLessonId] = useState(null);
+  const [remarkingQuestionId, setRemarkingQuestionId] = useState(null);
 
   // Chatbot states
   const [chatMessages, setChatMessages] = useState([
@@ -352,6 +356,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
 
   const handleSaveTailoredQuestions = async (assignmentId, studentId) => {
     const key = `${assignmentId}:${studentId}`;
+    setSavingTailoredHw(true);
     try {
       const res = await fetch('/api/teacher-data?route=homework-questions', {
         method: 'POST',
@@ -376,6 +381,8 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
     } catch (err) {
       console.error(err);
       alert('Error saving tailored questions.');
+    } finally {
+      setSavingTailoredHw(false);
     }
   };
 
@@ -425,6 +432,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
   }, [user?.user_id]);
 
   const handleClaimStudent = async (studentId, isClaimed) => {
+    setClaimingStudentId(studentId);
     try {
       const res = await fetch('/api/teacher-data', {
         method: 'POST',
@@ -442,6 +450,8 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setClaimingStudentId(null);
     }
   };
 
@@ -526,6 +536,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
     if (!confirm('Are you sure you want to delete this lesson plan? This will automatically delete all associated homework assignments.')) {
       return;
     }
+    setDeletingLessonId(lessonId);
     try {
       const res = await fetch(`/api/lessons?lessonId=${encodeURIComponent(lessonId)}`, {
         method: 'DELETE'
@@ -539,6 +550,8 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
     } catch (e) {
       console.error(e);
       alert('Error deleting lesson.');
+    } finally {
+      setDeletingLessonId(null);
     }
   };
 
@@ -801,8 +814,9 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                       className={`btn ${isClaimed ? 'btn-outline' : 'btn-primary'}`}
                       style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }}
                       onClick={() => handleClaimStudent(student.user_id, isClaimed)}
+                      disabled={claimingStudentId === student.user_id}
                     >
-                      {isClaimed ? 'Unclaim' : 'Claim'}
+                      {claimingStudentId === student.user_id ? 'Updating...' : (isClaimed ? 'Unclaim' : 'Claim')}
                     </button>
                   </div>
                 );
@@ -1316,7 +1330,9 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                       <button
                         className="btn btn-outline"
                         style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem', height: 'auto', minHeight: 'auto', color: 'var(--success)', borderColor: 'var(--success)' }}
+                        disabled={remarkingQuestionId === r.id}
                         onClick={async () => {
+                          setRemarkingQuestionId(r.id);
                           try {
                             const res = await fetch('/api/remark-correct', {
                               method: 'POST',
@@ -1338,10 +1354,20 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                             });
                           } catch (e) {
                             alert('Failed to connect to server');
+                          } finally {
+                            setRemarkingQuestionId(null);
                           }
                         }}
                       >
-                        <ThumbsUp size={14} /> Mark Correct
+                        {remarkingQuestionId === r.id ? (
+                          <>
+                            <Loader2 className="animate-spin" size={14} /> Updating...
+                          </>
+                        ) : (
+                          <>
+                            <ThumbsUp size={14} /> Mark Correct
+                          </>
+                        )}
                       </button>
                     </div>
                   )}
@@ -1368,7 +1394,14 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
               </h3>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button className="btn btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }} onClick={() => handleStartEditLesson(selectedLesson)}>Edit</button>
-                <button className="btn btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={() => handleDeleteLesson(selectedLesson.lesson_id)}>Delete</button>
+                 <button
+                   className="btn btn-outline"
+                   style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                   onClick={() => handleDeleteLesson(selectedLesson.lesson_id)}
+                   disabled={deletingLessonId === selectedLesson.lesson_id}
+                 >
+                   {deletingLessonId === selectedLesson.lesson_id ? 'Deleting...' : 'Delete'}
+                 </button>
                 <button className="btn btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }} onClick={() => setSelectedLesson(null)}>Close</button>
               </div>
             </div>
@@ -1522,25 +1555,27 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                                     )}
 
                                     {isEditing && (
-                                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <button
-                                          type="button"
-                                          className="btn btn-primary"
-                                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto' }}
-                                          onClick={() => handleSaveTailoredQuestions(hw.assignment_id, student.user_id)}
-                                        >
-                                          Save
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="btn btn-outline"
-                                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto' }}
-                                          onClick={() => setEditingStudentHwKey(null)}
-                                        >
-                                          Cancel
-                                        </button>
-                                      </div>
-                                    )}
+                                       <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                         <button
+                                           type="button"
+                                           className="btn btn-primary"
+                                           style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto' }}
+                                           onClick={() => handleSaveTailoredQuestions(hw.assignment_id, student.user_id)}
+                                           disabled={savingTailoredHw}
+                                         >
+                                           {savingTailoredHw ? 'Saving...' : 'Save'}
+                                         </button>
+                                         <button
+                                           type="button"
+                                           className="btn btn-outline"
+                                           style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto' }}
+                                           onClick={() => setEditingStudentHwKey(null)}
+                                           disabled={savingTailoredHw}
+                                         >
+                                           Cancel
+                                         </button>
+                                       </div>
+                                     )}
                                   </div>
 
                                   {questions && !isEditing && (

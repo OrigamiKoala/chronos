@@ -492,10 +492,13 @@ function App() {
     setCurrentScreen('exam');
   };
 
+  const [deletingExam, setDeletingExam] = useState(false);
+
   const handleDeleteExam = async () => {
     if (!activeExam) return;
     if (!window.confirm("Are you sure you want to discard this active exam? All in-progress work will be permanently lost.")) return;
 
+    setDeletingExam(true);
     try {
       const response = await fetch('/api/exams?route=delete-active-exam', {
         method: 'POST',
@@ -508,6 +511,8 @@ function App() {
 
       if (response.ok) {
         setActiveExam(null);
+        // Clear cached active exam
+        localStorage.removeItem('chronos_cache_active_exam');
       } else {
         const errData = await response.json().catch(() => ({}));
         alert(errData.error || 'Failed to delete active exam');
@@ -515,6 +520,8 @@ function App() {
     } catch (err) {
       console.error('Delete active exam failed:', err);
       alert('Network error. Failed to delete active exam.');
+    } finally {
+      setDeletingExam(false);
     }
   };
 
@@ -1013,18 +1020,19 @@ function App() {
                             Resume
                           </button>
                           <button
-                            className="btn btn-outline"
-                            style={{
-                              padding: '0.4rem 1rem',
-                              fontSize: '0.85rem',
-                              borderColor: '#ef4444',
-                              color: '#ef4444',
-                              background: 'transparent'
-                            }}
-                            onClick={handleDeleteExam}
-                          >
-                            Delete
-                          </button>
+                             className="btn btn-outline"
+                             style={{
+                               padding: '0.4rem 1rem',
+                               fontSize: '0.85rem',
+                               borderColor: '#ef4444',
+                               color: '#ef4444',
+                               background: 'transparent'
+                             }}
+                             onClick={handleDeleteExam}
+                             disabled={deletingExam}
+                           >
+                             {deletingExam ? 'Discarding...' : 'Delete'}
+                           </button>
                         </div>
 
                       </div>

@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, AlertCircle, CheckCircle, HelpCircle, Loader2, Tag, Inbox, Play, BookOpenCheck } from 'lucide-react';
-import { ChemicalText } from './ChemicalText';
+import { ChemicalText, SmilesRenderer } from './ChemicalText';
+import { isSmiles } from './chemicalHelpers.js';
+
+const renderChemicalValue = (val, size = 70) => {
+  if (!val) return 'No answer';
+  if (isSmiles(val)) {
+    return <SmilesRenderer smiles={val} width={size} height={size} theme="dark" />;
+  }
+  return <ChemicalText text={val} theme="dark" defaultWidth={size} defaultHeight={size} />;
+};
 
 export function ReviewScreen({ user, onBack }) {
   const [loading, setLoading] = useState(true);
@@ -120,7 +129,7 @@ export function ReviewScreen({ user, onBack }) {
         });
         if (!res.ok) throw new Error('Failed to fetch explanation from server');
         const data = await res.json();
-        
+
         // Update local state
         setWrongQuestions(prev => prev.map((item, idx) => {
           if (idx === index) {
@@ -203,7 +212,7 @@ export function ReviewScreen({ user, onBack }) {
   const handleTestSubmit = async () => {
     const q = testQuestions[currentTestIndex];
     const isCorrect = userSelectedAnswer.trim().toLowerCase() === q.correct_answer.trim().toLowerCase();
-    
+
     setCurrentIsCorrect(isCorrect);
     setSubmittedCurrent(true);
     setTestResults(prev => [...prev, isCorrect]);
@@ -232,7 +241,7 @@ export function ReviewScreen({ user, onBack }) {
           if (!res.ok) throw new Error('Failed to get explanation');
           const data = await res.json();
           setCurrentExplanation(data.explanation);
-          
+
           // Update test questions state to cache explanation
           setTestQuestions(prev => prev.map((item, idx) => {
             if (idx === currentTestIndex) {
@@ -256,7 +265,7 @@ export function ReviewScreen({ user, onBack }) {
           if (!res.ok) throw new Error('Failed to get explanation');
           const data = await res.json();
           setCurrentExplanation(data.explanation);
-          
+
           setTestQuestions(prev => prev.map((item, idx) => {
             if (idx === currentTestIndex) {
               return { ...item, ai_explanation: data.explanation };
@@ -283,6 +292,8 @@ export function ReviewScreen({ user, onBack }) {
     }
   };
 
+  const [submittingResults, setSubmittingResults] = useState(false);
+
   // Next question / Finish test
   const handleTestNext = async () => {
     if (currentTestIndex < testQuestions.length - 1) {
@@ -298,6 +309,7 @@ export function ReviewScreen({ user, onBack }) {
       }));
 
       if (user) {
+        setSubmittingResults(true);
         try {
           await fetch(`/api/review?action=submit-results`, {
             method: 'POST',
@@ -309,6 +321,8 @@ export function ReviewScreen({ user, onBack }) {
           });
         } catch (err) {
           console.error("Failed to submit spaced rep updates to server:", err);
+        } finally {
+          setSubmittingResults(false);
         }
       } else {
         // Guest mode SM-2 execution on client
@@ -374,7 +388,7 @@ export function ReviewScreen({ user, onBack }) {
     const nextReview = q.spaced_rep?.next_review_at || q.next_review_at;
     const diffMs = new Date(nextReview).getTime() - now;
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    
+
     return (
       <span className="badge badge-scheduled" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
         Box {box} • Scheduled in {diffDays} {diffDays === 1 ? 'day' : 'days'}
@@ -450,7 +464,7 @@ export function ReviewScreen({ user, onBack }) {
                     }}>
                       {label}
                     </span>
-                    <span style={{ flex: 1 }}><ChemicalText text={opt} /></span>
+                    <span style={{ flex: 1 }}>{renderChemicalValue(opt)}</span>
                   </button>
                 );
               })}
@@ -508,7 +522,7 @@ export function ReviewScreen({ user, onBack }) {
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', padding: '1rem 1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
                 <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Correct Answer:</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                  {q.correct_answer}
+                  {renderChemicalValue(q.correct_answer)}
                 </div>
               </div>
 
@@ -529,9 +543,17 @@ export function ReviewScreen({ user, onBack }) {
               <button
                 className="btn btn-outline"
                 onClick={handleTestNext}
-                style={{ width: '100%', padding: '1rem', display: 'flex', justifyContent: 'center' }}
+                disabled={submittingResults}
+                style={{ width: '100%', padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
               >
-                {currentTestIndex < testQuestions.length - 1 ? 'Next Question' : 'Finish Session'}
+                {submittingResults ? (
+                  <>
+                    <Loader2 className="animate-spin" size={16} />
+                    Finishing...
+                  </>
+                ) : (
+                  currentTestIndex < testQuestions.length - 1 ? 'Next Question' : 'Finish Session'
+                )}
               </button>
             </div>
           )}
@@ -614,7 +636,7 @@ export function ReviewScreen({ user, onBack }) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
         <div>
-          <h2 className="text-gradient">Spaced Repetition Review</h2>
+          <h2 className="text-gradient">Review</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.25rem' }}>
             Review past mistakes and lock in key concepts using scheduled practice.
           </p>
@@ -635,7 +657,7 @@ export function ReviewScreen({ user, onBack }) {
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 0' }}>
           <Loader2 className="animate-spin text-gradient" size={48} />
-          <h4 style={{ marginTop: '1.5rem', color: 'var(--text-secondary)' }}>Loading wrong questions...</h4>
+          <h4 style={{ marginTop: '1.5rem', color: 'var(--text-secondary)' }}>Loading...</h4>
         </div>
       ) : error ? (
         <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', border: '1px solid var(--danger-glass)' }}>
@@ -681,8 +703,6 @@ export function ReviewScreen({ user, onBack }) {
 
           {/* Filters Bar */}
           <div className="glass-panel" style={{ padding: '1rem var(--card-padding)', marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Filter Results:</span>
-            
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Subject:</span>
               <select
@@ -814,7 +834,7 @@ export function ReviewScreen({ user, onBack }) {
                         />
                       ) : q.frq_submission?.value && q.frq_submission.value !== '[Time Out]' ? (
                         <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-                          {q.frq_submission.value}
+                          {renderChemicalValue(q.frq_submission.value)}
                         </div>
                       ) : q.user_answer === '[Drawing Submission]' ? (
                         <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
@@ -840,11 +860,11 @@ export function ReviewScreen({ user, onBack }) {
                   }}>
                     <div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Your Attempted Answer:</div>
-                      <div style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--danger)' }}>{q.user_answer || 'No answer'}</div>
+                      <div style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--danger)' }}>{renderChemicalValue(q.user_answer)}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Correct Answer:</div>
-                      <div style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--success)' }}>{q.correct_answer}</div>
+                      <div style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--success)' }}>{renderChemicalValue(q.correct_answer)}</div>
                     </div>
                   </div>
 

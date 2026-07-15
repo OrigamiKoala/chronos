@@ -109,7 +109,10 @@ export function AdminScreen({ user, onBack, autoLoginLoading }) {
     }
   };
 
+  const [memberActionLoading, setMemberActionLoading] = useState(false);
+
   const handleUpdateRole = async (targetUser, newRole) => {
+    setMemberActionLoading(true);
     try {
       const res = await fetch('/api/org-members', {
         method: 'POST',
@@ -130,11 +133,14 @@ export function AdminScreen({ user, onBack, autoLoginLoading }) {
     } catch (e) {
       console.error(e);
       alert('Error updating member role');
+    } finally {
+      setMemberActionLoading(false);
     }
   };
 
   const handleRemoveMember = async (targetUser) => {
     if (confirm(`Remove ${targetUser} from organization?`)) {
+      setMemberActionLoading(true);
       try {
         const res = await fetch('/api/org-members', {
           method: 'POST',
@@ -155,6 +161,8 @@ export function AdminScreen({ user, onBack, autoLoginLoading }) {
       } catch (e) {
         console.error(e);
         alert('Error removing member');
+      } finally {
+        setMemberActionLoading(false);
       }
     }
   };
@@ -332,6 +340,7 @@ export function AdminScreen({ user, onBack, autoLoginLoading }) {
                                     style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', width: 'auto', minWidth: '85px', height: 'auto', minHeight: 'auto' }}
                                     value={m.user_role || 'student'}
                                     onChange={(e) => handleUpdateRole(m.user_id, e.target.value)}
+                                    disabled={memberActionLoading}
                                   >
                                     <option value="student">Student</option>
                                     <option value="teacher">Teacher</option>
@@ -341,8 +350,9 @@ export function AdminScreen({ user, onBack, autoLoginLoading }) {
                                     className="btn btn-outline"
                                     style={{ padding: '0.15rem 0.35rem', fontSize: '0.7rem', height: 'auto', minHeight: 'auto', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
                                     onClick={() => handleRemoveMember(m.user_id)}
+                                    disabled={memberActionLoading}
                                   >
-                                    Remove
+                                    {memberActionLoading ? '...' : 'Remove'}
                                   </button>
                                 </div>
                               )}
