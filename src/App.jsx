@@ -535,6 +535,7 @@ function App() {
           return;
         }
         setActiveExam(null);
+        setExamConfig(null);
         // Overwrite results, rating, and change with AI-graded values if present
         if (submitData.results) {
           setExamResults({

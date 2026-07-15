@@ -296,10 +296,18 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
     return config.isRated !== false;
   });
   const [saving, setSaving] = useState(false);
-  const [totalTimeLeft, setTotalTimeLeft] = useState(() => config.timeLimitWholeTest * 60);
-  const [questionTimesLeft, setQuestionTimesLeft] = useState(() =>
-    Array(config.numQuestions).fill(isWholeTestMode ? null : config.timeLimitPerQuestion)
-  );
+  const [totalTimeLeft, setTotalTimeLeft] = useState(() => {
+    if (resumeState && resumeState.config && resumeState.config.totalTimeLeft !== undefined) {
+      return resumeState.config.totalTimeLeft;
+    }
+    return config.timeLimitWholeTest * 60;
+  });
+  const [questionTimesLeft, setQuestionTimesLeft] = useState(() => {
+    if (resumeState && resumeState.config && resumeState.config.questionTimesLeft) {
+      return resumeState.config.questionTimesLeft;
+    }
+    return Array(config.numQuestions).fill(isWholeTestMode ? null : config.timeLimitPerQuestion);
+  });
   const [answers, setAnswers] = useState(() =>
     resumeState ? resumeState.answers : Array(config.numQuestions).fill('')
   );
@@ -579,7 +587,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       ...updatedConfig,
       activeSetIndex,
       setTimesLeft,
-      setsTimedOut
+      setsTimedOut,
+      totalTimeLeft,
+      questionTimesLeft
     };
     try {
       await fetch('/api/exams?route=save-active-exam', {
