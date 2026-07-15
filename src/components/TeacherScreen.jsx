@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, BookOpen, Plus, Loader2, ShieldAlert, CheckCircle, XCircle, Sparkles, Send, Trash2 } from 'lucide-react';
+import { Users, BookOpen, Plus, Loader2, ShieldAlert, CheckCircle, XCircle, Sparkles, Send, Trash2, ThumbsUp } from 'lucide-react';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { StudentAIInsights } from './StudentAIInsights';
 import { ChemicalText, SmilesRenderer } from './ChemicalText';
@@ -1288,6 +1288,40 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                       </span>
                     </div>
                   </div>
+
+                  {!r.isCorrect && (
+                    <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        className="btn btn-outline"
+                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem', height: 'auto', minHeight: 'auto', color: 'var(--success)', borderColor: 'var(--success)' }}
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/remark-correct', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                username: reviewExam.user_id,
+                                examId: reviewExam.exam_id,
+                                questionId: r.id,
+                                subject: reviewExam.subject,
+                                topic: r.topic || 'General',
+                              }),
+                            });
+                            if (!res.ok) { alert('Failed to remark question'); return; }
+                            setReviewExam(prev => {
+                              const newResults = prev.results.map(q => q.id === r.id ? { ...q, isCorrect: true } : q);
+                              const correctCount = newResults.filter(q => q.isCorrect).length;
+                              return { ...prev, results: newResults, accuracy: correctCount / newResults.length };
+                            });
+                          } catch (e) {
+                            alert('Failed to connect to server');
+                          }
+                        }}
+                      >
+                        <ThumbsUp size={14} /> Mark Correct
+                      </button>
+                    </div>
+                  )}
 
                   {r.feedback && (
                     <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', borderLeft: '3px solid var(--accent-primary)', paddingLeft: '0.75rem', color: 'var(--text-secondary)' }}>
