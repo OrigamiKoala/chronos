@@ -22,6 +22,12 @@ export function ReviewScreen({ user, onBack }) {
   // Reload trigger for updating data from event handlers
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTopic, selectedSubject, selectedTag]);
+
   // Test mode states
   const [testMode, setTestMode] = useState(false); // false, 'test', 'summary'
   const [testQuestions, setTestQuestions] = useState([]);
@@ -100,17 +106,29 @@ export function ReviewScreen({ user, onBack }) {
   const subjectsList = Array.from(new Set(wrongQuestions.map(q => q.subject).filter(Boolean)));
   const tagsList = Array.from(new Set(wrongQuestions.map(q => q.tag).filter(Boolean)));
 
-  // Filter wrong questions
-  const filteredWrong = wrongQuestions.filter(q => {
-    const topicMatch = selectedTopic === 'all' || q.topic === selectedTopic;
-    const subjectMatch = selectedSubject === 'all' || q.subject === selectedSubject;
-    const tagMatch = selectedTag === 'all' || q.tag === selectedTag;
-    return topicMatch && subjectMatch && tagMatch;
-  });
+  // Filter and sort wrong questions (newest to oldest)
+  const filteredWrong = wrongQuestions
+    .filter(q => {
+      const topicMatch = selectedTopic === 'all' || q.topic === selectedTopic;
+      const subjectMatch = selectedSubject === 'all' || q.subject === selectedSubject;
+      const tagMatch = selectedTag === 'all' || q.tag === selectedTag;
+      return topicMatch && subjectMatch && tagMatch;
+    })
+    .sort((a, b) => {
+      const aTime = new Date(a.created_at || 0).getTime();
+      const bTime = new Date(b.created_at || 0).getTime();
+      return bTime - aTime;
+    });
+
+  const itemsPerPage = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredWrong.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedWrong = filteredWrong.slice(startIndex, startIndex + itemsPerPage);
 
   // Request explanation for a question in the main list
-  const askExplanationForQuestion = async (q, index) => {
-    setLoadingExpls(prev => ({ ...prev, [index]: true }));
+  const askExplanationForQuestion = async (q) => {
+    const qKey = q.question_id || q.question_text;
+    setLoadingExpls(prev => ({ ...prev, [qKey]: true }));
     try {
       if (user) {
         const res = await fetch('/api/review?action=ask-explanation', {
@@ -131,8 +149,8 @@ export function ReviewScreen({ user, onBack }) {
         const data = await res.json();
 
         // Update local state
-        setWrongQuestions(prev => prev.map((item, idx) => {
-          if (idx === index) {
+        setWrongQuestions(prev => prev.map(item => {
+          if (item.question_id === q.question_id || item.question_text === q.question_text) {
             return { ...item, ai_explanation: data.explanation };
           }
           return item;
@@ -155,20 +173,22 @@ export function ReviewScreen({ user, onBack }) {
         const data = await res.json();
 
         // Update local state and localStorage
-        const updatedQuestions = wrongQuestions.map((item, idx) => {
-          if (idx === index) {
-            return { ...item, ai_explanation: data.explanation };
-          }
-          return item;
+        setWrongQuestions(prev => {
+          const updated = prev.map(item => {
+            if (item.question_id === q.question_id || item.question_text === q.question_text) {
+              return { ...item, ai_explanation: data.explanation };
+            }
+            return item;
+          });
+          localStorage.setItem('chronos_guest_wrong_problems', JSON.stringify(updated));
+          return updated;
         });
-        setWrongQuestions(updatedQuestions);
-        localStorage.setItem('chronos_guest_wrong_problems', JSON.stringify(updatedQuestions));
       }
     } catch (err) {
       console.error(err);
       alert('Could not generate explanation. Please try again.');
     } finally {
-      setLoadingExpls(prev => ({ ...prev, [index]: false }));
+      setLoadingExpls(prev => ({ ...prev, [qKey]: false }));
     }
   };
 
@@ -776,7 +796,8 @@ export function ReviewScreen({ user, onBack }) {
 
           {/* List of wrong questions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {filteredWrong.map((q, idx) => {
+            {paginatedWrong.map((q, idx) => {
+              const qKey = q.question_id || q.question_text;
               return (
                 <div key={idx} className="glass-panel" style={{ padding: '1.5rem', transition: 'var(--transition-fast)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
@@ -889,11 +910,11 @@ export function ReviewScreen({ user, onBack }) {
                   ) : (
                     <button
                       className="btn btn-outline"
-                      disabled={loadingExpls[idx]}
-                      onClick={() => askExplanationForQuestion(q, idx)}
+                      disabled={loadingExpls[qKey]}
+                      onClick={() => askExplanationForQuestion(q)}
                       style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
-                      {loadingExpls[idx] ? (
+                      {loadingExpls[qKey] ? (
                         <>
                           <Loader2 size={12} className="animate-spin" /> Fetching Explanation...
                         </>
@@ -908,6 +929,31 @@ export function ReviewScreen({ user, onBack }) {
               );
             })}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                className="btn btn-outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+              >
+                Previous
+              </button>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                Page <strong>{currentPage}</strong> of {totalPages}
+              </span>
+              <button
+                className="btn btn-outline"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
