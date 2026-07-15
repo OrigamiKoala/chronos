@@ -1056,7 +1056,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                         {filteredS.map((s, i) => (
                           <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === s.topic && prev?.type === 'strength' ? null : { topic: s.topic, subject: s.subject, type: 'strength' })} style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--success)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === s.topic && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent', transition: 'all 0.2s' }}>
-                            {s.subject !== 'All' && selectedSubjectFilter === 'All' ? `${s.topic} (${s.subject})` : s.topic}
+                            {s.topic}
                           </span>
                         ))}
                       </div>
@@ -1068,7 +1068,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                         {filteredW.map((w, i) => (
                           <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === w.topic && prev?.type === 'weakness' ? null : { topic: w.topic, subject: w.subject, type: 'weakness' })} style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--danger)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === w.topic && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent', transition: 'all 0.2s' }}>
-                            {w.subject !== 'All' && selectedSubjectFilter === 'All' ? `${w.topic} (${w.subject})` : w.topic}
+                            {w.topic}
                           </span>
                         ))}
                       </div>
@@ -1080,7 +1080,6 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                       <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                         <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
-                        {selectedTopicDetail.subject && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.4rem' }}>({selectedTopicDetail.subject})</span>}
                       </h4>
                       <button className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }} onClick={() => setSelectedTopicDetail(null)}>Close</button>
                     </div>
