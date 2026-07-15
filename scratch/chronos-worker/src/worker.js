@@ -1,3 +1,4 @@
+import { GoogleGenAI } from '@google/genai';
 import { getAccessToken } from './auth.js';
 import { runQuery } from './bigquery.js';
 import { md5 } from './md5.js';
@@ -918,7 +919,8 @@ async function executeWithRetry(apiKeys, models, apiCallFn) {
         if (i > 0) {
           console.warn(`[API Rotation] Selected key failed. Rotating to backup key ${i + 1} for model ${currentModel}.`);
         }
-        const result = await apiCallFn(apiKey, currentModel);
+        const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 300_000 } });
+        const result = await apiCallFn(ai, currentModel);
         console.log(`[AI Success] Successfully received response from model ${currentModel}`);
         return result;
       } catch (err) {
@@ -941,6 +943,10 @@ async function executeWithRetry(apiKeys, models, apiCallFn) {
         } else if (status === 429) {
           console.warn(`[429] Rate limit hit for ${currentModel} on key.`);
           markKeyRateLimited(currentModel, apiKey);
+        } else if (status === 400) {
+          console.warn(`[400] Bad request for ${currentModel}: ${err.message.substring(0, 100)}. Breaking out of key loop.`);
+          all503 = false;
+          break;
         } else {
           console.warn(`[API Rotation] Error for ${currentModel}: ${err.message}. Trying next key...`);
         }
@@ -956,52 +962,41 @@ async function executeWithRetry(apiKeys, models, apiCallFn) {
 }
 
 async function callGemini(input, apiKeys, models, temperature, systemInstruction) {
-  const hasMultimodal = Array.isArray(input) && input.some(item => item?.parts?.some(p => p?.inlineData));
   const defaultModels = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'];
   const targetModels = models?.length > 0 ? models : defaultModels;
 
+  // Build input for the interactions API from various input formats
+  let interactionInput;
+  if (typeof input === 'string') {
+    interactionInput = input;
+  } else if (Array.isArray(input)) {
+    // generateContent-style: [{ role, parts }] — extract parts and convert
+    if (input[0]?.parts) {
+      const parts = input.flatMap(item => item.parts || []);
+      interactionInput = parts.map(p => {
+        if (p?.inlineData) return { type: 'image', data: p.inlineData.data, mime_type: p.inlineData.mimeType };
+        if (p?.text) return { type: 'text', text: p.text };
+        return { type: 'text', text: String(p ?? '') };
+      });
+    } else {
+      // Flat array of strings or text objects — flatten to string for text-only
+      const joined = input.map(item => (typeof item === 'string' ? item : item?.text ?? '')).filter(Boolean).join('\n');
+      interactionInput = joined || '';
+    }
+  } else {
+    interactionInput = String(input ?? '');
+  }
+
   try {
-    return await executeWithRetry(apiKeys, targetModels, async (apiKey, model) => {
-      const url = `https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`;
-      const body = {
-        model,
+    return await executeWithRetry(apiKeys, targetModels, async (ai, currentModel) => {
+      const result = await ai.interactions.create({
+        model: currentModel,
+        input: interactionInput,
+        system_instruction: systemInstruction,
         response_format: { type: 'text', mime_type: 'application/json' },
         generation_config: { temperature: temperature ?? 1.5, thinking_level: 'low' },
-      };
-
-      if (hasMultimodal) {
-        body.contents = input;
-      } else {
-        let prompt;
-        if (typeof input === 'string') {
-          prompt = input;
-        } else if (Array.isArray(input)) {
-          prompt = input.map((item) => (typeof item === 'string' ? item : item?.text ?? '')).join('\n');
-        } else {
-          prompt = String(input ?? '');
-        }
-        body.input = prompt;
-      }
-
-      if (systemInstruction) {
-        body.system_instruction = systemInstruction;
-      }
-
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
       });
-
-      if (!resp.ok) {
-        const errText = await resp.text();
-        const err = new Error(`HTTP ${resp.status}: ${errText.substring(0, 200)}`);
-        err.status = resp.status;
-        throw err;
-      }
-
-      const data = await resp.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text ?? data.output_text ?? null;
+      return result.output_text ?? null;
     });
   } catch (err) {
     console.warn('[callGemini] All models/keys failed:', err.message);
