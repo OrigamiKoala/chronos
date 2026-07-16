@@ -858,8 +858,8 @@ export default async function handler(req, res) {
           query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` 
             (user_id, exam_id, subject, accuracy, avg_time, rating_change, new_rating, created_at, assignment_id)
             VALUES (@username, @examId, @subject, @accuracy, @avgTime, @ratingChange, @newRating, CURRENT_TIMESTAMP(), @assignmentId)`,
-          params: { username: sanitizedUser, examId, subject, accuracy: finalAccuracy, avgTime, ratingChange: finalRatingChange, newRating: finalNewRating, assignmentId: assignmentId || null },
-          types: { assignmentId: 'STRING' }
+          params: { username: sanitizedUser, examId, subject, accuracy: finalAccuracy, avgTime: avgTime !== undefined && avgTime !== null ? Number(avgTime) : null, ratingChange: finalRatingChange, newRating: finalNewRating, assignmentId: assignmentId || null },
+          types: { assignmentId: 'STRING', avgTime: 'FLOAT64', ratingChange: 'INT64', newRating: 'INT64' }
         }),
         bq.query({
           query: `INSERT INTO \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
@@ -936,6 +936,21 @@ export default async function handler(req, res) {
               examId,
               subject,
               wrongProblems: wrongProblemsToInsert
+            },
+            types: {
+              wrongProblems: [
+                {
+                  question_id: 'STRING',
+                  topic: 'STRING',
+                  question_text: 'STRING',
+                  user_answer: 'STRING',
+                  correct_answer: 'STRING',
+                  options: 'STRING',
+                  question_type: 'STRING',
+                  ai_explanation: 'STRING',
+                  frq_submission_json: 'STRING'
+                }
+              ]
             }
           })
         );

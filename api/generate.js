@@ -1023,29 +1023,7 @@ export default async function handler(req, res) {
       console.error('Parallel fetch error:', err);
     }
 
-    // 1b. Fetch 1 pregenerated question
-    let pregeneratedQuestion = null;
-    try {
-      const pregenQuery = `
-        SELECT question_json
-        FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
-        WHERE subject = @subject AND difficulty = @difficulty
-          AND (ARRAY_LENGTH(@doneIds) = 0 OR JSON_VALUE(question_json, '$.id') NOT IN UNNEST(@doneIds))
-        ORDER BY RAND()
-        LIMIT 1
-      `;
-      const [rows] = await bq.query({
-        query: pregenQuery,
-        params: { subject: normSubject, difficulty: difficulty, doneIds: doneQuestionIds },
-        types: { doneIds: ['STRING'] }
-      });
-      if (rows && rows.length > 0) {
-        console.log('[BigQuery] Successfully fetched pregenerated question from BigQuery:', rows[0].question_json);
-        pregeneratedQuestion = JSON.parse(rows[0].question_json);
-      }
-    } catch (err) {
-      console.error('Error fetching pregenerated question:', err);
-    }
+
 
     // 2. Build the Gemini generation prompt
     let syllabus = '';
@@ -1173,10 +1151,7 @@ The output must be a pure JSON array containing exactly the requested number of 
 
 Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.`;
 
-    // using outer allQuestions array
-    if (pregeneratedQuestion) {
-      allQuestions.push(pregeneratedQuestion);
-    }
+
 
     // Helper to build dynamic prompt
     const buildDynamicPrompt = (needed) => {
