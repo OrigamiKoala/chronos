@@ -24,7 +24,7 @@ async function bqQuery(options, maxRetries = 3) {
     } catch (err) {
       attempt++;
       const errMsg = err.message || '';
-      const isConcurrencyError = 
+      const isConcurrencyError =
         errMsg.includes('Could not serialize access') ||
         errMsg.includes('concurrent update') ||
         errMsg.includes('DML_TRANSACTION_CONFLICT') ||
@@ -58,23 +58,23 @@ function normalizeAnswer(str) {
 function evaluateKeywordExpression(expression, userAnswer) {
   if (!expression) return false;
   const normalizedAnswer = normalizeAnswer(userAnswer);
-  
+
   // Support single quotes/double quotes and words, retaining parenthesis and logical operators
   const tokens = expression.match(/'[^']+'|"[^"]+"|\(|\)|AND|OR|NOT|[a-zA-Z0-9_.-]+/gi) || [];
-  
+
   const processedTokens = tokens.map(token => {
     const upper = token.toUpperCase();
     if (upper === 'AND') return '&&';
     if (upper === 'OR') return '||';
     if (upper === 'NOT') return '!';
     if (token === '(' || token === ')') return token;
-    
+
     const cleanTerm = token.replace(/^['"]|['"]$/g, '');
     const normTerm = normalizeAnswer(cleanTerm);
     const present = normalizedAnswer.includes(normTerm);
     return present ? 'true' : 'false';
   });
-  
+
   const jsExpression = processedTokens.join(' ');
   try {
     const safeRegex = /^(?:true|false|&&|\|\||!|\(|\)|\s)+$/;
@@ -363,9 +363,9 @@ export default async function handler(req, res) {
             SET results_json = @resultsJson,
                 interaction_ids_json = @interactionIdsJson
             WHERE exam_id = @examId AND user_id = @username`,
-          params: { 
-            examId, 
-            username: sanitizedUser, 
+          params: {
+            examId,
+            username: sanitizedUser,
             resultsJson: JSON.stringify(results),
             interactionIdsJson: interactionIds ? JSON.stringify(interactionIds) : null
           },
@@ -450,7 +450,7 @@ export default async function handler(req, res) {
         SELECT @username, @examId, p.question_index, p.tag, p.is_correct, p.points_value, CURRENT_TIMESTAMP()
         FROM UNNEST(@tags) p;
       `;
-      
+
       const tagsParam = tags.map(t => ({
         question_index: Number(t.questionIndex),
         tag: String(t.tag),
@@ -524,9 +524,9 @@ export default async function handler(req, res) {
           SET results_json = @resultsJson,
               interaction_ids_json = @interactionIdsJson
           WHERE exam_id = @examId AND user_id = @username`,
-        params: { 
-          examId, 
-          username: sanitizedUser, 
+        params: {
+          examId,
+          username: sanitizedUser,
           resultsJson: JSON.stringify(results),
           interactionIdsJson: interactionIds ? JSON.stringify(interactionIds) : null
         },
@@ -784,9 +784,9 @@ export default async function handler(req, res) {
     // 0. Add questions to pregenerated_questions table in BigQuery (non-mock questions only)
     const nonMockQuestions = gradedResults.filter(q => {
       if (!q.id || !q.question) return false;
-      const isMock = q.id.toString().toLowerCase().includes('mock') || 
-                     q.question.toString().startsWith('Mock') ||
-                     /^\d+-\d+$/.test(q.id); // Matches Date.now()-i format
+      const isMock = q.id.toString().toLowerCase().includes('mock') ||
+        q.question.toString().startsWith('Mock') ||
+        /^\d+-\d+$/.test(q.id); // Matches Date.now()-i format
       return !isMock;
     });
 
@@ -1068,9 +1068,9 @@ export default async function handler(req, res) {
         }
       }
 
-      return res.status(200).json({ 
-        success: true, 
-        detailedAnalysis, 
+      return res.status(200).json({
+        success: true,
+        detailedAnalysis,
         mistakePatterns,
         results: gradedResults,
         accuracy: finalAccuracy,
@@ -1087,9 +1087,9 @@ export default async function handler(req, res) {
         true,
         req
       );
-      return res.status(200).json({ 
-        success: true, 
-        detailedAnalysis: null, 
+      return res.status(200).json({
+        success: true,
+        detailedAnalysis: null,
         mistakePatterns,
         results: gradedResults,
         accuracy: finalAccuracy,
@@ -1100,19 +1100,19 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('Submit exam error:', err);
-    const isOverload = err.status === 503 || 
-                       err.status === 500 ||
-                       err.status === 429 ||
-                       (err.message && (err.message.toLowerCase().includes('demand') ||
-                                        err.message.includes('503') || 
-                                        err.message.includes('500') ||
-                                        err.message.includes('429') || 
-                                        err.message.includes('overloaded') || 
-                                        err.message.includes('busy') || 
-                                        err.message.includes('rate limit') || 
-                                        err.message.includes('exhausted') || 
-                                        err.message.includes('quota') || 
-                                        err.message.includes('failed or are rate limited')));
+    const isOverload = err.status === 503 ||
+      err.status === 500 ||
+      err.status === 429 ||
+      (err.message && (err.message.toLowerCase().includes('demand') ||
+        err.message.includes('503') ||
+        err.message.includes('500') ||
+        err.message.includes('429') ||
+        err.message.includes('overloaded') ||
+        err.message.includes('busy') ||
+        err.message.includes('rate limit') ||
+        err.message.includes('exhausted') ||
+        err.message.includes('quota') ||
+        err.message.includes('failed or are rate limited')));
     if (isOverload) {
       try {
         const answers = results.map(r => r.userAnswer || '');
@@ -1141,30 +1141,30 @@ export default async function handler(req, res) {
         if (!WEBHOOK_URL) {
           console.warn('GOOGLE_APPS_SCRIPT_WEBHOOK_URL is not configured. Skipping background exam grading.');
         } else {
-        await fetch(WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'async_grade_exam',
-            teacherId: 'SYSTEM',
-            payload: {
-              username,
-              subject,
-              examId,
-              accuracy,
-              avgTime,
-              ratingChange,
-              newRating,
-              isRated,
-              assignmentId,
-              results: results.map(r => {
-                const { frqSubmission, ...rest } = r;
-                return rest;
-              }),
-             geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
-            }
-          })
-        });
+          await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'async_grade_exam',
+              teacherId: 'SYSTEM',
+              payload: {
+                username,
+                subject,
+                examId,
+                accuracy,
+                avgTime,
+                ratingChange,
+                newRating,
+                isRated,
+                assignmentId,
+                results: results.map(r => {
+                  const { frqSubmission, ...rest } = r;
+                  return rest;
+                }),
+                geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
+              }
+            })
+          });
         }
       } catch (triggerErr) {
         console.error('Failed to trigger background grading:', triggerErr);
@@ -1200,7 +1200,7 @@ async function generateAndSaveDiagnostics(username, examId, subject, results, is
         query: fetchWrongProblemsQuery,
         params: { username, subject }
       });
-      
+
       // Fetch student's overall topic mastery statistics
       const fetchMasteryQuery = `
         SELECT sub_category as topic, correct_count, total_count, accuracy_rate
@@ -1222,7 +1222,7 @@ async function generateAndSaveDiagnostics(username, examId, subject, results, is
     }
 
     const currentAttemptString = results.map((r, i) => `
-Question ${i+1}: ${r.question}
+Question ${i + 1}: ${r.question}
 Correct Answer: ${r.answer}
 User's Answer: ${r.userAnswer || 'None'}
 Is Correct: ${r.isCorrect ? 'Yes' : 'No'}
@@ -1230,24 +1230,37 @@ Time Spent: ${r.timeSpent || 0}s
 Timed Out: ${r.timeOut ? 'Yes' : 'No'}
 `).join('\n');
 
-    let prompt = `You are a world-class diagnostic tutor for the stress-sandbox app. 
-Analyze the user's performance on this ${subject} exam attempt and their historical learning profile.
+    let prompt = `<role>
+You are a world-class diagnostic tutor for the stress-sandbox app. 
+</role>
 
-Current Exam Attempt Details:
+<goal>
+Analyze the user's performance on this ${subject} exam attempt and their historical learning profile.
+</goal>
+
+<current_exam_attempt_details>
 ${currentAttemptString}
+</current_exam_attempt_details>
 `;
 
     if (!isGuest) {
       prompt += `
+<student_info>
+<student_mastery>
 Student's overall topic mastery statistics (number of attempts, correct answers, and accuracy) in this subject:
 ${masteryString}
+</student_mastery>
 
+<student_mistake_history>
 Incorrect questions history in this subject:
 ${wrongProblemsString}
+</student_mistake_history>
+</student_info>
 `;
     }
 
     prompt += `
+<instructions>
 Your tasks:
 1. Analyze the user's mistake patterns and identify weaknesses in their WAYS OF THINKING on this specific attempt.
    - Go beyond mere topic/concept gaps: analyze the specific incorrect answers they chose ("User's Answer") versus the correct answers ("Correct Answer") across all questions.
@@ -1260,7 +1273,9 @@ Your tasks:
 2. Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. 
 3. For EACH of these identified topics (both strengths and weaknesses), generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at.
 4. Provide a thorough, detailed diagnostic analysis of their strengths and weaknesses in this subject, focusing on both conceptual understanding and their general cognitive reasoning patterns, problem-solving habits, and error-checking strategies.
+</instructions>
 
+<rules>
 CRITICAL RULES FOR TOPIC BREAKDOWNS:
 - Don't flag any topic as a weakness if the student has never tested on it (i.e. not present in overall topic mastery).
 - Only flag a topic as a weakness if the student gets it wrong constantly (e.g., accuracy is less than 65% across at least 3 attempts).
@@ -1268,10 +1283,12 @@ CRITICAL RULES FOR TOPIC BREAKDOWNS:
 - For each topic in 'topic_breakdowns', the 'good_at' and 'not_good_at' descriptions MUST be completely distinct and address different aspects of the topic. They MUST NOT be identical, copy each other, or be contradictory.
 - If the topic is a clear strength, specify what makes them strong in 'good_at', and for 'not_good_at' write: "No significant weaknesses observed in recent attempts."
 - If the topic is a clear weakness, specify their core struggle in 'not_good_at', and for 'good_at' write: "Requires fundamental instruction on basic concepts before identifying specific strengths." or describe any partial progress shown.
+</rules>
 `;
     }
 
     prompt += `
+<output_requirements>
 Return strictly a valid JSON object with the following schema:
 {
   "mistake_patterns": "A detailed, direct, supportive, and pedagogical summary of their mistake patterns on this specific attempt...",
@@ -1282,7 +1299,8 @@ Return strictly a valid JSON object with the following schema:
     { "topic": "Topic B", "good_at": "What they do well...", "not_good_at": "What they struggle with..." }
   ]`}
 }
-Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.`;
+
+Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object. </output_requirements>`;
 
     const modelId = 'gemini-3.1-flash-lite';
     const models = [modelId, 'gemini-3-flash-preview'];

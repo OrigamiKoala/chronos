@@ -134,18 +134,25 @@ export default async function handler(req, res) {
 
       const hasData = contextData && contextData !== "[]" && contextData !== "[{}]";
 
-      const systemPrompt = `You are a diagnostic assistant for the stress-sandbox app.
-Contextual Performance Dataset: ${contextData}
+      const systemPrompt = `
+<role>
+You are a diagnostic assistant for the stress-sandbox app.
+</role>
+
+<contextual_performance_dataset>
+${contextData}
+</contextual_performance_dataset>
 
 The dataset includes:
 - "past_5_exams": The student's 5 most recent exam attempts.
 - "last_homework": The student's last submitted homework assignment (if any), including question results.
 
-ANTI-HALLUCINATION PROTOCOL:
-- ${hasData ?
-        "Synthesize observations strictly from metrics populated in the JSON payload above. Do not invent missing data blocks." :
-        "CRITICAL: The context string contains no valid database entries. Explicitly notify the user that no active table records were found for this selection in BigQuery."
-      }
+<anti_hallucination_protocol>
+${hasData ?
+          "Synthesize observations strictly from metrics populated in the JSON payload above. Do not invent missing data blocks." :
+          "CRITICAL: The context string contains no valid database entries. Explicitly notify the user that no active table records were found for this selection in BigQuery."
+        }
+</anti_hallucination_protocol>
 Keep answers clear, highly metric-accurate, and under 3 sentences.`;
 
       const modelId = process.env.GEMINI_MODEL || 'gemini-3.1-flash';
@@ -209,7 +216,11 @@ Keep answers clear, highly metric-accurate, and under 3 sentences.`;
         historyContext = '\n\nPrevious conversation history:\n' + history.map(msg => `${msg.sender === 'user' ? 'User' : 'Tutor'}: ${msg.text}`).join('\n');
       }
 
-      prompt = `You are a world-class tutor in science and mathematics.
+      prompt = `<role>
+You are a world-class tutor in science and mathematics.
+</role>
+
+<context>
 Analyze this exam question:
 Question: ${question}
 Correct Answer: ${answer}
@@ -218,15 +229,21 @@ User's Attempt Was: ${isCorrect ? 'Correct' : 'Incorrect'}${historyContext}
 
 The user is asking: ${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.'}
 
-Tasks:
+</context>
+
+<tasks>
 1. Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct. ${subjectInstructions}
 2. Critically review the user's answer. If their attempt was marked 'Incorrect', determine if it is actually mathematically, chemically, or scientifically equivalent to the correct answer (for example: minor rounding differences, spelling variations, standard hyphen vs unicode minus sign, spacing or symbol differences, or alternative valid representations). If it is indeed equivalent and correct, set 'shouldRemarkCorrect' to true. Otherwise, set it to false.
+</tasks>
+
+<output_requirements>
 
 Return strictly a valid JSON object with the following schema:
 {
   "explanation": "Clear, detailed step-by-step explanation (without markdown headers or greetings)",
   "shouldRemarkCorrect": true or false
-}`;
+}
+</output_requirements>`;
     }
 
     const modelId = 'gemini-3.1-flash-lite';
@@ -270,15 +287,15 @@ Return strictly a valid JSON object with the following schema:
     });
   } catch (err) {
     console.error('Explanation error:', err);
-    const isBusyOrRateLimited = err.status === 503 || err.status === 500 || err.status === 429 || 
-                                (err.message && (err.message.toLowerCase().includes('demand') ||
-                                                 err.message.includes('503') || 
-                                                 err.message.includes('500') ||
-                                                 err.message.includes('429') ||
-                                                 err.message.includes('overloaded') || 
-                                                 err.message.includes('rate limit') ||
-                                                 err.message.includes('busy') ||
-                                                 err.message.includes('limit')));
+    const isBusyOrRateLimited = err.status === 503 || err.status === 500 || err.status === 429 ||
+      (err.message && (err.message.toLowerCase().includes('demand') ||
+        err.message.includes('503') ||
+        err.message.includes('500') ||
+        err.message.includes('429') ||
+        err.message.includes('overloaded') ||
+        err.message.includes('rate limit') ||
+        err.message.includes('busy') ||
+        err.message.includes('limit')));
     if (isBusyOrRateLimited) {
       return res.status(503).json({
         error: "Sorry, the bot is busy right now. Try again later.",

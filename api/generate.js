@@ -448,9 +448,7 @@ const chemistryExemplars = [
 ];
 
 const chem_syllabus = `
-# USNCO Learning Objectives
-
----
+<syllabus>
 
 ## T1: Stoichiometry/Solutions
 
@@ -750,9 +748,11 @@ const chem_syllabus = `
 ### Polymer Chemistry
 * **T10.28 (SL):** Polymerization: monomers, repeating units, chain-growth vs step-growth polymerization, and addition vs condensation polymers (polyesters, polyamides)
 * **T10.29 (HL):** Stereochemistry of polymerization (Ziegler-Natta catalyst) and copolymer chemistry
-`
+</syllabus>
+`;
 
 const chem_excluded_topics = `
+<excluded_topics>
 ***CRITICAL: DO NOT INCLUDE ANY OF THE FOLLOWING TOPICS***
 
 - Named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g., Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
@@ -762,9 +762,11 @@ const chem_excluded_topics = `
 - Graduate-level concepts entirely unless you explicitly provide the necessary first-principles background within the question text itself.
 - Advanced spectroscopy (e.g., 2D-NMR).
 - Slater's rules
-`
+</excluded_topics>
+`;
 
 const agents_description = `
+<agents>
 ## Agent: Brainstorm
 - **Instructions**:
   - Role: You are an expert coach for students competing at the national level of olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. The goal is to prepare them for future iterations of the exam, which are anticipated to increase significantly in difficulty.
@@ -859,7 +861,8 @@ const agents_description = `
   - Goal: Compile all the questions generated into the correct output format (see Output Requirements).
   - Context: The problems and solutions are listed in the "Problems" and "Solutions" documents. The format is listed in the Output Requirements.
   - Output the JSON for the entire exam.
-`
+</agents>
+`;
 
 function formatExemplarsForPrompt(exemplars) {
   return exemplars.map(ex => {
@@ -1031,28 +1034,29 @@ export default async function handler(req, res) {
 
     if (normSubject === 'math') {
       syllabus = `
-Syllabus Boundaries
+<syllabus>
 - Restrict to algebra, combinatorics, geometry, number theory. No calculus. Increase difficulty by coupling topics.
 - NO research level math (e.g. differential equations, topology, etc.)
 
 Difficulty scale: 0=simplest part of MATHCOUNTS (MATHCOUNTS School), 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 10=hardest IMO.
+</syllabus>
 `;
       examples = formatExemplarsForPrompt(mathExemplars);
     } else if (normSubject === 'physics') {
       syllabus = `
+<syllabus>
 Syllabus Boundaries
 - DIFFICULTY < 8 (F=ma/AP Physics C): Restrict to classical mechanics, electromagnetism, thermodynamics, fluid dynamics, waves, optics. Increase difficulty by coupling unexpected systems.
 - DIFFICULTY >= 8 (USAPhO/IPhO): Original concept-first designs. May introduce special relativity, quantum basics, statistical mechanics, etc. but MUST define all concepts from scratch (first-principles guardrail). free_response MUST require comprehensive derivation, not just a final number.
 
 Difficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest IPhO.
+</syllabus>
 `;
       examples = formatExemplarsForPrompt(physicsExemplars);
     } else if (normSubject === 'chemistry') {
       syllabus = `
-# Syllabus Boundaries
 
-There are two styles of exam - USNCO-style and IChO-style.
-
+<usnco_description>
 ## USNCO Style Exams (Difficulty < 8):
 
 - Difficulty 1 (AP Chem Exam): Straightforward applications of concepts and formulas. Minimal thinking.
@@ -1066,10 +1070,14 @@ ${chem_syllabus}
 The following topics are excluded from USNCO-style exams:
 
 ${chem_excluded_topics}
+</usnco_description>
 
+<icho_description>
 ## IChO Style Exams (Difficulty 8+):
 
-Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high school knowldge (e.g. simple spectroscopy, organic chemistry mechanisms). You can also bring in more advanced knowledge (like in the USNCO excluded topics), but it must be on a first-principles approach: you have to introduce the new concepts/ideas the student should not already know as a high school student.`;
+Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high school knowldge (e.g. simple spectroscopy, organic chemistry mechanisms). You can also bring in more advanced knowledge (like in the USNCO excluded topics), but it must be on a first-principles approach: you have to introduce the new concepts/ideas the student should not already know as a high school student.
+</icho_description>
+`;
       examples = formatExemplarsForPrompt(chemistryExemplars);
     }
 
@@ -1087,9 +1095,11 @@ Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high scho
     let lessonInstructions = '';
     if (lessonTitle || lessonDescription) {
       lessonInstructions = `
+<lesson_instructions>
 Additionally, this exam is a homework assignment for the lesson "${lessonTitle || ''}".
 The teacher set the following lesson plan/content:
 "${lessonDescription || ''}"
+</lesson_instructions>
 
 You MUST generate questions that are directly related to the content and concepts outlined in this lesson plan/content.
 `;
@@ -1098,41 +1108,56 @@ You MUST generate questions that are directly related to the content and concept
     let topicsInstructions = '';
     if (topics && typeof topics === 'string' && topics.trim()) {
       topicsInstructions = `
-Additionally, the user has explicitly requested that this exam focus on the following topics: "${topics.trim()}".
-You MUST prioritize generating questions that are directly related to these specified topics.
+<topics_instructions>Additionally, the user has explicitly requested that this exam focus on the following topics: "${topics.trim()}".
+You MUST prioritize generating questions that are directly related to these specified topics.</topics_instructions>
 `;
     }
 
-    const systemInstruction = `# Role: You are an expert coach for students competing in advanced high school Olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. The goal is to prepare them for future iterations of the exam, which are anticipated to increase significantly in difficulty.
+    const systemInstruction = `<role>
+You are an expert coach for students competing in advanced high school Olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. The goal is to prepare them for future iterations of the exam, which are anticipated to increase significantly in difficulty.
+</role>
 
-# Context: You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
+<context>
+You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
+</context>
 
 ${topicsInstructions}
 
 ${lessonInstructions}
 
+<user_information>
 Utilize the following diagnostic information about the user to tailor the test:
 - User Weakness Analysis: ${weaknessAnalysis}
 - User Topic Breakdown:
 ${topicBreakdown}
 - Recent Mistake Patterns (thinking / test-taking style):
 ${mistakeAnalysis}
+</user_information>
 
-# Goal: Write questions for a user's practice tests that perfectly mirror official styling but features significantly elevated problem difficulty, demanding deep structural, thermodynamic, and mechanistic insight. The exam must be indistinguishable from an official paper in tone, typography, formatting, style, and difficulty. Target the user's weak areas ( ${weaknesses} ).
+<goal>
+Write questions for a user's practice tests that perfectly mirror official styling but features significantly elevated problem difficulty, demanding deep structural, thermodynamic, and mechanistic insight. The exam must be indistinguishable from an official paper in tone, typography, formatting, style, and difficulty. Target the user's weak areas ( ${weaknesses} ).
+</goal>
 
-# Context: You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
+<context>
+You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
+</context>
 
 ${syllabus}
 
-# Steps: You will stimulate different agent roles, completing a full generation pipeline:
+<generation_pipeline>
+You will stimulate different agent roles, completing a full generation pipeline:
 
 ${agents_description}
 
-# Examples:
+</generation_pipeline>
+
+<examples>
 
 ${examples}
 
-# Output Requirements:
+</examples>
+
+<output_requirements>
 
 Do NOT output your thought process in any field of the JSON. Only output the final, fully refined question parameters.
 Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with \`[\`.
@@ -1149,7 +1174,8 @@ The output must be a pure JSON array containing exactly the requested number of 
   "difficulty": a number representing difficulty. This MUST be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}] (no question can be more than 2 difficulty units away from the average test difficulty ${difficulty})
 }
 
-Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.`;
+Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.
+</output_requirements>`;
 
 
 

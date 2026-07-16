@@ -374,7 +374,7 @@ export default async function handler(req, res) {
         const results = JSON.parse(row.results_json);
         const incorrectQuestions = results.filter(r => !r.isCorrect);
         const totalMissed = incorrectQuestions.length;
-        
+
         let timeMissed = 0;
         results.forEach((r, qIdx) => {
           const isTimeOut = r.timeOut || r.userAnswer === '[Time Out]';
@@ -385,7 +385,7 @@ export default async function handler(req, res) {
         });
 
         const percentMissedDueToTime = totalMissed > 0 ? Math.round((timeMissed / totalMissed) * 100) : 0;
-        
+
         timeIssuesSeries.push({
           exam_id: row.exam_id,
           created_at: row.created_at,
@@ -507,12 +507,16 @@ export default async function handler(req, res) {
           breakdowns: breakdowns.map(b => ({ studentId: b.user_id, topic: b.topic, good_at: b.good_at, not_good_at: b.not_good_at }))
         };
 
-        const prompt = `You are an expert tutor synthesizing student learning analytics. Below is the detailed analysis and topic breakdown for a class of students. Please consolidate this data into a single cohesive dashboard representing the class as a whole.
+        const prompt = `<role>
+You are an expert tutor synthesizing student learning analytics. Below is the detailed analysis and topic breakdown for a class of students. Please consolidate this data into a single cohesive dashboard representing the class as a whole.
 Do not reference individual student usernames or student IDs (e.g. do not say "Student user_1 has problem with X" or "user_1 is good at Y"). Synthesize their strengths and weaknesses into general trends for the entire class.
+</role>
 
-Input Data:
+<input_data>
 ${JSON.stringify(inputData, null, 2)}
+</input_data>
 
+<output_requirements>
 You MUST format your output strictly as a JSON object, with no markdown code blocks wrapping the JSON, matching this schema:
 {
   "detailedAnalysis": {
@@ -526,7 +530,8 @@ You MUST format your output strictly as a JSON object, with no markdown code blo
       "not_good_at": "Markdown bulleted list summarizing what students in the class generally struggle with."
     }
   }
-}`;
+}
+</output_requirements>`;
 
         const response = await executeWithRetry(
           ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'],

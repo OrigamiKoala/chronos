@@ -122,7 +122,7 @@ export default async function handler(req, res) {
       const consolidated = wrongRows.map(w => {
         const examId = w.exam_id;
         const qId = w.question_id;
-        
+
         // Find index of this question in the exam
         const idx = (indexMap[examId] && indexMap[examId][qId] !== undefined) ? indexMap[examId][qId] : -1;
         const tag = (idx !== -1 && tagMap[examId] && tagMap[examId][idx]) ? tagMap[examId][idx] : null;
@@ -287,24 +287,34 @@ export default async function handler(req, res) {
           subjectInstructions = 'Represent organic molecules strictly using SMILES notation wrapped in <smiles>...</smiles> tags where appropriate (e.g., <smiles>C(C)O</smiles> for ethanol, <smiles>CC(=O)O</smiles> for acetic acid). Represent inorganic molecules, structures, and reaction equations strictly using LaTeX (e.g., $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$).';
         }
 
-        const prompt = `You are a world-class tutor in science and mathematics.
+        const prompt = `
+<role>
+You are a world-class tutor in science and mathematics.
+</role>
+
+<context>
 Analyze this exam question:
 Question: ${questionText}
 Correct Answer: ${correctAnswer}
 User's Answer: ${userAnswer || 'No answer'}
 User's Attempt Was: Incorrect
+</context>
 
 The user is asking: Explain the correct answer, step-by-step, and why it is correct.
 
-Tasks:
+<tasks>
 1. Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct. ${subjectInstructions}
 2. Set shouldRemarkCorrect to false.
+</tasks>
 
+<output_requirements>
 Return strictly a valid JSON object with the following schema:
 {
   "explanation": "Clear, detailed step-by-step explanation (without markdown headers or greetings)",
   "shouldRemarkCorrect": false
-}`;
+}
+Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.
+</output_requirements>`;
 
         const modelId = 'gemini-3.1-flash-lite';
         const models = [modelId, 'gemini-3-flash-preview'];
