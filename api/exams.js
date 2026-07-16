@@ -16,6 +16,31 @@ const bq = new BigQuery({
   },
 });
 
+async function bqQuery(options, maxRetries = 3) {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await bq.query(options);
+    } catch (err) {
+      attempt++;
+      const errMsg = err.message || '';
+      const isConcurrencyError = 
+        errMsg.includes('Could not serialize access') ||
+        errMsg.includes('concurrent update') ||
+        errMsg.includes('DML_TRANSACTION_CONFLICT') ||
+        errMsg.includes('concurrent DML');
+      if (isConcurrencyError && attempt < maxRetries) {
+        const delay = Math.random() * 500 + attempt * 500;
+        console.warn(`[BigQuery Concurrency] Attempt ${attempt} failed: ${errMsg}. Retrying in ${Math.round(delay)}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+
 function normalizeAnswer(str) {
   if (!str) return '';
   return str
@@ -578,7 +603,7 @@ export default async function handler(req, res) {
           VALUES (@username, @examId, @subject, @configJson, @problemsJson, @answersJson, @frqSubmissionsJson, @currentQuestionIndex, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
       `;
 
-      await bq.query({
+      await bqQuery({
         query: mergeQuery,
         params: {
           username: sanitizedUser,
@@ -842,7 +867,7 @@ export default async function handler(req, res) {
 
     if (!isGuest) {
       // 0. Delete the active exam immediately so it never shows "Resume" after submit
-      await bq.query({
+      await bqQuery({
         query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
           WHERE user_id = @username AND exam_id = @examId`,
         params: { username: sanitizedUser, examId }
