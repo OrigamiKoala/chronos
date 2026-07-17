@@ -500,7 +500,7 @@ export default async function handler(req, res) {
           });
 
           // Prepare prompt for Gemini
-          let practiceSummaryText = `The student did not submit any exams or practice results during this week (from ${startTime.slice(0, 10)} to ${endTime.slice(0, 10)}).`;
+          let practiceSummaryText = `  <status>The student did not submit any exams or practice results during this week (from ${startTime.slice(0, 10)} to ${endTime.slice(0, 10)}).</status>`;
           if (practiceRows.length > 0) {
             practiceSummaryText = practiceRows.map((row, index) => {
               let parsedResults = [];
@@ -509,40 +509,61 @@ export default async function handler(req, res) {
               } catch (e) {
                 console.error('Failed to parse results_json:', e);
               }
-              const questionsSummary = parsedResults.map((q, qidx) => 
-                `Q${qidx + 1} (${q.topic || 'General'}): ${q.question} | Student Answer: "${q.userAnswer || 'none'}" | Correct Answer: "${q.answer || ''}" | Is Correct: ${q.isCorrect ? 'Yes' : 'No'}`
-              ).join('\n  ');
+              const questionsSummary = parsedResults.map((q, qidx) => `    <question number="${qidx + 1}" topic="${q.topic || 'General'}">
+      <text>${q.question}</text>
+      <student_answer>${q.userAnswer || 'none'}</student_answer>
+      <correct_answer>${q.answer || ''}</correct_answer>
+      <is_correct>${q.isCorrect ? 'Yes' : 'No'}</is_correct>
+    </question>`).join('\n');
 
-              return `Exam ${index + 1}: Subject: ${row.subject} | Accuracy: ${Math.round(row.accuracy * 100)}% | Date: ${new Date(row.created_at?.value || row.created_at).toLocaleDateString()}\n  Questions details:\n  ${questionsSummary}`;
-            }).join('\n\n');
+              return `  <exam index="${index + 1}" subject="${row.subject}" accuracy="${Math.round(row.accuracy * 100)}%" date="${new Date(row.created_at?.value || row.created_at).toLocaleDateString()}">
+    <questions>
+${questionsSummary}
+    </questions>
+  </exam>`;
+            }).join('\n');
           }
 
-          const geminiPrompt = `You are a world-class educational AI assistant. You help teachers and coaches track student progress and tailor their lessons.
+          const geminiPrompt = `<role>
+You are a world-class educational AI assistant. You help teachers and coaches track student progress and tailor their lessons.
 Analyze a student's practice and exam attempts over a 1-week period following a specific lesson plan.
+</role>
 
-Student ID: ${sId}
-Lesson Title: ${targetLesson.title}
-Lesson Syllabus / Description: ${targetLesson.description}
-Lesson Created At: ${new Date(lessonDateStr).toLocaleDateString()}
+<student_info>
+  <student_id>${sId}</student_id>
+  <lesson_title>${targetLesson.title}</lesson_title>
+  <lesson_description>${targetLesson.description}</lesson_description>
+  <lesson_created_at>${new Date(lessonDateStr).toLocaleDateString()}</lesson_created_at>
+</student_info>
 
-Student's Practice History during the week of ${new Date(lessonDateStr).toLocaleDateString()} to ${new Date(lessonTime + ONE_WEEK_MS).toLocaleDateString()}:
+<practice_history start_date="${new Date(lessonDateStr).toLocaleDateString()}" end_date="${new Date(lessonTime + ONE_WEEK_MS).toLocaleDateString()}">
 ${practiceSummaryText}
+</practice_history>
 
-Your tasks:
-1. Summarize the student's practice during the week, diagnosing both conceptual topic gaps AND thinking/reasoning weaknesses. 
-   - Analyze the specific wrong answers chosen ("Student Answer") versus the correct answers ("Correct Answer") across their attempts. 
-   - Draw conclusions about the student's cognitive traps, mistake patterns, and ways of thinking (e.g. rushing calculations, falling for distractor baits, applying formulas without context, missing edge cases, or unit errors).
-   - If they didn't practice, clearly report that they did not record any practice activity.
-2. Formulate specific suggestions for the coach/teacher on what concepts to focus on AND what reasoning habits or error-checking practices the student should develop next to improve their thinking.
-3. Determine if the student is progressing toward the learning goals (defined by the lesson title and description). Clearly state "Yes", "No", or "Partial" and explain why based on their performance/practice in topics related to the lesson plan.
+<tasks>
+  <task id="1">
+    <description>Summarize the student's practice during the week, diagnosing both conceptual topic gaps AND thinking/reasoning weaknesses.</description>
+    <sub_tasks>
+      <sub_task>Analyze the specific wrong answers chosen ("Student Answer") versus the correct answers ("Correct Answer") across their attempts.</sub_task>
+      <sub_task>Draw conclusions about the student's cognitive traps, mistake patterns, and ways of thinking (e.g. rushing calculations, falling for distractor baits, applying formulas without context, missing edge cases, or unit errors).</sub_task>
+      <sub_task>If they didn't practice, clearly report that they did not record any practice activity.</sub_task>
+    </sub_tasks>
+  </task>
+  <task id="2">Formulate specific suggestions for the coach/teacher on what concepts to focus on AND what reasoning habits or error-checking practices the student should develop next to improve their thinking.</task>
+  <task id="3">Determine if the student is progressing toward the learning goals (defined by the lesson title and description). Clearly state "Yes", "No", or "Partial" and explain why based on their performance/practice in topics related to the lesson plan.</task>
+</tasks>
 
-Return strictly a valid JSON object with the following schema:
-{
-  "summary": "Your detailed summary of the last week of practice, describing both topic performance and diagnosed thinking/cognitive weaknesses based on their incorrect vs. correct answers.",
-  "suggestions": "Your concrete advice for the teacher on both conceptual next steps and specific cognitive strategies or error-checking habits the student should build.",
-  "progress_status": "Yes / No / Partial (and explain why)"
-}
-Do NOT include markdown headers, backticks, or any conversational text. Return ONLY the raw JSON object.`;
+<output_requirements>
+  <format>json</format>
+  <schema>
+    {
+      "summary": "Your detailed summary of the last week of practice, describing both topic performance and diagnosed thinking/cognitive weaknesses based on their incorrect vs. correct answers.",
+      "suggestions": "Your concrete advice for the teacher on both conceptual next steps and specific cognitive strategies or error-checking habits the student should build.",
+      "progress_status": "Yes / No / Partial (and explain why)"
+    }
+  </schema>
+  <constraints>Do NOT include markdown headers, backticks, or any conversational text. Return ONLY the raw JSON object.</constraints>
+</output_requirements>`;
 
           const modelId = 'gemini-3.1-flash-lite';
           const models = [modelId, 'gemini-3-flash-preview'];

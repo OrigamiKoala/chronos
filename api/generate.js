@@ -1099,9 +1099,9 @@ Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high scho
 Additionally, this exam is a homework assignment for the lesson "${lessonTitle || ''}".
 The teacher set the following lesson plan/content:
 "${lessonDescription || ''}"
-</lesson_instructions>
 
 You MUST generate questions that are directly related to the content and concepts outlined in this lesson plan/content.
+</lesson_instructions>
 `;
     }
 
@@ -1126,12 +1126,9 @@ ${topicsInstructions}
 ${lessonInstructions}
 
 <user_information>
-Utilize the following diagnostic information about the user to tailor the test:
-- User Weakness Analysis: ${weaknessAnalysis}
-- User Topic Breakdown:
-${topicBreakdown}
-- Recent Mistake Patterns (thinking / test-taking style):
-${mistakeAnalysis}
+  <weakness_analysis>${weaknessAnalysis}</weakness_analysis>
+  <topic_breakdown>${topicBreakdown}</topic_breakdown>
+  <mistake_patterns>${mistakeAnalysis}</mistake_patterns>
 </user_information>
 
 <goal>
@@ -1158,40 +1155,47 @@ ${examples}
 </examples>
 
 <output_requirements>
+  <general_rules>
+    <rule>Do NOT output your thought process in any field of the JSON. Only output the final, fully refined question parameters.</rule>
+    <rule>Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with '['.</rule>
+    <rule>For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Keep simple, purely qualitative text options that do not contain mathematical or chemical terms in plain, un-delimited text format.</rule>
+  </general_rules>
 
-Do NOT output your thought process in any field of the JSON. Only output the final, fully refined question parameters.
-Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with \`[\`.
-
-OPTIONS FORMATTING (LaTeX Delimiters): For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Keep simple, purely qualitative text options that do not contain mathematical or chemical terms in plain, un-delimited text format.
-
-The output must be a pure JSON array containing exactly the requested number of objects, with the following schema for each object:
-{
-  "id": "A unique string ID",
-  "topic": "A comma-separated list of brief sub-categories or topics tested (e.g. 'Algebra, Number Theory' or 'Stoichiometry, Kinetics' or 'Mechanics, Rotational Dynamics')",
-  "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format. ***CRITICAL:*** Do not include the answer choices here, if the question is multiple choice.",
-  "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
-  "answer": ${answerSchemaDesc},
-  "difficulty": a number representing difficulty. This MUST be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}] (no question can be more than 2 difficulty units away from the average test difficulty ${difficulty})
-}
-
-Output the result strictly as a raw, valid JSON array, keeping it free of any markdown formatting or surrounding code blocks.
+  <schema_type>json_array</schema_type>
+  <schema>
+    [
+      {
+        "id": "A unique string ID",
+        "topic": "A comma-separated list of brief sub-categories or topics tested (e.g. 'Algebra, Number Theory' or 'Stoichiometry, Kinetics' or 'Mechanics, Rotational Dynamics')",
+        "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format. CRITICAL: Do not include the answer choices here, if the question is multiple choice.",
+        "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
+        "answer": ${answerSchemaDesc},
+        "difficulty": a number representing difficulty. This MUST be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}] (no question can be more than 2 difficulty units away from the average test difficulty ${difficulty})
+      }
+    ]
+  </schema>
 </output_requirements>`;
 
 
 
-    // Helper to build dynamic prompt
     const buildDynamicPrompt = (needed) => {
       const typeInstruction = needed >= parsedTypes.length
         ? `You MUST ensure that the generated questions contain a mix of all requested question types: ${parsedTypes.join(', ')}. Every requested type MUST appear at least once in the output array.`
         : `Each generated question MUST be chosen from the following types: ${parsedTypes.join(', ')}.`;
 
-      let prompt = `Generate exactly ${needed} ${normSubject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 0 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
-Follow these strict rules:
+      let prompt = `<generation_request>
+Generate exactly ${needed} ${normSubject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 0 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
+
+<rules>
 1. ${typeInstruction}`;
 
       if (topics && typeof topics === 'string' && topics.trim()) {
         prompt += `\n2. The generated questions MUST be about the following topics: ${topics.trim()}.`;
       }
+
+      prompt += `
+</rules>
+</generation_request>`;
 
       return prompt;
     };

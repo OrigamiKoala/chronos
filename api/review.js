@@ -293,27 +293,33 @@ You are a world-class tutor in science and mathematics.
 </role>
 
 <context>
-Analyze this exam question:
-Question: ${questionText}
-Correct Answer: ${correctAnswer}
-User's Answer: ${userAnswer || 'No answer'}
-User's Attempt Was: Incorrect
+  <analysis_target>
+    <question>${questionText}</question>
+    <correct_answer>${correctAnswer}</correct_answer>
+    <user_answer>${userAnswer || 'No answer'}</user_answer>
+    <attempt_status>Incorrect</attempt_status>
+  </analysis_target>
 </context>
 
-The user is asking: Explain the correct answer, step-by-step, and why it is correct.
+<query>Explain the correct answer, step-by-step, and why it is correct.</query>
 
 <tasks>
-1. Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct. ${subjectInstructions}
-2. Set shouldRemarkCorrect to false.
+  <task id="1">
+    <description>Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct.</description>
+    <subject_specific_instructions>${subjectInstructions}</subject_specific_instructions>
+  </task>
+  <task id="2">Set shouldRemarkCorrect to false.</task>
 </tasks>
 
 <output_requirements>
-Return strictly a valid JSON object with the following schema:
-{
-  "explanation": "Clear, detailed step-by-step explanation (without markdown headers or greetings)",
-  "shouldRemarkCorrect": false
-}
-Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.
+  <format>json</format>
+  <schema>
+    {
+      "explanation": "Clear, detailed step-by-step explanation (without markdown headers or greetings)",
+      "shouldRemarkCorrect": false
+    }
+  </schema>
+  <constraints>Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.</constraints>
 </output_requirements>`;
 
         const modelId = 'gemini-3.1-flash-lite';

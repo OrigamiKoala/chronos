@@ -143,9 +143,10 @@ You are a diagnostic assistant for the stress-sandbox app.
 ${contextData}
 </contextual_performance_dataset>
 
-The dataset includes:
-- "past_5_exams": The student's 5 most recent exam attempts.
-- "last_homework": The student's last submitted homework assignment (if any), including question results.
+<dataset_description>
+  <dataset_item name="past_5_exams">The student's 5 most recent exam attempts.</dataset_item>
+  <dataset_item name="last_homework">The student's last submitted homework assignment (if any), including question results.</dataset_item>
+</dataset_description>
 
 <anti_hallucination_protocol>
 ${hasData ?
@@ -153,7 +154,10 @@ ${hasData ?
           "CRITICAL: The context string contains no valid database entries. Explicitly notify the user that no active table records were found for this selection in BigQuery."
         }
 </anti_hallucination_protocol>
-Keep answers clear, highly metric-accurate, and under 3 sentences.`;
+
+<instructions>
+  <constraint>Keep answers clear, highly metric-accurate, and under 3 sentences.</constraint>
+</instructions>`;
 
       const modelId = process.env.GEMINI_MODEL || 'gemini-3.1-flash';
       const models = [...new Set([modelId, 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'])];
@@ -209,11 +213,11 @@ Keep answers clear, highly metric-accurate, and under 3 sentences.`;
 
     let prompt = '';
     if (previousInteractionId) {
-      prompt = userQuery || 'Explain the correct answer, step-by-step, and why it is correct.';
+      prompt = `<query>${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.'}</query>`;
     } else {
       let historyContext = '';
       if (Array.isArray(history) && history.length > 0) {
-        historyContext = '\n\nPrevious conversation history:\n' + history.map(msg => `${msg.sender === 'user' ? 'User' : 'Tutor'}: ${msg.text}`).join('\n');
+        historyContext = '\n\n<conversation_history>\n' + history.map(msg => `  <message sender="${msg.sender === 'user' ? 'User' : 'Tutor'}">${msg.text}</message>`).join('\n') + '\n</conversation_history>';
       }
 
       prompt = `<role>
@@ -221,28 +225,34 @@ You are a world-class tutor in science and mathematics.
 </role>
 
 <context>
-Analyze this exam question:
-Question: ${question}
-Correct Answer: ${answer}
-User's Answer: ${userAnswer || 'No answer'}
-User's Attempt Was: ${isCorrect ? 'Correct' : 'Incorrect'}${historyContext}
-
-The user is asking: ${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.'}
-
+  <analysis_target>
+    <question>${question}</question>
+    <correct_answer>${answer}</correct_answer>
+    <user_answer>${userAnswer || 'No answer'}</user_answer>
+    <attempt_status>${isCorrect ? 'Correct' : 'Incorrect'}</attempt_status>${historyContext}
+  </analysis_target>
 </context>
 
+<query>
+${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.'}
+</query>
+
 <tasks>
-1. Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct. ${subjectInstructions}
-2. Critically review the user's answer. If their attempt was marked 'Incorrect', determine if it is actually mathematically, chemically, or scientifically equivalent to the correct answer (for example: minor rounding differences, spelling variations, standard hyphen vs unicode minus sign, spacing or symbol differences, or alternative valid representations). If it is indeed equivalent and correct, set 'shouldRemarkCorrect' to true. Otherwise, set it to false.
+  <task id="1">
+    <description>Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct.</description>
+    <subject_specific_instructions>${subjectInstructions}</subject_specific_instructions>
+  </task>
+  <task id="2">Critically review the user's answer. If their attempt was marked 'Incorrect', determine if it is actually mathematically, chemically, or scientifically equivalent to the correct answer (for example: minor rounding differences, spelling variations, standard hyphen vs unicode minus sign, spacing or symbol differences, or alternative valid representations). If it is indeed equivalent and correct, set 'shouldRemarkCorrect' to true. Otherwise, set it to false.</task>
 </tasks>
 
 <output_requirements>
-
-Return strictly a valid JSON object with the following schema:
-{
-  "explanation": "Clear, detailed step-by-step explanation (without markdown headers or greetings)",
-  "shouldRemarkCorrect": true or false
-}
+  <format>json</format>
+  <schema>
+    {
+      "explanation": "Clear, detailed step-by-step explanation (without markdown headers or greetings)",
+      "shouldRemarkCorrect": true or false
+    }
+  </schema>
 </output_requirements>`;
     }
 

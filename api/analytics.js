@@ -517,20 +517,23 @@ ${JSON.stringify(inputData, null, 2)}
 </input_data>
 
 <output_requirements>
-You MUST format your output strictly as a JSON object, with no markdown code blocks wrapping the JSON, matching this schema:
-{
-  "detailedAnalysis": {
-    "Math": "Markdown consolidated summary for Math class-wide performance...",
-    "Physics": "Markdown consolidated summary for Physics class-wide performance...",
-    "Chemistry": "Markdown consolidated summary for Chemistry class-wide performance..."
-  },
-  "topicBreakdowns": {
-    "TopicName": {
-      "good_at": "Markdown bulleted list summarizing what students in the class generally understand well.",
-      "not_good_at": "Markdown bulleted list summarizing what students in the class generally struggle with."
+  <format>json</format>
+  <schema>
+    {
+      "detailedAnalysis": {
+        "Math": "Markdown consolidated summary for Math class-wide performance...",
+        "Physics": "Markdown consolidated summary for Physics class-wide performance...",
+        "Chemistry": "Markdown consolidated summary for Chemistry class-wide performance..."
+      },
+      "topicBreakdowns": {
+        "TopicName": {
+          "good_at": "Markdown bulleted list summarizing what students in the class generally understand well.",
+          "not_good_at": "Markdown bulleted list summarizing what students in the class generally struggle with."
+        }
+      }
     }
-  }
-}
+  </schema>
+  <constraints>You MUST format your output strictly as a JSON object, with no markdown code blocks wrapping the JSON.</constraints>
 </output_requirements>`;
 
         const response = await executeWithRetry(

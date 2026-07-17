@@ -1213,22 +1213,30 @@ async function generateAndSaveDiagnostics(username, examId, subject, results, is
       });
 
       if (masteryRows && masteryRows.length > 0) {
-        masteryString = masteryRows.map(m => `Topic: ${m.topic} | Attempts: ${m.total_count} | Correct: ${m.correct_count} | Accuracy: ${Math.round((m.accuracy_rate || 0) * 100)}%`).join('\n');
+        masteryString = masteryRows.map(m => `  <topic_stat name="${m.topic}">
+    <attempts>${m.total_count}</attempts>
+    <correct>${m.correct_count}</correct>
+    <accuracy>${Math.round((m.accuracy_rate || 0) * 100)}%</accuracy>
+  </topic_stat>`).join('\n');
       }
 
       if (wrongProblems && wrongProblems.length > 0) {
-        wrongProblemsString = wrongProblems.map(p => `Topic: ${p.topic} | Question: ${p.question_text} | User Answer: ${p.user_answer || 'None'} | Correct Answer: ${p.correct_answer}`).join(' ; ');
+        wrongProblemsString = wrongProblems.map(p => `  <incorrect_problem topic="${p.topic}">
+    <question>${p.question_text}</question>
+    <user_answer>${p.user_answer || 'None'}</user_answer>
+    <correct_answer>${p.correct_answer}</correct_answer>
+  </incorrect_problem>`).join('\n');
       }
     }
 
-    const currentAttemptString = results.map((r, i) => `
-Question ${i + 1}: ${r.question}
-Correct Answer: ${r.answer}
-User's Answer: ${r.userAnswer || 'None'}
-Is Correct: ${r.isCorrect ? 'Yes' : 'No'}
-Time Spent: ${r.timeSpent || 0}s
-Timed Out: ${r.timeOut ? 'Yes' : 'No'}
-`).join('\n');
+    const currentAttemptString = results.map((r, i) => `  <question_attempt number="${i + 1}">
+    <question>${r.question}</question>
+    <correct_answer>${r.answer}</correct_answer>
+    <user_answer>${r.userAnswer || 'None'}</user_answer>
+    <is_correct>${r.isCorrect ? 'Yes' : 'No'}</is_correct>
+    <time_spent>${r.timeSpent || 0}s</time_spent>
+    <timed_out>${r.timeOut ? 'Yes' : 'No'}</timed_out>
+  </question_attempt>`).join('\n');
 
     let prompt = `<role>
 You are a world-class diagnostic tutor for the stress-sandbox app. 
@@ -1247,12 +1255,10 @@ ${currentAttemptString}
       prompt += `
 <student_info>
 <student_mastery>
-Student's overall topic mastery statistics (number of attempts, correct answers, and accuracy) in this subject:
 ${masteryString}
 </student_mastery>
 
 <student_mistake_history>
-Incorrect questions history in this subject:
 ${wrongProblemsString}
 </student_mistake_history>
 </student_info>
@@ -1260,47 +1266,58 @@ ${wrongProblemsString}
     }
 
     prompt += `
-<instructions>
-Your tasks:
-1. Analyze the user's mistake patterns and identify weaknesses in their WAYS OF THINKING on this specific attempt.
-   - Go beyond mere topic/concept gaps: analyze the specific incorrect answers they chose ("User's Answer") versus the correct answers ("Correct Answer") across all questions.
-   - Infer their cognitive pitfalls and reasoning shortcuts (e.g., did they apply a formula blindly without checking assumptions, ignore boundary/limiting conditions, make consistent algebraic/sign errors, misread units, fail to double-check their calculations, or panic under time pressure?).
-   - Provide a detailed diagnostic summary of these thinking pitfalls, and offer concrete recommendations to help them correct these thinking patterns.
+<tasks>
+  <task id="1">
+    <description>Analyze the user's mistake patterns and identify weaknesses in their WAYS OF THINKING on this specific attempt.</description>
+    <sub_tasks>
+      <sub_task>Go beyond mere topic/concept gaps: analyze the specific incorrect answers they chose ("User's Answer") versus the correct answers ("Correct Answer") across all questions.</sub_task>
+      <sub_task>Infer their cognitive pitfalls and reasoning shortcuts (e.g., did they apply a formula blindly without checking assumptions, ignore boundary/limiting conditions, make consistent algebraic/sign errors, misread units, fail to double-check their calculations, or panic under time pressure?).</sub_task>
+      <sub_task>Provide a detailed diagnostic summary of these thinking pitfalls, and offer concrete recommendations to help them correct these thinking patterns.</sub_task>
+    </sub_tasks>
+  </task>
 `;
 
     if (!isGuest) {
       prompt += `
-2. Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness. 
-3. For EACH of these identified topics (both strengths and weaknesses), generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at.
-4. Provide a thorough, detailed diagnostic analysis of their strengths and weaknesses in this subject, focusing on both conceptual understanding and their general cognitive reasoning patterns, problem-solving habits, and error-checking strategies.
-</instructions>
+  <task id="2">Identify up to 5 specific topics where they show strength or promise, and up to 5 specific topics where they show weakness.</task>
+  <task id="3">For EACH of these identified topics (both strengths and weaknesses), generate a breakdown of exactly what part of that topic the user is good at, and what part they are not good at.</task>
+  <task id="4">Provide a thorough, detailed diagnostic analysis of their strengths and weaknesses in this subject, focusing on both conceptual understanding and their general cognitive reasoning patterns, problem-solving habits, and error-checking strategies.</task>
+`;
+    }
 
+    prompt += `
+</tasks>
+`;
+
+    if (!isGuest) {
+      prompt += `
 <rules>
-CRITICAL RULES FOR TOPIC BREAKDOWNS:
-- Don't flag any topic as a weakness if the student has never tested on it (i.e. not present in overall topic mastery).
-- Only flag a topic as a weakness if the student gets it wrong constantly (e.g., accuracy is less than 65% across at least 3 attempts).
-- If they have only attempted a topic 1 or 2 times and got it wrong, do NOT flag it as a weakness.
-- For each topic in 'topic_breakdowns', the 'good_at' and 'not_good_at' descriptions MUST be completely distinct and address different aspects of the topic. They MUST NOT be identical, copy each other, or be contradictory.
-- If the topic is a clear strength, specify what makes them strong in 'good_at', and for 'not_good_at' write: "No significant weaknesses observed in recent attempts."
-- If the topic is a clear weakness, specify their core struggle in 'not_good_at', and for 'good_at' write: "Requires fundamental instruction on basic concepts before identifying specific strengths." or describe any partial progress shown.
+  <rule>Don't flag any topic as a weakness if the student has never tested on it (i.e. not present in overall topic mastery).</rule>
+  <rule>Only flag a topic as a weakness if the student gets it wrong constantly (e.g., accuracy is less than 65% across at least 3 attempts).</rule>
+  <rule>If they have only attempted a topic 1 or 2 times and got it wrong, do NOT flag it as a weakness.</rule>
+  <rule>For each topic in 'topic_breakdowns', the 'good_at' and 'not_good_at' descriptions MUST be completely distinct and address different aspects of the topic. They MUST NOT be identical, copy each other, or be contradictory.</rule>
+  <rule>If the topic is a clear strength, specify what makes them strong in 'good_at', and for 'not_good_at' write: "No significant weaknesses observed in recent attempts."</rule>
+  <rule>If the topic is a clear weakness, specify their core struggle in 'not_good_at', and for 'good_at' write: "Requires fundamental instruction on basic concepts before identifying specific strengths." or describe any partial progress shown.</rule>
 </rules>
 `;
     }
 
     prompt += `
 <output_requirements>
-Return strictly a valid JSON object with the following schema:
-{
-  "mistake_patterns": "A detailed, direct, supportive, and pedagogical summary of their mistake patterns on this specific attempt...",
-  "strengths": ${isGuest ? '[]' : '["Topic A", "Topic B"]'},
-  "weaknesses": ${isGuest ? '[]' : '["Topic B", "Topic C"]'},
-  "detailed_analysis": ${isGuest ? '""' : '"A detailed diagnosis..."'},
-  "topic_breakdowns": ${isGuest ? '[]' : `[
-    { "topic": "Topic B", "good_at": "What they do well...", "not_good_at": "What they struggle with..." }
-  ]`}
-}
-
-Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object. </output_requirements>`;
+  <format>json</format>
+  <schema>
+    {
+      "mistake_patterns": "A detailed, direct, supportive, and pedagogical summary of their mistake patterns on this specific attempt...",
+      "strengths": ${isGuest ? '[]' : '["Topic A", "Topic B"]'},
+      "weaknesses": ${isGuest ? '[]' : '["Topic B", "Topic C"]'},
+      "detailed_analysis": ${isGuest ? '""' : '"A detailed diagnosis..."'},
+      "topic_breakdowns": ${isGuest ? '[]' : `[
+        { "topic": "Topic B", "good_at": "What they do well...", "not_good_at": "What they struggle with..." }
+      ]`}
+    }
+  </schema>
+  <constraints>Do NOT include markdown formatting, backticks, or any conversational text. Return ONLY the raw JSON object.</constraints>
+</output_requirements>`;
 
     const modelId = 'gemini-3.1-flash-lite';
     const models = [modelId, 'gemini-3-flash-preview'];
