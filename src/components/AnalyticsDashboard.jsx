@@ -381,7 +381,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     // Create a chronological baseline. If a subject has no exams yet, it remains 100.
     // We map each point to its exact time/date to see the ELO vs time progression accurately.
     const datasets = filteredSubjects.map(s => {
-      const subjectHistory = sortedHistory.filter(h => h.subject === s);
+      const subjectHistory = sortedHistory.filter(h => h.subject?.toLowerCase() === s.toLowerCase());
 
       // Starting point: (100) before any exam
       const points = [{ x: 'Start', y: 100 }];
@@ -556,7 +556,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
     const filteredSeries = selectedSubjectFilter === 'All'
       ? data.timeIssuesSeries
-      : data.timeIssuesSeries.filter(t => t.subject === selectedSubjectFilter);
+      : data.timeIssuesSeries.filter(t => t.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase());
 
     if (filteredSeries.length === 0) return null;
 
@@ -638,7 +638,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     if (!data?.topicMastery?.length) return null;
     const filtered = (selectedSubjectFilter === 'All'
       ? data.topicMastery
-      : data.topicMastery.filter(t => t.subject === selectedSubjectFilter)
+      : data.topicMastery.filter(t => t.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase())
     ).filter(t => t.total_count > 0)
      .sort((a, b) => a.accuracy_rate - b.accuracy_rate); // lowest accuracy on top
 
@@ -849,7 +849,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                       <span className="analytics-stat-label">Overall Subject Accuracy</span>
                       <span className="analytics-stat-value" style={{ color: 'var(--success)' }}>
                         {(() => {
-                          const subjectHistory = (data?.eloHistory || []).filter(h => h.subject === selectedSubjectFilter);
+                      const subjectHistory = (data?.eloHistory || []).filter(h => h.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase());
                           if (subjectHistory.length === 0) return '0%';
                           const sum = subjectHistory.reduce((acc, h) => acc + (h.accuracy || 0), 0);
                           return Math.round((sum / subjectHistory.length) * 100) + '%';
@@ -1060,8 +1060,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
           {/* Strengths & Weaknesses */}
           {(() => {
-            const filteredS = selectedSubjectFilter === 'All' ? displayStrengths : displayStrengths.filter(s => s.subject === selectedSubjectFilter);
-            const filteredW = selectedSubjectFilter === 'All' ? displayWeaknesses : displayWeaknesses.filter(w => w.subject === selectedSubjectFilter);
+            const filteredS = selectedSubjectFilter === 'All' ? displayStrengths : displayStrengths.filter(s => s.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase());
+            const filteredW = selectedSubjectFilter === 'All' ? displayWeaknesses : displayWeaknesses.filter(w => w.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase());
             if (filteredS.length === 0 && filteredW.length === 0) return null;
             return (
               <div className="glass-panel" style={{ marginTop: '2rem', padding: 'var(--card-padding)' }}>

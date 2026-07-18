@@ -577,9 +577,14 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
   };
 
   // Filter S/W to the current subject
-  const subjectStrengths = strengths.filter(s => s.subject === resultsObj.subject).map(s => s.topic);
-  const subjectWeaknesses = weaknesses.filter(w => w.subject === resultsObj.subject).map(w => w.topic);
-  const subjectDiagnosis = detailedAnalysis[resultsObj.subject];
+  const subjectStrengths = strengths.filter(s => s.subject?.toLowerCase() === resultsObj.subject?.toLowerCase()).map(s => s.topic);
+  const subjectWeaknesses = weaknesses.filter(w => w.subject?.toLowerCase() === resultsObj.subject?.toLowerCase()).map(w => w.topic);
+  const subjectDiagnosis = Object.keys(detailedAnalysis).reduce((acc, key) => {
+    if (key.toLowerCase() === resultsObj.subject?.toLowerCase()) {
+      return detailedAnalysis[key];
+    }
+    return acc;
+  }, null);
 
   const hasAnyTags = Object.keys(tags).length > 0;
 
