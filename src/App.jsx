@@ -88,6 +88,7 @@ function App() {
       ? getCachedItem('chronos_cache_topic_breakdowns', {})
       : getCachedItem('chronos_guest_topic_breakdowns', {});
   });
+  const [lastCondensedScreen, setLastCondensedScreen] = useState('');
 
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
 
@@ -185,6 +186,16 @@ function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (user && currentScreen === 'analytics') {
+      if (lastCondensedScreen !== currentScreen) {
+        condenseDuplicateTopics();
+      }
+    } else if (currentScreen !== 'dashboard') {
+      setLastCondensedScreen('');
+    }
+  }, [currentScreen, user?.user_id, lastCondensedScreen]);
 
   // Auto-login on mount (silent background sync)
   useEffect(() => {
@@ -473,6 +484,28 @@ function App() {
           localStorage.setItem('chronos_cache_active_exam', JSON.stringify(loginData.activeExam || null));
         }
       }).catch(err => console.error("Failed to refresh user data:", err));
+  };
+
+  const condenseDuplicateTopics = () => {
+    if (!user) return;
+    setLastCondensedScreen(currentScreen);
+    fetch('/api/condense-topics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user.user_id })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.mergedCount > 0) {
+          setStrengths(data.strengths);
+          setWeaknesses(data.weaknesses);
+          setTopicBreakdowns(data.topicBreakdowns);
+          localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
+          localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
+          localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns));
+        }
+      })
+      .catch(err => console.error("Topic condensation failed:", err));
   };
 
   const startExam = (config) => {
@@ -1231,6 +1264,7 @@ function App() {
                 loadingExamId={loadingExamId}
                 onReviewExam={reviewPastExam}
                 formatDate={formatDate}
+                onCondense={condenseDuplicateTopics}
               />
             )}
             {currentScreen === 'teacher' && (

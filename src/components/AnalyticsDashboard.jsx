@@ -64,7 +64,7 @@ function formatDate(dateVal) {
   return isNaN(d.getTime()) ? '?' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = [], topicBreakdowns = {}, detailedAnalysis = {}, history = [], loadingExamId = null, onReviewExam = null, hideHistory = false }) {
+export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = [], topicBreakdowns = {}, detailedAnalysis = {}, history = [], loadingExamId = null, onReviewExam = null, hideHistory = false, onCondense = null }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -341,9 +341,26 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         if (!r.ok) throw new Error('Failed to load analytics');
         return r.json();
       })
-      .then(d => { setData(d); setLoading(false); })
+      .then(d => {
+        setData(d);
+        setLoading(false);
+        if (onCondense) {
+          onCondense((condensedData) => {
+            setData(prev => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                topicMastery: condensedData.topicMastery,
+                topicBreakdowns: condensedData.topicBreakdowns,
+                strengths: condensedData.strengths,
+                weaknesses: condensedData.weaknesses
+              };
+            });
+          });
+        }
+      })
       .catch(e => { setError(e.message); setLoading(false); });
-  }, [user?.user_id]);
+  }, [user?.user_id, onCondense]);
 
   // ELO over time chart
   const eloChartData = useMemo(() => {
