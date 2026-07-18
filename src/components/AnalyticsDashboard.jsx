@@ -73,6 +73,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' or 'org_portal'
   const [orgMembers, setOrgMembers] = useState([]);
   const [orgLoading, setOrgLoading] = useState(false);
+  const hasCondensedRef = useRef(false);
 
   const displayHistory = useMemo(() => history && history.length > 0 ? history : (data?.history || []), [history, data?.history]);
   const displayStrengths = useMemo(() => strengths && strengths.length > 0 ? strengths : (data?.strengths || []), [strengths, data?.strengths]);
@@ -344,7 +345,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       .then(d => {
         setData(d);
         setLoading(false);
-        if (onCondense) {
+        if (onCondense && !hasCondensedRef.current) {
+          hasCondensedRef.current = true;
           onCondense((condensedData) => {
             setData(prev => {
               if (!prev) return prev;

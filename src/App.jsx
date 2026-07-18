@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SetupScreen } from './components/SetupScreen';
 import { ExamScreen } from './components/ExamScreen';
 import { AnalyticsScreen } from './components/AnalyticsScreen';
@@ -486,7 +486,7 @@ function App() {
       }).catch(err => console.error("Failed to refresh user data:", err));
   };
 
-  const condenseDuplicateTopics = () => {
+  const condenseDuplicateTopics = useCallback((onSuccess = null) => {
     if (!user) return;
     setLastCondensedScreen(currentScreen);
     fetch('/api/condense-topics', {
@@ -496,17 +496,22 @@ function App() {
     })
       .then(res => res.json())
       .then(data => {
-        if (data.success && data.mergedCount > 0) {
-          setStrengths(data.strengths);
-          setWeaknesses(data.weaknesses);
-          setTopicBreakdowns(data.topicBreakdowns);
-          localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
-          localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
-          localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns));
+        if (data.success) {
+          if (data.mergedCount > 0) {
+            setStrengths(data.strengths);
+            setWeaknesses(data.weaknesses);
+            setTopicBreakdowns(data.topicBreakdowns);
+            localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
+            localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
+            localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns));
+          }
+          if (onSuccess) {
+            onSuccess(data);
+          }
         }
       })
       .catch(err => console.error("Topic condensation failed:", err));
-  };
+  }, [user?.user_id, currentScreen]);
 
   const startExam = (config) => {
     if (!user) {
