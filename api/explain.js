@@ -242,7 +242,7 @@ ${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.
     <description>Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct.</description>
     <subject_specific_instructions>${subjectInstructions}</subject_specific_instructions>
   </task>
-  <task id="2">Critically review the user's answer. If their attempt was marked 'Incorrect', determine if it is actually mathematically, chemically, or scientifically equivalent to the correct answer (for example: minor rounding differences, spelling variations, standard hyphen vs unicode minus sign, spacing or symbol differences, or alternative valid representations). If it is indeed equivalent and correct, set 'shouldRemarkCorrect' to true. Otherwise, set it to false.</task>
+  <task id="2">Critically review the user's answer. If their attempt was marked 'Incorrect', determine if it is actually mathematically, chemically, or scientifically equivalent to the correct answer (for example: minor rounding differences, spelling variations, standard hyphen vs unicode minus sign, spacing or symbol differences, or alternative valid representations). If it is indeed equivalent and correct, set 'shouldRemarkCorrect' to true. Otherwise, set it to false. Also consider that the answer key may not be correct. If the answer key is incorrect, and the student is correct, mark the question correct.</task>
 </tasks>
 
 <output_requirements>
