@@ -577,7 +577,7 @@ function App() {
     }
 
     // Send result to DB
-    const examIdStr = `${Date.now()}`;
+    const examIdStr = examConfig?.examId || `${Date.now()}`;
     setCurrentExamId(examIdStr);
     setGradingLoading(true);
 
@@ -637,6 +637,7 @@ function App() {
         }
         setActiveExam(null);
         setExamConfig(null);
+        localStorage.removeItem('chronos_cache_active_exam');
         // Overwrite results, rating, and change with AI-graded values if present
         if (submitData.results) {
           setExamResults({
