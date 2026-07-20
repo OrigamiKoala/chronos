@@ -10,7 +10,7 @@ import { ReviewScreen } from './components/ReviewScreen';
 import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
 
 // Cookie helpers
-function setCookie(name, value, days = 30) {
+function setCookie(name, value, days = 90) {
   const expires = new Date(Date.now() + days * 864e5).toUTCString();
   document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
 }

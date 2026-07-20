@@ -19,7 +19,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 function generateToken(username) {
   if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
-  const payload = Buffer.from(JSON.stringify({ username, exp: Date.now() + 1000 * 60 * 60 * 24 * 30 })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ username, exp: Date.now() + 1000 * 60 * 60 * 24 * 90 })).toString('base64url');
   const signature = crypto.createHmac('sha256', JWT_SECRET).update(payload).digest('base64url');
   return `${payload}.${signature}`;
 }
