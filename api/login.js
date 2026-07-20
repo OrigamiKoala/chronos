@@ -121,6 +121,9 @@ export default async function handler(req, res) {
   let validTokenUsername = null;
   if (token) {
     validTokenUsername = verifyToken(token);
+    if (!validTokenUsername) {
+      return res.status(401).json({ error: 'Token expired or invalid' });
+    }
   }
 
   if (!validTokenUsername && autoLogin) {
@@ -431,7 +434,11 @@ export default async function handler(req, res) {
       const updatesToMake = [];
 
       for (const h of allHistory) {
-        const sub = h.subject;
+        const rawSub = String(h.subject || 'Math').trim();
+        let sub = 'Math';
+        if (rawSub.toLowerCase() === 'physics') sub = 'Physics';
+        else if (rawSub.toLowerCase() === 'chemistry') sub = 'Chemistry';
+
         const currentRating = subjectRatings[sub] || 100;
         const score = h.accuracy;
 

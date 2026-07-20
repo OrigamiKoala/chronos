@@ -209,6 +209,11 @@ function App() {
       })
         .then(res => {
           if (res.ok) return res.json();
+          if (res.status === 401) {
+            handleLogout();
+            setShowLoginModal(true);
+            setLoginError('Session expired. Please sign in again.');
+          }
           throw new Error('Auto login failed response');
         })
         .then(data => {
@@ -230,6 +235,7 @@ function App() {
             // Cache data in cookies and localStorage
             setCookie('chronos_logged_user', data.user.user_id);
             setCookie('chronos_user_data', JSON.stringify(data.user));
+            if (data.token) setCookie('chronos_logged_token', data.token);
             localStorage.setItem('chronos_cache_ratings', JSON.stringify(userRatings));
             localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
             localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
@@ -456,9 +462,18 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: user.user_id, token })
     })
-      .then(res => res.json())
+      .then(res => {
+        if (res.status === 401) {
+          handleLogout();
+          setShowLoginModal(true);
+          setLoginError('Session expired. Please sign in again.');
+          return null;
+        }
+        return res.json();
+      })
       .then(loginData => {
-        if (loginData && !loginData.status) {
+        if (!loginData) return;
+        if (loginData && loginData.user && !loginData.status) {
           setUser(loginData.user);
           setStrengths(loginData.strengths || []);
           setWeaknesses(loginData.weaknesses || []);
@@ -466,15 +481,16 @@ function App() {
           setTopicBreakdowns(loginData.topicBreakdowns || {});
           setHistory(loginData.history || []);
           const userRatings = {
-            Math: loginData.user.math_rating,
-            Physics: loginData.user.physics_rating,
-            Chemistry: loginData.user.chemistry_rating
+            Math: loginData.user.math_rating || 100,
+            Physics: loginData.user.physics_rating || 100,
+            Chemistry: loginData.user.chemistry_rating || 100
           };
           setRatings(userRatings);
           setActiveExam(loginData.activeExam || null);
 
           // Update cache
           setCookie('chronos_user_data', JSON.stringify(loginData.user));
+          if (loginData.token) setCookie('chronos_logged_token', loginData.token);
           localStorage.setItem('chronos_cache_ratings', JSON.stringify(userRatings));
           localStorage.setItem('chronos_cache_strengths', JSON.stringify(loginData.strengths || []));
           localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(loginData.weaknesses || []));
@@ -722,8 +738,17 @@ function App() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: user.user_id, token })
           })
-            .then(res2 => res2.json())
+            .then(res2 => {
+              if (res2.status === 401) {
+                handleLogout();
+                setShowLoginModal(true);
+                setLoginError('Session expired. Please sign in again.');
+                return null;
+              }
+              return res2.json();
+            })
             .then(data => {
+              if (!data || !data.user) return;
               // Instantly populate the latest state in case background refresh lags
               setUser(data.user);
               setStrengths(data.strengths);
