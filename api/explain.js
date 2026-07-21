@@ -159,8 +159,8 @@ ${hasData ?
   <constraint>Keep answers clear, highly metric-accurate, and under 3 sentences.</constraint>
 </instructions>`;
 
-      const modelId = process.env.GEMINI_MODEL || 'gemini-3.1-flash';
-      const models = [...new Set([modelId, 'gemini-3.1-flash-lite', 'gemini-3-flash-preview'])];
+      const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+      const models = [...new Set([modelId, 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'])];
 
       const input = [{
         type: 'user_input',
@@ -256,8 +256,8 @@ ${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.
 </output_requirements>`;
     }
 
-    const modelId = 'gemini-3.1-flash-lite';
-    const models = [modelId, 'gemini-3-flash-preview'];
+    const modelId = 'gemini-3.5-flash-lite';
+    const models = [modelId, 'gemini-3.1-flash-lite'];
     const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
       model: currentModel,
       input: prompt,

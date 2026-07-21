@@ -537,7 +537,7 @@ ${JSON.stringify(inputData, null, 2)}
 </output_requirements>`;
 
         const response = await executeWithRetry(
-          ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'],
+          ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'],
           (ai, currentModel) => ai.interactions.create({
             model: currentModel,
             input: prompt,

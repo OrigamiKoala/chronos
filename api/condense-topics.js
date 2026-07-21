@@ -130,8 +130,8 @@ Output format must be a JSON object matching this schema:
   ]
 }`;
 
-    const modelId = 'gemini-3.1-flash-lite';
-    const models = [modelId, 'gemini-3-flash-preview'];
+    const modelId = 'gemini-3.5-flash-lite';
+    const models = [modelId, 'gemini-3.1-flash-lite'];
     const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
       model: currentModel,
       input: prompt,

@@ -962,7 +962,7 @@ async function executeWithRetry(apiKeys, models, apiCallFn) {
 }
 
 async function callGemini(input, apiKeys, models, temperature, systemInstruction) {
-  const defaultModels = ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'];
+  const defaultModels = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
   const targetModels = models?.length > 0 ? models : defaultModels;
 
   // Build input for the interactions API from various input formats
@@ -1226,7 +1226,7 @@ The output must be a pure JSON array with the following schema for each object:
         const needed = aiCount - allQuestions.length;
         const dynamicPrompt = buildDynamicPrompt(needed);
 
-        let responseText = await drainGemini(dynamicPrompt, ['gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'], 1.5, systemInstruction);
+        let responseText = await drainGemini(dynamicPrompt, ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'], 1.5, systemInstruction);
 
         if (responseText) {
           try {
@@ -1390,7 +1390,7 @@ Return ONLY a valid JSON array (one object per Question ID):
       const responseText = await callGemini(
         contents,
         geminiApiKeys,
-        ['gemini-3.1-flash-lite', 'gemini-3-flash-preview']
+        ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
       );
 
       if (!responseText) throw new Error('No response from Gemini during batch grading');
