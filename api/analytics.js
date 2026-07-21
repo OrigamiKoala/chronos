@@ -333,7 +333,8 @@ export default async function handler(req, res) {
     const subjectTimeOuts = { Math: 0, Physics: 0, Chemistry: 0 };
     for (const row of resultRows) {
       try {
-        const results = JSON.parse(row.results_json);
+        const results = examResultsMap[row.exam_id];
+        if (!results) continue;
         const sub = row.subject;
         if (subjectTimes[sub] !== undefined) {
           results.forEach((r, qIdx) => {
@@ -371,7 +372,8 @@ export default async function handler(req, res) {
     const timeIssuesSeries = [];
     for (const row of resultRows) {
       try {
-        const results = JSON.parse(row.results_json);
+        const results = examResultsMap[row.exam_id];
+        if (!results) continue;
         const incorrectQuestions = results.filter(r => !r.isCorrect);
         const totalMissed = incorrectQuestions.length;
 
@@ -404,7 +406,8 @@ export default async function handler(req, res) {
     let maxDuration = 0;
     for (const row of resultRows) {
       try {
-        const results = JSON.parse(row.results_json);
+        const results = examResultsMap[row.exam_id];
+        if (!results) continue;
         const totalSec = getExamDuration(results);
         if (totalSec > maxDuration) {
           maxDuration = totalSec;
