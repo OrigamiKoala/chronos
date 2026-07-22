@@ -134,9 +134,19 @@ function App() {
   const [loadingExamId, setLoadingExamId] = useState(null);
   const [currentExamId, setCurrentExamId] = useState(null);
   const [gradingLoading, setGradingLoading] = useState(false);
-  const [activeExam, setActiveExam] = useState(() => {
-    return getCachedItem('chronos_cache_active_exam', null);
+  const [activeExams, setActiveExams] = useState(() => {
+    const cached = getCachedItem('chronos_cache_active_exams', null) || getCachedItem('chronos_cache_active_exam', null);
+    if (!cached) return [];
+    if (Array.isArray(cached)) return cached;
+    return [cached];
   });
+
+  const extractActiveExams = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data.activeExams)) return data.activeExams;
+    if (data.activeExam) return [data.activeExam];
+    return [];
+  };
 
   const formatDate = (dateVal) => {
     if (!dateVal) return '';
@@ -230,7 +240,8 @@ function App() {
               Chemistry: data.user.chemistry_rating || 100
             };
             setRatings(userRatings);
-            setActiveExam(data.activeExam || null);
+            const loadedActiveExams = extractActiveExams(data);
+            setActiveExams(loadedActiveExams);
 
             // Cache data in cookies and localStorage
             setCookie('chronos_logged_user', data.user.user_id);
@@ -242,7 +253,7 @@ function App() {
             localStorage.setItem('chronos_cache_detailed_analysis', JSON.stringify(data.detailedAnalysis || {}));
             localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns || {}));
             localStorage.setItem('chronos_cache_history', JSON.stringify(data.history));
-            localStorage.setItem('chronos_cache_active_exam', JSON.stringify(data.activeExam || null));
+            localStorage.setItem('chronos_cache_active_exams', JSON.stringify(loadedActiveExams));
           }
           setAutoLoginLoading(false);
         })
@@ -320,7 +331,8 @@ function App() {
             Chemistry: data.user.chemistry_rating || 100
           };
           setRatings(userRatings);
-          setActiveExam(data.activeExam || null);
+          const loadedActiveExams = extractActiveExams(data);
+          setActiveExams(loadedActiveExams);
 
           // Store login credentials and data in cookies and cache
           setCookie('chronos_logged_user', data.user.user_id);
@@ -334,7 +346,7 @@ function App() {
           localStorage.setItem('chronos_cache_detailed_analysis', JSON.stringify(data.detailedAnalysis || {}));
           localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns || {}));
           localStorage.setItem('chronos_cache_history', JSON.stringify(data.history));
-          localStorage.setItem('chronos_cache_active_exam', JSON.stringify(data.activeExam || null));
+          localStorage.setItem('chronos_cache_active_exams', JSON.stringify(loadedActiveExams));
 
           localStorage.removeItem('chronos_guest_history');
           localStorage.removeItem('chronos_guest_strengths');
@@ -441,7 +453,7 @@ function App() {
     const guestTopicBreakdowns = localStorage.getItem('chronos_guest_topic_breakdowns');
     setTopicBreakdowns(guestTopicBreakdowns ? JSON.parse(guestTopicBreakdowns) : {});
     setSelectedTopicDetail(null);
-    setActiveExam(null);
+    setActiveExams([]);
     eraseCookie('chronos_logged_user');
     eraseCookie('chronos_logged_token');
     eraseCookie('chronos_user_data');
@@ -451,6 +463,7 @@ function App() {
     localStorage.removeItem('chronos_cache_detailed_analysis');
     localStorage.removeItem('chronos_cache_topic_breakdowns');
     localStorage.removeItem('chronos_cache_history');
+    localStorage.removeItem('chronos_cache_active_exams');
     localStorage.removeItem('chronos_cache_active_exam');
   };
 
@@ -486,7 +499,8 @@ function App() {
             Chemistry: loginData.user.chemistry_rating || 100
           };
           setRatings(userRatings);
-          setActiveExam(loginData.activeExam || null);
+          const loadedActiveExams = extractActiveExams(loginData);
+          setActiveExams(loadedActiveExams);
 
           // Update cache
           setCookie('chronos_user_data', JSON.stringify(loginData.user));
@@ -497,7 +511,7 @@ function App() {
           localStorage.setItem('chronos_cache_detailed_analysis', JSON.stringify(loginData.detailedAnalysis || {}));
           localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(loginData.topicBreakdowns || {}));
           localStorage.setItem('chronos_cache_history', JSON.stringify(loginData.history || []));
-          localStorage.setItem('chronos_cache_active_exam', JSON.stringify(loginData.activeExam || null));
+          localStorage.setItem('chronos_cache_active_exams', JSON.stringify(loadedActiveExams));
         }
       }).catch(err => console.error("Failed to refresh user data:", err));
   };
@@ -540,33 +554,35 @@ function App() {
     }
   };
 
-  const handleResumeExam = () => {
-    if (!activeExam) return;
-    setExamConfig({ ...activeExam.config, username: user.user_id, examId: activeExam.exam_id });
+  const handleResumeExam = (examToResume) => {
+    const targetExam = examToResume || (activeExams.length > 0 ? activeExams[0] : null);
+    if (!targetExam) return;
+    setExamConfig({ ...targetExam.config, username: user.user_id, examId: targetExam.exam_id, subject: targetExam.subject });
     setCurrentScreen('exam');
   };
 
-  const [deletingExam, setDeletingExam] = useState(false);
+  const [deletingExamId, setDeletingExamId] = useState(null);
 
-  const handleDeleteExam = async () => {
-    if (!activeExam) return;
+  const handleDeleteExam = async (examIdToDelete) => {
+    const targetId = examIdToDelete || (activeExams.length > 0 ? activeExams[0].exam_id : null);
+    if (!targetId) return;
     if (!window.confirm("Are you sure you want to discard this active exam? All in-progress work will be permanently lost.")) return;
 
-    setDeletingExam(true);
+    setDeletingExamId(targetId);
     try {
       const response = await fetch('/api/exams?route=delete-active-exam', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: user.user_id,
-          examId: activeExam.exam_id
+          examId: targetId
         })
       });
 
       if (response.ok) {
-        setActiveExam(null);
-        // Clear cached active exam
-        localStorage.removeItem('chronos_cache_active_exam');
+        const updatedExams = activeExams.filter(e => e.exam_id !== targetId);
+        setActiveExams(updatedExams);
+        localStorage.setItem('chronos_cache_active_exams', JSON.stringify(updatedExams));
       } else {
         const errData = await response.json().catch(() => ({}));
         alert(errData.error || 'Failed to delete active exam');
@@ -575,7 +591,7 @@ function App() {
       console.error('Delete active exam failed:', err);
       alert('Network error. Failed to delete active exam.');
     } finally {
-      setDeletingExam(false);
+      setDeletingExamId(null);
     }
   };
 
@@ -689,9 +705,9 @@ function App() {
           setGradingLoading(false);
           return;
         }
-        setActiveExam(null);
+        setActiveExams(prev => prev.filter(e => e.exam_id !== examIdStr));
         setExamConfig(null);
-        localStorage.removeItem('chronos_cache_active_exam');
+        localStorage.setItem('chronos_cache_active_exams', JSON.stringify(activeExams.filter(e => e.exam_id !== examIdStr)));
         // Overwrite results, rating, and change with AI-graded values if present
         if (submitData.results) {
           setExamResults({
@@ -761,7 +777,8 @@ function App() {
                 Physics: data.user.physics_rating || 100,
                 Chemistry: data.user.chemistry_rating || 100
               });
-              setActiveExam(null);
+              const loadedActiveExams = extractActiveExams(data);
+              setActiveExams(loadedActiveExams);
               setCurrentScreen('analytics');
               setGradingLoading(false);
             })
@@ -1057,50 +1074,58 @@ function App() {
                       {user.user_id}'s {selectedSubject} Dashboard
                     </h3>
 
-                    {activeExam && (
-                      <div style={{
-                        background: 'rgba(99, 102, 241, 0.08)',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                        borderRadius: 'var(--radius-md)',
-                        padding: '1rem',
-                        marginBottom: '1.5rem',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        boxSizing: 'border-box'
-                      }}>
-                        <div>
-                          <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600' }}>Resume Exam?</h4>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            {activeExam.subject} • {activeExam.config.numQuestions} Qs • Started {new Date(activeExam.created_at).toLocaleDateString()}
-                          </span>
+                    {activeExams && activeExams.length > 0 && activeExams.map((exam, index) => {
+                      const numQs = exam.config?.numQuestions || exam.problems?.length || 0;
+                      const dateFormatted = exam.created_at ? formatDate(exam.created_at) : 'In progress';
+                      return (
+                        <div
+                          key={exam.exam_id || index}
+                          style={{
+                            background: 'rgba(99, 102, 241, 0.08)',
+                            border: '1px solid rgba(99, 102, 241, 0.3)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: '1rem',
+                            marginBottom: '1rem',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <div>
+                            <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600' }}>
+                              Resume Exam?
+                            </h4>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                              {exam.subject} • {numQs} Qs • Started {dateFormatted}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              className="btn btn-primary"
+                              style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+                              onClick={() => handleResumeExam(exam)}
+                            >
+                              Resume
+                            </button>
+                            <button
+                              className="btn btn-outline"
+                              style={{
+                                padding: '0.4rem 1rem',
+                                fontSize: '0.85rem',
+                                borderColor: '#ef4444',
+                                color: '#ef4444',
+                                background: 'transparent'
+                              }}
+                              onClick={() => handleDeleteExam(exam.exam_id)}
+                              disabled={deletingExamId === exam.exam_id}
+                            >
+                              {deletingExamId === exam.exam_id ? 'Discarding...' : 'Delete'}
+                            </button>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button
-                            className="btn btn-primary"
-                            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
-                            onClick={handleResumeExam}
-                          >
-                            Resume
-                          </button>
-                          <button
-                             className="btn btn-outline"
-                             style={{
-                               padding: '0.4rem 1rem',
-                               fontSize: '0.85rem',
-                               borderColor: '#ef4444',
-                               color: '#ef4444',
-                               background: 'transparent'
-                             }}
-                             onClick={handleDeleteExam}
-                             disabled={deletingExam}
-                           >
-                             {deletingExam ? 'Discarding...' : 'Delete'}
-                           </button>
-                        </div>
-
-                      </div>
-                    )}
+                      );
+                    })}
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                       <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
@@ -1261,7 +1286,7 @@ function App() {
                 config={examConfig}
                 onFinish={finishExam}
                 onCancel={restart}
-                resumeState={activeExam && activeExam.exam_id === examConfig?.examId ? activeExam : null}
+                resumeState={activeExams.find(e => e.exam_id === examConfig?.examId) || null}
               />
             )}
             {currentScreen === 'analytics' && examResults && (

@@ -388,11 +388,10 @@ export default async function handler(req, res) {
          WHERE user_id = @username
         ) AS breakdown_json,
         
-        (SELECT TO_JSON_STRING(STRUCT(exam_id, subject, config_json, problems_json, answers_json, frq_submissions_json, current_question_index, created_at))
+        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(exam_id, subject, config_json, problems_json, answers_json, frq_submissions_json, current_question_index, created_at) ORDER BY created_at DESC))
          FROM \`${projectId}\`.\`chronos_users\`.\`user_active_exams\`
          WHERE user_id = @username
-         LIMIT 1
-        ) AS active_exam_json
+        ) AS active_exams_json
     `;
 
     const [rows] = await bq.query({
@@ -406,26 +405,27 @@ export default async function handler(req, res) {
     const analyses = resultRow.analysis_json ? (JSON.parse(resultRow.analysis_json) || []) : [];
     const breakdowns = resultRow.breakdown_json ? (JSON.parse(resultRow.breakdown_json) || []) : [];
 
-    let activeExam = null;
-    if (resultRow.active_exam_json) {
+    let activeExams = [];
+    if (resultRow.active_exams_json) {
       try {
-        const parsedActive = JSON.parse(resultRow.active_exam_json);
-        if (parsedActive && parsedActive.exam_id) {
-          activeExam = {
+        const parsedList = JSON.parse(resultRow.active_exams_json);
+        if (Array.isArray(parsedList)) {
+          activeExams = parsedList.map(parsedActive => ({
             exam_id: parsedActive.exam_id,
             subject: parsedActive.subject,
-            config: parsedActive.config_json ? JSON.parse(parsedActive.config_json) : {},
-            problems: parsedActive.problems_json ? JSON.parse(parsedActive.problems_json) : [],
-            answers: parsedActive.answers_json ? JSON.parse(parsedActive.answers_json) : [],
-            frqSubmissions: parsedActive.frq_submissions_json ? JSON.parse(parsedActive.frq_submissions_json) : [],
-            currentQuestionIndex: Number(parsedActive.current_question_index),
+            config: parsedActive.config_json ? (typeof parsedActive.config_json === 'string' ? JSON.parse(parsedActive.config_json) : parsedActive.config_json) : {},
+            problems: parsedActive.problems_json ? (typeof parsedActive.problems_json === 'string' ? JSON.parse(parsedActive.problems_json) : parsedActive.problems_json) : [],
+            answers: parsedActive.answers_json ? (typeof parsedActive.answers_json === 'string' ? JSON.parse(parsedActive.answers_json) : parsedActive.answers_json) : [],
+            frqSubmissions: parsedActive.frq_submissions_json ? (typeof parsedActive.frq_submissions_json === 'string' ? JSON.parse(parsedActive.frq_submissions_json) : parsedActive.frq_submissions_json) : [],
+            currentQuestionIndex: Number(parsedActive.current_question_index || 0),
             created_at: parsedActive.created_at?.value || parsedActive.created_at
-          };
+          })).filter(e => e && e.exam_id);
         }
       } catch (err) {
-        console.error('Error parsing active exam:', err);
+        console.error('Error parsing active exams:', err);
       }
     }
+    const activeExam = activeExams.length > 0 ? activeExams[0] : null;
 
     if (needsRecalculation) {
       const subjectRatings = { Math: 100, Physics: 100, Chemistry: 100 };
@@ -590,7 +590,8 @@ export default async function handler(req, res) {
       weaknesses,
       detailedAnalysis,
       topicBreakdowns,
-      activeExam
+      activeExam,
+      activeExams
     });
 
   } catch (err) {
