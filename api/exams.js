@@ -357,7 +357,7 @@ export default async function handler(req, res) {
       if (subject === 'Physics') ratingColumn = 'physics_rating';
       else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
 
-      await Promise.all([
+      const updatePromises = [
         bq.query({
           query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\`
             SET results_json = @resultsJson,
@@ -390,7 +390,7 @@ export default async function handler(req, res) {
             WHERE user_id = @username`,
           params: { ratingDiff, username: sanitizedUser }
         })
-      ]);
+      ];
 
       // 6. Update user_topic_mastery in a single query
       const topics = topic.split(',').map(t => t.trim()).filter(Boolean);
@@ -401,11 +401,13 @@ export default async function handler(req, res) {
               accuracy_rate = SAFE_DIVIDE(correct_count + 1, total_count)
           WHERE user_id = @username AND subject = @subject AND sub_category IN UNNEST(@topics)
         `;
-        await bq.query({
+        updatePromises.push(bq.query({
           query: updateMasteryQuery,
           params: { username: sanitizedUser, subject, topics }
-        });
+        }));
       }
+
+      await Promise.all(updatePromises);
 
       return res.status(200).json({ success: true, newAccuracy, newRatingVal, newRatingChange });
     } catch (err) {
@@ -1055,7 +1057,7 @@ export default async function handler(req, res) {
                   isRated,
                   assignmentId,
                   results: gradedResults.map(r => {
-                    const { frqSubmission, ...rest } = r;
+                    const { frqSubmission, ...rest } = r; // eslint-disable-line no-unused-vars
                     return rest;
                   }),
                   geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
@@ -1158,7 +1160,7 @@ export default async function handler(req, res) {
                 isRated,
                 assignmentId,
                 results: results.map(r => {
-                  const { frqSubmission, ...rest } = r;
+                  const { frqSubmission, ...rest } = r; // eslint-disable-line no-unused-vars
                   return rest;
                 }),
                 geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
