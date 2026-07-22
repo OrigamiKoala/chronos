@@ -330,9 +330,6 @@ You are a world-class tutor in science and mathematics.
           response_format: {
             type: 'text',
             mime_type: 'application/json'
-          },
-          generation_config: {
-            temperature: 0.3
           }
         }), req);
 

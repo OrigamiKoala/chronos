@@ -171,10 +171,6 @@ ${hasData ?
         model: undefined, // set per model in retry
         input,
         system_instruction: systemPrompt,
-        generation_config: {
-          maxOutputTokens: 256,
-          temperature: 0.3
-        }
       };
       if (previousInteractionId) {
         interactionOptions.previous_interaction_id = previousInteractionId;

@@ -54,7 +54,7 @@ async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homework
       return;
     }
     const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
-    
+
     // Helper function to generate HS256 JWT
     function generateJWT(payload, secret) {
       const header = { alg: 'HS256', typ: 'JWT' };
@@ -573,9 +573,6 @@ ${practiceSummaryText}
             response_format: {
               type: 'text',
               mime_type: 'application/json'
-            },
-            generation_config: {
-              temperature: 0.3
             }
           }), req);
 
@@ -861,12 +858,12 @@ ${practiceSummaryText}
 
       if (myStudents.length > 0) {
         const studentIds = myStudents.map(s => s.user_id);
-        
+
         // Query collective ELO averages
         const mathSum = myStudents.reduce((acc, s) => acc + (s.math_rating || 100), 0);
         const physSum = myStudents.reduce((acc, s) => acc + (s.physics_rating || 100), 0);
         const chemSum = myStudents.reduce((acc, s) => acc + (s.chemistry_rating || 100), 0);
-        
+
         collectiveStats.avgMath = Math.round(mathSum / myStudents.length);
         collectiveStats.avgPhys = Math.round(physSum / myStudents.length);
         collectiveStats.avgChem = Math.round(chemSum / myStudents.length);
@@ -895,7 +892,7 @@ ${practiceSummaryText}
 
         try {
           const breakdownRowsProcessed = breakdownRows;
-          
+
           for (const row of breakdownRows) {
             const topic = row.topic;
             if (!collectiveTopicBreakdowns[topic]) {
@@ -908,7 +905,7 @@ ${practiceSummaryText}
               collectiveTopicBreakdowns[topic].not_good_at.push(`- **${row.user_id}**: ${row.not_good_at}`);
             }
           }
-          
+
           for (const topic in collectiveTopicBreakdowns) {
             collectiveTopicBreakdowns[topic].good_at = collectiveTopicBreakdowns[topic].good_at.join('\n');
             collectiveTopicBreakdowns[topic].not_good_at = collectiveTopicBreakdowns[topic].not_good_at.join('\n');
