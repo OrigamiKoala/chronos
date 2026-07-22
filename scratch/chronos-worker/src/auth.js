@@ -20,7 +20,11 @@ export async function getAccessToken(env) {
   const now = Math.floor(Date.now() / 1000);
   if (cachedToken && tokenExpiry - now > 60) return cachedToken;
 
-  const sa = JSON.parse(env.GCP_SA_KEY);
+  if (!env || !env.GCP_SA_KEY) {
+    throw new Error('GCP_SA_KEY environment variable is missing');
+  }
+
+  const sa = typeof env.GCP_SA_KEY === 'string' ? JSON.parse(env.GCP_SA_KEY) : env.GCP_SA_KEY;
 
   const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const iat = now;

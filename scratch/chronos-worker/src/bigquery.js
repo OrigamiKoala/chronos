@@ -39,8 +39,9 @@ function parseRows(result) {
   const fields = (result.schema?.fields || []).map((f) => f.name);
   return rows.map((row) => {
     const obj = {};
-    row.f.forEach((cell, idx) => {
-      obj[fields[idx]] = cell.v;
+    (row.f || []).forEach((cell, idx) => {
+      const fieldName = fields[idx] || `col_${idx}`;
+      obj[fieldName] = cell.v;
     });
     return obj;
   });

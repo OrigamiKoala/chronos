@@ -1296,7 +1296,6 @@ Generate exactly ${needed} ${normSubject} problems. The average difficulty of th
             input: dynamicPrompt,
             system_instruction: systemInstruction,
             response_format: { type: 'text', mime_type: 'application/json' },
-            //      generation_config: { thinking_level: 'low' }
           }).then(r => r.output_text)
         );
 

@@ -870,7 +870,12 @@ function formatExemplarsForPrompt(exemplars) {
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
   });
 }
 
@@ -989,13 +994,16 @@ async function callGemini(input, apiKeys, models, temperature, systemInstruction
 
   try {
     return await executeWithRetry(apiKeys, targetModels, async (ai, currentModel) => {
-      const result = await ai.interactions.create({
+      const config = {
         model: currentModel,
         input: interactionInput,
         system_instruction: systemInstruction,
         response_format: { type: 'text', mime_type: 'application/json' },
-        generation_config: { thinking_level: 'low' },
-      });
+      };
+      if (typeof temperature === 'number') {
+        config.generation_config = { temperature };
+      }
+      const result = await ai.interactions.create(config);
       return result.output_text ?? null;
     });
   } catch (err) {
@@ -1010,9 +1018,12 @@ async function callGemini(input, apiKeys, models, temperature, systemInstruction
 // ------------------------------------
 
 async function generateHomework(payload, projectId, accessToken, env) {
-  const { teacherId, lessonId, lessonTitle, lessonDescription, studentIds, homeworks } = payload;
-  const geminiApiKeys = (env.GEMINI_API_KEYS || '').split(',').map((k) => k.trim()).filter(Boolean);
-  const tId = teacherId.trim().toLowerCase();
+  const { teacherId, lessonId, lessonTitle, lessonDescription, studentIds, homeworks } = payload || {};
+  const rawKeys = env.GEMINI_API_KEYS || payload?.geminiApiKeys || payload?.geminiApiKey || '';
+  const geminiApiKeys = (Array.isArray(rawKeys) ? rawKeys : String(rawKeys).split(','))
+    .map((k) => String(k).trim())
+    .filter(Boolean);
+  const tId = teacherId ? teacherId.trim().toLowerCase() : '';
 
   let subreqCount = 0;
   let drainSkipped = false;
@@ -1041,15 +1052,18 @@ async function generateHomework(payload, projectId, accessToken, env) {
         teacherId, lessonId, lessonTitle, lessonDescription,
         studentIds: [sanitizedStudent],
         homeworks: [hw],
-        geminiApiKeys: payload.geminiApiKeys
+        geminiApiKeys: payload?.geminiApiKeys
       })
     }).catch(err => console.error('Fallback ping failed:', err));
   }
 
-  for (const studentId of studentIds) {
-    const sanitizedStudent = studentId.trim().toLowerCase();
+  const safeStudents = Array.isArray(studentIds) ? studentIds : [];
+  const safeHomeworks = Array.isArray(homeworks) ? homeworks : [];
 
-    for (const hw of homeworks) {
+  for (const studentId of safeStudents) {
+    const sanitizedStudent = String(studentId || '').trim().toLowerCase();
+
+    for (const hw of safeHomeworks) {
       drainSkipped = false;
 
 
@@ -1298,9 +1312,14 @@ The output must be a pure JSON array with the following schema for each object:
 // ------------------------------------
 
 async function gradeExam(payload, projectId, accessToken, env) {
-  const { username, subject, examId, accuracy, avgTime, ratingChange, newRating, isRated, assignmentId, results } = payload;
-  const geminiApiKeys = (env.GEMINI_API_KEYS || '').split(',').map((k) => k.trim()).filter(Boolean);
-  const sanitizedUser = username.trim().toLowerCase();
+  const data = payload?.payload || payload || {};
+  const { username, subject, examId, accuracy, avgTime, ratingChange, newRating, isRated, assignmentId, results } = data;
+  const rawKeys = env.GEMINI_API_KEYS || payload?.geminiApiKeys || payload?.geminiApiKey || '';
+  const geminiApiKeys = (Array.isArray(rawKeys) ? rawKeys : String(rawKeys).split(','))
+    .map((k) => String(k).trim())
+    .filter(Boolean);
+  const sanitizedUser = String(username || '').trim().toLowerCase();
+  const safeResults = Array.isArray(results) ? results : [];
 
   // Fetch frqSubmission from BigQuery (not sent in payload to keep it small)
   let storedResults = [];
@@ -1319,8 +1338,8 @@ async function gradeExam(payload, projectId, accessToken, env) {
   const storedMap = {};
   storedResults.forEach(r => { if (r.id) storedMap[r.id] = r; });
 
-  const frqs = results.filter((r) => r.type === 'free_response');
-  const nonFrqs = results.filter((r) => r.type !== 'free_response');
+  const frqs = safeResults.filter((r) => r.type === 'free_response');
+  const nonFrqs = safeResults.filter((r) => r.type !== 'free_response');
 
   // Grade non-FRQs (trust client-side grading)
   const gradedNonFrqs = nonFrqs.map((r) => ({
@@ -1635,27 +1654,32 @@ export default {
       return jsonResponse({ error: 'Invalid JSON body' }, 400);
     }
 
-    const { action } = payload;
-    const projectId = payload.projectId || env.PROJECT_ID;
+    const { action } = payload || {};
+    const projectId = payload?.projectId || env.PROJECT_ID;
 
     let accessToken;
     try {
       accessToken = await getAccessToken(env);
     } catch (err) {
       console.error('Auth failed:', err);
-      return jsonResponse({ error: 'GCP authentication failed' }, 500);
+      return jsonResponse({ error: 'GCP authentication failed: ' + err.message }, 500);
     }
 
-    if (action === 'generate_homework') {
-      await generateHomework(payload, projectId, accessToken, env);
-      return jsonResponse({ success: true, message: 'Homework generation complete' });
-    }
+    try {
+      if (action === 'generate_homework') {
+        await generateHomework(payload, projectId, accessToken, env);
+        return jsonResponse({ success: true, message: 'Homework generation complete' });
+      }
 
-    if (action === 'async_grade_exam') {
-      await gradeExam(payload.payload, projectId, accessToken, env);
-      return jsonResponse({ success: true, message: 'Exam grading complete' });
-    }
+      if (action === 'async_grade_exam') {
+        await gradeExam(payload, projectId, accessToken, env);
+        return jsonResponse({ success: true, message: 'Exam grading complete' });
+      }
 
-    return jsonResponse({ error: 'Unknown action' }, 400);
+      return jsonResponse({ error: 'Unknown action: ' + action }, 400);
+    } catch (err) {
+      console.error(`Error processing action ${action}:`, err);
+      return jsonResponse({ error: err.message || 'Internal worker error' }, 500);
+    }
   },
 };
