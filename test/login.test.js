@@ -30,7 +30,7 @@ describe('login API - Table Creation Error Logging', () => {
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    const req = {
+    const req = { query: {},
       method: 'POST',
       body: {
         username: 'testuser',
