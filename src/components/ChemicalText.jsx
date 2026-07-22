@@ -156,9 +156,18 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
   if (!text) return null;
 
+  // Unescape literal backslash-n / backslash-r / backslash-t string escape sequences to actual linebreaks/tabs for display,
+  // preserving valid LaTeX commands starting with n, r, or t.
+  const cleanText = typeof text === 'string'
+    ? text
+        .replace(/\\+n(?![u]|eq|abla|eg|otin|exists|ot|atural|ewline|oindent|earrow|warrow|left|right|parallel|prec|succ|sim|sub|sup|vdash|vDash|Vdash|VDash|leqslant|geqslant|less|gtr|[a-z]*[0-9{}])/g, '\n')
+        .replace(/\\+r(?![h]o|[a-z]*[0-9{}])/g, '\r')
+        .replace(/\\+t(?![a]u|[h]eta|[e]xt|[i]mes|[i]lde|[a]n|[a]nh|[o]p|[r]iangle|[h]ere|[s]frac|[a-z]*[0-9{}])/g, '\t')
+    : text;
+
   // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\], \begin{env}...\end{env}), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
   // smiles tag blocks (<smiles>...</smiles>), and markdown bold (**...**) / italic (*...*)
-  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\end\{[a-zA-Z]+\*?\}|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
+  const parts = cleanText.split(/(\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\end\{[a-zA-Z]+\*?\}|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
 
   return (
     <span ref={containerRef} key={text} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -234,12 +243,6 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         if (part.startsWith('$') || part.startsWith('\\(') || part.startsWith('\\[') || part.startsWith('\\begin')) {
           return <span key={partIndex}>{part}</span>;
         }
-        // Detect raw LaTeX commands (e.g., \textbf, \qquad) not wrapped in delimiters and wrap them for MathJax
-        if (/^\\[a-zA-Z]+/.test(part)) {
-          // Wrap the raw command in inline math delimiters
-          const wrapped = `$${part}$`;
-          return <span key={partIndex}>{wrapped}</span>;
-        }
 
         // If this part is markdown bold (**...**), render as <strong>
         if (part.startsWith('**') && part.endsWith('**')) {
@@ -253,9 +256,8 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
           return <em key={partIndex}><ChemicalText text={inner} theme={theme} defaultWidth={defaultWidth} defaultHeight={defaultHeight} /></em>;
         }
 
-        // For non-math text, split by whitespace to detect newlines and space spacing properly
-        const cleanPart = typeof part === 'string' ? part.replace(/\\+n/g, '\n').replace(/\\+r/g, '\r') : part;
-        const tokens = cleanPart.split(/(\s+)/);
+        // For non-math text, split by whitespace to detect newlines, spaces, and unwrapped raw LaTeX commands safely per token
+        const tokens = part.split(/(\s+)/);
         return (
           <span key={partIndex}>
             {tokens.map((token, index) => {
@@ -274,6 +276,11 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
                   );
                 }
                 return <span key={index}>{token}</span>;
+              }
+
+              // Check if token contains a raw LaTeX command (e.g. \ce{H2O}, \alpha, \textbf{(A)}) not enclosed in $...$
+              if (/(?:^|[^\\])\\[a-zA-Z]+/.test(token) && !token.startsWith('\\n') && !token.startsWith('\\r') && !token.startsWith('\\t')) {
+                return <span key={index}>{`$${token}$`}</span>;
               }
 
               return <span key={index}>{token}</span>;
