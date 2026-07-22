@@ -994,7 +994,7 @@ async function callGemini(input, apiKeys, models, temperature, systemInstruction
         input: interactionInput,
         system_instruction: systemInstruction,
         response_format: { type: 'text', mime_type: 'application/json' },
-        generation_config: { temperature: temperature ?? 1.5, thinking_level: 'low' },
+        generation_config: { thinking_level: 'low' },
       });
       return result.output_text ?? null;
     });
@@ -1407,7 +1407,7 @@ Return ONLY a valid JSON array (one object per Question ID):
         if (!graded) return { ...r, isCorrect: false, score: 0, feedback: 'Grading failed for this question.' };
         const sub = r.frqSubmission || storedMap[r.id]?.frqSubmission || null;
         const isImage = sub?.value?.startsWith('data:image/');
-        
+
         let finalIsCorrect = false;
         if (graded.isCorrect === null || graded.isCorrect === undefined) {
           finalIsCorrect = null;
@@ -1456,7 +1456,7 @@ Return ONLY a valid JSON array (one object per Question ID):
     for (const r of gradedFrqs) {
       const topicStr = r.topic || 'General';
       const topics = topicStr.split(',').map(t => t.trim()).filter(Boolean);
-      
+
       if (r.isCorrect === true) {
         for (const topic of topics) {
           dbPromises.push(runQuery(
