@@ -1276,7 +1276,7 @@ Generate exactly ${needed} ${normSubject} problems. The average difficulty of th
 
     const geminiModels = count > 40
       ? ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
-      : ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+      : ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
 
     let attempts = 0;
     const maxAttempts = 3;
@@ -1296,7 +1296,7 @@ Generate exactly ${needed} ${normSubject} problems. The average difficulty of th
             input: dynamicPrompt,
             system_instruction: systemInstruction,
             response_format: { type: 'text', mime_type: 'application/json' },
-            generation_config: { temperature: 1.5, thinking_level: 'low' }
+            generation_config: { temperature: 1.5, thinking_level: 'high' }
           }).then(r => r.output_text)
         );
 
