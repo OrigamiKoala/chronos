@@ -1,5 +1,103 @@
 import { BigQuery } from '@google-cloud/bigquery';
+import crypto from 'crypto';
 import { executeWithRetry, parseJSONResponse } from './_gemini.js';
+
+function generateQuestionId(questionText, subject) {
+  const hash = crypto.createHash('md5')
+    .update(`${subject || ''}:${questionText}`)
+    .digest('hex');
+  const cleanSubject = String(subject || 'gen').trim().toLowerCase().substring(0, 5);
+  return `${cleanSubject}_${hash.substring(0, 16)}`;
+}
+
+async function saveQuestionsToPregenerated(questions, subject) {
+  if (!questions || !Array.isArray(questions) || questions.length === 0) return;
+  const nonMockQuestions = questions.filter(q => {
+    if (!q || !q.question) return false;
+    const qId = String(q.id || '');
+    const isMock = qId.toLowerCase().includes('mock') ||
+      q.question.toString().startsWith('Mock') ||
+      /^\d+-\d+$/.test(qId);
+    return !isMock;
+  });
+
+  if (nonMockQuestions.length === 0) return;
+
+  const normSubject = String(subject || 'general').trim().toLowerCase();
+  const selectClauses = [];
+  const params = {};
+  const types = {};
+
+  nonMockQuestions.forEach((q, idx) => {
+    const questionId = q.id && !/^\d+-\d+$/.test(String(q.id))
+      ? String(q.id)
+      : generateQuestionId(q.question, normSubject);
+
+    const idParam = `qid_${idx}`;
+    const subjectParam = `sub_${idx}`;
+    const topicParam = `topic_${idx}`;
+    const diffParam = `diff_${idx}`;
+    const typeParam = `type_${idx}`;
+    const jsonParam = `json_${idx}`;
+
+    const cleanQuestion = {
+      id: questionId,
+      topic: q.topic || 'General',
+      question: q.question,
+      type: q.type || 'multiple_choice',
+      difficulty: Number(q.difficulty !== undefined ? q.difficulty : 5),
+      answer: q.answer || '',
+      detailedSolution: q.detailedSolution || ''
+    };
+    if (q.options) cleanQuestion.options = q.options;
+    if (q.keywordExpression) cleanQuestion.keywordExpression = q.keywordExpression;
+
+    params[idParam] = questionId;
+    params[subjectParam] = normSubject;
+    params[topicParam] = String(q.topic || 'General');
+    params[diffParam] = Number(q.difficulty !== undefined ? q.difficulty : 5);
+    params[typeParam] = String(q.type || 'multiple_choice');
+    params[jsonParam] = JSON.stringify(cleanQuestion);
+
+    types[idParam] = 'STRING';
+    types[subjectParam] = 'STRING';
+    types[topicParam] = 'STRING';
+    types[diffParam] = 'INT64';
+    types[typeParam] = 'STRING';
+    types[jsonParam] = 'STRING';
+
+    selectClauses.push(`
+      SELECT 
+        @${idParam} AS question_id,
+        @${subjectParam} AS subject,
+        @${topicParam} AS topic,
+        @${diffParam} AS difficulty,
+        @${typeParam} AS type,
+        @${jsonParam} AS question_json
+    `);
+  });
+
+  const batchMergePregenQuery = `
+    MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
+    USING (
+      ${selectClauses.join('\n      UNION ALL\n      ')}
+    ) S
+    ON T.question_id = S.question_id
+    WHEN NOT MATCHED THEN
+      INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
+      VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())
+  `;
+
+  try {
+    await bq.query({
+      query: batchMergePregenQuery,
+      params,
+      types
+    });
+  } catch (pregenErr) {
+    console.error('Failed to add questions to pregenerated_questions:', pregenErr);
+  }
+}
 
 
 
@@ -782,86 +880,7 @@ export default async function handler(req, res) {
     }
 
     // 0. Add questions to pregenerated_questions table in BigQuery (non-mock questions only)
-    const nonMockQuestions = gradedResults.filter(q => {
-      if (!q.id || !q.question) return false;
-      const isMock = q.id.toString().toLowerCase().includes('mock') ||
-        q.question.toString().startsWith('Mock') ||
-        /^\d+-\d+$/.test(q.id); // Matches Date.now()-i format
-      return !isMock;
-    });
-
-    if (nonMockQuestions.length > 0) {
-      const normSubject = String(subject).trim().toLowerCase();
-      const selectClauses = [];
-      const params = {};
-      const types = {};
-
-      nonMockQuestions.forEach((q, idx) => {
-        const idParam = `qid_${idx}`;
-        const subjectParam = `sub_${idx}`;
-        const topicParam = `topic_${idx}`;
-        const diffParam = `diff_${idx}`;
-        const typeParam = `type_${idx}`;
-        const jsonParam = `json_${idx}`;
-
-        const cleanQuestion = {
-          id: q.id,
-          topic: q.topic || 'General',
-          question: q.question,
-          type: q.type,
-          difficulty: Number(q.difficulty !== undefined ? q.difficulty : 5),
-          answer: q.answer || '',
-          detailedSolution: q.detailedSolution || ''
-        };
-        if (q.options) cleanQuestion.options = q.options;
-        if (q.keywordExpression) cleanQuestion.keywordExpression = q.keywordExpression;
-
-        params[idParam] = String(q.id);
-        params[subjectParam] = normSubject;
-        params[topicParam] = String(q.topic || 'General');
-        params[diffParam] = Number(q.difficulty !== undefined ? q.difficulty : 5);
-        params[typeParam] = String(q.type);
-        params[jsonParam] = JSON.stringify(cleanQuestion);
-
-        types[idParam] = 'STRING';
-        types[subjectParam] = 'STRING';
-        types[topicParam] = 'STRING';
-        types[diffParam] = 'INT64';
-        types[typeParam] = 'STRING';
-        types[jsonParam] = 'STRING';
-
-        selectClauses.push(`
-          SELECT 
-            @${idParam} AS question_id,
-            @${subjectParam} AS subject,
-            @${topicParam} AS topic,
-            @${diffParam} AS difficulty,
-            @${typeParam} AS type,
-            @${jsonParam} AS question_json
-        `);
-      });
-
-      const batchMergePregenQuery = `
-        MERGE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` T
-        USING (
-          ${selectClauses.join('\n          UNION ALL\n          ')}
-        ) S
-        ON T.question_id = S.question_id
-        WHEN NOT MATCHED THEN
-          INSERT (question_id, subject, topic, difficulty, type, question_json, created_at)
-          VALUES (S.question_id, S.subject, S.topic, S.difficulty, S.type, S.question_json, CURRENT_TIMESTAMP())
-      `;
-
-      try {
-        await bq.query({
-          query: batchMergePregenQuery,
-          params,
-          types
-        });
-      } catch (pregenErr) {
-        console.error('Failed to add questions to pregenerated_questions:', pregenErr);
-      }
-    }
+    await saveQuestionsToPregenerated(gradedResults, subject);
 
     const isGuest = sanitizedUser === 'default_user';
 
