@@ -135,12 +135,47 @@ export function ReactionRenderer({ reaction, theme = 'dark' }) {
   );
 }
 
+export function normalizeLaTeX(str) {
+  if (typeof str !== 'string' || !str) return str;
+
+  let cleaned = str;
+
+  // 1. Convert TAB/control characters before LaTeX commands starting with t (e.g. \times, \text, \theta, \tau, \tilde, \to)
+  cleaned = cleaned.replace(/\t(imes|ext|heta|au|ilde|riangle|op|an|anh|here|sfrac|o\b)/g, '\\\\t$1');
+
+  // 2. Convert raw 'times' directly following numbers (e.g. 1.00times10^{-2} or 1.00 times 10^{-2}) to \times
+  cleaned = cleaned.replace(/([0-9.]+)\s*\\?\t?times/gi, '$1 \\\\times ');
+
+  // 3. Fix unescaped chemical formulas like ceH2A, ceNa2CO3, ceNaHCO3, ceAgCl, ce[ML2]+ outside or inside math mode
+  cleaned = cleaned.replace(/(^|[^a-zA-Z0-9\\])ce([A-Z][a-zA-Z0-9_{}+\-]*|\{[^}]+\})/g, '$1\\\\ce{$2}');
+
+  // 4. Unescape literal string escapes for newlines/tabs if present as literal "\n", "\r", "\t",
+  // while preserving valid LaTeX commands like \nu, \rho, \tau, \text, \times, \tilde, \triangle, \theta, etc.
+  cleaned = cleaned
+    .replace(/\\+n(?![u]|eq|abla|eg|otin|exists|ot|atural|ewline|oindent|earrow|warrow|left|right|parallel|prec|succ|sim|sub|sup|vdash|vDash|Vdash|VDash|leqslant|geqslant|less|gtr|[a-z]*[0-9{}])/g, '\n')
+    .replace(/\\+r(?![h]o|[a-z]*[0-9{}])/g, '\r')
+    .replace(/\\+t(?![a]u|[h]eta|[e]xt|[i]mes|[i]lde|[a]n|[a]nh|[o]p|[r]iangle|[h]ere|[s]frac|[a-z]*[0-9{}])/g, '\t');
+
+  // 5. Normalize 2 or more backslashes before LaTeX command names or symbols (e.g. \\ce -> \ce, \\text -> \text, \\circ -> \circ, \\times -> \times)
+  cleaned = cleaned.replace(/\\{2,}([a-zA-Z]+|[%$_#{}^])/g, '\\$1');
+
+  // 6. Normalize one or more backslashes before ^ (e.g. 200\ ^ -> 200^, 200\\ ^ -> 200^)
+  cleaned = cleaned.replace(/\\+\s*\^/g, '^');
+
+  // 7. Reduce 4 or more backslashes to double backslash \\ (for row breaks in arrays/matrices)
+  cleaned = cleaned.replace(/\\{4,}/g, '\\\\');
+
+  return cleaned;
+}
+
 export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, defaultHeight = 130 }) {
   const containerRef = useRef(null);
 
+  const cleanText = normalizeLaTeX(text);
+
   // Trigger MathJax typesetting after render so LaTeX like $\text{H}_2\text{SO}_4$ renders
   useEffect(() => {
-    if (!containerRef.current || !text) return;
+    if (!containerRef.current || !cleanText) return;
     if (window.MathJax && window.MathJax.typesetPromise) {
       try {
         window.MathJax.typesetClear([containerRef.current]);
@@ -152,25 +187,16 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         console.error('MathJax typeset error:', err);
       });
     }
-  }, [text]);
+  }, [cleanText]);
 
-  if (!text) return null;
-
-  // Unescape literal backslash-n / backslash-r / backslash-t string escape sequences to actual linebreaks/tabs for display,
-  // preserving valid LaTeX commands starting with n, r, or t.
-  const cleanText = typeof text === 'string'
-    ? text
-        .replace(/\\+n(?![u]|eq|abla|eg|otin|exists|ot|atural|ewline|oindent|earrow|warrow|left|right|parallel|prec|succ|sim|sub|sup|vdash|vDash|Vdash|VDash|leqslant|geqslant|less|gtr|[a-z]*[0-9{}])/g, '\n')
-        .replace(/\\+r(?![h]o|[a-z]*[0-9{}])/g, '\r')
-        .replace(/\\+t(?![a]u|[h]eta|[e]xt|[i]mes|[i]lde|[a]n|[a]nh|[o]p|[r]iangle|[h]ere|[s]frac|[a-z]*[0-9{}])/g, '\t')
-    : text;
+  if (!cleanText) return null;
 
   // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\], \begin{env}...\end{env}), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
   // smiles tag blocks (<smiles>...</smiles>), and markdown bold (**...**) / italic (*...*)
   const parts = cleanText.split(/(\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\end\{[a-zA-Z]+\*?\}|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
 
   return (
-    <span ref={containerRef} key={text} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
+    <span ref={containerRef} key={cleanText} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
       {parts.map((part, partIndex) => {
         let isSvg = false;
         let svgContent = part;
