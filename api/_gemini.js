@@ -73,7 +73,7 @@ export async function executeWithRetry(models, apiCallFn) {
         }
         const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 300_000 } }); // 5-minute timeout
         const result = await apiCallFn(ai, currentModel);
-        console.log(`[AI Success] Successfully received response from model ${currentModel}:`, JSON.stringify(result, null, 2));
+        console.log(`[AI Success] Successfully received response from model ${currentModel}:`, typeof result === 'string' ? result : JSON.stringify(result, null, 2));
         return result;
       } catch (err) {
         lastError = err;
