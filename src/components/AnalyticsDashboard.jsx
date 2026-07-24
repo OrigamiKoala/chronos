@@ -372,11 +372,10 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
     // To graph ELO vs time effectively, we want to map every ELO change to its exact timestamp
     // Sorting history chronologically (asc) to build progression
-    const sortedHistory = [...data.eloHistory].sort((a, b) => {
-      const da = new Date(a.created_at?.value || a.created_at);
-      const db = new Date(b.created_at?.value || b.created_at);
-      return da - db;
-    });
+    const sortedHistory = data.eloHistory.map(item => ({
+      original: item,
+      time: new Date(item.created_at?.value || item.created_at).getTime()
+    })).sort((a, b) => a.time - b.time).map(item => item.original);
 
     // Create a chronological baseline. If a subject has no exams yet, it remains 100.
     // We map each point to its exact time/date to see the ELO vs time progression accurately.
@@ -642,23 +641,37 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     ).filter(t => t.total_count > 0)
      .sort((a, b) => a.accuracy_rate - b.accuracy_rate); // lowest accuracy on top
 
+    const labels = new Array(filtered.length);
+    const chartData = new Array(filtered.length);
+    const backgroundColor = new Array(filtered.length);
+    const borderColor = new Array(filtered.length);
+
+    for (let i = 0; i < filtered.length; i++) {
+      const t = filtered[i];
+      const rate = t.accuracy_rate;
+
+      labels[i] = t.sub_category;
+      chartData[i] = Math.round(rate * 100);
+
+      if (rate >= 0.7) {
+        backgroundColor[i] = 'rgba(16, 185, 129, 0.5)';
+        borderColor[i] = '#10b981';
+      } else if (rate >= 0.5) {
+        backgroundColor[i] = 'rgba(245, 158, 11, 0.5)';
+        borderColor[i] = '#f59e0b';
+      } else {
+        backgroundColor[i] = 'rgba(239, 68, 68, 0.5)';
+        borderColor[i] = '#ef4444';
+      }
+    }
+
     return {
-      labels: filtered.map(t => t.sub_category),
+      labels,
       datasets: [{
         label: 'Accuracy %',
-        data: filtered.map(t => Math.round(t.accuracy_rate * 100)),
-        backgroundColor: filtered.map(t => {
-          const rate = t.accuracy_rate;
-          if (rate >= 0.7) return 'rgba(16, 185, 129, 0.5)';
-          if (rate >= 0.5) return 'rgba(245, 158, 11, 0.5)';
-          return 'rgba(239, 68, 68, 0.5)';
-        }),
-        borderColor: filtered.map(t => {
-          const rate = t.accuracy_rate;
-          if (rate >= 0.7) return '#10b981';
-          if (rate >= 0.5) return '#f59e0b';
-          return '#ef4444';
-        }),
+        data: chartData,
+        backgroundColor,
+        borderColor,
         borderWidth: 1,
         borderRadius: 4,
         barPercentage: 0.6,
@@ -672,9 +685,9 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     const lastExam = data.eloHistory[data.eloHistory.length - 1];
     const lastExamDateStr = lastExam.created_at?.value || lastExam.created_at;
     if (!lastExamDateStr) return true;
-    const lastExamDate = new Date(lastExamDateStr);
-    if (isNaN(lastExamDate.getTime())) return true;
-    return (new Date() - lastExamDate) > 24 * 60 * 60 * 1000;
+    const timestamp = typeof lastExamDateStr === 'number' ? lastExamDateStr : Date.parse(lastExamDateStr);
+    if (isNaN(timestamp)) return true;
+    return (Date.now() - timestamp) > 86400000;
   }, [data]);
 
   if (loading) {
