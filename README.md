@@ -6,6 +6,8 @@ Vibe coded by Carl Liu (c) 2026
 
 Feel free to use this framework, with your own API key (uses Gemini's Interactions API)
 
+If you like my stuff, consider supporting me on [Patreon](https://www.patreon.com/cw/origamikoala). Thanks!
+
 ---
 
 ## 🚀 Key Features
