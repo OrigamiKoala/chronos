@@ -13,35 +13,49 @@ function markKeyRateLimited(modelId, apiKey) {
   console.warn(`[API Rotation] Key marked rate-limited for model ${modelId} today.`);
 }
 
+export function getGeminiApiKeys() {
+  const keys = [];
+
+  if (process.env.GEMINI_API_KEYS) {
+    const list = process.env.GEMINI_API_KEYS.split(',').map(k => k.trim()).filter(Boolean);
+    keys.push(...list);
+  }
+
+  if (process.env.GEMINI_API_KEY) {
+    const key = process.env.GEMINI_API_KEY.trim();
+    if (key && !keys.includes(key)) keys.push(key);
+  }
+
+  const numberedKeysMap = new Map();
+  for (const envKey of Object.keys(process.env)) {
+    const match = envKey.match(/^api_(\d+)$/i);
+    if (match && process.env[envKey]) {
+      const idx = parseInt(match[1], 10);
+      numberedKeysMap.set(idx, process.env[envKey].trim());
+    }
+  }
+
+  for (let i = 1; i <= 100; i++) {
+    const val = process.env[`api_${i}`];
+    if (val && !numberedKeysMap.has(i)) {
+      numberedKeysMap.set(i, val.trim());
+    }
+  }
+
+  const sortedIndices = Array.from(numberedKeysMap.keys()).sort((a, b) => a - b);
+  for (const idx of sortedIndices) {
+    const k = numberedKeysMap.get(idx);
+    if (k && !keys.includes(k)) {
+      keys.push(k);
+    }
+  }
+
+  return keys;
+}
+
 export async function executeWithRetry(models, apiCallFn) {
   const modelList = Array.isArray(models) ? models : [models];
-  const keys = [
-    process.env.api_1,
-    process.env.api_2,
-    process.env.api_3,
-    process.env.api_4,
-    process.env.api_5,
-    process.env.api_6,
-    process.env.api_7,
-    process.env.api_8,
-    process.env.api_9,
-    process.env.api_10,
-    process.env.api_11,
-    process.env.api_12,
-    process.env.api_13,
-    process.env.api_14,
-    process.env.api_15,
-    process.env.api_16,
-    process.env.api_17,
-    process.env.api_18,
-    process.env.api_19,
-    process.env.api_20,
-    process.env.api_21,
-    process.env.api_22,
-    process.env.api_23,
-    process.env.api_24,
-    process.env.api_25
-  ].filter(Boolean);
+  const keys = getGeminiApiKeys();
 
   if (keys.length === 0) {
     throw new Error('GEMINI_API_KEYs are missing');

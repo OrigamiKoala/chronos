@@ -1,6 +1,6 @@
 import { BigQuery } from '@google-cloud/bigquery';
 import crypto from 'crypto';
-import { executeWithRetry, parseJSONResponse } from './_gemini.js';
+import { executeWithRetry, parseJSONResponse, getGeminiApiKeys } from './_gemini.js';
 
 function generateQuestionId(questionText, subject) {
   const hash = crypto.createHash('md5')
@@ -1077,7 +1077,7 @@ export default async function handler(req, res) {
                     const { frqSubmission, ...rest } = r;
                     return rest;
                   }),
-                  geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
+                  geminiApiKeys: getGeminiApiKeys()
                 }
               })
             });
@@ -1180,7 +1180,7 @@ export default async function handler(req, res) {
                   const { frqSubmission, ...rest } = r;
                   return rest;
                 }),
-                geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
+                geminiApiKeys: getGeminiApiKeys()
               }
             })
           });

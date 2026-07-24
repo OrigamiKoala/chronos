@@ -20,3 +20,18 @@ Feel free to use this framework, with your own API key (uses Gemini's Interactio
 * **Clickable Strengths & Weaknesses (AI Breakdown)**: Click any topic tag on your dashboard to instantly review a pre-compiled, highly specific breakdown of what you are `"good at"` and `"not good at"`, stored dynamically in BigQuery.
 * **Inline AI Tutor Breakdown**: Ask AI about any completed question in the test review breakdown. Ask the AI tutor exactly why the correct answer is correct and ask follow-up questions in real-time.
 * **Full Session Caching**: Automatic caching of active usernames and previous test configurations in local storage for seamless onboarding.
+
+---
+
+If you want to download this and run it locally, you can. Here are all the API keys you need:
+
+api_1, api_2...: Gemini API keys. Get yours for free at [aistudio.google.com](https://aistudio.google.com). Add these as environment variables and they will automatically be loaded in.
+
+GOOGLE_APPS_SCRIPT_WEBHOOK_URL: You don't really need this, but it allows the app to generate homework questions asynchronously. Probably best to ignore this; just don't publish any homework assignments.
+
+JWT_SECRET: A random hex string (for security purposes).
+
+BIGQUERY_PRIVATE_KEY, BIGQUERY_CLIENT_EMAIL, BIGQUERY_PROJECT_ID: This app uses Google Cloud's BigQuery service to store user information. If you are running it locally, don't bother with this - just don't login.
+
+---
+

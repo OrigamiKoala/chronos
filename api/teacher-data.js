@@ -1,5 +1,5 @@
 import { BigQuery } from '@google-cloud/bigquery';
-import { executeWithRetry, parseJSONResponse } from './_gemini.js';
+import { executeWithRetry, parseJSONResponse, getGeminiApiKeys } from './_gemini.js';
 import crypto from 'crypto';
 
 // Helper function to generate HS256 JWT
@@ -99,7 +99,7 @@ async function triggerBackgroundHomeworkGeneration(teacherId, lessonId, homework
         lessonDescription: lessonDescription,
         studentIds: studentIds,
         homeworks: homeworks,
-        geminiApiKeys: Array.from({ length: 25 }, (_, i) => process.env[`api_${i + 1}`]).filter(Boolean)
+        geminiApiKeys: getGeminiApiKeys()
       })
     }).catch(err => console.error("Worker fetch failed in trigger:", err));
 
