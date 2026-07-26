@@ -204,11 +204,12 @@ export default async function handler(req, res) {
 Your tasks:
 1. AGGRESSIVE SUBTOPIC CLUSTERING & MERGES: Eliminate hyper-specific one-off subtopic fragmentation by aggressively merging low-count or narrowly phrased subtopics into clean, standardized subtopic clusters within the SAME subject.
    - MANDATORY PUNCTUATION & SLASH MERGING: Always merge slashes (/), ampersands (&), and 'and' variations (e.g. "bonding/molecular structure", "bonding & molecular structure", "bonding and molecular structure") into ONE clean title like "Bonding & Molecular Structure".
+   - MANDATORY PLURAL / SINGULAR MERGING: Always merge plural and singular variations (e.g. "aldol condensations" vs "aldol condensation", "reaction mechanisms" vs "reaction mechanism") into ONE clean singular/canonical title like "Aldol Condensation".
    - Merge "Determination of Rate Laws", "Initial Rates Method", and "Reaction Orders" into "Rate Laws & Reaction Orders".
    - Merge "Arrhenius Equation Calculations" and "Activation Energy" into "Arrhenius & Activation Energy".
    - Combine synonymous terms aggressively.
 
-2. MANDATORY USNCO PARENT CLASSIFICATION & ROLLUPS: Map EVERY Chemistry subtopic in the input to EXACTLY ONE of the official 10 USNCO Standard Topics below:
+2. MANDATORY 100% COVERAGE USNCO PARENT CLASSIFICATION: Map EVERY SINGLE Chemistry subtopic in the input to EXACTLY ONE of the official 10 USNCO Standard Topics below (do NOT leave any subtopic unclassified):
    1. Stoichiometry & Solutions
    2. Descriptive & Laboratory Chemistry
    3. States of Matter & Phase Changes
@@ -224,11 +225,12 @@ Your tasks:
    For Math: Use standard categories (Algebra, Calculus, Geometry & Trigonometry, Statistics & Probability).
    Preserve valid existing "parent_topic" mappings provided in the input unless a subtopic needs re-classification into the 10 USNCO topics.
 
+   If a question/subtopic is classified under "Other Topics", it MUST find a spot in one of the major topics.
 CRITICAL CONSTRAINTS:
 1. STRICT USNCO TOPICS FOR CHEMISTRY: parent_topic for Chemistry MUST be EXACTLY one of the 10 official USNCO topics listed above. DO NOT invent arbitrary overall titles (e.g. DO NOT use "Heterogeneous Systems", "Spectroscopy", "Chemistry", "General Topics", or "Phase Equilibria" as parent_topic).
 2. NO ORPHAN SUBTOPICS: Every subtopic must be mapped to one of the 10 standard USNCO parent categories in parent_rollups.
 3. ALWAYS MERGE PUNCTUATION VARIATIONS: If any two input topics differ only by slashes, ampersands, or spacing (e.g. "bonding/molecular structure" vs "bonding & molecular structure"), you MUST output a merge object combining them.
-4. PRESERVE EXISTING MAPPINGS: Re-use existing valid parent_topic values to complete classification instantly without re-analyzing already sorted subtopics.
+4. PRESERVE EXISTING MAPPINGS: Re-use existing valid parent_topic values to complete classification instantly without re-analyzing already sorted subtopics, unless the existing topic is "Other Topics" - then, reclassify.
 
 Input Data:
 ${JSON.stringify(inputTopics, null, 2)}
@@ -362,6 +364,57 @@ Output format must be a JSON object matching this schema:
               });
             }
           }
+        }
+      }
+
+      // Fallback classification for any subtopics left unmapped by AI
+      function fallbackUsncoClassifier(topicName, subjectName) {
+        const cleanLower = topicName.toLowerCase();
+        if (subjectName?.toLowerCase() === 'chemistry' || !subjectName) {
+          if (/organ|bio|polymer|hydrocarbon|alk|ester|alcohol|isomer|aromatic|substitut|nucleophil|electrophil|carbonyl|amine|amide|ketone|aldehyd|carboxylic|synthesis|stereochem|grignard|diels|sn1|sn2|e1|e2|chiral|enantiomer|diastereomer|resonance|functional group|reagent|aldol|enolate|peptide|fischer|cyclohexane|epox|carbocation|meso|stereospec/i.test(cleanLower)) {
+            return 'Organic Chemistry & Biochemistry';
+          }
+          if (/kineti|rate|half-life|activation energy|arrhenius|catalys|mechanism|order|autocatalys/i.test(cleanLower)) {
+            return 'Kinetics';
+          }
+          if (/thermo|enthalp|entrop|hess|calorim|gibbs|spontan|heat of|exotherm|endotherm|bond energy|racoult|effusion/i.test(cleanLower)) {
+            return 'Thermodynamics';
+          }
+          if (/electro|redox|galvanic|voltaic|nernst|faraday|anode|cathode|electroly|standard potential|voltage|reduction potential|overpotential/i.test(cleanLower) || (/\bcell\b/i.test(cleanLower) && !cleanLower.includes('unit cell'))) {
+            return 'Electrochemistry';
+          }
+          if (/equilibr|solubil|ksp|\bka\b|\bkb\b|\bkc\b|\bkp\b|chatelier|common ion|reaction quotient|henderson|hasselbalch|salt hydrolysis/i.test(cleanLower)) {
+            return 'Equilibrium';
+          }
+          if (/acid|base|titrat|buffer|\bph\b|\bpka\b|\bpkb\b|neutraliz|bronsted|arrhenius|isoelectric/i.test(cleanLower)) {
+            return 'Acids & Bases';
+          }
+          if (/stoich|solution|molar|dilut|yield|limiti|avogadro|empirical|concentration|\bppm\b|colligat|osmotic|freezing point|boiling point|mixture analysis|volumetric/i.test(cleanLower)) {
+            return 'Stoichiometry & Solutions';
+          }
+          if (/state|gas|phase|pressur|vapor|ideal gas|real gas|van der waals|intermolecular|dipole|dispersion|hydrogen bond|crystal|lattice|solid|liquid|unit cell|bragg|packing|supercritical/i.test(cleanLower)) {
+            return 'States of Matter & Phase Changes';
+          }
+          if (/atom|orbital|quantum|period|electron|lewis|vsepr|hybridiz|isotope|ionization|electronegativ|nuclide|radioact|decay|nuclear|bond|formal charge|mo theory|hückel|huckel/i.test(cleanLower)) {
+            return 'Atomic Structure & Periodicity';
+          }
+          return 'Other Topics';
+        }
+        return 'Other Topics';
+      }
+
+      for (const t of inputTopics) {
+        const key = t.topic.toLowerCase();
+        if (!generatedParentRollups[key]) {
+          const parent = fallbackUsncoClassifier(t.topic, t.subject);
+          generatedParentRollups[key] = parent;
+          breakdownItems.push({
+            subject: t.subject || 'Chemistry',
+            topic: t.topic,
+            parent_topic: parent,
+            good_at: '',
+            not_good_at: ''
+          });
         }
       }
 

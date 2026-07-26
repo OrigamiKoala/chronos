@@ -129,52 +129,53 @@ const isOverallTopic = (topicName) => {
 const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
   if (!origName) return subject || 'General';
   const cleanLower = origName.trim().toLowerCase();
+  const cleanSingular = cleanLower.replace(/s$/, '').replace(/e?s$/, '');
 
   // 1. Direct canonical map (e.g. "kinetics" -> "Kinetics")
-  if (CANONICAL_OVERALL_MAP[cleanLower]) {
-    return CANONICAL_OVERALL_MAP[cleanLower];
-  }
+  if (CANONICAL_OVERALL_MAP[cleanLower]) return CANONICAL_OVERALL_MAP[cleanLower];
+  if (CANONICAL_OVERALL_MAP[cleanSingular]) return CANONICAL_OVERALL_MAP[cleanSingular];
 
   // 2. AI Condenser mapping
-  if (aiParentMap && aiParentMap[cleanLower]) {
-    const parentClean = aiParentMap[cleanLower].trim().toLowerCase();
-    if (CANONICAL_OVERALL_MAP[parentClean]) {
-      return CANONICAL_OVERALL_MAP[parentClean];
+  if (aiParentMap) {
+    const aiTarget = aiParentMap[cleanLower] || aiParentMap[cleanSingular] || aiParentMap[cleanLower.replace(/s$/, '')];
+    if (aiTarget) {
+      const parentClean = aiTarget.trim().toLowerCase();
+      if (CANONICAL_OVERALL_MAP[parentClean]) return CANONICAL_OVERALL_MAP[parentClean];
+      return aiTarget;
     }
-    return aiParentMap[cleanLower];
   }
 
   // 3. Precise Keyword / Concept Regex Matching against standard major categories
   const subj = (subject || '').toLowerCase();
   if (subj === 'chemistry' || !subject || subj === 'general') {
-    if (/organ|bio|polymer|hydrocarbon|alk|ester|alcohol|isomer|aromatic|substitut|nucleophil|electrophil|carbonyl|amine|amide|ketone|aldehyd|carboxylic|synthesis|stereochem|grignard|diels|sn1|sn2|e1|e2|chiral|enantiomer|diastereomer|resonance|functional group|reagent/i.test(cleanLower)) {
+    if (/organ|bio|polymer|hydrocarbon|alk|ester|alcohol|isomer|aromatic|substitut|nucleophil|electrophil|carbonyl|amine|amide|ketone|aldehyd|carboxylic|synthesis|stereochem|grignard|diels|sn1|sn2|e1|e2|chiral|enantiomer|diastereomer|resonance|functional group|reagent|aldol|enolate|peptide|fischer|cyclohexane|epox|carbocation|meso|stereospec/i.test(cleanLower)) {
       return 'Organic Chemistry & Biochemistry';
     }
-    if (/kineti|rate|half-life|activation energy|arrhenius|catalys|mechanism|order/i.test(cleanLower)) {
+    if (/kineti|rate|half-life|activation energy|arrhenius|catalys|mechanism|order|autocatalys/i.test(cleanLower)) {
       return 'Kinetics';
     }
-    if (/thermo|enthalp|entrop|hess|calorim|gibbs|spontan|heat of|exotherm|endotherm|bond energy/i.test(cleanLower)) {
+    if (/thermo|enthalp|entrop|hess|calorim|gibbs|spontan|heat of|exotherm|endotherm|bond energy|racoult|effusion/i.test(cleanLower)) {
       return 'Thermodynamics';
     }
-    if (/electro|redox|galvanic|voltaic|nernst|faraday|anode|cathode|electroly|standard potential|voltage/i.test(cleanLower) || (/\bcell\b/i.test(cleanLower) && !cleanLower.includes('unit cell'))) {
+    if (/electro|redox|galvanic|voltaic|nernst|faraday|anode|cathode|electroly|standard potential|voltage|reduction potential|overpotential/i.test(cleanLower) || (/\bcell\b/i.test(cleanLower) && !cleanLower.includes('unit cell'))) {
       return 'Electrochemistry';
     }
-    if (/equilibr|solubil|ksp|\bka\b|\bkb\b|\bkc\b|\bkp\b|chatelier|common ion|reaction quotient/i.test(cleanLower)) {
+    if (/equilibr|solubil|ksp|\bka\b|\bkb\b|\bkc\b|\bkp\b|chatelier|common ion|reaction quotient|henderson|hasselbalch|salt hydrolysis/i.test(cleanLower)) {
       return 'Equilibrium';
     }
-    if (/acid|base|titrat|buffer|\bph\b|\bpka\b|\bpkb\b|neutraliz|bronsted|arrhenius/i.test(cleanLower)) {
+    if (/acid|base|titrat|buffer|\bph\b|\bpka\b|\bpkb\b|neutraliz|bronsted|arrhenius|isoelectric/i.test(cleanLower)) {
       return 'Acids & Bases';
     }
-    if (/stoich|solution|molar|dilut|yield|limiti|avogadro|empirical|concentration|\bppm\b|colligat|osmotic|freezing point|boiling point/i.test(cleanLower)) {
+    if (/stoich|solution|molar|dilut|yield|limiti|avogadro|empirical|concentration|\bppm\b|colligat|osmotic|freezing point|boiling point|mixture analysis|volumetric/i.test(cleanLower)) {
       return 'Stoichiometry & Solutions';
     }
-    if (/state|gas|phase|pressur|vapor|ideal gas|real gas|van der waals|intermolecular|dipole|dispersion|hydrogen bond|crystal|lattice|solid|liquid/i.test(cleanLower)) {
+    if (/state|gas|phase|pressur|vapor|ideal gas|real gas|van der waals|intermolecular|dipole|dispersion|hydrogen bond|crystal|lattice|solid|liquid|unit cell|bragg|packing|supercritical/i.test(cleanLower)) {
       return 'States of Matter & Phase Changes';
     }
-    if (/atom|orbital|quantum|period|electron|lewis|vsepr|hybridiz|isotope|ionization|electronegativ|nuclide|radioact|decay|nuclear|bond/i.test(cleanLower)) {
+    if (/atom|orbital|quantum|period|electron|lewis|vsepr|hybridiz|isotope|ionization|electronegativ|nuclide|radioact|decay|nuclear|bond|formal charge|mo theory|hückel|huckel/i.test(cleanLower)) {
       return 'Atomic Structure & Periodicity';
     }
-    if (/lab|descript|spectro|flame|color|qualitative|precipitat|filter|distill|chromatograph|coordination|complex ion|ligand|transition metal/i.test(cleanLower)) {
+    if (/lab|descript|spectro|flame|color|qualitative|precipitat|filter|distill|chromatograph|coordination|complex ion|ligand|transition metal|beer|gravimetric|photometry|error|interhalogen|non-metal/i.test(cleanLower)) {
       return 'Descriptive & Laboratory Chemistry';
     }
     return 'Other Topics';
@@ -883,8 +884,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       const card = getOrCreateCard(majorParent, item.subject);
 
       const normalizedSubName = origName.replace(/\s*\/\s*/g, ' & ').replace(/\s+and\s+/gi, ' & ').trim();
-      const subKey = normalizedSubName.toLowerCase();
-      if (subKey === majorParent.toLowerCase()) {
+      const subKey = normalizedSubName.toLowerCase().replace(/s$/, '');
+      if (subKey === majorParent.toLowerCase().replace(/s$/, '')) {
         card.directCorrect += correct;
         card.directTotal += total;
         continue;
@@ -892,7 +893,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
       if (!card.subtopicsMap.has(subKey)) {
         card.subtopicsMap.set(subKey, {
-          name: normalizedSubName,
+          name: normalizedSubName.replace(/s$/i, ''),
           correct,
           total
         });
