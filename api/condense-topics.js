@@ -39,6 +39,9 @@ export default async function handler(req, res) {
         params: { username: sanitizedUser }
       }).catch(err => console.error("Delete synthetic mastery error:", err)),
       bq.query({
+        query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
+      }).catch(err => console.error("Add parent_topic column error:", err)),
+      bq.query({
         query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @username AND (LOWER(topic) = LOWER(subject) OR LOWER(topic) IN ('general', 'general topics', 'science'))`,
         params: { username: sanitizedUser }
       }).catch(err => console.error("Delete generic breakdown error:", err))
