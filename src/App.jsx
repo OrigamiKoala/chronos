@@ -808,7 +808,7 @@ function App() {
 
         // Then re-login to refresh all state (history, strengths, weaknesses, etc.) if logged in
         if (user) {
-          const token = localStorage.getItem('chronos_logged_token') || '';
+          const token = getCookie('chronos_logged_token') || localStorage.getItem('chronos_logged_token') || '';
           fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
