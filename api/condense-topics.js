@@ -66,7 +66,7 @@ export default async function handler(req, res) {
       });
 
       const [finalBreakdownRows] = await bq.query({
-        query: `SELECT topic, good_at, not_good_at, subject
+        query: `SELECT topic, good_at, not_good_at, subject, parent_topic
           FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
           WHERE user_id = @username`,
         params: { username: sanitizedUser }
@@ -151,11 +151,16 @@ export default async function handler(req, res) {
         .map(m => ({ topic: m.sub_category, subject: m.subject }));
 
       const topicBreakdowns = {};
+      const parentRollups = { ...activeParentRollups };
       for (const b of finalBreakdownRows) {
         topicBreakdowns[b.topic] = {
           good_at: b.good_at,
-          not_good_at: b.not_good_at
+          not_good_at: b.not_good_at,
+          parent_topic: b.parent_topic
         };
+        if (b.topic && b.parent_topic) {
+          parentRollups[b.topic.trim().toLowerCase()] = b.parent_topic;
+        }
       }
 
       return res.status(200).json({
@@ -164,7 +169,7 @@ export default async function handler(req, res) {
         strengths,
         weaknesses,
         topicBreakdowns,
-        parentRollups: activeParentRollups,
+        parentRollups,
         topicMastery
       });
     };

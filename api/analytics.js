@@ -779,21 +779,6 @@ ${JSON.stringify(inputData, null, 2)}
     ];
 
     const parentRollups = {};
-    for (const r of rawTopicsList) {
-      if (!r.topic || typeof r.topic !== 'string') continue;
-      const parts = r.topic.split(',').map(p => p.trim()).filter(Boolean);
-      if (parts.length < 2) continue;
-
-      const majorTag = parts.find(p => CANONICAL_MAJORS.some(m => m.toLowerCase() === p.toLowerCase()));
-      if (majorTag) {
-        const canonicalMajor = CANONICAL_MAJORS.find(m => m.toLowerCase() === majorTag.toLowerCase()) || majorTag;
-        for (const part of parts) {
-          if (part.toLowerCase() !== majorTag.toLowerCase()) {
-            parentRollups[part.toLowerCase()] = canonicalMajor;
-          }
-        }
-      }
-    }
     for (const b of breakdowns) {
       const topic = b.topic;
       if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
@@ -802,7 +787,9 @@ ${JSON.stringify(inputData, null, 2)}
           not_good_at: b.not_good_at
         };
         if (b.parent_topic) {
-          parentRollups[topic.toLowerCase()] = b.parent_topic;
+          const normKey = toCanonicalSubtopic(topic).toLowerCase();
+          parentRollups[normKey] = b.parent_topic;
+          parentRollups[topic.trim().toLowerCase()] = b.parent_topic;
         }
       }
     }
