@@ -35,9 +35,9 @@ export default async function handler(req, res) {
         params: { username: sanitizedUser }
       }).catch(err => console.error("Auto-repair mastery error:", err)),
       bq.query({
-        query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = @username AND (LOWER(sub_category) = LOWER(subject) OR LOWER(sub_category) IN ('general', 'general topics', 'science'))`,
+        query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = @username AND (total_count > 300 OR correct_count > 300 OR LOWER(sub_category) IN ('kinetics', 'thermodynamics', 'electrochemistry', 'stoichiometry & solutions', 'equilibrium', 'acids & bases', 'descriptive & laboratory chemistry', 'atomic structure & periodicity', 'organic chemistry & biochemistry', 'kinetics & rate laws'))`,
         params: { username: sanitizedUser }
-      }).catch(err => console.error("Delete generic mastery error:", err)),
+      }).catch(err => console.error("Delete inflated mastery error:", err)),
       bq.query({
         query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @username AND (LOWER(topic) = LOWER(subject) OR LOWER(topic) IN ('general', 'general topics', 'science'))`,
         params: { username: sanitizedUser }

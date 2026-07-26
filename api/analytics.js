@@ -535,13 +535,15 @@ export default async function handler(req, res) {
     }
 
     for (const row of topicMastery) {
+      const total = Number((row.total_count?.value ?? row.total_count) || 0);
+      if (total > 300) continue;
       const key = `${(row.subject || '').toLowerCase()}:${(row.sub_category || '').toLowerCase()}`;
       if (!liveMasteryMap[key]) {
         liveMasteryMap[key] = {
           sub_category: row.sub_category,
           subject: row.subject,
           correct_count: Number((row.correct_count?.value ?? row.correct_count) || 0),
-          total_count: Number((row.total_count?.value ?? row.total_count) || 0)
+          total_count: total
         };
       }
     }
