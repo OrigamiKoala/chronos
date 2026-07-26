@@ -225,7 +225,7 @@ const getMajorTopicCardName = (origName, subject) => {
     }
   }
 
-  return 'General Topics';
+  return subject || 'General';
 };
 
 const normalizeSubtopicName = (name) => {
@@ -1376,7 +1376,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                             color: textColor,
                             whiteSpace: 'nowrap'
                           }}>
-                            {card.overallAccuracy}%
+                            {card.overallAccuracy}% <small style={{ opacity: 0.85, fontWeight: 'normal', fontSize: '0.75rem' }}>({card.totalCorrect}/{card.totalTotal})</small>
                           </span>
                         </div>
 
