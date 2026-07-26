@@ -544,6 +544,10 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       .then(d => {
         setData(d);
         setLoading(false);
+        if (!hasCondensedRef.current) {
+          hasCondensedRef.current = true;
+          handleCondense();
+        }
       })
       .catch(e => { setError(e.message); setLoading(false); });
   }, [user?.user_id]);
@@ -986,7 +990,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
             onClick={handleCondense}
           >
             {condensing ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
-            {condensing ? 'Organizing...' : 'Organize Topics (AI)'}
+            {condensing ? 'Organizing...' : 'Organize Topics'}
           </button>
           {onBack && (
             <button className="btn btn-outline" onClick={onBack} style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
