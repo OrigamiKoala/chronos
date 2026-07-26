@@ -383,7 +383,7 @@ export default async function handler(req, res) {
          WHERE user_id = @username
         ) AS analysis_json,
         
-        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(topic, good_at, not_good_at)))
+        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(topic, good_at, not_good_at, parent_topic)))
          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
          WHERE user_id = @username
         ) AS breakdown_json,
@@ -570,13 +570,18 @@ export default async function handler(req, res) {
     }
 
     const topicBreakdowns = {};
+    const parentRollups = {};
     for (const b of breakdowns) {
       const topic = b.topic;
       if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
         topicBreakdowns[topic] = {
           good_at: b.good_at,
-          not_good_at: b.not_good_at
+          not_good_at: b.not_good_at,
+          parent_topic: b.parent_topic || null
         };
+        if (b.parent_topic) {
+          parentRollups[topic.trim().toLowerCase()] = b.parent_topic;
+        }
       }
     }
 
@@ -590,6 +595,7 @@ export default async function handler(req, res) {
       weaknesses,
       detailedAnalysis,
       topicBreakdowns,
+      parentRollups,
       activeExam,
       activeExams
     });

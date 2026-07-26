@@ -274,7 +274,7 @@ function formatDate(dateVal) {
   return isNaN(d.getTime()) ? '?' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = [], topicBreakdowns = {}, detailedAnalysis = {}, history = [], loadingExamId = null, onReviewExam = null, hideHistory = false, onCondense = null }) {
+export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = [], topicBreakdowns = {}, detailedAnalysis = {}, history = [], loadingExamId = null, onReviewExam = null, hideHistory = false, onCondense = null, initialParentRollups = {} }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -286,6 +286,13 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   const [condensing, setCondensing] = useState(false);
   const hasCondensedRef = useRef(false);
   const aiParentRollupsRef = useRef({});
+
+  // Seed aiParentRollupsRef from prop on first render so cached mappings are immediately available
+  useEffect(() => {
+    if (initialParentRollups && Object.keys(initialParentRollups).length > 0) {
+      aiParentRollupsRef.current = { ...initialParentRollups, ...aiParentRollupsRef.current };
+    }
+  }, []);
 
   const displayHistory = useMemo(() => (data?.history && data.history.length > 0) ? data.history : (history || []), [history, data?.history]);
   const displayStrengths = useMemo(() => (data?.strengths && data.strengths.length > 0) ? data.strengths : (strengths || []), [strengths, data?.strengths]);
@@ -585,9 +592,14 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         return r.json();
       })
       .then(d => {
-        setData(d);
+        // Merge initialParentRollups so cached mappings are immediately visible
+        const mergedParentRollups = { ...initialParentRollups, ...(d.parentRollups || {}) };
+        setData({ ...d, parentRollups: mergedParentRollups });
+        if (Object.keys(mergedParentRollups).length > 0) {
+          aiParentRollupsRef.current = { ...mergedParentRollups, ...aiParentRollupsRef.current };
+        }
         setLoading(false);
-        const hasSavedRollups = d.parentRollups && Object.keys(d.parentRollups).length > 0;
+        const hasSavedRollups = Object.keys(mergedParentRollups).length > 0;
         if (!hasCondensedRef.current && !hasSavedRollups) {
           hasCondensedRef.current = true;
           handleCondense();

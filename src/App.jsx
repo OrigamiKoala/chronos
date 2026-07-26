@@ -88,6 +88,9 @@ function App() {
       ? getCachedItem('chronos_cache_topic_breakdowns', {})
       : getCachedItem('chronos_guest_topic_breakdowns', {});
   });
+  const [parentRollups, setParentRollups] = useState(() => {
+    return initialUser ? getCachedItem('chronos_cache_parent_rollups', {}) : {};
+  });
   const [lastCondensedScreen, setLastCondensedScreen] = useState('');
 
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
@@ -246,6 +249,10 @@ function App() {
             localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns || {}));
             localStorage.setItem('chronos_cache_history', JSON.stringify(data.history));
             localStorage.setItem('chronos_cache_active_exams', JSON.stringify(loadedActiveExams));
+            if (data.parentRollups && Object.keys(data.parentRollups).length > 0) {
+              setParentRollups(prev => ({ ...prev, ...data.parentRollups }));
+              localStorage.setItem('chronos_cache_parent_rollups', JSON.stringify({ ...getCachedItem('chronos_cache_parent_rollups', {}), ...data.parentRollups }));
+            }
           }
           setAutoLoginLoading(false);
         })
@@ -503,6 +510,10 @@ function App() {
           localStorage.setItem('chronos_cache_detailed_analysis', JSON.stringify(loginData.detailedAnalysis || {}));
           localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(loginData.topicBreakdowns || {}));
           localStorage.setItem('chronos_cache_history', JSON.stringify(loginData.history || []));
+          if (loginData.parentRollups && Object.keys(loginData.parentRollups).length > 0) {
+            setParentRollups(prev => ({ ...prev, ...loginData.parentRollups }));
+            localStorage.setItem('chronos_cache_parent_rollups', JSON.stringify({ ...getCachedItem('chronos_cache_parent_rollups', {}), ...loginData.parentRollups }));
+          }
           localStorage.setItem('chronos_cache_active_exams', JSON.stringify(loadedActiveExams));
         }
       }).catch(err => console.error("Failed to refresh user data:", err));
@@ -567,6 +578,13 @@ function App() {
       })
       .catch(err => console.error("Topic condensation failed:", err));
   }, [user?.user_id]);
+
+  // Fire condense-topics automatically whenever the analytics dashboard opens
+  useEffect(() => {
+    if (currentScreen === 'dashboard' && user) {
+      condenseDuplicateTopics();
+    }
+  }, [currentScreen, user?.user_id]);
 
   const startExam = (config) => {
     if (!user) {
@@ -1357,6 +1375,7 @@ function App() {
                 onReviewExam={reviewPastExam}
                 formatDate={formatDate}
                 onCondense={condenseDuplicateTopics}
+                initialParentRollups={parentRollups}
               />
             )}
             {currentScreen === 'teacher' && (
