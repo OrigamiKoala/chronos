@@ -493,22 +493,53 @@ export default async function handler(req, res) {
       .sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at))
       .slice(0, 25);
 
-    let finalTopicMastery = topicMastery;
-    if (usernames.length > 1) {
-      const masteryMap = {};
-      for (const row of topicMastery) {
-        const key = `${row.subject}:${row.sub_category}`;
-        if (!masteryMap[key]) {
-          masteryMap[key] = { sub_category: row.sub_category, subject: row.subject, correct_count: 0, total_count: 0 };
-        }
-        masteryMap[key].correct_count += (row.correct_count || 0);
-        masteryMap[key].total_count += (row.total_count || 0);
+    const liveMasteryMap = {};
+    for (const row of resultRows) {
+      const subject = row.subject || 'Chemistry';
+      let resultsList = [];
+      try {
+        resultsList = typeof row.results_json === 'string' ? JSON.parse(row.results_json) : (row.results_json || []);
+      } catch (e) {
+        continue;
       }
-      finalTopicMastery = Object.values(masteryMap).map(m => ({
-        ...m,
-        accuracy_rate: m.total_count > 0 ? m.correct_count / m.total_count : 0
-      })).sort((a, b) => b.accuracy_rate - a.accuracy_rate);
+      if (!Array.isArray(resultsList)) continue;
+
+      for (const q of resultsList) {
+        if (!q || !q.topic) continue;
+        let isCorrect = false;
+        if (typeof q.is_correct === 'boolean') {
+          isCorrect = q.is_correct;
+        } else if (q.user_answer !== undefined && q.answer !== undefined) {
+          isCorrect = String(q.user_answer).trim().toLowerCase() === String(q.answer).trim().toLowerCase();
+        }
+        const tags = String(q.topic).split(',').map(t => t.trim()).filter(Boolean);
+        for (const tag of tags) {
+          const key = `${subject.toLowerCase()}:${tag.toLowerCase()}`;
+          if (!liveMasteryMap[key]) {
+            liveMasteryMap[key] = { sub_category: tag, subject, correct_count: 0, total_count: 0 };
+          }
+          liveMasteryMap[key].total_count += 1;
+          if (isCorrect) liveMasteryMap[key].correct_count += 1;
+        }
+      }
     }
+
+    for (const row of topicMastery) {
+      const key = `${(row.subject || '').toLowerCase()}:${(row.sub_category || '').toLowerCase()}`;
+      if (!liveMasteryMap[key]) {
+        liveMasteryMap[key] = {
+          sub_category: row.sub_category,
+          subject: row.subject,
+          correct_count: Number((row.correct_count?.value ?? row.correct_count) || 0),
+          total_count: Number((row.total_count?.value ?? row.total_count) || 0)
+        };
+      }
+    }
+
+    let finalTopicMastery = Object.values(liveMasteryMap).map(m => ({
+      ...m,
+      accuracy_rate: m.total_count > 0 ? m.correct_count / m.total_count : 0
+    })).sort((a, b) => b.accuracy_rate - a.accuracy_rate);
 
     const strengths = finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
     const weaknesses = finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
