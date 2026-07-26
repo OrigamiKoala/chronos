@@ -62,6 +62,15 @@ const CANONICAL_OVERALL_MAP = {
   'nuclear chemistry': 'Nuclear Chemistry',
   'periodic table': 'Periodic Trends',
   'periodic trends': 'Periodic Trends',
+  'descriptive & laboratory chemistry': 'Descriptive & Laboratory Chemistry',
+  'descriptive & laboratory': 'Descriptive & Laboratory Chemistry',
+  'descriptive chemistry': 'Descriptive & Laboratory Chemistry',
+  'laboratory chemistry': 'Descriptive & Laboratory Chemistry',
+  'laboratory techniques': 'Descriptive & Laboratory Chemistry',
+  'volumetric analysis': 'Descriptive & Laboratory Chemistry',
+  'gravimetric analysis': 'Descriptive & Laboratory Chemistry',
+  'qualitative analysis': 'Descriptive & Laboratory Chemistry',
+
   'solutions': 'Solutions',
   'states of matter': 'States of Matter & Gases',
   'gases': 'States of Matter & Gases',
@@ -104,6 +113,22 @@ const CANONICAL_OVERALL_MAP = {
 };
 
 const SUBTOPIC_TO_MAJOR_MAP = {
+  // Descriptive & Laboratory Chemistry / Analytical
+  'volumetric analysis': 'Descriptive & Laboratory Chemistry',
+  'volumetric': 'Descriptive & Laboratory Chemistry',
+  'gravimetric analysis': 'Descriptive & Laboratory Chemistry',
+  'gravimetric': 'Descriptive & Laboratory Chemistry',
+  'qualitative analysis': 'Descriptive & Laboratory Chemistry',
+  'spectrophotometry': 'Descriptive & Laboratory Chemistry',
+  'beer\'s law': 'Descriptive & Laboratory Chemistry',
+  'beers law': 'Descriptive & Laboratory Chemistry',
+  'chromatography': 'Descriptive & Laboratory Chemistry',
+  'flame test': 'Descriptive & Laboratory Chemistry',
+  'error analysis': 'Descriptive & Laboratory Chemistry',
+  'laboratory techniques': 'Descriptive & Laboratory Chemistry',
+  'lab techniques': 'Descriptive & Laboratory Chemistry',
+  'analytical chemistry': 'Descriptive & Laboratory Chemistry',
+
   // Chemistry - Kinetics
   'arrhenius equation': 'Chemical Kinetics',
   'arrhenius': 'Chemical Kinetics',
@@ -200,9 +225,10 @@ const SUBTOPIC_TO_MAJOR_MAP = {
 };
 
 const getMajorTopicCardName = (origName, subject) => {
-  if (!origName) return 'General Topics';
+  if (!origName) return subject ? `${subject} Concepts` : 'General Concepts';
   const cleanLower = origName.trim().toLowerCase();
 
+  // 1. Direct canonical map
   if (CANONICAL_OVERALL_MAP[cleanLower]) {
     return CANONICAL_OVERALL_MAP[cleanLower];
   }
@@ -210,10 +236,12 @@ const getMajorTopicCardName = (origName, subject) => {
     return CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')];
   }
 
+  // 2. Direct subtopic map
   if (SUBTOPIC_TO_MAJOR_MAP[cleanLower]) {
     return SUBTOPIC_TO_MAJOR_MAP[cleanLower];
   }
 
+  // 3. Substring match in subtopic or canonical maps
   for (const [subKey, majorName] of Object.entries(SUBTOPIC_TO_MAJOR_MAP)) {
     if (cleanLower.includes(subKey)) {
       return majorName;
@@ -225,12 +253,104 @@ const getMajorTopicCardName = (origName, subject) => {
     }
   }
 
-  return subject || 'General';
+  // 4. Comprehensive Keyword Domain Classifier
+  // Chemistry
+  if (cleanLower.includes('kinet') || cleanLower.includes('rate') || cleanLower.includes('arrhenius') || cleanLower.includes('catalys') || cleanLower.includes('mechanism') || cleanLower.includes('half-life')) {
+    return 'Chemical Kinetics';
+  }
+  if (cleanLower.includes('thermo') || cleanLower.includes('heat') || cleanLower.includes('enthalp') || cleanLower.includes('entrop') || cleanLower.includes('gibbs') || cleanLower.includes('calorim') || cleanLower.includes('born-haber') || cleanLower.includes('hess')) {
+    return 'Thermodynamics';
+  }
+  if (cleanLower.includes('equilib') || cleanLower.includes('solub') || cleanLower.includes('ksp') || cleanLower.includes('le chatelier') || cleanLower.includes('complex ion') || cleanLower.includes('precipitat')) {
+    return 'Chemical Equilibrium';
+  }
+  if (cleanLower.includes('acid') || cleanLower.includes('base') || cleanLower.includes('buffer') || cleanLower.includes('ph') || cleanLower.includes('poh') || cleanLower.includes('brønsted') || cleanLower.includes('bronsted')) {
+    return 'Acids & Bases';
+  }
+  if (cleanLower.includes('bond') || cleanLower.includes('vsepr') || cleanLower.includes('orbital') || cleanLower.includes('lewis') || cleanLower.includes('hybrid') || cleanLower.includes('atom') || cleanLower.includes('electronegat') || cleanLower.includes('geometry') || cleanLower.includes('resonance')) {
+    return 'Atomic Structure & Bonding';
+  }
+  if (cleanLower.includes('analyt') || cleanLower.includes('volum') || cleanLower.includes('gravim') || cleanLower.includes('spectr') || cleanLower.includes('beer') || cleanLower.includes('chromat') || cleanLower.includes('lab') || cleanLower.includes('qualitat') || cleanLower.includes('titrat') || cleanLower.includes('technique')) {
+    return 'Descriptive & Laboratory Chemistry';
+  }
+  if (cleanLower.includes('organ') || cleanLower.includes('carbon') || cleanLower.includes('aromat') || cleanLower.includes('stereo') || cleanLower.includes('sn1') || cleanLower.includes('sn2') || cleanLower.includes('nmr') || cleanLower.includes('alkane') || cleanLower.includes('alkene')) {
+    return 'Organic Chemistry';
+  }
+  if (cleanLower.includes('inorgan') || cleanLower.includes('transition metal') || cleanLower.includes('coordinat') || cleanLower.includes('crystal field') || cleanLower.includes('halogen') || cleanLower.includes('interhalogen')) {
+    return 'Inorganic Chemistry';
+  }
+  if (cleanLower.includes('bio') || cleanLower.includes('enzyme') || cleanLower.includes('protein') || cleanLower.includes('amino') || cleanLower.includes('isoelectr') || cleanLower.includes('dna') || cleanLower.includes('rna') || cleanLower.includes('peptide')) {
+    return 'Biochemistry';
+  }
+  if (cleanLower.includes('stoichiom') || cleanLower.includes('limiting') || cleanLower.includes('yield') || cleanLower.includes('empirical') || cleanLower.includes('mole')) {
+    return 'Stoichiometry';
+  }
+  if (cleanLower.includes('electro') || cleanLower.includes('galvan') || cleanLower.includes('voltaic') || cleanLower.includes('redox') || cleanLower.includes('nernst') || cleanLower.includes('cell')) {
+    return 'Electrochemistry';
+  }
+  if (cleanLower.includes('solut') || cleanLower.includes('molar') || cleanLower.includes('molal') || cleanLower.includes('dilut') || cleanLower.includes('colligat')) {
+    return 'Solutions';
+  }
+  if (cleanLower.includes('gas') || cleanLower.includes('state') || cleanLower.includes('pressure') || cleanLower.includes('pv=nrt') || cleanLower.includes('phase') || cleanLower.includes('van der waals')) {
+    return 'States of Matter & Gases';
+  }
+
+  // Physics
+  if (cleanLower.includes('mechanic') || cleanLower.includes('force') || cleanLower.includes('work') || cleanLower.includes('energy') || cleanLower.includes('momentum') || cleanLower.includes('torque') || cleanLower.includes('rotation')) {
+    return 'Mechanics';
+  }
+  if (cleanLower.includes('kinematic') || cleanLower.includes('velocity') || cleanLower.includes('accelerat') || cleanLower.includes('projectile') || cleanLower.includes('motion') || cleanLower.includes('free fall')) {
+    return 'Kinematics';
+  }
+  if (cleanLower.includes('dynamic') || cleanLower.includes('newton') || cleanLower.includes('friction')) {
+    return 'Dynamics';
+  }
+  if (cleanLower.includes('optic') || cleanLower.includes('light') || cleanLower.includes('refract') || cleanLower.includes('reflect') || cleanLower.includes('lens') || cleanLower.includes('snell')) {
+    return 'Optics';
+  }
+  if (cleanLower.includes('electric') || cleanLower.includes('magnet') || cleanLower.includes('charge') || cleanLower.includes('circuit') || cleanLower.includes('field') || cleanLower.includes('induction')) {
+    return 'Electromagnetism';
+  }
+  if (cleanLower.includes('wave') || cleanLower.includes('oscillation') || cleanLower.includes('harmonic') || cleanLower.includes('frequency')) {
+    return 'Waves & Oscillations';
+  }
+  if (cleanLower.includes('quantum') || cleanLower.includes('photoelectric') || cleanLower.includes('photon')) {
+    return 'Quantum Mechanics';
+  }
+
+  // Mathematics
+  if (cleanLower.includes('calculus') || cleanLower.includes('deriv') || cleanLower.includes('integ') || cleanLower.includes('limit') || cleanLower.includes('series') || cleanLower.includes('taylor')) {
+    return 'Calculus';
+  }
+  if (cleanLower.includes('algeb') || cleanLower.includes('equation') || cleanLower.includes('polynomial') || cleanLower.includes('matrix') || cleanLower.includes('vector')) {
+    return 'Algebra';
+  }
+  if (cleanLower.includes('geomet') || cleanLower.includes('trig') || cleanLower.includes('triangle') || cleanLower.includes('angle') || cleanLower.includes('circle')) {
+    return 'Geometry & Trigonometry';
+  }
+  if (cleanLower.includes('statist') || cleanLower.includes('probab') || cleanLower.includes('mean') || cleanLower.includes('variance') || cleanLower.includes('distribution')) {
+    return 'Statistics & Probability';
+  }
+
+  const subLower = (subject || '').toLowerCase();
+  if (subLower.includes('chem')) return 'Descriptive & Laboratory Chemistry';
+  if (subLower.includes('phys')) return 'Mechanics';
+  if (subLower.includes('math')) return 'Algebra';
+
+  return subject ? `${subject} Concepts` : 'General Concepts';
 };
 
 const normalizeSubtopicName = (name) => {
   if (!name) return 'General';
   const clean = name.trim().toLowerCase();
+
+  // Laboratory / Descriptive Chemistry
+  if (clean.includes('volumetric') || clean.includes('titration curve') || clean.includes('titrant')) return 'Volumetric Analysis & Titrations';
+  if (clean.includes('gravimetric')) return 'Gravimetric Analysis';
+  if (clean.includes('spectrophotomet') || clean.includes('beer') || clean.includes('absorbance')) return "Beer's Law & Spectrophotometry";
+  if (clean.includes('chromatograph')) return 'Chromatography';
+  if (clean.includes('qualitative') || clean.includes('flame test') || clean.includes('precipitate test')) return 'Qualitative Analysis & Flame Tests';
+  if (clean.includes('lab') || clean.includes('error analysis')) return 'Laboratory Techniques & Error Analysis';
 
   // Kinetics
   if (clean.includes('arrhenius') || clean.includes('activation energy')) return 'Arrhenius & Activation Energy';
