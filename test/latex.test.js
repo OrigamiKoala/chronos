@@ -62,4 +62,26 @@ describe('LaTeX normalization tests', () => {
     expect(parsed[0].question).toContain('200^\\circ\\text{C}');
     expect(parsed[0].question).toContain('\\ce{NaHCO3}');
   });
+
+  it('should preserve all arrows, harpoons, and extensible arrows without truncating', () => {
+    const testCases = [
+      { raw: "\\rightarrow", expected: "\\rightarrow" },
+      { raw: "\\\\rightarrow", expected: "\\rightarrow" },
+      { raw: "\rightarrow", expected: "\\rightarrow" },
+      { raw: "\\rightharpoonup", expected: "\\rightharpoonup" },
+      { raw: "\\rightharpoondown", expected: "\\rightharpoondown" },
+      { raw: "\\rightleftharpoons", expected: "\\rightleftharpoons" },
+      { raw: "\\leftrightharpoons", expected: "\\leftrightharpoons" },
+      { raw: "\\nearrow", expected: "\\nearrow" },
+      { raw: "\\nwarrow", expected: "\\nwarrow" },
+      { raw: "\\nrightarrow", expected: "\\nrightarrow" },
+      { raw: "\\xrightarrow{H_2O}", expected: "\\xrightarrow{H_2O}" },
+      { raw: "\\ce{A + B \\rightarrow C}", expected: "\\ce{A + B \\rightarrow C}" },
+      { raw: "\\ce{A + B \\rightleftharpoons C}", expected: "\\ce{A + B \\rightleftharpoons C}" }
+    ];
+
+    for (const { raw, expected } of testCases) {
+      expect(normalizeLaTeX(raw)).toBe(expected);
+    }
+  });
 });

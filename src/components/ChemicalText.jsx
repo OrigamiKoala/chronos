@@ -140,8 +140,13 @@ export function normalizeLaTeX(str) {
 
   let cleaned = str;
 
-  // 1. Convert TAB/control characters before LaTeX commands starting with t (e.g. \times, \text, \theta, \tau, \tilde, \to)
-  cleaned = cleaned.replace(/\t(imes|ext|heta|au|ilde|riangle|op|an|anh|here|sfrac|o\b)/g, '\\\\t$1');
+  // 1. Convert control characters (\t, \r, \f, \v) before LaTeX commands starting with a-z
+  cleaned = cleaned
+    .replace(/\r([a-zA-Z])/g, '\\\\r$1')
+    .replace(/\f([a-zA-Z])/g, '\\\\f$1')
+    .replace(/\v([a-zA-Z])/g, '\\\\v$1')
+    .replace(/\x08([a-zA-Z])/g, '\\\\b$1')
+    .replace(/\t(imes|ext|heta|au|ilde|riangle|op|an|anh|here|sfrac|o\b|[a-zA-Z]+)/g, '\\\\t$1');
 
   // 2. Convert raw 'times' directly following numbers (e.g. 1.00times10^{-2} or 1.00 times 10^{-2}) to \times
   cleaned = cleaned.replace(/([0-9.]+)\s*\\?\t?times/gi, '$1 \\\\times ');
@@ -150,13 +155,13 @@ export function normalizeLaTeX(str) {
   cleaned = cleaned.replace(/(^|[^a-zA-Z0-9\\])ce([A-Z][a-zA-Z0-9_{}+\-]*|\{[^}]+\})/g, '$1\\\\ce{$2}');
 
   // 4. Unescape literal string escapes for newlines/tabs if present as literal "\n", "\r", "\t",
-  // while preserving valid LaTeX commands like \nu, \rho, \tau, \text, \times, \tilde, \triangle, \theta, etc.
+  // while preserving valid LaTeX commands like \nu, \rho, \tau, \text, \times, \tilde, \triangle, \theta, \rightarrow, \rightharpoonup, etc.
   cleaned = cleaned
     .replace(/\\+n(?![u]|eq|abla|eg|otin|exists|ot|atural|ewline|oindent|earrow|warrow|left|right|parallel|prec|succ|sim|sub|sup|vdash|vDash|Vdash|VDash|leqslant|geqslant|less|gtr|[a-z]*[0-9{}])/g, '\n')
-    .replace(/\\+r(?![h]o|[a-z]*[0-9{}])/g, '\r')
-    .replace(/\\+t(?![a]u|[h]eta|[e]xt|[i]mes|[i]lde|[a]n|[a]nh|[o]p|[r]iangle|[h]ere|[s]frac|[a-z]*[0-9{}])/g, '\t');
+    .replace(/\\+r(?![a-zA-Z])/g, '\r')
+    .replace(/\\+t(?![a-zA-Z])/g, '\t');
 
-  // 5. Normalize 2 or more backslashes before LaTeX command names or symbols (e.g. \\ce -> \ce, \\text -> \text, \\circ -> \circ, \\times -> \times)
+  // 5. Normalize 2 or more backslashes before LaTeX command names or symbols (e.g. \\ce -> \ce, \\text -> \text, \\circ -> \circ, \\times -> \times, \\rightarrow -> \rightarrow)
   cleaned = cleaned.replace(/\\{2,}([a-zA-Z]+|[%$_#{}^])/g, '\\$1');
 
   // 6. Normalize one or more backslashes before ^ (e.g. 200\ ^ -> 200^, 200\\ ^ -> 200^)
