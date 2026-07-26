@@ -520,7 +520,8 @@ function App() {
           ...prev,
           topicMastery: data.topicMastery,
           topicBreakdown: data.topicBreakdowns,
-          parentRollups: data.parentRollups,
+          topicBreakdowns: data.topicBreakdowns,
+          parentRollups: { ...(prev?.parentRollups || {}), ...(data.parentRollups || {}) },
           strengths: data.strengths,
           weaknesses: data.weaknesses
         } : prev);

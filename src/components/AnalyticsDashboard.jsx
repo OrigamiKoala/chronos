@@ -285,8 +285,9 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         setData(prev => ({
           ...prev,
           topicMastery: d.topicMastery || prev?.topicMastery,
-          topicBreakdown: d.topicBreakdowns || prev?.topicBreakdown,
-          parentRollups: d.parentRollups || prev?.parentRollups,
+          topicBreakdown: d.topicBreakdowns || prev?.topicBreakdown || prev?.topicBreakdowns,
+          topicBreakdowns: d.topicBreakdowns || prev?.topicBreakdowns || prev?.topicBreakdown,
+          parentRollups: { ...(prev?.parentRollups || {}), ...(d.parentRollups || {}) },
           strengths: d.strengths || prev?.strengths,
           weaknesses: d.weaknesses || prev?.weaknesses
         }));
