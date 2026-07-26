@@ -56,6 +56,13 @@ export default async function handler(req, res) {
 
     const breakdownRows = breakdownResult[0];
 
+    const currentParentRollups = {};
+    for (const b of breakdownRows) {
+      if (b.topic && b.parent_topic) {
+        currentParentRollups[b.topic.trim().toLowerCase()] = b.parent_topic;
+      }
+    }
+
     const [masteryRows] = await bq.query({
       query: `SELECT sub_category, subject, correct_count, total_count, accuracy_rate FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = @username`,
       params: { username: sanitizedUser }
@@ -381,6 +388,34 @@ Output format must be a JSON object matching this schema:
         }
       }
 
+      // Build maps for updating historical question data
+      const subtopicRenameMap = {};
+      if (responseObj && Array.isArray(responseObj.merges)) {
+        for (const merge of responseObj.merges) {
+          if (merge.source_topics && Array.isArray(merge.source_topics) && merge.target_topic) {
+            for (const source of merge.source_topics) {
+              subtopicRenameMap[source.trim().toLowerCase()] = merge.target_topic;
+            }
+          }
+        }
+      }
+      const parentReclassMap = {};
+      if (responseObj && Array.isArray(responseObj.parent_rollups)) {
+        for (const rollup of responseObj.parent_rollups) {
+          if (!rollup.parent_topic || !Array.isArray(rollup.child_topics)) continue;
+          for (const child of rollup.child_topics) {
+            const childLower = child.trim().toLowerCase();
+            const oldParent = currentParentRollups[childLower] || null;
+            const newParent = rollup.parent_topic;
+            if (oldParent && oldParent.toLowerCase() !== newParent.toLowerCase()) {
+              parentReclassMap[childLower] = { old_parent: oldParent, new_parent: newParent, subject: rollup.subject || 'Chemistry' };
+            } else if (!oldParent) {
+              parentReclassMap[childLower] = { old_parent: null, new_parent: newParent, subject: rollup.subject || 'Chemistry' };
+            }
+          }
+        }
+      }
+
       // Fallback classification for any subtopics left unmapped by AI
       function fallbackUsncoClassifier(topicName, subjectName) {
         const cleanLower = topicName.toLowerCase();
@@ -508,6 +543,110 @@ Output format must be a JSON object matching this schema:
           WHEN MATCHED AND (T.parent_topic IS NULL OR T.parent_topic = '') THEN
             UPDATE SET parent_topic = S.parent_topic;
         `);
+      }
+
+      // Update user_exam_results for subtopic merges and parent reclassification
+      if (Object.keys(subtopicRenameMap).length > 0 || Object.keys(parentReclassMap).length > 0) {
+        const [examResultRows] = await bq.query({
+          query: `SELECT exam_id, results_json FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` WHERE user_id = @username`,
+          params: { username: sanitizedUser }
+        });
+
+        for (const row of examResultRows) {
+          let resultsList;
+          try {
+            resultsList = typeof row.results_json === 'string' ? JSON.parse(row.results_json) : (row.results_json || []);
+          } catch (e) {
+            continue;
+          }
+          if (!Array.isArray(resultsList)) continue;
+
+          let changed = false;
+          for (const q of resultsList) {
+            if (!q.topic) continue;
+            const parts = String(q.topic).split(',').map(t => t.trim()).filter(Boolean);
+            let qChanged = false;
+
+            const renamedParts = parts.map(p => {
+              const renamed = subtopicRenameMap[p.toLowerCase()];
+              if (renamed) { qChanged = true; return renamed; }
+              return p;
+            });
+
+            const reclassParts = [...renamedParts];
+            for (const [childLower, reclass] of Object.entries(parentReclassMap)) {
+              const childIndex = reclassParts.findIndex(p => p.toLowerCase() === childLower);
+              if (childIndex === -1) continue;
+
+              const oldParentIndex = reclass.old_parent
+                ? reclassParts.findIndex(p => p.toLowerCase() === reclass.old_parent.toLowerCase())
+                : -1;
+
+              if (oldParentIndex >= 0) {
+                reclassParts[oldParentIndex] = reclass.new_parent;
+              } else {
+                const newParentExists = reclassParts.some(p => p.toLowerCase() === reclass.new_parent.toLowerCase());
+                if (!newParentExists) {
+                  reclassParts.unshift(reclass.new_parent);
+                }
+              }
+              qChanged = true;
+            }
+
+            if (qChanged) {
+              const seen = new Set();
+              const deduped = reclassParts.filter(p => { const l = p.toLowerCase(); if (seen.has(l)) return false; seen.add(l); return true; });
+              q.topic = deduped.join(', ');
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            const safeExamId = escapeSqlStr(row.exam_id);
+            statements.push(`UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` SET results_json = ${escapeSqlStr(JSON.stringify(resultsList))} WHERE user_id = ${safeUser} AND exam_id = ${safeExamId};`);
+          }
+        }
+      }
+
+      // Update user_wrong_problems for parent reclassification
+      if (Object.keys(parentReclassMap).length > 0) {
+        const [wrongProblemRows] = await bq.query({
+          query: `SELECT question_id, topic FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` WHERE user_id = @username AND topic IS NOT NULL`,
+          params: { username: sanitizedUser }
+        });
+
+        for (const row of wrongProblemRows) {
+          if (!row.topic) continue;
+          const parts = String(row.topic).split(',').map(t => t.trim()).filter(Boolean);
+          let changed = false;
+          const newParts = [...parts];
+
+          for (const [childLower, reclass] of Object.entries(parentReclassMap)) {
+            const childIndex = newParts.findIndex(p => p.toLowerCase() === childLower);
+            if (childIndex === -1) continue;
+
+            const oldParentIndex = reclass.old_parent
+              ? newParts.findIndex(p => p.toLowerCase() === reclass.old_parent.toLowerCase())
+              : -1;
+
+            if (oldParentIndex >= 0) {
+              newParts[oldParentIndex] = reclass.new_parent;
+            } else {
+              const newParentExists = newParts.some(p => p.toLowerCase() === reclass.new_parent.toLowerCase());
+              if (!newParentExists) {
+                newParts.unshift(reclass.new_parent);
+              }
+            }
+            changed = true;
+          }
+
+          if (changed) {
+            const seen = new Set();
+            const deduped = newParts.filter(p => { const l = p.toLowerCase(); if (seen.has(l)) return false; seen.add(l); return true; });
+            const safeQuestionId = escapeSqlStr(row.question_id);
+            statements.push(`UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` SET topic = ${escapeSqlStr(deduped.join(', '))} WHERE user_id = ${safeUser} AND question_id = ${safeQuestionId};`);
+          }
+        }
       }
 
       if (statements.length > 0) {

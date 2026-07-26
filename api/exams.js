@@ -206,10 +206,12 @@ export default async function handler(req, res) {
           user_id STRING NOT NULL, exam_id STRING NOT NULL,
           results_json STRING NOT NULL, created_at TIMESTAMP NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` (
-          user_id STRING NOT NULL, subject STRING NOT NULL, topic STRING NOT NULL,
-          good_at STRING NOT NULL, not_good_at STRING NOT NULL, updated_at TIMESTAMP NOT NULL
-        );
+        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+        ADD COLUMN IF NOT EXISTS good_at STRING;
+        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+        ADD COLUMN IF NOT EXISTS not_good_at STRING;
+        ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
         CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` (
           user_id STRING NOT NULL, exam_id STRING NOT NULL, subject STRING NOT NULL,
           mistake_patterns STRING NOT NULL, created_at TIMESTAMP NOT NULL
@@ -1382,17 +1384,18 @@ ${wrongProblemsString}
             }));
           }
 
-          // Fire topic breakdowns in a single bulk MERGE query to avoid concurrent update conflicts and multiple roundtrips
+          // Fire topic breakdowns into user_topic_mastery (sub_category keyed) in a single bulk MERGE.
+          // If a row already exists, keep its existing counters and just refresh good_at/not_good_at.
           if (Array.isArray(topicBreakdowns) && topicBreakdowns.length > 0) {
             const bulkBreakdownQuery = `
-              MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+              MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T
               USING UNNEST(@breakdowns) S
-              ON T.user_id = @username AND T.subject = @subject AND T.topic = S.topic
+              ON T.user_id = @username AND T.subject = @subject AND T.sub_category = S.sub_category
               WHEN MATCHED THEN
                 UPDATE SET good_at = S.good_at, not_good_at = S.not_good_at, updated_at = CURRENT_TIMESTAMP()
               WHEN NOT MATCHED THEN
-                INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
-                VALUES (@username, @subject, S.topic, S.good_at, S.not_good_at, CURRENT_TIMESTAMP())
+                INSERT (user_id, subject, sub_category, good_at, not_good_at, correct_count, total_count, accuracy_rate, updated_at)
+                VALUES (@username, @subject, S.sub_category, S.good_at, S.not_good_at, 0, 0, 0, CURRENT_TIMESTAMP())
             `;
             upsertPromises.push(
               bq.query({
@@ -1401,7 +1404,7 @@ ${wrongProblemsString}
                   username,
                   subject,
                   breakdowns: topicBreakdowns.map(b => ({
-                    topic: String(b.topic),
+                    sub_category: String(b.topic),
                     good_at: String(b.good_at || ''),
                     not_good_at: String(b.not_good_at || '')
                   }))

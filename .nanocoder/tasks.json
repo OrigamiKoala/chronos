@@ -1,1 +1,66 @@
-[]
+[
+  {
+    "id": "c2a82628",
+    "title": "Update api/exams.js: add good_at/not_good_at ALTERs, change CREATE TABLE block, change prompt field name, switch MERGE to user_topic_mastery, update topicBreakdowns response shape uses",
+    "status": "completed",
+    "createdAt": "2026-07-26T16:58:38.516Z",
+    "updatedAt": "2026-07-26T16:58:38.516Z",
+    "completedAt": "2026-07-26T16:58:38.516Z"
+  },
+  {
+    "id": "cbe9f4e6",
+    "title": "Update api/generate.js: drop user_topic_breakdown query, remove breakdown CTE, use mastery-only weaknesses",
+    "status": "in_progress",
+    "createdAt": "2026-07-26T16:58:38.516Z",
+    "updatedAt": "2026-07-26T16:58:38.516Z"
+  },
+  {
+    "id": "f1929ef1",
+    "title": "Update api/explain.js: drop user_topic_breakdown CTE, remove topicBreakdown variable usage",
+    "status": "pending",
+    "createdAt": "2026-07-26T16:58:38.516Z",
+    "updatedAt": "2026-07-26T16:58:38.516Z"
+  },
+  {
+    "id": "c6a70b41",
+    "title": "Update api/login.js: drop breakdown_json subquery, build topicBreakdowns from mastery good_at/not_good_at/parent_topic",
+    "status": "pending",
+    "createdAt": "2026-07-26T16:58:38.516Z",
+    "updatedAt": "2026-07-26T16:58:38.516Z"
+  },
+  {
+    "id": "7f296bd1",
+    "title": "Update api/analytics.js: drop breakdown CTE/parsing, derive topicBreakdowns from user_topic_mastery row good_at/not_good_at + parent_topic",
+    "status": "pending",
+    "createdAt": "2026-07-26T16:58:38.516Z",
+    "updatedAt": "2026-07-26T16:58:38.516Z"
+  },
+  {
+    "id": "a3d04f2f",
+    "title": "Update api/condense-topics.js: replace all user_topic_breakdown reads/writes/ALTERs with user_topic_mastery equivalents",
+    "status": "pending",
+    "createdAt": "2026-07-26T16:58:38.516Z",
+    "updatedAt": "2026-07-26T16:58:38.516Z"
+  },
+  {
+    "id": "0cabacec",
+    "title": "Update api/teacher-data.js: drop collectiveBreakdowns CTE, derive from mastery with good_at/not_good_at/parent_topic",
+    "status": "pending",
+    "createdAt": "2026-07-26T16:58:38.516Z",
+    "updatedAt": "2026-07-26T16:58:38.516Z"
+  },
+  {
+    "id": "2efa2e80",
+    "title": "Update scratch/chronos-worker/src/worker.js: drop topic_breakdown subquery",
+    "status": "pending",
+    "createdAt": "2026-07-26T16:58:38.516Z",
+    "updatedAt": "2026-07-26T16:58:38.516Z"
+  },
+  {
+    "id": "79810bf4",
+    "title": "Provide DROP TABLE SQL",
+    "status": "pending",
+    "createdAt": "2026-07-26T16:58:38.516Z",
+    "updatedAt": "2026-07-26T16:58:38.516Z"
+  }
+]
