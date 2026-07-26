@@ -222,43 +222,30 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   const handleCondense = async () => {
     if (condensing || !user?.user_id) return;
     setCondensing(true);
-    if (onCondense) {
-      onCondense((condensedData) => {
-        setCondensing(false);
-        if (condensedData) {
-          setData(prev => ({
-            ...prev,
-            topicMastery: condensedData.topicMastery || prev?.topicMastery,
-            topicBreakdown: condensedData.topicBreakdowns || prev?.topicBreakdown,
-            parentRollups: condensedData.parentRollups || prev?.parentRollups,
-            strengths: condensedData.strengths || prev?.strengths,
-            weaknesses: condensedData.weaknesses || prev?.weaknesses
-          }));
-        }
+    try {
+      const res = await fetch('/api/condense-topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user.user_id })
       });
-    } else {
-      try {
-        const res = await fetch('/api/condense-topics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: user.user_id })
-        });
-        const d = await res.json();
-        setCondensing(false);
-        if (d.success) {
-          setData(prev => ({
-            ...prev,
-            topicMastery: d.topicMastery || prev?.topicMastery,
-            topicBreakdown: d.topicBreakdowns || prev?.topicBreakdown,
-            parentRollups: d.parentRollups || prev?.parentRollups,
-            strengths: d.strengths || prev?.strengths,
-            weaknesses: d.weaknesses || prev?.weaknesses
-          }));
+      const d = await res.json();
+      if (d && d.success) {
+        setData(prev => ({
+          ...prev,
+          topicMastery: d.topicMastery || prev?.topicMastery,
+          topicBreakdown: d.topicBreakdowns || prev?.topicBreakdown,
+          parentRollups: d.parentRollups || prev?.parentRollups,
+          strengths: d.strengths || prev?.strengths,
+          weaknesses: d.weaknesses || prev?.weaknesses
+        }));
+        if (onCondense) {
+          onCondense(d);
         }
-      } catch (err) {
-        console.error("Failed to condense topics:", err);
-        setCondensing(false);
       }
+    } catch (err) {
+      console.error("Failed to condense topics:", err);
+    } finally {
+      setCondensing(false);
     }
   };
 

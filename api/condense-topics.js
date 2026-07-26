@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   try {
     // 1. Fetch current breakdowns and mastery
     const getTopicsQuery = `
-      SELECT topic, good_at, not_good_at, subject
+      SELECT topic, good_at, not_good_at, subject, parent_topic
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
       WHERE user_id = @username
     `;
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       });
 
       const [finalBreakdownRows] = await bq.query({
-        query: `SELECT topic, good_at, not_good_at, subject
+        query: `SELECT topic, good_at, not_good_at, subject, parent_topic
           FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
           WHERE user_id = @username`,
         params: { username: sanitizedUser }
@@ -102,11 +102,16 @@ export default async function handler(req, res) {
         .map(m => ({ topic: m.sub_category, subject: m.subject }));
 
       const topicBreakdowns = {};
+      const parentRollups = {};
       for (const b of finalBreakdownRows) {
         topicBreakdowns[b.topic] = {
           good_at: b.good_at,
-          not_good_at: b.not_good_at
+          not_good_at: b.not_good_at,
+          parent_topic: b.parent_topic
         };
+        if (b.parent_topic) {
+          parentRollups[b.topic.toLowerCase()] = b.parent_topic;
+        }
       }
 
       return res.status(200).json({
@@ -115,6 +120,7 @@ export default async function handler(req, res) {
         strengths,
         weaknesses,
         topicBreakdowns,
+        parentRollups,
         topicMastery
       });
     };
@@ -123,12 +129,13 @@ export default async function handler(req, res) {
       return await fetchAndResponseFinalState(0);
     }
 
-    // 2. Prepare AI input
+    // 2. Prepare AI input with existing parent_topic mappings
     const inputTopics = breakdownRows.map(row => {
       const mastery = masteryRows.find(m => m.sub_category === row.topic && m.subject === row.subject);
       return {
         subject: row.subject,
         topic: row.topic,
+        parent_topic: row.parent_topic || null,
         good_at: row.good_at,
         not_good_at: row.not_good_at,
         correct_count: mastery ? Number(mastery.correct_count || 0) : 0,
@@ -158,14 +165,12 @@ Your tasks:
 
    For Physics: Use standard categories (Kinematics, Dynamics, Mechanics, Optics, Electromagnetism, Waves & Oscillations, Quantum Mechanics).
    For Math: Use standard categories (Algebra, Calculus, Geometry & Trigonometry, Statistics & Probability).
-   Every single subtopic must appear in at least one parent_rollup's child_topics array under one of these standard parent categories.
+   Preserve valid existing "parent_topic" mappings provided in the input unless a subtopic needs re-classification into the 10 USNCO topics.
 
 CRITICAL CONSTRAINTS:
 1. STRICT USNCO TOPICS FOR CHEMISTRY: parent_topic for Chemistry MUST be EXACTLY one of the 10 official USNCO topics listed above. DO NOT invent arbitrary overall titles (e.g. DO NOT use "Heterogeneous Systems", "Spectroscopy", "Chemistry", "General Topics", or "Phase Equilibria" as parent_topic).
 2. NO ORPHAN SUBTOPICS: Every subtopic must be mapped to one of the 10 standard USNCO parent categories in parent_rollups.
-3. DO NOT combine completely distinct major fields or unrelated concepts.
-4. Synthesize "good_at" and "not_good_at" descriptions when topics are merged or rolled up.
-5. Target names MUST be clean, standardized Title-Case.
+3. PRESERVE EXISTING MAPPINGS: Re-use existing valid parent_topic values to complete classification instantly without re-analyzing already sorted subtopics.
 
 Input Data:
 ${JSON.stringify(inputTopics, null, 2)}
@@ -192,8 +197,8 @@ Output format must be a JSON object matching this schema:
   ]
 }`;
 
-    const modelId = 'gemini-3.5-flash-lite';
-    const models = [modelId, 'gemini-3.1-flash-lite'];
+    const modelId = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const models = [...new Set([modelId, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'])];
     const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
       model: currentModel,
       input: prompt,
@@ -421,13 +426,18 @@ Output format must be a JSON object matching this schema:
                   AND EXISTS (
                     SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part
                     WHERE LOWER(TRIM(part)) IN UNNEST(@childSources)
-                  )
-                  AND NOT EXISTS (
-                    SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part
-                    WHERE LOWER(TRIM(part)) = LOWER(@parentTopic)
                   )`,
               params: { username: sanitizedUser, subject, parentTopic: parent_topic, childSources: child_topics.map(c => c.toLowerCase()) }
             }).catch(err => console.error("Failed to retag user_wrong_problems for parent rollup:", err));
+
+            // 5. Save parent_topic mapping for all child subtopics in user_topic_breakdown
+            await bq.query({
+              query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+                SET parent_topic = @parentTopic
+                WHERE user_id = @username AND LOWER(subject) = LOWER(@subject)
+                  AND LOWER(topic) IN UNNEST(@childSources)`,
+              params: { username: sanitizedUser, subject, parentTopic: parent_topic, childSources: child_topics.map(c => c.toLowerCase()) }
+            }).catch(err => console.error("Failed to set parent_topic in user_topic_breakdown:", err));
 
             mergedCount++;
           }

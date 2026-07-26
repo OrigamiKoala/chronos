@@ -1166,7 +1166,7 @@ ${examples}
     [
       {
         "id": "A unique string ID",
-        "topic": "A comma-separated list of brief sub-categories or topics tested (e.g. 'Algebra, Number Theory' or 'Stoichiometry, Kinetics' or 'Mechanics, Rotational Dynamics')",
+        "topic": "A comma-separated string containing AT LEAST ONE Major Topic AND AT LEAST ONE specific Minor Subtopic. For Chemistry, the Major Topic MUST be one of: 'Stoichiometry & Solutions', 'Descriptive & Laboratory Chemistry', 'States of Matter & Phase Changes', 'Thermodynamics', 'Kinetics', 'Equilibrium', 'Acids & Bases', 'Electrochemistry', 'Atomic Structure & Periodicity', 'Organic Chemistry & Biochemistry'. Example: 'Kinetics, Michaelis-Menten Kinetics' or 'Thermodynamics, Hess\\'s Law & Enthalpy' or 'Kinematics, Projectile Motion'.",
         "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format. CRITICAL: Do not include the answer choices here, if the question is multiple choice.",
         "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
         "answer": ${answerSchemaDesc},
