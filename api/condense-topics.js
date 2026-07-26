@@ -67,12 +67,67 @@ export default async function handler(req, res) {
         params: { username: sanitizedUser }
       });
 
-      const topicMastery = finalMasteryRows.map(m => ({
-        sub_category: m.sub_category,
-        subject: m.subject,
-        correct_count: Number((m.correct_count?.value ?? m.correct_count) || 0),
-        total_count: Number((m.total_count?.value ?? m.total_count) || 0),
-        accuracy_rate: Number((m.accuracy_rate?.value ?? m.accuracy_rate) || 0)
+      const [examResultRows] = await bq.query({
+        query: `SELECT subject, results_json FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` WHERE user_id = @username`,
+        params: { username: sanitizedUser }
+      });
+
+      const liveMasteryMap = {};
+      for (const row of (examResultRows || [])) {
+        const subject = row.subject || 'Chemistry';
+        let resultsList = [];
+        try {
+          resultsList = typeof row.results_json === 'string' ? JSON.parse(row.results_json) : (row.results_json || []);
+        } catch (e) {
+          continue;
+        }
+        if (!Array.isArray(resultsList)) continue;
+
+        for (const q of resultsList) {
+          if (!q || !q.topic) continue;
+          let isCorrect = false;
+          if (typeof q.isCorrect === 'boolean') {
+            isCorrect = q.isCorrect;
+          } else if (typeof q.is_correct === 'boolean') {
+            isCorrect = q.is_correct;
+          } else if (q.score !== undefined && q.score !== null) {
+            isCorrect = Number(q.score) > 0;
+          } else if (q.earnedPoints !== undefined && q.earnedPoints !== null) {
+            isCorrect = Number(q.earnedPoints) > 0;
+          } else {
+            const uAns = q.userAnswer ?? q.user_answer ?? q.selectedOption ?? q.selected_option;
+            const cAns = q.answer ?? q.correctAnswer ?? q.correct_answer;
+            if (uAns !== undefined && cAns !== undefined) {
+              isCorrect = String(uAns).trim().toLowerCase() === String(cAns).trim().toLowerCase();
+            }
+          }
+          const tags = String(q.topic).split(',').map(t => t.trim()).filter(Boolean);
+          for (const tag of tags) {
+            const key = `${subject.toLowerCase()}:${tag.toLowerCase()}`;
+            if (!liveMasteryMap[key]) {
+              liveMasteryMap[key] = { sub_category: tag, subject, correct_count: 0, total_count: 0 };
+            }
+            liveMasteryMap[key].total_count += 1;
+            if (isCorrect) liveMasteryMap[key].correct_count += 1;
+          }
+        }
+      }
+
+      for (const row of finalMasteryRows) {
+        const key = `${(row.subject || '').toLowerCase()}:${(row.sub_category || '').toLowerCase()}`;
+        if (!liveMasteryMap[key]) {
+          liveMasteryMap[key] = {
+            sub_category: row.sub_category,
+            subject: row.subject,
+            correct_count: Number((row.correct_count?.value ?? row.correct_count) || 0),
+            total_count: Number((row.total_count?.value ?? row.total_count) || 0)
+          };
+        }
+      }
+
+      const topicMastery = Object.values(liveMasteryMap).map(m => ({
+        ...m,
+        accuracy_rate: m.total_count > 0 ? m.correct_count / m.total_count : 0
       })).sort((a, b) => {
         if (a.subject !== b.subject) return a.subject.localeCompare(b.subject);
         return b.accuracy_rate - a.accuracy_rate;
