@@ -120,6 +120,21 @@ export default async function handler(req, res) {
         SELECT 'breakdown' AS type, TO_JSON_STRING(STRUCT(user_id, topic, good_at, not_good_at)) AS data
         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
         WHERE user_id IN UNNEST(@usernames)
+      ),
+      pairings AS (
+        SELECT 'pairings' AS type, TO_JSON_STRING(STRUCT(
+          TRIM(SPLIT(topic, ',')[SAFE_OFFSET(0)]) AS major_topic,
+          TRIM(SPLIT(topic, ',')[SAFE_OFFSET(1)]) AS minor_topic
+        )) AS data
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+        WHERE user_id IN UNNEST(@usernames) AND ARRAY_LENGTH(SPLIT(topic, ',')) > 1
+        UNION DISTINCT
+        SELECT 'pairings' AS type, TO_JSON_STRING(STRUCT(
+          TRIM(SPLIT(topic, ',')[SAFE_OFFSET(0)]) AS major_topic,
+          TRIM(SPLIT(topic, ',')[SAFE_OFFSET(1)]) AS minor_topic
+        )) AS data
+        FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
+        WHERE ARRAY_LENGTH(SPLIT(topic, ',')) > 1
       )
       SELECT type, data FROM elo
       UNION ALL
@@ -132,6 +147,8 @@ export default async function handler(req, res) {
       SELECT type, data FROM analysis
       UNION ALL
       SELECT type, data FROM breakdown
+      UNION ALL
+      SELECT type, data FROM pairings
     `;
 
     const params = { usernames };
@@ -143,6 +160,7 @@ export default async function handler(req, res) {
     const topicMastery = [];
     const analyses = [];
     const breakdowns = [];
+    const pairings = [];
 
     for (const r of rows) {
       try {
@@ -153,6 +171,7 @@ export default async function handler(req, res) {
         else if (r.type === 'mastery') topicMastery.push(parsedData);
         else if (r.type === 'analysis') analyses.push(parsedData);
         else if (r.type === 'breakdown') breakdowns.push(parsedData);
+        else if (r.type === 'pairings') pairings.push(parsedData);
       } catch (parseErr) {
         console.error("Failed to parse row data:", r, parseErr);
       }
@@ -586,6 +605,11 @@ ${JSON.stringify(inputData, null, 2)}
     }
 
     const parentRollups = {};
+    for (const p of pairings) {
+      if (p.major_topic && p.minor_topic) {
+        parentRollups[p.minor_topic.toLowerCase()] = p.major_topic;
+      }
+    }
     for (const b of breakdowns) {
       const topic = b.topic;
       if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
