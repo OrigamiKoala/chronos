@@ -247,6 +247,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   const [orgLoading, setOrgLoading] = useState(false);
   const [condensing, setCondensing] = useState(false);
   const hasCondensedRef = useRef(false);
+  const aiParentRollupsRef = useRef({});
 
   const displayHistory = useMemo(() => (data?.history && data.history.length > 0) ? data.history : (history || []), [history, data?.history]);
   const displayStrengths = useMemo(() => (data?.strengths && data.strengths.length > 0) ? data.strengths : (strengths || []), [strengths, data?.strengths]);
