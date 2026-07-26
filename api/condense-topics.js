@@ -238,8 +238,6 @@ Output format must be a JSON object matching this schema:
             DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = ${safeUser} AND LOWER(subject) = LOWER(${safeSubject}) AND LOWER(sub_category) IN (${sourcesList});
             MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeTarget} AS topic) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic WHEN MATCHED THEN UPDATE SET good_at = ${safeGood}, not_good_at = ${safeNotGood}, updated_at = CURRENT_TIMESTAMP() WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (${safeUser}, ${safeSubject}, ${safeTarget}, ${safeGood}, ${safeNotGood}, CURRENT_TIMESTAMP());
             MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeTarget} AS sub_category) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category WHEN MATCHED THEN UPDATE SET correct_count = ${mergedCorrect}, total_count = ${mergedTotal}, accuracy_rate = ${mergedAccuracy} WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (${safeUser}, ${safeTarget}, ${safeSubject}, ${mergedCorrect}, ${mergedTotal}, ${mergedAccuracy});
-            UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` SET topic = REGEXP_REPLACE(topic, r'(?i)' || ${safeRegex}, ${safeTarget}) WHERE user_id = ${safeUser} AND LOWER(subject) = LOWER(${safeSubject}) AND REGEXP_CONTAINS(topic, r'(?i)' || ${safeRegex});
-            UPDATE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` SET topic = REGEXP_REPLACE(topic, r'(?i)' || ${safeRegex}, ${safeTarget}) WHERE LOWER(subject) = LOWER(${safeSubject}) AND REGEXP_CONTAINS(topic, r'(?i)' || ${safeRegex});
           `);
 
           mergedCount++;
@@ -260,18 +258,11 @@ Output format must be a JSON object matching this schema:
             continue;
           }
 
-          function escapeRegexp(str) {
-            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          }
-
           const safeUser = escapeSqlStr(sanitizedUser);
           const safeSubject = escapeSqlStr(subject);
           const safeParent = escapeSqlStr(parent_topic);
           const safeGood = escapeSqlStr(good_at || '');
           const safeNotGood = escapeSqlStr(not_good_at || '');
-          const childrenRegex = child_topics.map(c => escapeRegexp(c.trim())).join('|');
-          const safeChildRegex = escapeSqlStr('\\b(' + childrenRegex + ')\\b');
-          const safeParentRegex = escapeSqlStr('\\b' + escapeRegexp(parent_topic.trim()) + '\\b');
 
           const parentRow = masteryRows.find(m => (m.sub_category || '').toLowerCase() === parent_topic.toLowerCase() && (m.subject || '').toLowerCase() === subject.toLowerCase());
           let rollupCorrect = 0;
@@ -297,8 +288,6 @@ Output format must be a JSON object matching this schema:
             batchSqlStatements.push(`
               MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeParent} AS topic) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic WHEN MATCHED THEN UPDATE SET good_at = COALESCE(NULLIF(${safeGood}, ''), T.good_at), not_good_at = COALESCE(NULLIF(${safeNotGood}, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP() WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (${safeUser}, ${safeSubject}, ${safeParent}, ${safeGood}, ${safeNotGood}, CURRENT_TIMESTAMP());
               MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeParent} AS sub_category) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category WHEN MATCHED THEN UPDATE SET correct_count = ${rollupCorrect}, total_count = ${rollupTotal}, accuracy_rate = ${rollupAccuracy} WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (${safeUser}, ${safeParent}, ${safeSubject}, ${rollupCorrect}, ${rollupTotal}, ${rollupAccuracy});
-              UPDATE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` SET topic = CONCAT(${safeParent}, ', ', topic) WHERE LOWER(subject) = LOWER(${safeSubject}) AND REGEXP_CONTAINS(topic, r'(?i)' || ${safeChildRegex}) AND NOT REGEXP_CONTAINS(topic, r'(?i)' || ${safeParentRegex});
-              UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` SET topic = CONCAT(${safeParent}, ', ', topic) WHERE user_id = ${safeUser} AND LOWER(subject) = LOWER(${safeSubject}) AND REGEXP_CONTAINS(topic, r'(?i)' || ${safeChildRegex}) AND NOT REGEXP_CONTAINS(topic, r'(?i)' || ${safeParentRegex});
             `);
 
             mergedCount++;
