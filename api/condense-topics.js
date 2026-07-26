@@ -234,6 +234,14 @@ Output format must be a JSON object matching this schema:
             params: { username: sanitizedUser, subject, target: target_topic, sources: source_topics.map(s => s.toLowerCase()) }
           }).catch(err => console.error("Failed to update user_wrong_problems for condense:", err));
 
+          // 7. Update topic in pregenerated_questions
+          await bq.query({
+            query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
+              SET topic = @target
+              WHERE LOWER(subject) = LOWER(@subject) AND LOWER(topic) IN UNNEST(@sources)`,
+            params: { subject, target: target_topic, sources: source_topics.map(s => s.toLowerCase()) }
+          }).catch(err => console.error("Failed to update pregenerated_questions for condense:", err));
+
           mergedCount++;
         }
       }
