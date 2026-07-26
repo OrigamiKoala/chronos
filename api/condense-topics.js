@@ -202,18 +202,20 @@ Output format must be a JSON object matching this schema:
       const batchSqlStatements = [];
 
       if (responseObj && Array.isArray(responseObj.merges) && responseObj.merges.length > 0) {
+      const allDeleteSources = new Set();
+      const breakdownItems = [];
+      const masteryItems = [];
+
+      if (responseObj && Array.isArray(responseObj.merges) && responseObj.merges.length > 0) {
         for (const merge of responseObj.merges) {
           const { subject, source_topics, target_topic, good_at, not_good_at } = merge;
           if (!subject || !source_topics || !target_topic || source_topics.length < 2) {
             continue;
           }
 
-          const safeUser = escapeSqlStr(sanitizedUser);
-          const safeSubject = escapeSqlStr(subject);
-          const safeTarget = escapeSqlStr(target_topic);
-          const safeGood = escapeSqlStr(good_at || '');
-          const safeNotGood = escapeSqlStr(not_good_at || '');
-          const sourcesList = source_topics.map(s => escapeSqlStr(s.toLowerCase())).join(', ');
+          for (const s of source_topics) {
+            allDeleteSources.add(s.toLowerCase());
+          }
 
           let mergedCorrect = 0;
           let mergedTotal = 0;
@@ -226,20 +228,8 @@ Output format must be a JSON object matching this schema:
           }
           const mergedAccuracy = mergedTotal > 0 ? (mergedCorrect / mergedTotal) : 0.0;
 
-          function escapeRegexp(str) {
-            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          }
-
-          const sourcesRegex = source_topics.map(s => escapeRegexp(s.trim())).join('|');
-          const safeRegex = escapeSqlStr('\\b(' + sourcesRegex + ')\\b');
-
-          batchSqlStatements.push(`
-            DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = ${safeUser} AND LOWER(subject) = LOWER(${safeSubject}) AND LOWER(topic) IN (${sourcesList});
-            DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = ${safeUser} AND LOWER(subject) = LOWER(${safeSubject}) AND LOWER(sub_category) IN (${sourcesList});
-            MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeTarget} AS topic) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic WHEN MATCHED THEN UPDATE SET good_at = ${safeGood}, not_good_at = ${safeNotGood}, updated_at = CURRENT_TIMESTAMP() WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (${safeUser}, ${safeSubject}, ${safeTarget}, ${safeGood}, ${safeNotGood}, CURRENT_TIMESTAMP());
-            MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeTarget} AS sub_category) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category WHEN MATCHED THEN UPDATE SET correct_count = ${mergedCorrect}, total_count = ${mergedTotal}, accuracy_rate = ${mergedAccuracy} WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (${safeUser}, ${safeTarget}, ${safeSubject}, ${mergedCorrect}, ${mergedTotal}, ${mergedAccuracy});
-          `);
-
+          breakdownItems.push({ subject, topic: target_topic, good_at: good_at || '', not_good_at: not_good_at || '' });
+          masteryItems.push({ subject, sub_category: target_topic, correct_count: mergedCorrect, total_count: mergedTotal, accuracy_rate: mergedAccuracy });
           mergedCount++;
         }
       }
@@ -258,45 +248,61 @@ Output format must be a JSON object matching this schema:
             continue;
           }
 
-          const safeUser = escapeSqlStr(sanitizedUser);
-          const safeSubject = escapeSqlStr(subject);
-          const safeParent = escapeSqlStr(parent_topic);
-          const safeGood = escapeSqlStr(good_at || '');
-          const safeNotGood = escapeSqlStr(not_good_at || '');
-
-          const parentRow = masteryRows.find(m => (m.sub_category || '').toLowerCase() === parent_topic.toLowerCase() && (m.subject || '').toLowerCase() === subject.toLowerCase());
+          const lowerChildren = child_topics.map(c => c.toLowerCase());
+          lowerChildren.push(parent_topic.toLowerCase());
           let rollupCorrect = 0;
           let rollupTotal = 0;
 
-          if (parentRow && Number((parentRow.total_count?.value ?? parentRow.total_count) || 0) > 0) {
-            rollupCorrect = Number((parentRow.correct_count?.value ?? parentRow.correct_count) || 0);
-            rollupTotal = Number((parentRow.total_count?.value ?? parentRow.total_count) || 0);
-          } else {
-            const lowerChildren = child_topics.map(c => c.toLowerCase());
-            for (const m of masteryRows) {
-              const catName = (m.sub_category || '').toLowerCase();
-              if (lowerChildren.includes(catName)) {
-                rollupCorrect += Number((m.correct_count?.value ?? m.correct_count) || 0);
-                rollupTotal += Number((m.total_count?.value ?? m.total_count) || 0);
-              }
+          for (const m of masteryRows) {
+            const catName = (m.sub_category || '').toLowerCase();
+            if (lowerChildren.includes(catName) && (m.subject || '').toLowerCase() === subject.toLowerCase()) {
+              rollupCorrect += Number((m.correct_count?.value ?? m.correct_count) || 0);
+              rollupTotal += Number((m.total_count?.value ?? m.total_count) || 0);
             }
           }
 
           if (rollupTotal > 0) {
             const rollupAccuracy = rollupCorrect / rollupTotal;
-
-            batchSqlStatements.push(`
-              MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeParent} AS topic) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic WHEN MATCHED THEN UPDATE SET good_at = COALESCE(NULLIF(${safeGood}, ''), T.good_at), not_good_at = COALESCE(NULLIF(${safeNotGood}, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP() WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (${safeUser}, ${safeSubject}, ${safeParent}, ${safeGood}, ${safeNotGood}, CURRENT_TIMESTAMP());
-              MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeParent} AS sub_category) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category WHEN MATCHED THEN UPDATE SET correct_count = ${rollupCorrect}, total_count = ${rollupTotal}, accuracy_rate = ${rollupAccuracy} WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (${safeUser}, ${safeParent}, ${safeSubject}, ${rollupCorrect}, ${rollupTotal}, ${rollupAccuracy});
-            `);
-
+            breakdownItems.push({ subject, topic: parent_topic, good_at: good_at || '', not_good_at: not_good_at || '' });
+            masteryItems.push({ subject, sub_category: parent_topic, correct_count: rollupCorrect, total_count: rollupTotal, accuracy_rate: rollupAccuracy });
             mergedCount++;
           }
         }
       }
 
-      if (batchSqlStatements.length > 0) {
-        await bq.query({ query: batchSqlStatements.join('\n') }).catch(err => console.error("Batch BigQuery execution error:", err));
+      const safeUser = escapeSqlStr(sanitizedUser);
+      const statements = [];
+
+      if (allDeleteSources.size > 0) {
+        const sourcesList = Array.from(allDeleteSources).map(s => escapeSqlStr(s)).join(', ');
+        statements.push(`DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = ${safeUser} AND LOWER(topic) IN (${sourcesList});`);
+        statements.push(`DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = ${safeUser} AND LOWER(sub_category) IN (${sourcesList});`);
+      }
+
+      if (breakdownItems.length > 0) {
+        const selects = breakdownItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.topic)} AS topic, ${escapeSqlStr(item.good_at)} AS good_at, ${escapeSqlStr(item.not_good_at)} AS not_good_at`).join('\nUNION ALL\n');
+        statements.push(`
+          MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+          USING (${selects}) S
+          ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
+          WHEN MATCHED THEN UPDATE SET good_at = COALESCE(NULLIF(S.good_at, ''), T.good_at), not_good_at = COALESCE(NULLIF(S.not_good_at, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP()
+          WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (S.user_id, S.subject, S.topic, S.good_at, S.not_good_at, CURRENT_TIMESTAMP());
+        `);
+      }
+
+      if (masteryItems.length > 0) {
+        const selects = masteryItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.sub_category)} AS sub_category, ${item.correct_count} AS correct_count, ${item.total_count} AS total_count, ${item.accuracy_rate} AS accuracy_rate`).join('\nUNION ALL\n');
+        statements.push(`
+          MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T
+          USING (${selects}) S
+          ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category
+          WHEN MATCHED THEN UPDATE SET correct_count = S.correct_count, total_count = S.total_count, accuracy_rate = S.accuracy_rate
+          WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (S.user_id, S.sub_category, S.subject, S.correct_count, S.total_count, S.accuracy_rate);
+        `);
+      }
+
+      if (statements.length > 0) {
+        await bq.query({ query: statements.join('\n') }).catch(err => console.error("Batch BigQuery execution error:", err));
       }
     }
 
