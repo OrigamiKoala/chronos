@@ -25,6 +25,13 @@ const CHART_COLORS = {
   concept: { line: '#ef4444', bg: 'rgba(239, 68, 68, 0.25)' },
   intuition: { line: '#a855f7', bg: 'rgba(168, 85, 247, 0.2)' },
   efficiency: { line: '#06b6d4', bg: 'rgba(6, 182, 212, 0.3)' },
+  time: { line: '#ec4899', bg: 'rgba(236, 72, 153, 0.2)' }
+};
+
+const getSubjectColor = (subject) => {
+  if (!subject) return CHART_COLORS.Math;
+  const key = Object.keys(CHART_COLORS).find(k => k.toLowerCase() === String(subject).toLowerCase());
+  return CHART_COLORS[key] || CHART_COLORS.Math;
 };
 
 const OVERALL_TOPIC_NAMES = new Set([
@@ -417,8 +424,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       return {
         label: s,
         data: points.map(p => p.y),
-        borderColor: CHART_COLORS[s].line,
-        backgroundColor: CHART_COLORS[s].bg,
+        borderColor: getSubjectColor(s).line,
+        backgroundColor: getSubjectColor(s).bg,
         fill: true,
         tension: 0.35,
         pointRadius: 3,
@@ -458,8 +465,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       return {
         label: s,
         data: timeline.map(t => t.ratings[s]),
-        borderColor: CHART_COLORS[s].line,
-        backgroundColor: CHART_COLORS[s].bg,
+        borderColor: getSubjectColor(s).line,
+        backgroundColor: getSubjectColor(s).bg,
         fill: true,
         tension: 0.35,
         pointRadius: 3,
@@ -645,8 +652,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       datasets: [{
         label: 'Seconds / Question',
         data: subjects.map(s => data.avgTimePerSubject[s] || 0),
-        backgroundColor: subjects.map(s => CHART_COLORS[s]?.bg || CHART_COLORS.time.bg),
-        borderColor: subjects.map(s => CHART_COLORS[s]?.line || CHART_COLORS.time.line),
+        backgroundColor: subjects.map(s => getSubjectColor(s).bg),
+        borderColor: subjects.map(s => getSubjectColor(s).line),
         borderWidth: 1,
         borderRadius: 6,
         barPercentage: 0.6
@@ -850,10 +857,10 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 <>
                   {['Math', 'Physics', 'Chemistry'].map(s => (
                     <div key={s} className="glass-panel analytics-stat-card">
-                      <TrendingUp size={22} color={CHART_COLORS[s].line} />
+                      <TrendingUp size={22} color={getSubjectColor(s).line} />
                       <div>
                         <span className="analytics-stat-label">{s} ELO</span>
-                        <span className="analytics-stat-value" style={{ color: CHART_COLORS[s].line }}>
+                        <span className="analytics-stat-value" style={{ color: getSubjectColor(s).line }}>
                           {user?.[`${s.toLowerCase()}_rating`] || 100}
                         </span>
                       </div>
@@ -872,10 +879,10 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
               ) : (
                 <>
                   <div className="glass-panel analytics-stat-card">
-                    <TrendingUp size={22} color={CHART_COLORS[selectedSubjectFilter].line} />
+                    <TrendingUp size={22} color={getSubjectColor(selectedSubjectFilter).line} />
                     <div>
                       <span className="analytics-stat-label">{selectedSubjectFilter} ELO</span>
-                      <span className="analytics-stat-value" style={{ color: CHART_COLORS[selectedSubjectFilter].line }}>
+                      <span className="analytics-stat-value" style={{ color: getSubjectColor(selectedSubjectFilter).line }}>
                         {user?.[`${selectedSubjectFilter.toLowerCase()}_rating`] || 100}
                       </span>
                     </div>

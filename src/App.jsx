@@ -516,8 +516,11 @@ function App() {
       }).catch(err => console.error("Failed to refresh user data:", err));
   };
 
+  const isCondensingRef = useRef(false);
+
   const condenseDuplicateTopics = useCallback((onSuccess = null) => {
-    if (!user) return;
+    if (!user || isCondensingRef.current) return;
+    isCondensingRef.current = true;
     setLastCondensedScreen(currentScreen);
     fetch('/api/condense-topics', {
       method: 'POST',
@@ -538,7 +541,10 @@ function App() {
           }
         }
       })
-      .catch(err => console.error("Topic condensation failed:", err));
+      .catch(err => console.error("Topic condensation failed:", err))
+      .finally(() => {
+        isCondensingRef.current = false;
+      });
   }, [user?.user_id, currentScreen]);
 
   const startExam = (config) => {
