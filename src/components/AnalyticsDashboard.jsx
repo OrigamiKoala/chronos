@@ -492,13 +492,9 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       .then(d => {
         setData(d);
         setLoading(false);
-        if (!hasCondensedRef.current) {
-          hasCondensedRef.current = true;
-          handleCondense();
-        }
       })
       .catch(e => { setError(e.message); setLoading(false); });
-  }, [user?.user_id, onCondense]);
+  }, [user?.user_id]);
 
   // ELO over time chart
   const eloChartData = useMemo(() => {

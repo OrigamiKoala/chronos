@@ -508,8 +508,30 @@ function App() {
       }).catch(err => console.error("Failed to refresh user data:", err));
   };
 
-  const condenseDuplicateTopics = useCallback((onSuccess = null) => {
+  const condenseDuplicateTopics = useCallback((arg = null) => {
     if (!user) return;
+    if (arg && typeof arg === 'object' && arg.success) {
+      const data = arg;
+      if (data.strengths) setStrengths(data.strengths);
+      if (data.weaknesses) setWeaknesses(data.weaknesses);
+      if (data.topicBreakdowns) setTopicBreakdowns(data.topicBreakdowns);
+      if (data.topicMastery) {
+        setAnalyticsData(prev => prev ? {
+          ...prev,
+          topicMastery: data.topicMastery,
+          topicBreakdown: data.topicBreakdowns,
+          parentRollups: data.parentRollups,
+          strengths: data.strengths,
+          weaknesses: data.weaknesses
+        } : prev);
+      }
+      if (data.strengths) localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
+      if (data.weaknesses) localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
+      if (data.topicBreakdowns) localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns));
+      return;
+    }
+
+    const onSuccess = typeof arg === 'function' ? arg : null;
     fetch('/api/condense-topics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
