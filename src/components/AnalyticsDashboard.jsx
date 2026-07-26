@@ -829,7 +829,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   }, [data]);
 
   // Topic mastery mini-cards data grouped by overall topic via AI parent map
-  const toCanonicalSubtopic = (str) => {
+  function toCanonicalSubtopic(str) {
     if (!str) return '';
     let s = String(str).trim()
       .replace(/\s*\/\s*/g, ' & ')
@@ -863,7 +863,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     if (/^solubility/i.test(lower) && !lower.includes('product')) return 'Solubility & Ksp';
 
     return lower.split(' ').map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
-  };
+  }
 
   const topicCardsData = useMemo(() => {
     if (!data?.topicMastery?.length) return [];
