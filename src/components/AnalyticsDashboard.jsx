@@ -551,7 +551,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       .then(d => {
         setData(d);
         setLoading(false);
-        if (!hasCondensedRef.current) {
+        const hasSavedRollups = d.parentRollups && Object.keys(d.parentRollups).length > 0;
+        if (!hasCondensedRef.current && !hasSavedRollups) {
           hasCondensedRef.current = true;
           handleCondense();
         }
