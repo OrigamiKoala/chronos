@@ -177,8 +177,8 @@ Output format must be a JSON object matching this schema:
   ]
 }`;
 
-    const modelId = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    const models = [...new Set([modelId, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'])];
+    const modelId = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    const models = [...new Set([modelId, 'gemini-3.1-flash-lite'])];
     const response = await executeWithRetry(models, (ai, currentModel) => ai.interactions.create({
       model: currentModel,
       input: prompt,
