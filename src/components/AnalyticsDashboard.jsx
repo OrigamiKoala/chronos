@@ -891,19 +891,11 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0
       })).sort((a, b) => a.accuracy - b.accuracy);
 
-      // Find major topic row matching card title if it exists directly in subtopics
-      const majorRow = subtopics.find(s => s.name.toLowerCase() === card.title.toLowerCase());
       let totalCorrect = 0;
       let totalTotal = 0;
-
-      if (majorRow) {
-        totalCorrect = majorRow.correct;
-        totalTotal = majorRow.total;
-      } else {
-        for (const s of subtopics) {
-          totalCorrect += s.correct;
-          totalTotal += s.total;
-        }
+      for (const s of subtopics) {
+        totalCorrect += s.correct;
+        totalTotal += s.total;
       }
 
       const overallAccuracy = totalTotal > 0 ? Math.round((totalCorrect / totalTotal) * 100) : 0;
