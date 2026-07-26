@@ -834,6 +834,21 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
 
 
       <div>
+        <div style={{
+          marginBottom: '1rem',
+          padding: '0.75rem 1rem',
+          borderRadius: 'var(--radius-md)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.25)',
+          color: 'var(--text-secondary)',
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem'
+        }}>
+          <Info size={16} color="var(--accent-secondary)" style={{ flexShrink: 0 }} />
+          <span>If you believe you are right, click "Ask AI" and you can get your points back (or argue with the bot)</span>
+        </div>
         <h3 style={{ marginBottom: '1.5rem' }}>Question Breakdown</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {results.map((r, i) => {
