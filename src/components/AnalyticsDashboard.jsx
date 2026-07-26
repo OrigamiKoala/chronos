@@ -1315,7 +1315,9 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 {condensing ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
                 {condensing ? 'Organizing...' : 'Organize Topics (AI)'}
               </button>
-                        {topicCardsData.length === 0 ? (
+            </div>
+
+            {topicCardsData.length === 0 ? (
               <div className="glass-panel analytics-chart-panel">
                 <p className="analytics-empty">Complete exams to build topic mastery data</p>
               </div>
@@ -1527,7 +1529,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 })()}
               </>
             )}
-          </div>  </div>
+          </div>
 
           {/* Strengths & Weaknesses */}
           {(() => {
