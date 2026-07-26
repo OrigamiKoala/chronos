@@ -983,25 +983,6 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
               {s}
             </button>
           ))}
-          <button
-            className="btn btn-outline"
-            disabled={condensing}
-            style={{
-              padding: '0.35rem 0.75rem',
-              fontSize: '0.8rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: 'var(--accent-primary)',
-              borderColor: 'rgba(99, 102, 241, 0.4)',
-              background: 'rgba(99, 102, 241, 0.1)',
-              marginLeft: '0.5rem'
-            }}
-            onClick={handleCondense}
-          >
-            {condensing ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
-            {condensing ? 'Organizing...' : 'Organize Topics'}
-          </button>
           {onBack && (
             <button className="btn btn-outline" onClick={onBack} style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
               <ArrowLeft size={14} /> Back

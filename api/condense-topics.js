@@ -104,23 +104,41 @@ export default async function handler(req, res) {
         topicMastery
       });
     };
-
-    if (breakdownRows.length < 2) {
-      return await fetchAndResponseFinalState(0);
-    }
-
-    // 2. Prepare AI input with existing parent_topic mappings
-    const inputTopics = breakdownRows.map(row => {
-      const mastery = masteryRows.find(m => m.sub_category === row.topic && m.subject === row.subject);
-      return {
-        subject: row.subject,
-        topic: row.topic,
-        good_at: row.good_at,
-        not_good_at: row.not_good_at,
+    const allTopicsMap = new Map();
+    for (const b of breakdownRows) {
+      if (!b.topic) continue;
+      const key = `${(b.subject || 'Chemistry').toLowerCase()}:${b.topic.toLowerCase()}`;
+      const mastery = masteryRows.find(m => m.sub_category?.toLowerCase() === b.topic.toLowerCase() && m.subject?.toLowerCase() === b.subject?.toLowerCase());
+      allTopicsMap.set(key, {
+        subject: b.subject || 'Chemistry',
+        topic: b.topic,
+        good_at: b.good_at || '',
+        not_good_at: b.not_good_at || '',
         correct_count: mastery ? Number(mastery.correct_count || 0) : 0,
         total_count: mastery ? Number(mastery.total_count || 0) : 0
-      };
-    });
+      });
+    }
+
+    for (const m of masteryRows) {
+      if (!m.sub_category) continue;
+      const key = `${(m.subject || 'Chemistry').toLowerCase()}:${m.sub_category.toLowerCase()}`;
+      if (!allTopicsMap.has(key)) {
+        allTopicsMap.set(key, {
+          subject: m.subject || 'Chemistry',
+          topic: m.sub_category,
+          good_at: '',
+          not_good_at: '',
+          correct_count: Number(m.correct_count || 0),
+          total_count: Number(m.total_count || 0)
+        });
+      }
+    }
+
+    const inputTopics = Array.from(allTopicsMap.values());
+
+    if (inputTopics.length < 1) {
+      return await fetchAndResponseFinalState(0);
+    }
 
     const prompt = `You are an expert tutor and curriculum designer specializing in USNCO (US National Chemistry Olympiad) standards. Analyze the following topic breakdown data for a student.
 
