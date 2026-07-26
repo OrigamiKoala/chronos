@@ -230,7 +230,6 @@ CRITICAL CONSTRAINTS:
 1. STRICT USNCO TOPICS FOR CHEMISTRY: parent_topic for Chemistry MUST be EXACTLY one of the 10 official USNCO topics listed above. DO NOT invent arbitrary overall titles (e.g. DO NOT use "Heterogeneous Systems", "Spectroscopy", "Chemistry", "General Topics", or "Phase Equilibria" as parent_topic).
 2. NO ORPHAN SUBTOPICS: Every subtopic must be mapped to one of the 10 standard USNCO parent categories in parent_rollups.
 3. ALWAYS MERGE PUNCTUATION VARIATIONS: If any two input topics differ only by slashes, ampersands, or spacing (e.g. "bonding/molecular structure" vs "bonding & molecular structure"), you MUST output a merge object combining them.
-4. PRESERVE EXISTING MAPPINGS: Re-use existing valid parent_topic values to complete classification instantly without re-analyzing already sorted subtopics, unless the existing topic is "Other Topics" - then, reclassify.
 
 Input Data:
 ${JSON.stringify(inputTopics, null, 2)}
