@@ -13,7 +13,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { TrendingUp, Target, Zap, Brain, BarChart3, Clock, Flame, ArrowLeft, Loader2, Sparkles } from 'lucide-react';
+import { TrendingUp, Target, Zap, Brain, BarChart3, Clock, Flame, ArrowLeft, Loader2 } from 'lucide-react';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
@@ -1078,7 +1078,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                       <span className="analytics-stat-label">Overall Subject Accuracy</span>
                       <span className="analytics-stat-value" style={{ color: 'var(--success)' }}>
                         {(() => {
-                      const subjectHistory = (data?.eloHistory || []).filter(h => h.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase());
+                          const subjectHistory = (data?.eloHistory || []).filter(h => h.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase());
                           if (subjectHistory.length === 0) return '0%';
                           const sum = subjectHistory.reduce((acc, h) => acc + (h.accuracy || 0), 0);
                           return Math.round((sum / subjectHistory.length) * 100) + '%';
@@ -1291,10 +1291,10 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                       : '#ef4444';
 
                   return (
-                    <div 
-                      key={card.title} 
-                      className="glass-panel" 
-                      style={{ 
+                    <div
+                      key={card.title}
+                      className="glass-panel"
+                      style={{
                         padding: '1.25rem',
                         display: 'flex',
                         flexDirection: 'column',
@@ -1346,12 +1346,12 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                             {card.subtopics.map(sub => {
                               const subColor = sub.accuracy >= 70 ? '#10b981' : sub.accuracy >= 50 ? '#f59e0b' : '#ef4444';
                               return (
-                                <div 
-                                  key={sub.name} 
-                                  style={{ 
-                                    display: 'flex', 
-                                    justify: 'space-between', 
-                                    alignItems: 'center', 
+                                <div
+                                  key={sub.name}
+                                  style={{
+                                    display: 'flex',
+                                    justify: 'space-between',
+                                    alignItems: 'center',
                                     fontSize: '0.82rem',
                                     padding: '0.35rem 0.5rem',
                                     borderRadius: '6px',
