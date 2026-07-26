@@ -199,9 +199,6 @@ Output format must be a JSON object matching this schema:
     let mergedCount = 0;
     if (response.output_text) {
       const responseObj = parseJSONResponse(response.output_text);
-      const batchSqlStatements = [];
-
-      if (responseObj && Array.isArray(responseObj.merges) && responseObj.merges.length > 0) {
       const allDeleteSources = new Set();
       const breakdownItems = [];
       const masteryItems = [];
