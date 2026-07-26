@@ -131,19 +131,20 @@ const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
   const cleanLower = origName.trim().toLowerCase();
   const cleanSingular = cleanLower.replace(/s$/, '').replace(/e?s$/, '');
 
-  // 1. Direct canonical map (e.g. "kinetics" -> "Kinetics")
-  if (CANONICAL_OVERALL_MAP[cleanLower]) return CANONICAL_OVERALL_MAP[cleanLower];
-  if (CANONICAL_OVERALL_MAP[cleanSingular]) return CANONICAL_OVERALL_MAP[cleanSingular];
-
-  // 2. AI Condenser mapping
+  // 1. AI Condenser mapping (takes priority over static defaults)
   if (aiParentMap) {
-    const aiTarget = aiParentMap[cleanLower] || aiParentMap[cleanSingular] || aiParentMap[cleanLower.replace(/s$/, '')];
+    const canonicalKey = toCanonicalSubtopic(origName).toLowerCase();
+    const aiTarget = aiParentMap[canonicalKey] || aiParentMap[cleanLower] || aiParentMap[cleanSingular] || aiParentMap[cleanLower.replace(/s$/, '')];
     if (aiTarget) {
       const parentClean = aiTarget.trim().toLowerCase();
       if (CANONICAL_OVERALL_MAP[parentClean]) return CANONICAL_OVERALL_MAP[parentClean];
       return aiTarget;
     }
   }
+
+  // 2. Direct canonical map fallback (e.g. "kinetics" -> "Kinetics")
+  if (CANONICAL_OVERALL_MAP[cleanLower]) return CANONICAL_OVERALL_MAP[cleanLower];
+  if (CANONICAL_OVERALL_MAP[cleanSingular]) return CANONICAL_OVERALL_MAP[cleanSingular];
 
   // 3. Precise Keyword / Concept Regex Matching against standard major categories
   const subj = (subject || '').toLowerCase();
@@ -838,21 +839,25 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
     // Build AI parent mapping from breakdown data established by AI Condenser
     const aiParentMap = {};
-    if (data?.topicBreakdown) {
-      for (const [topic, details] of Object.entries(data.topicBreakdown)) {
-        if (details.parent_topic) {
-          aiParentMap[topic.toLowerCase()] = details.parent_topic;
+    const breakdownsObj = data?.topicBreakdowns || data?.topicBreakdown;
+    if (breakdownsObj) {
+      for (const [topic, details] of Object.entries(breakdownsObj)) {
+        if (details && details.parent_topic) {
+          aiParentMap[topic.trim().toLowerCase()] = details.parent_topic;
+          aiParentMap[toCanonicalSubtopic(topic).toLowerCase()] = details.parent_topic;
         }
       }
     }
     if (data?.parentRollups) {
       for (const [child, parent] of Object.entries(data.parentRollups)) {
         aiParentMap[child.trim().toLowerCase()] = parent;
+        aiParentMap[toCanonicalSubtopic(child).toLowerCase()] = parent;
       }
     }
     if (aiParentRollupsRef.current) {
       for (const [child, parent] of Object.entries(aiParentRollupsRef.current)) {
         aiParentMap[child.trim().toLowerCase()] = parent;
+        aiParentMap[toCanonicalSubtopic(child).toLowerCase()] = parent;
       }
     }
 
