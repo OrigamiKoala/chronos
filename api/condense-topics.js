@@ -35,6 +35,15 @@ export default async function handler(req, res) {
       params: { username: sanitizedUser }
     });
 
+    // 0. Auto-repair historic corrupt mastery rows where correct_count > total_count
+    await bq.query({
+      query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+        SET correct_count = total_count,
+            accuracy_rate = 1.0
+        WHERE user_id = @username AND correct_count > total_count`,
+      params: { username: sanitizedUser }
+    }).catch(err => console.error("Auto-repair mastery error:", err));
+
     const getMasteryQuery = `
       SELECT sub_category, subject, correct_count, total_count, accuracy_rate
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
@@ -118,18 +127,20 @@ export default async function handler(req, res) {
     const prompt = `You are an expert tutor and curriculum designer. Analyze the following topic breakdown data for a student.
 
 Your tasks:
-1. CONSOLIDATION & MERGES: Actively consolidate redundant, synonymous, or highly overlapping sub-topics within the SAME subject to streamline the student's dashboard and prevent topic bloat.
+1. AGGRESSIVE SUBTOPIC CLUSTERING & MERGES: Eliminate hyper-specific one-off subtopic fragmentation by aggressively merging low-count or narrowly phrased subtopics into clean, standardized subtopic clusters within the SAME subject.
+   - Merge "Determination of Rate Laws", "Initial Rates Method", and "Reaction Orders" into "Rate Laws & Reaction Orders".
+   - Merge "Arrhenius Equation Calculations" and "Activation Energy" into "Arrhenius Equation & Activation Energy".
+   - Merge "Hückel's Rule" and "Aromatic Compounds" into "Aromaticity".
    - Combine synonymous terms (e.g., "kinetics", "chemical kinetics", and "reaction kinetics" -> "Chemical Kinetics").
-   - Combine highly overlapping or tightly coupled sub-concepts into a clean, unified topic (e.g., "Hückel's Rule" and "Aromaticity" -> "Aromaticity", or "Hess's Law" and "Enthalpy Calculations" -> "Thermochemistry").
 
-2. PARENT ROLLUPS & RETAGGING: Identify specific detailed sub-topics (e.g., "Michaelis-Menten Kinetics", "Hess's Law", "Nernst Equation", "Snell's Law") and map them to their standard overall parent category (e.g., "Chemical Kinetics", "Thermodynamics", "Electrochemistry", "Optics").
-   - This ensures questions tagged with narrow sub-topics are also tagged with the overall parent topic (e.g., "Chemical Kinetics, Michaelis-Menten Kinetics").
+2. PARENT ROLLUPS & RETAGGING: Map specific subtopics to their standard overall parent category (e.g., "Chemical Kinetics", "Thermodynamics", "Electrochemistry", "Organic Chemistry").
+   - Ensures questions tagged with subtopics are also tagged with their parent category (e.g., "Chemical Kinetics, Rate Laws & Reaction Orders").
 
 CRITICAL CONSTRAINTS:
-1. ACTIVELY SHRINK topic bloat: Combine duplicate, synonymous, or tightly coupled sub-topics (e.g. "Hückel's Rule" + "Aromaticity" -> "Aromaticity"; "Kinetics" + "Chemical Kinetics" -> "Chemical Kinetics").
+1. ELIMINATE ONE-OFF SUBTOPIC SPAM: Actively combine minor/specific variants into clean, reusable subtopic clusters.
 2. DO NOT combine completely distinct major fields or unrelated concepts (e.g., do not merge Thermodynamics into Kinetics).
-3. For merged topics, synthesize "good_at" and "not_good_at" descriptions into concise, clear, and comprehensive summaries.
-4. For target topic names, use clean, standardized title-case capitalization (e.g. "Aromaticity" or "Chemical Kinetics").
+3. Synthesize "good_at" and "not_good_at" descriptions when topics are merged.
+4. Target names MUST be clean, standardized Title-Case (e.g., "Rate Laws & Reaction Orders", "Chemical Kinetics").
 5. If no topics need to be combined or rolled up, return empty arrays for "merges" and "parent_rollups".
 
 Input Data:

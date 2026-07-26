@@ -495,8 +495,8 @@ export default async function handler(req, res) {
       if (topics.length > 0) {
         const updateMasteryQuery = `
           UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-          SET correct_count = correct_count + 1,
-              accuracy_rate = SAFE_DIVIDE(correct_count + 1, total_count)
+          SET correct_count = LEAST(correct_count + 1, total_count),
+              accuracy_rate = SAFE_DIVIDE(LEAST(correct_count + 1, total_count), total_count)
           WHERE user_id = @username AND subject = @subject AND sub_category IN UNNEST(@topics)
         `;
         updatePromises.push(bq.query({

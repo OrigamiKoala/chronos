@@ -103,6 +103,172 @@ const CANONICAL_OVERALL_MAP = {
   'multivariable calculus': 'Multivariable Calculus'
 };
 
+const SUBTOPIC_TO_MAJOR_MAP = {
+  // Chemistry - Kinetics
+  'arrhenius equation': 'Chemical Kinetics',
+  'arrhenius': 'Chemical Kinetics',
+  'reaction rate': 'Chemical Kinetics',
+  'reaction rates': 'Chemical Kinetics',
+  'rate law': 'Chemical Kinetics',
+  'michaelis-menten': 'Chemical Kinetics',
+  'enzyme kinetics': 'Chemical Kinetics',
+  'activation energy': 'Chemical Kinetics',
+  'catalysis': 'Chemical Kinetics',
+
+  // Chemistry - Equilibrium
+  'solubility': 'Chemical Equilibrium',
+  'solubility equilibria': 'Chemical Equilibrium',
+  'solubility and complex ion equilibria': 'Chemical Equilibrium',
+  'complex ion': 'Chemical Equilibrium',
+  'complex ion equilibria': 'Chemical Equilibrium',
+  'fractional precipitation': 'Chemical Equilibrium',
+  'common ion effect': 'Chemical Equilibrium',
+  'le chatelier': 'Chemical Equilibrium',
+  'equilibrium constant': 'Chemical Equilibrium',
+
+  // Chemistry - Thermodynamics
+  'born-haber': 'Thermodynamics',
+  'born-haber cycle': 'Thermodynamics',
+  'hess': 'Thermodynamics',
+  'hess\'s law': 'Thermodynamics',
+  'enthalpy': 'Thermodynamics',
+  'entropy': 'Thermodynamics',
+  'gibbs free energy': 'Thermodynamics',
+  'calorimetry': 'Thermodynamics',
+  'spontaneity': 'Thermodynamics',
+
+  // Chemistry - Atomic Structure & Bonding
+  'vsepr': 'Atomic Structure & Bonding',
+  'vsepr theory': 'Atomic Structure & Bonding',
+  'bond angle': 'Atomic Structure & Bonding',
+  'bond angles': 'Atomic Structure & Bonding',
+  'hybridization': 'Atomic Structure & Bonding',
+  'molecular orbital': 'Atomic Structure & Bonding',
+  'lewis structure': 'Atomic Structure & Bonding',
+  'electronegativity': 'Atomic Structure & Bonding',
+  'bonding': 'Atomic Structure & Bonding',
+
+  // Chemistry - Organic
+  'nmr': 'Organic Chemistry',
+  'nmr spectroscopy': 'Organic Chemistry',
+  'carbonyl': 'Organic Chemistry',
+  'carbonyl chemistry': 'Organic Chemistry',
+  'aromaticity': 'Organic Chemistry',
+  'huckel': 'Organic Chemistry',
+  'hückel': 'Organic Chemistry',
+  'stereochemistry': 'Organic Chemistry',
+  'sn1': 'Organic Chemistry',
+  'sn2': 'Organic Chemistry',
+
+  // Chemistry - Inorganic
+  'interhalogen': 'Inorganic Chemistry',
+  'interhalogens': 'Inorganic Chemistry',
+  'complex chemistry': 'Inorganic Chemistry',
+  'coordination chemistry': 'Inorganic Chemistry',
+  'crystal field theory': 'Inorganic Chemistry',
+  'transition metals': 'Inorganic Chemistry',
+
+  // Chemistry - Biochemistry
+  'isoelectric': 'Biochemistry',
+  'isoelectric point': 'Biochemistry',
+  'isoelectronic': 'Biochemistry',
+  'isoelectronic point': 'Biochemistry',
+  'amino acids': 'Biochemistry',
+  'proteins': 'Biochemistry',
+
+  // Chemistry - Acids & Bases
+  'buffer': 'Acids & Bases',
+  'buffer solutions': 'Acids & Bases',
+  'titration': 'Acids & Bases',
+  'ph': 'Acids & Bases',
+
+  // Physics
+  'projectile motion': 'Kinematics',
+  'free fall': 'Kinematics',
+  'circular motion': 'Mechanics',
+  'rotational dynamics': 'Dynamics',
+  'torque': 'Dynamics',
+  'work-energy theorem': 'Mechanics',
+  'snell': 'Optics',
+  'refraction': 'Optics',
+
+  // Math
+  'integration by parts': 'Calculus',
+  'derivatives': 'Calculus',
+  'limits': 'Calculus',
+  'taylor series': 'Calculus'
+};
+
+const getMajorTopicCardName = (origName, subject) => {
+  if (!origName) return 'General Topics';
+  const cleanLower = origName.trim().toLowerCase();
+
+  if (CANONICAL_OVERALL_MAP[cleanLower]) {
+    return CANONICAL_OVERALL_MAP[cleanLower];
+  }
+  if (CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')]) {
+    return CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')];
+  }
+
+  if (SUBTOPIC_TO_MAJOR_MAP[cleanLower]) {
+    return SUBTOPIC_TO_MAJOR_MAP[cleanLower];
+  }
+
+  for (const [subKey, majorName] of Object.entries(SUBTOPIC_TO_MAJOR_MAP)) {
+    if (cleanLower.includes(subKey)) {
+      return majorName;
+    }
+  }
+  for (const [canonKey, majorName] of Object.entries(CANONICAL_OVERALL_MAP)) {
+    if (cleanLower.includes(canonKey)) {
+      return majorName;
+    }
+  }
+
+  return 'General Topics';
+};
+
+const normalizeSubtopicName = (name) => {
+  if (!name) return 'General';
+  const clean = name.trim().toLowerCase();
+
+  // Kinetics
+  if (clean.includes('arrhenius') || clean.includes('activation energy')) return 'Arrhenius & Activation Energy';
+  if (clean.includes('rate law') || clean.includes('initial rate') || clean.includes('order of reaction') || clean.includes('reaction order')) return 'Rate Laws & Reaction Orders';
+  if (clean.includes('michaelis') || clean.includes('enzyme')) return 'Enzyme Kinetics & Michaelis-Menten';
+
+  // Equilibrium
+  if (clean.includes('solubility') || clean.includes('ksp') || clean.includes('precipitation')) return 'Solubility & Ksp Equilibria';
+  if (clean.includes('le chatelier') || clean.includes('equilibrium constant')) return "Le Chatelier's Principle & Equilibrium";
+  if (clean.includes('complex ion')) return 'Complex Ion Equilibria';
+
+  // Thermodynamics
+  if (clean.includes('hess') || clean.includes('enthalpy')) return "Hess's Law & Enthalpy";
+  if (clean.includes('born-haber') || clean.includes('lattice')) return 'Born-Haber Cycle & Lattice Energy';
+  if (clean.includes('entropy') || clean.includes('gibbs') || clean.includes('spontaneous') || clean.includes('free energy')) return 'Entropy & Free Energy';
+
+  // Atomic Structure & Bonding
+  if (clean.includes('vsepr') || clean.includes('geometry') || clean.includes('bond angle')) return 'VSEPR & Molecular Geometry';
+  if (clean.includes('hybrid') || clean.includes('orbital') || clean.includes('mo theory')) return 'Hybridization & MO Theory';
+  if (clean.includes('lewis') || clean.includes('resonance')) return 'Lewis Structures & Resonance';
+  if (clean.includes('electronegativity') || clean.includes('polar')) return 'Periodic Trends & Polarity';
+
+  // Organic Chemistry
+  if (clean.includes('nmr') || clean.includes('spectroscopy') || clean.includes('ir spec')) return 'NMR & Spectroscopy';
+  if (clean.includes('carbonyl') || clean.includes('ketone') || clean.includes('aldehyde')) return 'Carbonyl Chemistry';
+  if (clean.includes('aromatic') || clean.includes('huckel') || clean.includes('hückel')) return 'Aromaticity & Hückel Rule';
+  if (clean.includes('stereochemistry') || clean.includes('chiral')) return 'Stereochemistry & Isomers';
+
+  // Biochemistry
+  if (clean.includes('isoelectric') || clean.includes('isoelectronic') || clean.includes('zwitterion')) return 'Isoelectric Point & Amino Acids';
+
+  // Acids & Bases
+  if (clean.includes('buffer') || clean.includes('titration') || clean.includes('ph')) return 'Buffer Solutions & Titrations';
+
+  // Fallback: Clean Titlecase
+  return name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
+};
+
 const isOverallTopic = (topicName) => {
   if (!topicName) return false;
   const clean = topicName.trim().toLowerCase();
@@ -743,35 +909,26 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       const origName = (item.sub_category || item.topic || '').trim();
       if (!origName) continue;
 
-      const correct = Number((item.correct_count?.value ?? item.correct_count) || 0);
       const total = Number((item.total_count?.value ?? item.total_count) || 0);
       if (total <= 0) continue;
+      const correct = Number((item.correct_count?.value ?? item.correct_count) || 0);
 
       const cleanLower = origName.toLowerCase();
-      const canonicalParent = CANONICAL_OVERALL_MAP[cleanLower] || CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')];
+      const majorParent = getMajorTopicCardName(origName, item.subject);
+      const card = getOrCreateCard(majorParent, item.subject);
 
-      if (canonicalParent) {
-        const card = getOrCreateCard(canonicalParent, item.subject);
+      const isDirectMajor = (CANONICAL_OVERALL_MAP[cleanLower] || CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')]) === majorParent;
+
+      if (isDirectMajor) {
         card.directCorrect += correct;
         card.directTotal += total;
       } else {
-        let inferredParent = null;
-        for (const [key, val] of Object.entries(CANONICAL_OVERALL_MAP)) {
-          if (cleanLower.includes(key)) {
-            inferredParent = val;
-            break;
-          }
-        }
-        if (!inferredParent) {
-          inferredParent = origName.charAt(0).toUpperCase() + origName.slice(1);
-        }
-
-        const card = getOrCreateCard(inferredParent, item.subject);
-        const subKey = origName.toLowerCase();
+        const normName = normalizeSubtopicName(origName);
+        const subKey = normName.toLowerCase();
 
         if (!card.subtopicsMap.has(subKey)) {
           card.subtopicsMap.set(subKey, {
-            name: origName,
+            name: normName,
             correct,
             total
           });
@@ -786,7 +943,9 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     const result = [];
     for (const card of cardsMap.values()) {
       const subtopics = Array.from(card.subtopicsMap.values()).map(s => ({
-        ...s,
+        name: s.name,
+        correct: s.correct,
+        total: s.total,
         accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0
       })).sort((a, b) => a.accuracy - b.accuracy);
 
