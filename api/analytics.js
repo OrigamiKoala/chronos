@@ -493,7 +493,67 @@ export default async function handler(req, res) {
       .sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at))
       .slice(0, 25);
 
+function toCanonicalSubtopic(str) {
+  if (!str) return '';
+  let s = String(str).trim()
+    .replace(/\s*\/\s*/g, ' & ')
+    .replace(/\s+and\s+/gi, ' & ')
+    .replace(/\s+/g, ' ');
+
+  let lower = s.toLowerCase();
+
+  // Systemic stemming & suffix normalization
+  lower = lower
+    .replace(/equilibria$/i, 'equilibrium')
+    .replace(/mechanisms$/i, 'mechanism')
+    .replace(/laws$/i, 'law')
+    .replace(/reactions$/i, 'reaction')
+    .replace(/diagrams$/i, 'diagram')
+    .replace(/plots$/i, 'plot')
+    .replace(/calculations$/i, 'calculation')
+    .replace(/constants$/i, 'constant')
+    .replace(/equations$/i, 'equation')
+    .replace(/cells$/i, 'cell')
+    .replace(/potentials$/i, 'potential')
+    .replace(/relations$/i, 'relation')
+    .replace(/effects$/i, 'effect')
+    .replace(/changes$/i, 'change')
+    .replace(/orders$/i, 'order');
+
+  lower = lower.replace(/^(chemical|general|basic)\s+/i, '');
+
+  if (/^acid-base|^acid base/i.test(lower)) return 'Acid-Base Equilibria';
+  if (/^reaction kinetics|^reaction mechanism|^kinetic/i.test(lower)) return 'Reaction Kinetics & Mechanisms';
+  if (/^first law/i.test(lower)) return 'First Law of Thermodynamics';
+  if (/^solubility/i.test(lower) && !lower.includes('product')) return 'Solubility & Ksp';
+
+  return lower.split(' ').map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+}
+
     const liveMasteryMap = {};
+    const parentQuestionSets = {}; // Major topic -> Set of question IDs
+
+    function getMajorTopicName(origName, subject) {
+      if (!origName) return subject || 'General';
+      const cleanLower = origName.trim().toLowerCase();
+      const subj = (subject || '').toLowerCase();
+      if (subj === 'chemistry' || !subject || subj === 'general') {
+        if (/organ|bio|polymer|hydrocarbon|alk|ester|alcohol|isomer|aromatic|substitut|nucleophil|electrophil|carbonyl|amine|amide|ketone|aldehyd|carboxylic|synthesis|stereochem|grignard|diels|sn1|sn2|e1|e2|chiral|enantiomer|diastereomer|resonance|functional group|reagent|aldol|enolate|peptide|fischer|cyclohexane|epox|carbocation|meso|stereospec/i.test(cleanLower)) return 'Organic Chemistry & Biochemistry';
+        if (/kineti|rate|half-life|activation energy|arrhenius|catalys|mechanism|order|autocatalys/i.test(cleanLower)) return 'Kinetics';
+        if (/thermo|enthalp|entrop|hess|calorim|gibbs|spontan|heat of|exotherm|endotherm|bond energy|racoult|effusion/i.test(cleanLower)) return 'Thermodynamics';
+        if (/electro|redox|galvanic|voltaic|nernst|faraday|anode|cathode|electroly|standard potential|voltage|reduction potential|overpotential/i.test(cleanLower) || (/\bcell\b/i.test(cleanLower) && !cleanLower.includes('unit cell'))) return 'Electrochemistry';
+        if (/equilibr|solubil|ksp|\bka\b|\bkb\b|\bkc\b|\bkp\b|chatelier|common ion|reaction quotient|henderson|hasselbalch|salt hydrolysis/i.test(cleanLower)) return 'Equilibrium';
+        if (/acid|base|titrat|buffer|\bph\b|\bpka\b|\bpkb\b|neutraliz|bronsted|arrhenius|isoelectric/i.test(cleanLower)) return 'Acids & Bases';
+        if (/stoich|solution|molar|dilut|yield|limiti|avogadro|empirical|concentration|\bppm\b|colligat|osmotic|freezing point|boiling point|mixture analysis|volumetric/i.test(cleanLower)) return 'Stoichiometry & Solutions';
+        if (/state|gas|phase|pressur|vapor|ideal gas|real gas|van der waals|intermolecular|dipole|dispersion|hydrogen bond|crystal|lattice|solid|liquid|unit cell|bragg|packing|supercritical/i.test(cleanLower)) return 'States of Matter & Phase Changes';
+        if (/atom|orbital|quantum|period|electron|lewis|vsepr|hybridiz|isotope|ionization|electronegativ|nuclide|radioact|decay|nuclear|bond|formal charge|mo theory|hückel|huckel/i.test(cleanLower)) return 'Atomic Structure & Periodicity';
+        if (/lab|descript|spectro|flame|color|qualitative|precipitat|filter|distill|chromatograph|coordination|complex ion|ligand|transition metal|beer|gravimetric|photometry|error|interhalogen|non-metal/i.test(cleanLower)) return 'Descriptive & Laboratory Chemistry';
+        return 'Other Topics';
+      }
+      return 'Other Topics';
+    }
+
+    let qGlobalIndex = 0;
     for (const row of resultRows) {
       const subject = row.subject || 'Chemistry';
       let resultsList = [];
@@ -505,6 +565,7 @@ export default async function handler(req, res) {
       if (!Array.isArray(resultsList)) continue;
 
       for (const q of resultsList) {
+        qGlobalIndex += 1;
         if (!q || !q.topic) continue;
         let isCorrect = false;
         if (typeof q.isCorrect === 'boolean') {
@@ -522,16 +583,39 @@ export default async function handler(req, res) {
             isCorrect = String(uAns).trim().toLowerCase() === String(cAns).trim().toLowerCase();
           }
         }
-        const tags = String(q.topic).split(',').map(t => t.trim()).filter(Boolean);
-        for (const tag of tags) {
+
+        const rawTags = String(q.topic).split(',').map(t => t.trim()).filter(Boolean);
+        const uniqueNormTags = new Set(rawTags.map(toCanonicalSubtopic).filter(Boolean));
+        const matchedParents = new Set();
+
+        for (const tag of uniqueNormTags) {
           const key = `${subject.toLowerCase()}:${tag.toLowerCase()}`;
           if (!liveMasteryMap[key]) {
             liveMasteryMap[key] = { sub_category: tag, subject, correct_count: 0, total_count: 0 };
           }
           liveMasteryMap[key].total_count += 1;
           if (isCorrect) liveMasteryMap[key].correct_count += 1;
+
+          const pName = getMajorTopicName(tag, subject);
+          matchedParents.add(pName);
+        }
+
+        for (const pName of matchedParents) {
+          if (!parentQuestionSets[pName]) {
+            parentQuestionSets[pName] = { correct: 0, total: 0, qIds: new Set() };
+          }
+          if (!parentQuestionSets[pName].qIds.has(qGlobalIndex)) {
+            parentQuestionSets[pName].qIds.add(qGlobalIndex);
+            parentQuestionSets[pName].total += 1;
+            if (isCorrect) parentQuestionSets[pName].correct += 1;
+          }
         }
       }
+    }
+
+    const parentTotalsMap = {};
+    for (const [pName, data] of Object.entries(parentQuestionSets)) {
+      parentTotalsMap[pName] = { correct: data.correct, total: data.total };
     }
 
     for (const row of topicMastery) {
@@ -736,6 +820,7 @@ ${JSON.stringify(inputData, null, 2)}
       topicBreakdowns,
       topicBreakdown: topicBreakdowns,
       parentRollups,
+      parentTotals: parentTotalsMap,
       summary: {
         totalExams,
         subjectCounts,

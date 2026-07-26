@@ -872,6 +872,42 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       return cardsMap.get(key);
     };
 
+const toCanonicalSubtopic = (str) => {
+  if (!str) return '';
+  let s = String(str).trim()
+    .replace(/\s*\/\s*/g, ' & ')
+    .replace(/\s+and\s+/gi, ' & ')
+    .replace(/\s+/g, ' ');
+
+  let lower = s.toLowerCase();
+
+  lower = lower
+    .replace(/equilibria$/i, 'equilibrium')
+    .replace(/mechanisms$/i, 'mechanism')
+    .replace(/laws$/i, 'law')
+    .replace(/reactions$/i, 'reaction')
+    .replace(/diagrams$/i, 'diagram')
+    .replace(/plots$/i, 'plot')
+    .replace(/calculations$/i, 'calculation')
+    .replace(/constants$/i, 'constant')
+    .replace(/equations$/i, 'equation')
+    .replace(/cells$/i, 'cell')
+    .replace(/potentials$/i, 'potential')
+    .replace(/relations$/i, 'relation')
+    .replace(/effects$/i, 'effect')
+    .replace(/changes$/i, 'change')
+    .replace(/orders$/i, 'order');
+
+  lower = lower.replace(/^(chemical|general|basic)\s+/i, '');
+
+  if (/^acid-base|^acid base/i.test(lower)) return 'Acid-Base Equilibria';
+  if (/^reaction kinetics|^reaction mechanism|^kinetic/i.test(lower)) return 'Reaction Kinetics & Mechanisms';
+  if (/^first law/i.test(lower)) return 'First Law of Thermodynamics';
+  if (/^solubility/i.test(lower) && !lower.includes('product')) return 'Solubility & Ksp';
+
+  return lower.split(' ').map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+};
+
     for (const item of filtered) {
       const origName = (item.sub_category || item.topic || '').trim();
       if (!origName) continue;
@@ -883,9 +919,9 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       const majorParent = getMajorTopicCardName(origName, item.subject, aiParentMap);
       const card = getOrCreateCard(majorParent, item.subject);
 
-      const normalizedSubName = origName.replace(/\s*\/\s*/g, ' & ').replace(/\s+and\s+/gi, ' & ').trim();
-      const subKey = normalizedSubName.toLowerCase().replace(/s$/, '');
-      if (subKey === majorParent.toLowerCase().replace(/s$/, '')) {
+      const normalizedSubName = toCanonicalSubtopic(origName);
+      const subKey = normalizedSubName.toLowerCase();
+      if (subKey === majorParent.toLowerCase()) {
         card.directCorrect += correct;
         card.directTotal += total;
         continue;
@@ -893,14 +929,14 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
       if (!card.subtopicsMap.has(subKey)) {
         card.subtopicsMap.set(subKey, {
-          name: normalizedSubName.replace(/s$/i, ''),
+          name: normalizedSubName,
           correct,
           total
         });
       } else {
         const sub = card.subtopicsMap.get(subKey);
-        sub.correct += correct;
-        sub.total += total;
+        sub.correct = Math.max(sub.correct, correct);
+        sub.total = Math.max(sub.total, total);
       }
     }
 
@@ -915,9 +951,15 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
       let totalCorrect = card.directCorrect || 0;
       let totalTotal = card.directTotal || 0;
-      for (const s of subtopics) {
-        totalCorrect += s.correct;
-        totalTotal += s.total;
+
+      if (data?.parentTotals && data.parentTotals[card.title]) {
+        totalCorrect = data.parentTotals[card.title].correct;
+        totalTotal = data.parentTotals[card.title].total;
+      } else {
+        for (const s of subtopics) {
+          totalCorrect += s.correct;
+          totalTotal += s.total;
+        }
       }
 
       const overallAccuracy = totalTotal > 0 ? Math.round((totalCorrect / totalTotal) * 100) : 0;
