@@ -882,10 +882,15 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       const majorParent = getMajorTopicCardName(origName, item.subject, aiParentMap);
       const card = getOrCreateCard(majorParent, item.subject);
 
-      const subKey = origName.toLowerCase();
+      const normalizedSubName = origName.replace(/\s*\/\s*/g, ' & ').replace(/\s+and\s+/gi, ' & ').trim();
+      const subKey = normalizedSubName.toLowerCase();
+      if (subKey === majorParent.toLowerCase()) {
+        continue;
+      }
+
       if (!card.subtopicsMap.has(subKey)) {
         card.subtopicsMap.set(subKey, {
-          name: origName,
+          name: normalizedSubName,
           correct,
           total
         });

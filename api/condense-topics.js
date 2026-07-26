@@ -144,9 +144,10 @@ export default async function handler(req, res) {
 
 Your tasks:
 1. AGGRESSIVE SUBTOPIC CLUSTERING & MERGES: Eliminate hyper-specific one-off subtopic fragmentation by aggressively merging low-count or narrowly phrased subtopics into clean, standardized subtopic clusters within the SAME subject.
+   - MANDATORY PUNCTUATION & SLASH MERGING: Always merge slashes (/), ampersands (&), and 'and' variations (e.g. "bonding/molecular structure", "bonding & molecular structure", "bonding and molecular structure") into ONE clean title like "Bonding & Molecular Structure".
    - Merge "Determination of Rate Laws", "Initial Rates Method", and "Reaction Orders" into "Rate Laws & Reaction Orders".
    - Merge "Arrhenius Equation Calculations" and "Activation Energy" into "Arrhenius & Activation Energy".
-   - Combine synonymous terms.
+   - Combine synonymous terms aggressively.
 
 2. MANDATORY USNCO PARENT CLASSIFICATION & ROLLUPS: Map EVERY Chemistry subtopic in the input to EXACTLY ONE of the official 10 USNCO Standard Topics below:
    1. Stoichiometry & Solutions
@@ -167,7 +168,8 @@ Your tasks:
 CRITICAL CONSTRAINTS:
 1. STRICT USNCO TOPICS FOR CHEMISTRY: parent_topic for Chemistry MUST be EXACTLY one of the 10 official USNCO topics listed above. DO NOT invent arbitrary overall titles (e.g. DO NOT use "Heterogeneous Systems", "Spectroscopy", "Chemistry", "General Topics", or "Phase Equilibria" as parent_topic).
 2. NO ORPHAN SUBTOPICS: Every subtopic must be mapped to one of the 10 standard USNCO parent categories in parent_rollups.
-3. PRESERVE EXISTING MAPPINGS: Re-use existing valid parent_topic values to complete classification instantly without re-analyzing already sorted subtopics.
+3. ALWAYS MERGE PUNCTUATION VARIATIONS: If any two input topics differ only by slashes, ampersands, or spacing (e.g. "bonding/molecular structure" vs "bonding & molecular structure"), you MUST output a merge object combining them.
+4. PRESERVE EXISTING MAPPINGS: Re-use existing valid parent_topic values to complete classification instantly without re-analyzing already sorted subtopics.
 
 Input Data:
 ${JSON.stringify(inputTopics, null, 2)}
@@ -276,10 +278,25 @@ Output format must be a JSON object matching this schema:
           }
 
           if (rollupTotal > 0) {
-            const rollupAccuracy = rollupCorrect / rollupTotal;
             breakdownItems.push({ subject, topic: parent_topic, good_at: good_at || '', not_good_at: not_good_at || '' });
-            masteryItems.push({ subject, sub_category: parent_topic, correct_count: rollupCorrect, total_count: rollupTotal, accuracy_rate: rollupAccuracy });
-            mergedCount++;
+          }
+        }
+      }
+
+      const generatedParentRollups = {};
+      if (responseObj && Array.isArray(responseObj.parent_rollups)) {
+        for (const rollup of responseObj.parent_rollups) {
+          if (rollup.parent_topic && Array.isArray(rollup.child_topics)) {
+            for (const child of rollup.child_topics) {
+              generatedParentRollups[child.toLowerCase()] = rollup.parent_topic;
+              breakdownItems.push({
+                subject: rollup.subject || 'Chemistry',
+                topic: child,
+                parent_topic: rollup.parent_topic,
+                good_at: '',
+                not_good_at: ''
+              });
+            }
           }
         }
       }
@@ -294,13 +311,13 @@ Output format must be a JSON object matching this schema:
       }
 
       if (breakdownItems.length > 0) {
-        const selects = breakdownItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.topic)} AS topic, ${escapeSqlStr(item.good_at)} AS good_at, ${escapeSqlStr(item.not_good_at)} AS not_good_at`).join('\nUNION ALL\n');
+        const selects = breakdownItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.topic)} AS topic, ${escapeSqlStr(item.parent_topic || '')} AS parent_topic, ${escapeSqlStr(item.good_at)} AS good_at, ${escapeSqlStr(item.not_good_at)} AS not_good_at`).join('\nUNION ALL\n');
         statements.push(`
           MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
           USING (${selects}) S
           ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-          WHEN MATCHED THEN UPDATE SET good_at = COALESCE(NULLIF(S.good_at, ''), T.good_at), not_good_at = COALESCE(NULLIF(S.not_good_at, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP()
-          WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (S.user_id, S.subject, S.topic, S.good_at, S.not_good_at, CURRENT_TIMESTAMP());
+          WHEN MATCHED THEN UPDATE SET parent_topic = COALESCE(NULLIF(S.parent_topic, ''), T.parent_topic), good_at = COALESCE(NULLIF(S.good_at, ''), T.good_at), not_good_at = COALESCE(NULLIF(S.not_good_at, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP()
+          WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, parent_topic, good_at, not_good_at, updated_at) VALUES (S.user_id, S.subject, S.topic, S.parent_topic, S.good_at, S.not_good_at, CURRENT_TIMESTAMP());
         `);
       }
 
@@ -313,17 +330,6 @@ Output format must be a JSON object matching this schema:
           WHEN MATCHED THEN UPDATE SET correct_count = S.correct_count, total_count = S.total_count, accuracy_rate = S.accuracy_rate
           WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (S.user_id, S.sub_category, S.subject, S.correct_count, S.total_count, S.accuracy_rate);
         `);
-      }
-
-      const generatedParentRollups = {};
-      if (responseObj && Array.isArray(responseObj.parent_rollups)) {
-        for (const rollup of responseObj.parent_rollups) {
-          if (rollup.parent_topic && Array.isArray(rollup.child_topics)) {
-            for (const child of rollup.child_topics) {
-              generatedParentRollups[child.toLowerCase()] = rollup.parent_topic;
-            }
-          }
-        }
       }
 
       if (statements.length > 0) {
