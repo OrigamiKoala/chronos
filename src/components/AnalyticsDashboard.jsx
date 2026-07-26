@@ -130,13 +130,79 @@ const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
     return CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')];
   }
 
-  // 2. AI-determined parent mapping from AI Condenser (e.g., "Volumetric Analysis" -> "Descriptive & Laboratory Chemistry")
+  // 2. AI-determined parent mapping from AI Condenser
   if (aiParentMap && aiParentMap[cleanLower]) {
     return aiParentMap[cleanLower];
   }
 
-  // 3. Fallback: Subject card (e.g. "Chemistry", "Physics", "Math")
-  return subject || 'General';
+  // 3. Domain Keyword Classifier
+  if (cleanLower.includes('kinet') || cleanLower.includes('rate') || cleanLower.includes('arrhenius') || cleanLower.includes('catalys') || cleanLower.includes('mechanism') || cleanLower.includes('half-life')) {
+    return 'Chemical Kinetics';
+  }
+  if (cleanLower.includes('thermo') || cleanLower.includes('heat') || cleanLower.includes('enthalp') || cleanLower.includes('entrop') || cleanLower.includes('gibbs') || cleanLower.includes('calorim') || cleanLower.includes('born-haber') || cleanLower.includes('hess')) {
+    return 'Thermodynamics';
+  }
+  if (cleanLower.includes('equilib') || cleanLower.includes('solub') || cleanLower.includes('ksp') || cleanLower.includes('le chatelier') || cleanLower.includes('complex ion') || cleanLower.includes('precipitat')) {
+    return 'Chemical Equilibrium';
+  }
+  if (cleanLower.includes('acid') || cleanLower.includes('base') || cleanLower.includes('buffer') || cleanLower.includes('ph') || cleanLower.includes('poh') || cleanLower.includes('brønsted') || cleanLower.includes('bronsted')) {
+    return 'Acids & Bases';
+  }
+  if (cleanLower.includes('bond') || cleanLower.includes('vsepr') || cleanLower.includes('orbital') || cleanLower.includes('lewis') || cleanLower.includes('hybrid') || cleanLower.includes('atom') || cleanLower.includes('electronegat') || cleanLower.includes('geometry') || cleanLower.includes('resonance')) {
+    return 'Atomic Structure & Bonding';
+  }
+  if (cleanLower.includes('analyt') || cleanLower.includes('volum') || cleanLower.includes('gravim') || cleanLower.includes('spectr') || cleanLower.includes('beer') || cleanLower.includes('chromat') || cleanLower.includes('lab') || cleanLower.includes('qualitat') || cleanLower.includes('titrat') || cleanLower.includes('technique')) {
+    return 'Descriptive & Laboratory Chemistry';
+  }
+  if (cleanLower.includes('organ') || cleanLower.includes('carbon') || cleanLower.includes('aromat') || cleanLower.includes('stereo') || cleanLower.includes('sn1') || cleanLower.includes('sn2') || cleanLower.includes('nmr') || cleanLower.includes('alkane') || cleanLower.includes('alkene') || cleanLower.includes('huckel') || cleanLower.includes('hückel')) {
+    return 'Organic Chemistry';
+  }
+  if (cleanLower.includes('inorgan') || cleanLower.includes('transition metal') || cleanLower.includes('coordinat') || cleanLower.includes('crystal field') || cleanLower.includes('halogen') || cleanLower.includes('interhalogen')) {
+    return 'Inorganic Chemistry';
+  }
+  if (cleanLower.includes('bio') || cleanLower.includes('enzyme') || cleanLower.includes('protein') || cleanLower.includes('amino') || cleanLower.includes('isoelectr') || cleanLower.includes('dna') || cleanLower.includes('rna') || cleanLower.includes('peptide')) {
+    return 'Biochemistry';
+  }
+  if (cleanLower.includes('stoichiom') || cleanLower.includes('limiting') || cleanLower.includes('yield') || cleanLower.includes('empirical') || cleanLower.includes('mole')) {
+    return 'Stoichiometry';
+  }
+  if (cleanLower.includes('electro') || cleanLower.includes('galvan') || cleanLower.includes('voltaic') || cleanLower.includes('redox') || cleanLower.includes('nernst') || cleanLower.includes('cell')) {
+    return 'Electrochemistry';
+  }
+  if (cleanLower.includes('solut') || cleanLower.includes('molar') || cleanLower.includes('molal') || cleanLower.includes('dilut') || cleanLower.includes('colligat')) {
+    return 'Solutions';
+  }
+  if (cleanLower.includes('gas') || cleanLower.includes('state') || cleanLower.includes('pressure') || cleanLower.includes('pv=nrt') || cleanLower.includes('phase') || cleanLower.includes('van der waals')) {
+    return 'States of Matter & Gases';
+  }
+
+  // Physics
+  if (cleanLower.includes('mechanic') || cleanLower.includes('force') || cleanLower.includes('work') || cleanLower.includes('energy') || cleanLower.includes('momentum') || cleanLower.includes('torque') || cleanLower.includes('rotation')) {
+    return 'Mechanics';
+  }
+  if (cleanLower.includes('kinematic') || cleanLower.includes('velocity') || cleanLower.includes('accelerat') || cleanLower.includes('projectile') || cleanLower.includes('motion') || cleanLower.includes('free fall')) {
+    return 'Kinematics';
+  }
+  if (cleanLower.includes('dynamic') || cleanLower.includes('newton') || cleanLower.includes('friction')) {
+    return 'Dynamics';
+  }
+  if (cleanLower.includes('optic') || cleanLower.includes('light') || cleanLower.includes('refract') || cleanLower.includes('reflect') || cleanLower.includes('lens')) {
+    return 'Optics';
+  }
+  if (cleanLower.includes('electric') || cleanLower.includes('magnet') || cleanLower.includes('charge') || cleanLower.includes('circuit') || cleanLower.includes('field')) {
+    return 'Electromagnetism';
+  }
+
+  // Mathematics
+  if (cleanLower.includes('calculus') || cleanLower.includes('deriv') || cleanLower.includes('integ') || cleanLower.includes('limit') || cleanLower.includes('series')) {
+    return 'Calculus';
+  }
+  if (cleanLower.includes('algeb') || cleanLower.includes('equation') || cleanLower.includes('polynomial') || cleanLower.includes('matrix')) {
+    return 'Algebra';
+  }
+
+  // 4. Standalone Topic Title Case Fallback
+  return origName.trim().charAt(0).toUpperCase() + origName.trim().slice(1);
 };
 
 const baseChartOptions = {
@@ -184,6 +250,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' or 'org_portal'
   const [orgMembers, setOrgMembers] = useState([]);
   const [orgLoading, setOrgLoading] = useState(false);
+  const [condensing, setCondensing] = useState(false);
   const hasCondensedRef = useRef(false);
 
   const displayHistory = useMemo(() => (data?.history && data.history.length > 0) ? data.history : (history || []), [history, data?.history]);
@@ -908,6 +975,43 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
               {s}
             </button>
           ))}
+          {onCondense && (
+            <button
+              className="btn btn-outline"
+              disabled={condensing}
+              style={{
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: 'var(--accent-primary)',
+                borderColor: 'rgba(99, 102, 241, 0.4)',
+                background: 'rgba(99, 102, 241, 0.1)',
+                marginLeft: '0.5rem'
+              }}
+              onClick={() => {
+                if (condensing) return;
+                setCondensing(true);
+                onCondense((condensedData) => {
+                  setCondensing(false);
+                  if (condensedData) {
+                    setData(prev => ({
+                      ...prev,
+                      topicMastery: condensedData.topicMastery || prev?.topicMastery,
+                      topicBreakdown: condensedData.topicBreakdowns || prev?.topicBreakdown,
+                      parentRollups: condensedData.parentRollups || prev?.parentRollups,
+                      strengths: condensedData.strengths || prev?.strengths,
+                      weaknesses: condensedData.weaknesses || prev?.weaknesses
+                    }));
+                  }
+                });
+              }}
+            >
+              {condensing ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+              {condensing ? 'Organizing...' : 'Organize Topics (AI)'}
+            </button>
+          )}
           {onBack && (
             <button className="btn btn-outline" onClick={onBack} style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
               <ArrowLeft size={14} /> Back

@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       params: { username: sanitizedUser }
     });
 
-    // 0. Auto-repair historic corrupt mastery rows where correct_count > total_count
+    // 0. Auto-repair historic corrupt mastery rows where correct_count > total_count or generic topic = subject
     await bq.query({
       query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
         SET correct_count = total_count,
@@ -43,6 +43,18 @@ export default async function handler(req, res) {
         WHERE user_id = @username AND correct_count > total_count`,
       params: { username: sanitizedUser }
     }).catch(err => console.error("Auto-repair mastery error:", err));
+
+    await bq.query({
+      query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+        WHERE user_id = @username AND (LOWER(sub_category) = LOWER(subject) OR LOWER(sub_category) IN ('general', 'general topics', 'science'))`,
+      params: { username: sanitizedUser }
+    }).catch(err => console.error("Delete generic mastery error:", err));
+
+    await bq.query({
+      query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
+        WHERE user_id = @username AND (LOWER(topic) = LOWER(subject) OR LOWER(topic) IN ('general', 'general topics', 'science'))`,
+      params: { username: sanitizedUser }
+    }).catch(err => console.error("Delete generic breakdown error:", err));
 
     const getMasteryQuery = `
       SELECT sub_category, subject, correct_count, total_count, accuracy_rate
@@ -143,6 +155,7 @@ CRITICAL CONSTRAINTS:
 2. DO NOT combine completely distinct major fields or unrelated concepts (e.g., do not merge Thermodynamics into Kinetics).
 3. Synthesize "good_at" and "not_good_at" descriptions when topics are merged or rolled up.
 4. Target names MUST be clean, standardized Title-Case.
+5. NEVER use generic subject names like "Chemistry", "Physics", "Math", "Science", or "General Topics" as parent_topic. parent_topic MUST be a specific major sub-field (e.g., "Chemical Kinetics", "Thermodynamics", "Organic Chemistry", "Descriptive & Laboratory Chemistry").
 
 Input Data:
 ${JSON.stringify(inputTopics, null, 2)}
@@ -292,7 +305,14 @@ Output format must be a JSON object matching this schema:
       if (responseObj && Array.isArray(responseObj.parent_rollups) && responseObj.parent_rollups.length > 0) {
         for (const rollup of responseObj.parent_rollups) {
           const { subject, parent_topic, child_topics, good_at, not_good_at } = rollup;
-          if (!subject || !parent_topic || !Array.isArray(child_topics) || child_topics.length === 0) {
+          if (
+            !subject ||
+            !parent_topic ||
+            !Array.isArray(child_topics) ||
+            child_topics.length === 0 ||
+            parent_topic.toLowerCase() === subject.toLowerCase() ||
+            ['general', 'general topics', 'science'].includes(parent_topic.toLowerCase())
+          ) {
             continue;
           }
 

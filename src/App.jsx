@@ -521,6 +521,16 @@ function App() {
           if (data.strengths) setStrengths(data.strengths);
           if (data.weaknesses) setWeaknesses(data.weaknesses);
           if (data.topicBreakdowns) setTopicBreakdowns(data.topicBreakdowns);
+          if (data.topicMastery) {
+            setAnalyticsData(prev => prev ? {
+              ...prev,
+              topicMastery: data.topicMastery,
+              topicBreakdown: data.topicBreakdowns,
+              parentRollups: data.parentRollups,
+              strengths: data.strengths,
+              weaknesses: data.weaknesses
+            } : prev);
+          }
           if (data.strengths) localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
           if (data.weaknesses) localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
           if (data.topicBreakdowns) localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns));
