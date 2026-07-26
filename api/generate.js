@@ -334,7 +334,7 @@ const chemistryExemplars = [
   },
   {
     "id": "chem_ex5",
-    "topic": "Chemical Equilibrium, Solubility, Acids & Bases",
+    "topic": "Equilibrium, Solubility & Acid-Base Equilibria",
     "question": "A solution initially is $0.10$ M in both $\\\\ce{Cd^{2+}}$ and $\\\\ce{Tl^+}$ and is kept saturated with hydrogen sulfide gas ($[\\\\ce{H2S}] = 0.1$ M). In what pH range will one of the metal ions be precipitated quantitatively ($> 99.9\\\\%$) while the other remains completely in solution?\\\\n\\\\n$$K_{\\\\text{sp}}\\\\text{ of CdS} = 1.0 \\\\times 10^{-27} \\\\quad K_{\\\\text{sp}}\\\\text{ of Tl}_2\\\\text{S} = 6.0 \\\\times 10^{-22}$$\\\\n$$K_{\\\\text{a}}\\\\text{ of H}_2\\\\text{S} = 8.9 \\\\times 10^{-8} \\\\quad K_{\\\\text{a}}\\\\text{ of HS}^- = 1.0 \\\\times 10^{-19}$$",
     "type": "multiple_choice",
     "options": [
@@ -408,7 +408,7 @@ const chemistryExemplars = [
   },
   {
     "id": "chem_ex11",
-    "topic": "Chemical Equilibrium, Acids & Bases",
+    "topic": "Equilibrium, Acid-Base Equilibria",
     "question": "Which statement best describes the differences between a $0.1$ M solution of ammonium bicarbonate, $\\\\ce{NH4(HCO3)}$, and a $0.1$ M solution of ammonium carbonate, $\\\\ce{(NH4)2CO3}$?",
     "type": "multiple_choice",
     "options": [
@@ -1166,7 +1166,7 @@ ${examples}
     [
       {
         "id": "A unique string ID",
-        "topic": "A comma-separated string containing the EXACT string of at least one Major Topic AND at least one specific Minor Subtopic. For Chemistry, you MUST include the EXACT Major Topic string from: 'Stoichiometry & Solutions', 'Descriptive & Laboratory Chemistry', 'States of Matter & Phase Changes', 'Thermodynamics', 'Kinetics', 'Equilibrium', 'Acids & Bases', 'Electrochemistry', 'Atomic Structure & Periodicity', 'Organic Chemistry & Biochemistry'. Example: 'Kinetics, Michaelis-Menten Kinetics' or 'Michaelis-Menten Kinetics, Kinetics' or 'Thermodynamics, Hess\\'s Law & Enthalpy' or 'Kinematics, Projectile Motion'.",
+        "topic": "A comma-separated string containing the EXACT string of at least one Major Topic AND at least one specific Minor Subtopic. For Chemistry, you MUST include the EXACT Major Topic string from: 'Stoichiometry & Solutions', 'Descriptive & Laboratory Chemistry', 'States of Matter & Phase Changes', 'Thermodynamics', 'Kinetics', 'Equilibrium', 'Electrochemistry', 'Atomic Structure & Periodicity', 'Organic Chemistry & Biochemistry'. Example: 'Kinetics, Michaelis-Menten Kinetics' or 'Michaelis-Menten Kinetics, Kinetics' or 'Thermodynamics, Hess\\'s Law & Enthalpy' or 'Kinematics, Projectile Motion'.",
         "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format. CRITICAL: Do not include the answer choices here, if the question is multiple choice.",
         "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
         "answer": ${answerSchemaDesc},

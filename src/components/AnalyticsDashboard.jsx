@@ -64,9 +64,9 @@ const CANONICAL_OVERALL_MAP = {
   'equilibrium': 'Equilibrium',
   'chemical equilibrium': 'Equilibrium',
 
-  'acid-base chemistry': 'Acids & Bases',
-  'acids and bases': 'Acids & Bases',
-  'acids & bases': 'Acids & Bases',
+  'acid-base chemistry': 'Equilibrium',
+  'acids and bases': 'Equilibrium',
+  'acids & bases': 'Equilibrium',
 
   'electrochemistry': 'Electrochemistry',
 
@@ -201,7 +201,7 @@ const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
       return 'Equilibrium';
     }
     if (/acid|base|titrat|buffer|\bph\b|\bpka\b|\bpkb\b|neutraliz|bronsted|arrhenius|isoelectric/i.test(cleanLower)) {
-      return 'Acids & Bases';
+      return 'Equilibrium';
     }
     if (/stoich|solution|molar|dilut|yield|limiti|avogadro|empirical|concentration|\bppm\b|colligat|osmotic|freezing point|boiling point|mixture analysis|volumetric/i.test(cleanLower)) {
       return 'Stoichiometry & Solutions';

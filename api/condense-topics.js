@@ -48,7 +48,7 @@ export default async function handler(req, res) {
         params: { username: sanitizedUser }
       }).catch(err => console.error("Auto-repair mastery error:", err)),
       bq.query({
-        query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = @username AND (LOWER(sub_category) = LOWER(subject) OR LOWER(sub_category) IN ('general', 'general topics', 'science', 'kinetics', 'thermodynamics', 'electrochemistry', 'stoichiometry & solutions', 'equilibrium', 'acids & bases', 'descriptive & laboratory chemistry', 'atomic structure & periodicity', 'organic chemistry & biochemistry', 'kinetics & rate laws'))`,
+        query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = @username AND (LOWER(sub_category) = LOWER(subject) OR LOWER(sub_category) IN ('general', 'general topics', 'science', 'kinetics', 'thermodynamics', 'electrochemistry', 'stoichiometry & solutions', 'equilibrium', 'descriptive & laboratory chemistry', 'atomic structure & periodicity', 'organic chemistry & biochemistry', 'kinetics & rate laws'))`,
         params: { username: sanitizedUser }
       }).catch(err => console.error("Delete synthetic mastery error:", err))
     ]);
@@ -308,7 +308,7 @@ Output format must be a JSON object matching this schema:
           const { subject, source_topics, target_topic, good_at, not_good_at } = merge;
           const majorTitles = [
             'stoichiometry & solutions', 'descriptive & laboratory chemistry', 'states of matter & phase changes',
-            'thermodynamics', 'kinetics', 'equilibrium', 'acids & bases', 'electrochemistry',
+            'thermodynamics', 'kinetics', 'equilibrium', 'electrochemistry',
             'atomic structure & periodicity', 'organic chemistry & biochemistry'
           ];
           if (!subject || !source_topics || !target_topic || source_topics.length < 2 || majorTitles.includes(target_topic.toLowerCase().trim())) {
@@ -435,7 +435,7 @@ Output format must be a JSON object matching this schema:
             return 'Equilibrium';
           }
           if (/acid|base|titrat|buffer|\bph\b|\bpka\b|\bpkb\b|neutraliz|bronsted|arrhenius|isoelectric/i.test(cleanLower)) {
-            return 'Acids & Bases';
+            return 'Equilibrium';
           }
           if (/stoich|solution|molar|dilut|yield|limiti|avogadro|empirical|concentration|\bppm\b|colligat|osmotic|freezing point|boiling point|mixture analysis|volumetric/i.test(cleanLower)) {
             return 'Stoichiometry & Solutions';
