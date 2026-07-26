@@ -202,6 +202,30 @@ Output format must be a JSON object matching this schema:
           }
 
           // Calculate combined mastery
+    function escapeSqlStr(str) {
+      if (str === null || str === undefined) return "''";
+      return "'" + String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+    }
+
+    let mergedCount = 0;
+    if (response.output_text) {
+      const responseObj = parseJSONResponse(response.output_text);
+      const batchSqlStatements = [];
+
+      if (responseObj && Array.isArray(responseObj.merges) && responseObj.merges.length > 0) {
+        for (const merge of responseObj.merges) {
+          const { subject, source_topics, target_topic, good_at, not_good_at } = merge;
+          if (!subject || !source_topics || !target_topic || source_topics.length < 2) {
+            continue;
+          }
+
+          const safeUser = escapeSqlStr(sanitizedUser);
+          const safeSubject = escapeSqlStr(subject);
+          const safeTarget = escapeSqlStr(target_topic);
+          const safeGood = escapeSqlStr(good_at || '');
+          const safeNotGood = escapeSqlStr(not_good_at || '');
+          const sourcesList = source_topics.map(s => escapeSqlStr(s.toLowerCase())).join(', ');
+
           let mergedCorrect = 0;
           let mergedTotal = 0;
           for (const source of source_topics) {
@@ -213,40 +237,19 @@ Output format must be a JSON object matching this schema:
           }
           const mergedAccuracy = mergedTotal > 0 ? (mergedCorrect / mergedTotal) : 0.0;
 
-          // Fire all 6 merge updates in parallel
-          await Promise.all([
-            bq.query({
-              query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @username AND LOWER(subject) = LOWER(@subject) AND LOWER(topic) IN UNNEST(@sources)`,
-              params: { username: sanitizedUser, subject, sources: source_topics.map(s => s.toLowerCase()) }
-            }),
-            bq.query({
-              query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = @username AND LOWER(subject) = LOWER(@subject) AND LOWER(sub_category) IN UNNEST(@sources)`,
-              params: { username: sanitizedUser, subject, sources: source_topics.map(s => s.toLowerCase()) }
-            }),
-            bq.query({
-              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T USING (SELECT @username AS user_id, @subject AS subject, @target AS topic) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic WHEN MATCHED THEN UPDATE SET good_at = @goodAt, not_good_at = @notGoodAt, updated_at = CURRENT_TIMESTAMP() WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (@username, @subject, @target, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
-              params: { username: sanitizedUser, subject, target: target_topic, goodAt: good_at || '', notGoodAt: not_good_at || '' }
-            }),
-            bq.query({
-              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T USING (SELECT @username AS user_id, @subject AS subject, @target AS sub_category) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category WHEN MATCHED THEN UPDATE SET correct_count = @correct, total_count = @total, accuracy_rate = @accuracy WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (@username, @target, @subject, @correct, @total, @accuracy)`,
-              params: { username: sanitizedUser, subject, target: target_topic, correct: mergedCorrect, total: mergedTotal, accuracy: mergedAccuracy },
-              types: { correct: 'INT64', total: 'INT64', accuracy: 'FLOAT64' }
-            }),
-            bq.query({
-              query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` SET topic = ARRAY_TO_STRING(ARRAY(SELECT DISTINCT IF(LOWER(TRIM(part)) IN UNNEST(@sources), @target, TRIM(part)) FROM UNNEST(SPLIT(topic, ',')) part WHERE TRIM(part) != ''), ', ') WHERE user_id = @username AND LOWER(subject) = LOWER(@subject) AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) IN UNNEST(@sources))`,
-              params: { username: sanitizedUser, subject, target: target_topic, sources: source_topics.map(s => s.toLowerCase()) }
-            }).catch(err => console.error("Failed to update user_wrong_problems for condense:", err)),
-            bq.query({
-              query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` SET topic = ARRAY_TO_STRING(ARRAY(SELECT DISTINCT IF(LOWER(TRIM(part)) IN UNNEST(@sources), @target, TRIM(part)) FROM UNNEST(SPLIT(topic, ',')) part WHERE TRIM(part) != ''), ', ') WHERE LOWER(subject) = LOWER(@subject) AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) IN UNNEST(@sources))`,
-              params: { subject, target: target_topic, sources: source_topics.map(s => s.toLowerCase()) }
-            }).catch(err => console.error("Failed to update pregenerated_questions for condense:", err))
-          ]);
+          batchSqlStatements.push(`
+            DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = ${safeUser} AND LOWER(subject) = LOWER(${safeSubject}) AND LOWER(topic) IN (${sourcesList});
+            DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = ${safeUser} AND LOWER(subject) = LOWER(${safeSubject}) AND LOWER(sub_category) IN (${sourcesList});
+            MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeTarget} AS topic) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic WHEN MATCHED THEN UPDATE SET good_at = ${safeGood}, not_good_at = ${safeNotGood}, updated_at = CURRENT_TIMESTAMP() WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (${safeUser}, ${safeSubject}, ${safeTarget}, ${safeGood}, ${safeNotGood}, CURRENT_TIMESTAMP());
+            MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeTarget} AS sub_category) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category WHEN MATCHED THEN UPDATE SET correct_count = ${mergedCorrect}, total_count = ${mergedTotal}, accuracy_rate = ${mergedAccuracy} WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (${safeUser}, ${safeTarget}, ${safeSubject}, ${mergedCorrect}, ${mergedTotal}, ${mergedAccuracy});
+            UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` SET topic = ARRAY_TO_STRING(ARRAY(SELECT DISTINCT IF(LOWER(TRIM(part)) IN (${sourcesList}), ${safeTarget}, TRIM(part)) FROM UNNEST(SPLIT(topic, ',')) part WHERE TRIM(part) != ''), ', ') WHERE user_id = ${safeUser} AND LOWER(subject) = LOWER(${safeSubject}) AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) IN (${sourcesList}));
+            UPDATE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` SET topic = ARRAY_TO_STRING(ARRAY(SELECT DISTINCT IF(LOWER(TRIM(part)) IN (${sourcesList}), ${safeTarget}, TRIM(part)) FROM UNNEST(SPLIT(topic, ',')) part WHERE TRIM(part) != ''), ', ') WHERE LOWER(subject) = LOWER(${safeSubject}) AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) IN (${sourcesList}));
+          `);
 
           mergedCount++;
         }
       }
 
-      // Process parent rollups so that specific sub-topics are also factored into overall parent categories
       if (responseObj && Array.isArray(responseObj.parent_rollups) && responseObj.parent_rollups.length > 0) {
         for (const rollup of responseObj.parent_rollups) {
           const { subject, parent_topic, child_topics, good_at, not_good_at } = rollup;
@@ -261,16 +264,14 @@ Output format must be a JSON object matching this schema:
             continue;
           }
 
-          // Refetch fresh mastery rows to include any merges that just happened
-          const [currentMasteryRows] = await bq.query({
-            query: `SELECT sub_category, subject, correct_count, total_count, accuracy_rate
-              FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
-              WHERE user_id = @username AND LOWER(subject) = LOWER(@subject)`,
-            params: { username: sanitizedUser, subject }
-          });
+          const safeUser = escapeSqlStr(sanitizedUser);
+          const safeSubject = escapeSqlStr(subject);
+          const safeParent = escapeSqlStr(parent_topic);
+          const safeGood = escapeSqlStr(good_at || '');
+          const safeNotGood = escapeSqlStr(not_good_at || '');
+          const childSourcesList = child_topics.map(c => escapeSqlStr(c.toLowerCase())).join(', ');
 
-          // Check if parent_topic already has a direct mastery row
-          const parentRow = currentMasteryRows.find(m => (m.sub_category || '').toLowerCase() === parent_topic.toLowerCase());
+          const parentRow = masteryRows.find(m => (m.sub_category || '').toLowerCase() === parent_topic.toLowerCase() && (m.subject || '').toLowerCase() === subject.toLowerCase());
           let rollupCorrect = 0;
           let rollupTotal = 0;
 
@@ -279,7 +280,7 @@ Output format must be a JSON object matching this schema:
             rollupTotal = Number((parentRow.total_count?.value ?? parentRow.total_count) || 0);
           } else {
             const lowerChildren = child_topics.map(c => c.toLowerCase());
-            for (const m of currentMasteryRows) {
+            for (const m of masteryRows) {
               const catName = (m.sub_category || '').toLowerCase();
               if (lowerChildren.includes(catName)) {
                 rollupCorrect += Number((m.correct_count?.value ?? m.correct_count) || 0);
@@ -291,30 +292,22 @@ Output format must be a JSON object matching this schema:
           if (rollupTotal > 0) {
             const rollupAccuracy = rollupCorrect / rollupTotal;
 
-            await Promise.all([
-              bq.query({
-                query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T USING (SELECT @username AS user_id, @subject AS subject, @target AS topic) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic WHEN MATCHED THEN UPDATE SET good_at = COALESCE(NULLIF(@goodAt, ''), T.good_at), not_good_at = COALESCE(NULLIF(@notGoodAt, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP() WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (@username, @subject, @target, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
-                params: { username: sanitizedUser, subject, target: parent_topic, goodAt: good_at || '', notGoodAt: not_good_at || '' }
-              }).catch(err => console.error("Failed to rollup parent breakdown:", err)),
-              bq.query({
-                query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T USING (SELECT @username AS user_id, @subject AS subject, @target AS sub_category) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category WHEN MATCHED THEN UPDATE SET correct_count = @correct, total_count = @total, accuracy_rate = @accuracy WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (@username, @target, @subject, @correct, @total, @accuracy)`,
-                params: { username: sanitizedUser, subject, target: parent_topic, correct: rollupCorrect, total: rollupTotal, accuracy: rollupAccuracy },
-                types: { correct: 'INT64', total: 'INT64', accuracy: 'FLOAT64' }
-              }).catch(err => console.error("Failed to rollup parent mastery:", err)),
-              bq.query({
-                query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` SET topic = ARRAY_TO_STRING(ARRAY(SELECT DISTINCT TRIM(part) FROM UNNEST(SPLIT(CONCAT(@parentTopic, ', ', topic), ',')) part WHERE TRIM(part) != ''), ', ') WHERE LOWER(subject) = LOWER(@subject) AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) IN UNNEST(@childSources)) AND NOT EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) = LOWER(@parentTopic))`,
-                params: { subject, parentTopic: parent_topic, childSources: child_topics.map(c => c.toLowerCase()) }
-              }).catch(err => console.error("Failed to retag pregenerated_questions for parent rollup:", err)),
-              bq.query({
-                query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` SET topic = ARRAY_TO_STRING(ARRAY(SELECT DISTINCT TRIM(part) FROM UNNEST(SPLIT(CONCAT(@parentTopic, ', ', topic), ',')) part WHERE TRIM(part) != ''), ', ') WHERE user_id = @username AND LOWER(subject) = LOWER(@subject) AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) IN UNNEST(@childSources))`,
-                params: { username: sanitizedUser, subject, parentTopic: parent_topic, childSources: child_topics.map(c => c.toLowerCase()) }
-              }).catch(err => console.error("Failed to retag user_wrong_problems for parent rollup:", err))
-            ]);
+            batchSqlStatements.push(`
+              MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeParent} AS topic) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic WHEN MATCHED THEN UPDATE SET good_at = COALESCE(NULLIF(${safeGood}, ''), T.good_at), not_good_at = COALESCE(NULLIF(${safeNotGood}, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP() WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (${safeUser}, ${safeSubject}, ${safeParent}, ${safeGood}, ${safeNotGood}, CURRENT_TIMESTAMP());
+              MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T USING (SELECT ${safeUser} AS user_id, ${safeSubject} AS subject, ${safeParent} AS sub_category) S ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category WHEN MATCHED THEN UPDATE SET correct_count = ${rollupCorrect}, total_count = ${rollupTotal}, accuracy_rate = ${rollupAccuracy} WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (${safeUser}, ${safeParent}, ${safeSubject}, ${rollupCorrect}, ${rollupTotal}, ${rollupAccuracy});
+              UPDATE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\` SET topic = ARRAY_TO_STRING(ARRAY(SELECT DISTINCT TRIM(part) FROM UNNEST(SPLIT(CONCAT(${safeParent}, ', ', topic), ',')) part WHERE TRIM(part) != ''), ', ') WHERE LOWER(subject) = LOWER(${safeSubject}) AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) IN (${childSourcesList})) AND NOT EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) = LOWER(${safeParent}));
+              UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` SET topic = ARRAY_TO_STRING(ARRAY(SELECT DISTINCT TRIM(part) FROM UNNEST(SPLIT(CONCAT(${safeParent}, ', ', topic), ',')) part WHERE TRIM(part) != ''), ', ') WHERE user_id = ${safeUser} AND LOWER(subject) = LOWER(${safeSubject}) AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part WHERE LOWER(TRIM(part)) IN (${childSourcesList}));
+            `);
 
             mergedCount++;
           }
         }
       }
+
+      if (batchSqlStatements.length > 0) {
+        await bq.query({ query: batchSqlStatements.join('\n') }).catch(err => console.error("Batch BigQuery execution error:", err));
+      }
+    }
     }
 
     return await fetchAndResponseFinalState(mergedCount);
