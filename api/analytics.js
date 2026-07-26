@@ -507,10 +507,20 @@ export default async function handler(req, res) {
       for (const q of resultsList) {
         if (!q || !q.topic) continue;
         let isCorrect = false;
-        if (typeof q.is_correct === 'boolean') {
+        if (typeof q.isCorrect === 'boolean') {
+          isCorrect = q.isCorrect;
+        } else if (typeof q.is_correct === 'boolean') {
           isCorrect = q.is_correct;
-        } else if (q.user_answer !== undefined && q.answer !== undefined) {
-          isCorrect = String(q.user_answer).trim().toLowerCase() === String(q.answer).trim().toLowerCase();
+        } else if (q.score !== undefined && q.score !== null) {
+          isCorrect = Number(q.score) > 0;
+        } else if (q.earnedPoints !== undefined && q.earnedPoints !== null) {
+          isCorrect = Number(q.earnedPoints) > 0;
+        } else {
+          const uAns = q.userAnswer ?? q.user_answer ?? q.selectedOption ?? q.selected_option;
+          const cAns = q.answer ?? q.correctAnswer ?? q.correct_answer;
+          if (uAns !== undefined && cAns !== undefined) {
+            isCorrect = String(uAns).trim().toLowerCase() === String(cAns).trim().toLowerCase();
+          }
         }
         const tags = String(q.topic).split(',').map(t => t.trim()).filter(Boolean);
         for (const tag of tags) {
