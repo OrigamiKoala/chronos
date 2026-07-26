@@ -61,11 +61,22 @@ export default async function handler(req, res) {
         params: { username: sanitizedUser }
       });
 
-      const strengths = finalMasteryRows
+      const topicMastery = finalMasteryRows.map(m => ({
+        sub_category: m.sub_category,
+        subject: m.subject,
+        correct_count: Number((m.correct_count?.value ?? m.correct_count) || 0),
+        total_count: Number((m.total_count?.value ?? m.total_count) || 0),
+        accuracy_rate: Number((m.accuracy_rate?.value ?? m.accuracy_rate) || 0)
+      })).sort((a, b) => {
+        if (a.subject !== b.subject) return a.subject.localeCompare(b.subject);
+        return b.accuracy_rate - a.accuracy_rate;
+      });
+
+      const strengths = topicMastery
         .filter(m => m.total_count >= 3 && m.accuracy_rate >= 0.70)
         .map(m => ({ topic: m.sub_category, subject: m.subject }));
 
-      const weaknesses = finalMasteryRows
+      const weaknesses = topicMastery
         .filter(m => m.total_count >= 3 && m.accuracy_rate < 0.65)
         .map(m => ({ topic: m.sub_category, subject: m.subject }));
 
@@ -83,7 +94,7 @@ export default async function handler(req, res) {
         strengths,
         weaknesses,
         topicBreakdowns,
-        topicMastery: finalMasteryRows
+        topicMastery
       });
     };
 
@@ -206,6 +217,22 @@ Output format must be a JSON object matching this schema:
             params: { username: sanitizedUser, subject, target: target_topic, correct: mergedCorrect, total: mergedTotal, accuracy: mergedAccuracy },
             types: { correct: 'INT64', total: 'INT64', accuracy: 'FLOAT64' }
           });
+
+          // 5. Update question category tags in user_problem_tags
+          await bq.query({
+            query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+              SET tag = @target
+              WHERE user_id = @username AND LOWER(tag) IN UNNEST(@sources)`,
+            params: { username: sanitizedUser, target: target_topic, sources: source_topics.map(s => s.toLowerCase()) }
+          }).catch(err => console.error("Failed to update user_problem_tags for condense:", err));
+
+          // 6. Update question category topics in user_wrong_problems
+          await bq.query({
+            query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+              SET topic = @target
+              WHERE user_id = @username AND LOWER(subject) = LOWER(@subject) AND LOWER(topic) IN UNNEST(@sources)`,
+            params: { username: sanitizedUser, subject, target: target_topic, sources: source_topics.map(s => s.toLowerCase()) }
+          }).catch(err => console.error("Failed to update user_wrong_problems for condense:", err));
 
           mergedCount++;
         }

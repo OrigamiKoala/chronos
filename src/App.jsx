@@ -198,7 +198,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (user && currentScreen === 'analytics') {
+    if (user && currentScreen === 'dashboard') {
       if (lastCondensedScreen !== currentScreen) {
         condenseDuplicateTopics();
       }
@@ -527,14 +527,12 @@ function App() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          if (data.mergedCount > 0) {
-            setStrengths(data.strengths);
-            setWeaknesses(data.weaknesses);
-            setTopicBreakdowns(data.topicBreakdowns);
-            localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
-            localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
-            localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns));
-          }
+          if (data.strengths) setStrengths(data.strengths);
+          if (data.weaknesses) setWeaknesses(data.weaknesses);
+          if (data.topicBreakdowns) setTopicBreakdowns(data.topicBreakdowns);
+          if (data.strengths) localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
+          if (data.weaknesses) localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
+          if (data.topicBreakdowns) localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns));
           if (onSuccess) {
             onSuccess(data);
           }

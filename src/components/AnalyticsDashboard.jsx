@@ -75,11 +75,11 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   const [orgLoading, setOrgLoading] = useState(false);
   const hasCondensedRef = useRef(false);
 
-  const displayHistory = useMemo(() => history && history.length > 0 ? history : (data?.history || []), [history, data?.history]);
-  const displayStrengths = useMemo(() => strengths && strengths.length > 0 ? strengths : (data?.strengths || []), [strengths, data?.strengths]);
-  const displayWeaknesses = useMemo(() => weaknesses && weaknesses.length > 0 ? weaknesses : (data?.weaknesses || []), [weaknesses, data?.weaknesses]);
-  const displayDetailedAnalysis = useMemo(() => Object.keys(detailedAnalysis || {}).length > 0 ? detailedAnalysis : (data?.detailedAnalysis || {}), [detailedAnalysis, data?.detailedAnalysis]);
-  const displayTopicBreakdowns = useMemo(() => Object.keys(topicBreakdowns || {}).length > 0 ? topicBreakdowns : (data?.topicBreakdowns || {}), [topicBreakdowns, data?.topicBreakdowns]);
+  const displayHistory = useMemo(() => (data?.history && data.history.length > 0) ? data.history : (history || []), [history, data?.history]);
+  const displayStrengths = useMemo(() => (data?.strengths && data.strengths.length > 0) ? data.strengths : (strengths || []), [strengths, data?.strengths]);
+  const displayWeaknesses = useMemo(() => (data?.weaknesses && data.weaknesses.length > 0) ? data.weaknesses : (weaknesses || []), [weaknesses, data?.weaknesses]);
+  const displayDetailedAnalysis = useMemo(() => (data?.detailedAnalysis && Object.keys(data.detailedAnalysis).length > 0) ? data.detailedAnalysis : (detailedAnalysis || {}), [detailedAnalysis, data?.detailedAnalysis]);
+  const displayTopicBreakdowns = useMemo(() => (data?.topicBreakdowns && Object.keys(data.topicBreakdowns).length > 0) ? data.topicBreakdowns : (topicBreakdowns || {}), [topicBreakdowns, data?.topicBreakdowns]);
 
   const fetchOrgMembers = () => {
     if (!user?.user_organization) return;
@@ -638,8 +638,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     const filtered = (selectedSubjectFilter === 'All'
       ? data.topicMastery
       : data.topicMastery.filter(t => t.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase())
-    ).filter(t => t.total_count > 0)
-     .sort((a, b) => a.accuracy_rate - b.accuracy_rate); // lowest accuracy on top
+    ).filter(t => Number((t.total_count?.value ?? t.total_count) || 0) > 0)
+     .sort((a, b) => Number((a.accuracy_rate?.value ?? a.accuracy_rate) || 0) - Number((b.accuracy_rate?.value ?? b.accuracy_rate) || 0)); // lowest accuracy on top
 
     const labels = new Array(filtered.length);
     const chartData = new Array(filtered.length);
@@ -648,7 +648,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
     for (let i = 0; i < filtered.length; i++) {
       const t = filtered[i];
-      const rate = t.accuracy_rate;
+      const rate = Number((t.accuracy_rate?.value ?? t.accuracy_rate) || 0);
 
       labels[i] = t.sub_category;
       chartData[i] = Math.round(rate * 100);
