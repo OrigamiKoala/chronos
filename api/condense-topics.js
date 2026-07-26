@@ -237,9 +237,9 @@ Your tasks:
    4. Thermodynamics
    5. Kinetics
    6. Equilibrium
-   7. Acids & Bases
-   8. Electrochemistry
-   9. Atomic Structure & Periodicity
+   7. Electrochemistry
+   8. Atomic Structure & Periodicity
+   9. Bonding & Molecular Structure
    10. Organic Chemistry & Biochemistry
 
    For Physics: Use standard categories (Kinematics, Dynamics, Mechanics, Optics, Electromagnetism, Waves & Oscillations, Quantum Mechanics).

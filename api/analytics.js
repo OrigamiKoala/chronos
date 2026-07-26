@@ -480,42 +480,42 @@ export default async function handler(req, res) {
       .sort((a, b) => new Date(b.created_at?.value || b.created_at) - new Date(a.created_at?.value || a.created_at))
       .slice(0, 25);
 
-function toCanonicalSubtopic(str) {
-  if (!str) return '';
-  let s = String(str).trim()
-    .replace(/\s*\/\s*/g, ' & ')
-    .replace(/\s+and\s+/gi, ' & ')
-    .replace(/\s+/g, ' ');
+    function toCanonicalSubtopic(str) {
+      if (!str) return '';
+      let s = String(str).trim()
+        .replace(/\s*\/\s*/g, ' & ')
+        .replace(/\s+and\s+/gi, ' & ')
+        .replace(/\s+/g, ' ');
 
-  let lower = s.toLowerCase();
+      let lower = s.toLowerCase();
 
-  // Systemic stemming & suffix normalization
-  lower = lower
-    .replace(/equilibria$/i, 'equilibrium')
-    .replace(/mechanisms$/i, 'mechanism')
-    .replace(/laws$/i, 'law')
-    .replace(/reactions$/i, 'reaction')
-    .replace(/diagrams$/i, 'diagram')
-    .replace(/plots$/i, 'plot')
-    .replace(/calculations$/i, 'calculation')
-    .replace(/constants$/i, 'constant')
-    .replace(/equations$/i, 'equation')
-    .replace(/cells$/i, 'cell')
-    .replace(/potentials$/i, 'potential')
-    .replace(/relations$/i, 'relation')
-    .replace(/effects$/i, 'effect')
-    .replace(/changes$/i, 'change')
-    .replace(/orders$/i, 'order');
+      // Systemic stemming & suffix normalization
+      lower = lower
+        .replace(/equilibria$/i, 'equilibrium')
+        .replace(/mechanisms$/i, 'mechanism')
+        .replace(/laws$/i, 'law')
+        .replace(/reactions$/i, 'reaction')
+        .replace(/diagrams$/i, 'diagram')
+        .replace(/plots$/i, 'plot')
+        .replace(/calculations$/i, 'calculation')
+        .replace(/constants$/i, 'constant')
+        .replace(/equations$/i, 'equation')
+        .replace(/cells$/i, 'cell')
+        .replace(/potentials$/i, 'potential')
+        .replace(/relations$/i, 'relation')
+        .replace(/effects$/i, 'effect')
+        .replace(/changes$/i, 'change')
+        .replace(/orders$/i, 'order');
 
-  lower = lower.replace(/^(chemical|general|basic)\s+/i, '');
+      lower = lower.replace(/^(chemical|general|basic)\s+/i, '');
 
-  if (/^acid-base|^acid base/i.test(lower)) return 'Acid-Base Equilibria';
-  if (/^reaction kinetics|^reaction mechanism|^kinetic/i.test(lower)) return 'Reaction Kinetics & Mechanisms';
-  if (/^first law/i.test(lower)) return 'First Law of Thermodynamics';
-  if (/^solubility/i.test(lower) && !lower.includes('product')) return 'Solubility & Ksp';
+      if (/^acid-base|^acid base/i.test(lower)) return 'Acid-Base Equilibria';
+      if (/^reaction kinetics|^reaction mechanism|^kinetic/i.test(lower)) return 'Reaction Kinetics & Mechanisms';
+      if (/^first law/i.test(lower)) return 'First Law of Thermodynamics';
+      if (/^solubility/i.test(lower) && !lower.includes('product')) return 'Solubility & Ksp';
 
-  return lower.split(' ').map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
-}
+      return lower.split(' ').map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+    }
 
     const liveMasteryMap = {};
     const parentQuestionSets = {}; // Major topic -> Set of question IDs
@@ -543,7 +543,7 @@ function toCanonicalSubtopic(str) {
         if (/thermo|enthalp|entrop|hess|calorim|gibbs|spontan|heat of|exotherm|endotherm|bond energy|racoult|effusion/i.test(cleanLower)) return 'Thermodynamics';
         if (/electro|redox|galvanic|voltaic|nernst|faraday|anode|cathode|electroly|standard potential|voltage|reduction potential|overpotential/i.test(cleanLower) || (/\bcell\b/i.test(cleanLower) && !cleanLower.includes('unit cell'))) return 'Electrochemistry';
         if (/equilibr|solubil|ksp|\bka\b|\bkb\b|\bkc\b|\bkp\b|chatelier|common ion|reaction quotient|henderson|hasselbalch|salt hydrolysis/i.test(cleanLower)) return 'Equilibrium';
-        if (/acid|base|titrat|buffer|\bph\b|\bpka\b|\bpkb\b|neutraliz|bronsted|arrhenius|isoelectric/i.test(cleanLower)) return 'Acids & Bases';
+        if (/acid|base|titrat|buffer|\bph\b|\bpka\b|\bpkb\b|neutraliz|bronsted|arrhenius|isoelectric/i.test(cleanLower)) return 'Equilibrium';
         if (/stoich|solution|molar|dilut|yield|limiti|avogadro|empirical|concentration|\bppm\b|colligat|osmotic|freezing point|boiling point|mixture analysis|volumetric/i.test(cleanLower)) return 'Stoichiometry & Solutions';
         if (/state|gas|phase|pressur|vapor|ideal gas|real gas|van der waals|intermolecular|dipole|dispersion|hydrogen bond|crystal|lattice|solid|liquid|unit cell|bragg|packing|supercritical/i.test(cleanLower)) return 'States of Matter & Phase Changes';
         if (/atom|orbital|quantum|period|electron|lewis|vsepr|hybridiz|isotope|ionization|electronegativ|nuclide|radioact|decay|nuclear|bond|formal charge|mo theory|hückel|huckel/i.test(cleanLower)) return 'Atomic Structure & Periodicity';
@@ -766,9 +766,9 @@ ${JSON.stringify(inputData, null, 2)}
       'Thermodynamics',
       'Kinetics',
       'Equilibrium',
-      'Acids & Bases',
       'Electrochemistry',
       'Atomic Structure & Periodicity',
+      'Bonding/Molecular Structure',
       'Organic Chemistry & Biochemistry',
       'Kinematics', 'Dynamics', 'Mechanics', 'Optics', 'Electromagnetism', 'Waves & Oscillations', 'Quantum Mechanics', 'Fluid Mechanics',
       'Algebra', 'Geometry & Trigonometry', 'Calculus', 'Statistics & Probability', 'Number Theory'
