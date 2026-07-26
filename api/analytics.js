@@ -797,7 +797,8 @@ ${JSON.stringify(inputData, null, 2)}
       if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
         topicBreakdowns[topic] = {
           good_at: b.good_at,
-          not_good_at: b.not_good_at
+          not_good_at: b.not_good_at,
+          parent_topic: b.parent_topic
         };
         if (b.parent_topic) {
           const normKey = toCanonicalSubtopic(topic).toLowerCase();
