@@ -292,16 +292,22 @@ Output format must be a JSON object matching this schema:
             params: { username: sanitizedUser, subject }
           });
 
+          // Check if parent_topic already has a direct mastery row
+          const parentRow = currentMasteryRows.find(m => (m.sub_category || '').toLowerCase() === parent_topic.toLowerCase());
           let rollupCorrect = 0;
           let rollupTotal = 0;
-          const lowerChildren = child_topics.map(c => c.toLowerCase());
-          lowerChildren.push(parent_topic.toLowerCase());
 
-          for (const m of currentMasteryRows) {
-            const catName = (m.sub_category || '').toLowerCase();
-            if (lowerChildren.includes(catName)) {
-              rollupCorrect += Number((m.correct_count?.value ?? m.correct_count) || 0);
-              rollupTotal += Number((m.total_count?.value ?? m.total_count) || 0);
+          if (parentRow && Number((parentRow.total_count?.value ?? parentRow.total_count) || 0) > 0) {
+            rollupCorrect = Number((parentRow.correct_count?.value ?? parentRow.correct_count) || 0);
+            rollupTotal = Number((parentRow.total_count?.value ?? parentRow.total_count) || 0);
+          } else {
+            const lowerChildren = child_topics.map(c => c.toLowerCase());
+            for (const m of currentMasteryRows) {
+              const catName = (m.sub_category || '').toLowerCase();
+              if (lowerChildren.includes(catName)) {
+                rollupCorrect += Number((m.correct_count?.value ?? m.correct_count) || 0);
+                rollupTotal += Number((m.total_count?.value ?? m.total_count) || 0);
+              }
             }
           }
 
