@@ -191,17 +191,6 @@ Output format must be a JSON object matching this schema:
       }
     }));
 
-    let mergedCount = 0;
-    if (response.output_text) {
-      const responseObj = parseJSONResponse(response.output_text);
-      if (responseObj && Array.isArray(responseObj.merges) && responseObj.merges.length > 0) {
-        for (const merge of responseObj.merges) {
-          const { subject, source_topics, target_topic, good_at, not_good_at } = merge;
-          if (!subject || !source_topics || !target_topic || source_topics.length < 2) {
-            continue;
-          }
-
-          // Calculate combined mastery
     function escapeSqlStr(str) {
       if (str === null || str === undefined) return "''";
       return "'" + String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
@@ -307,7 +296,6 @@ Output format must be a JSON object matching this schema:
       if (batchSqlStatements.length > 0) {
         await bq.query({ query: batchSqlStatements.join('\n') }).catch(err => console.error("Batch BigQuery execution error:", err));
       }
-    }
     }
 
     return await fetchAndResponseFinalState(mergedCount);
