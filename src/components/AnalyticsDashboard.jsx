@@ -280,6 +280,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   const [error, setError] = useState(null);
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('All');
   const [selectedTopicDetail, setSelectedTopicDetail] = useState(null);
+  const [selectedCardForModal, setSelectedCardForModal] = useState(null);
   const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' or 'org_portal'
   const [orgMembers, setOrgMembers] = useState([]);
   const [orgLoading, setOrgLoading] = useState(false);
@@ -1391,18 +1392,27 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                         ? '#f59e0b'
                         : '#ef4444';
 
+                    const MAX_VISIBLE_SUBTOPICS = 5;
+                    const hasMoreSubtopics = card.subtopics.length > MAX_VISIBLE_SUBTOPICS;
+
                     return (
                       <div
                         key={card.title}
                         className="glass-panel"
+                        onClick={() => setSelectedCardForModal(card)}
                         style={{
                           padding: '1.25rem',
                           display: 'flex',
                           flexDirection: 'column',
                           justify: 'space-between',
                           border: '1px solid rgba(255, 255, 255, 0.08)',
-                          background: 'var(--bg-tertiary)'
+                          background: 'var(--bg-tertiary)',
+                          cursor: 'pointer',
+                          transition: 'border-color 0.2s',
+                          position: 'relative'
                         }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'}
                       >
                         <div>
                           {/* Header: Title & Overall % Badge */}
@@ -1443,8 +1453,15 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
                           {/* Subtopics List */}
                           {card.subtopics.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                              {card.subtopics.map(sub => {
+                            <div style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.4rem',
+                              maxHeight: hasMoreSubtopics ? `${MAX_VISIBLE_SUBTOPICS * 2.2}rem` : 'none',
+                              overflow: 'hidden',
+                              position: 'relative'
+                            }}>
+                              {card.subtopics.slice(0, hasMoreSubtopics ? MAX_VISIBLE_SUBTOPICS : undefined).map(sub => {
                                 const subColor = sub.accuracy >= 70 ? '#10b981' : sub.accuracy >= 50 ? '#f59e0b' : '#ef4444';
                                 return (
                                   <div
@@ -1468,6 +1485,24 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                                   </div>
                                 );
                               })}
+                              {hasMoreSubtopics && (
+                                <div style={{
+                                  position: 'absolute',
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: '2.2rem',
+                                  background: 'linear-gradient(transparent, var(--bg-tertiary))',
+                                  display: 'flex',
+                                  alignItems: 'flex-end',
+                                  justifyContent: 'center',
+                                  paddingBottom: '0.25rem'
+                                }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                                    +{card.subtopics.length - MAX_VISIBLE_SUBTOPICS} more — click to view all
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
@@ -1677,6 +1712,117 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
             </div>
           )}
         </>
+      )}
+
+      {/* Topic Card Detail Modal */}
+      {selectedCardForModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem'
+          }}
+          onClick={() => setSelectedCardForModal(null)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-secondary)',
+              borderRadius: '12px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '85vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  {selectedCardForModal.title}
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {selectedCardForModal.totalCorrect}/{selectedCardForModal.totalTotal} correct ({selectedCardForModal.overallAccuracy}%) &middot; {selectedCardForModal.subtopics.length} subtopics
+                </span>
+              </div>
+              <button
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.7rem', fontSize: '0.8rem', height: 'auto', minHeight: 'auto' }}
+                onClick={() => setSelectedCardForModal(null)}
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Modal Body — full subtopics list */}
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem'
+            }}>
+              {selectedCardForModal.subtopics.map(sub => {
+                const subColor = sub.accuracy >= 70 ? '#10b981' : sub.accuracy >= 50 ? '#f59e0b' : '#ef4444';
+                return (
+                  <div
+                    key={sub.name}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '0.85rem',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: '8px',
+                      background: 'rgba(0, 0, 0, 0.2)'
+                    }}
+                  >
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      {sub.name}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <div style={{
+                        width: '80px',
+                        height: '5px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        borderRadius: '3px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${sub.accuracy}%`,
+                          backgroundColor: subColor,
+                          borderRadius: '3px'
+                        }} />
+                      </div>
+                      <span style={{ fontWeight: '600', color: subColor, minWidth: '4.5rem', textAlign: 'right' }}>
+                        {sub.accuracy}% <small style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.75rem' }}>({sub.correct}/{sub.total})</small>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
