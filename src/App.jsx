@@ -666,6 +666,18 @@ function App() {
       localStorage.setItem('chronos_guest_history', JSON.stringify([immediateHistoryItem, ...guestHistory]));
     }
 
+    // Cache current exam submission to local active exam state so it can be resumed/resubmitted if session expired
+    const activeExamBackup = {
+      exam_id: examIdStr,
+      subject,
+      config: examConfig,
+      results,
+      updated_at: new Date().toISOString()
+    };
+    const cachedActiveExams = activeExams.filter(e => e.exam_id !== examIdStr);
+    const savedActiveExams = [activeExamBackup, ...cachedActiveExams];
+    localStorage.setItem('chronos_cache_active_exams', JSON.stringify(savedActiveExams));
+
     fetch('/api/submit-exam', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -697,7 +709,12 @@ function App() {
         }))
       })
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok && (res.status === 401 || res.status === 403)) {
+          throw new Error('SESSION_EXPIRED');
+        }
+        return res.json();
+      })
       .then(submitData => {
         if (submitData.error) {
           alert(submitData.error);
@@ -764,31 +781,27 @@ function App() {
               return res2.json();
             })
             .then(data => {
-              if (!data || !data.user) return;
-              // Instantly populate the latest state in case background refresh lags
-              setUser(data.user);
-              setStrengths(data.strengths);
-              setWeaknesses(data.weaknesses);
-              setDetailedAnalysis(data.detailedAnalysis || {});
-              setTopicBreakdowns(data.topicBreakdowns || {});
-              setHistory(data.history);
-              setRatings({
-                Math: data.user.math_rating || 100,
-                Physics: data.user.physics_rating || 100,
-                Chemistry: data.user.chemistry_rating || 100
-              });
-              const loadedActiveExams = extractActiveExams(data);
-              setActiveExams(loadedActiveExams);
-              setCurrentScreen('analytics');
+              if (data && data.user) {
+                setUser(data.user);
+                if (data.history) setHistory(data.history);
+                if (data.strengths) setStrengths(data.strengths);
+                if (data.weaknesses) setWeaknesses(data.weaknesses);
+                if (data.detailedAnalysis) setDetailedAnalysis(data.detailedAnalysis);
+                if (data.topicBreakdowns) setTopicBreakdowns(data.topicBreakdowns);
+                setRatings({
+                  Math: data.user.math_rating || 100,
+                  Physics: data.user.physics_rating || 100,
+                  Chemistry: data.user.chemistry_rating || 100
+                });
+              }
               setGradingLoading(false);
+              setCurrentScreen('analytics');
             })
-            .catch((err) => {
-              console.error("Failed to fetch fresh user data post-submit:", err);
-              setCurrentScreen('analytics');
+            .catch(() => {
               setGradingLoading(false);
+              setCurrentScreen('analytics');
             });
         } else {
-          // Guest history item is already pre-logged immediately before fetch. Let's just update the stored ratings if the AI modified it
           if (submitData.ratingChange !== undefined || submitData.newRating !== undefined) {
             const guestHistory = JSON.parse(localStorage.getItem('chronos_guest_history') || '[]');
             const target = guestHistory.find(h => h.exam_id === examIdStr);
@@ -862,16 +875,15 @@ function App() {
       })
       .catch(err => {
         console.error("Error submitting exam:", err);
-        setActiveExam(null);
-        setExamResults({
-          results,
-          subject,
-          oldRating: currentRating,
-          newRating,
-          ratingChange
-        });
-        setCurrentScreen('analytics');
         setGradingLoading(false);
+        setActiveExams(savedActiveExams);
+        if (err.message === 'SESSION_EXPIRED') {
+          setLoginError('Session expired while submitting. Please sign in again to submit your exam.');
+          setShowLoginModal(true);
+        } else {
+          alert(err.message || 'Session expired or network error while submitting. Your progress has been saved! You can resume and submit from the dashboard.');
+          setCurrentScreen('dashboard');
+        }
       });
   };
 

@@ -591,6 +591,26 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       totalTimeLeft,
       questionTimesLeft
     };
+
+    const activeExamPayload = {
+      exam_id: config.examId,
+      subject: config.subject,
+      config: finalConfig,
+      problems,
+      answers,
+      frqSubmissions,
+      currentQuestionIndex,
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      const cached = JSON.parse(localStorage.getItem('chronos_cache_active_exams') || '[]');
+      const filtered = Array.isArray(cached) ? cached.filter(e => e && e.exam_id !== config.examId) : [];
+      localStorage.setItem('chronos_cache_active_exams', JSON.stringify([activeExamPayload, ...filtered]));
+    } catch (e) {
+      console.error("Error updating local active exam cache:", e);
+    }
+
     try {
       await fetch('/api/exams?route=save-active-exam', {
         method: 'POST',
