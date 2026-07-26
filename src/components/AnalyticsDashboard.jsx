@@ -893,22 +893,38 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
     const result = [];
     for (const card of cardsMap.values()) {
-      const subtopics = Array.from(card.subtopicsMap.values()).map(s => ({
+      let subtopics = Array.from(card.subtopicsMap.values()).map(s => ({
         name: s.name,
         correct: s.correct,
         total: s.total,
         accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0
-      })).sort((a, b) => a.accuracy - b.accuracy);
+      }));
 
       let totalCorrect = card.directCorrect;
       let totalTotal = card.directTotal;
 
-      if (totalTotal === 0) {
-        for (const s of subtopics) {
-          totalCorrect += s.correct;
-          totalTotal += s.total;
-        }
+      let subTotalSum = 0;
+      let subCorrectSum = 0;
+      for (const s of subtopics) {
+        subTotalSum += s.total;
+        subCorrectSum += s.correct;
       }
+
+      if (totalTotal > 0 && totalTotal > subTotalSum) {
+        const unclassifiedTotal = totalTotal - subTotalSum;
+        const unclassifiedCorrect = Math.max(0, totalCorrect - subCorrectSum);
+        subtopics.push({
+          name: `General ${card.title}`,
+          correct: unclassifiedCorrect,
+          total: unclassifiedTotal,
+          accuracy: unclassifiedTotal > 0 ? Math.round((unclassifiedCorrect / unclassifiedTotal) * 100) : 0
+        });
+      } else if (totalTotal === 0) {
+        totalCorrect = subCorrectSum;
+        totalTotal = subTotalSum;
+      }
+
+      subtopics.sort((a, b) => a.accuracy - b.accuracy);
 
       const overallAccuracy = totalTotal > 0 ? Math.round((totalCorrect / totalTotal) * 100) : 0;
 
