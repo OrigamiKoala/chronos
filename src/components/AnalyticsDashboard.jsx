@@ -144,36 +144,56 @@ const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
     return aiParentMap[cleanLower];
   }
 
-  // 3. Keyword / Concept matching against major standard categories
+  // 3. Precise Keyword / Concept Regex Matching against standard major categories
   const subj = (subject || '').toLowerCase();
   if (subj === 'chemistry' || !subject || subj === 'general') {
-    if (cleanLower.includes('kineti')) return 'Kinetics';
-    if (cleanLower.includes('thermo') || cleanLower.includes('enthalp') || cleanLower.includes('entrop') || cleanLower.includes('hess') || cleanLower.includes('calorim')) return 'Thermodynamics';
-    if (cleanLower.includes('acid') || cleanLower.includes('base') || cleanLower.includes('titrat') || cleanLower.includes('buffer') || cleanLower.includes('ph')) return 'Acids & Bases';
-    if (cleanLower.includes('electro') || cleanLower.includes('redox') || cleanLower.includes('cell') || cleanLower.includes('nernst') || cleanLower.includes('voltage') || cleanLower.includes('faraday')) return 'Electrochemistry';
-    if (cleanLower.includes('equilibr') || cleanLower.includes('solubil') || cleanLower.includes('ksp') || cleanLower.includes('chatelier')) return 'Equilibrium';
-    if (cleanLower.includes('stoich') || cleanLower.includes('solution') || cleanLower.includes('molar') || cleanLower.includes('dilut') || cleanLower.includes('yield') || cleanLower.includes('limiti')) return 'Stoichiometry & Solutions';
-    if (cleanLower.includes('state') || cleanLower.includes('gas') || cleanLower.includes('phase') || cleanLower.includes('pressur') || cleanLower.includes('vapor') || cleanLower.includes('ideal gas')) return 'States of Matter & Phase Changes';
-    if (cleanLower.includes('atom') || cleanLower.includes('orbital') || cleanLower.includes('quantum') || cleanLower.includes('bond') || cleanLower.includes('period') || cleanLower.includes('electron') || cleanLower.includes('lewis') || cleanLower.includes('vsepr')) return 'Atomic Structure & Periodicity';
-    if (cleanLower.includes('organ') || cleanLower.includes('bio') || cleanLower.includes('polymer') || cleanLower.includes('hydrocarbon') || cleanLower.includes('alk') || cleanLower.includes('ester') || cleanLower.includes('alcohol') || cleanLower.includes('isomer')) return 'Organic Chemistry & Biochemistry';
-    if (cleanLower.includes('lab') || cleanLower.includes('descript') || cleanLower.includes('spectro') || cleanLower.includes('flame') || cleanLower.includes('color') || cleanLower.includes('qualitative') || cleanLower.includes('precipitat')) return 'Descriptive & Laboratory Chemistry';
+    if (/organ|bio|polymer|hydrocarbon|alk|ester|alcohol|isomer|aromatic|substitut|nucleophil|electrophil|carbonyl|amine|amide|ketone|aldehyd|carboxylic|synthesis|stereochem|grignard|diels|sn1|sn2|e1|e2|chiral|enantiomer|diastereomer|resonance|functional group|reagent/i.test(cleanLower)) {
+      return 'Organic Chemistry & Biochemistry';
+    }
+    if (/kineti|rate|half-life|activation energy|arrhenius|catalys|mechanism|order/i.test(cleanLower)) {
+      return 'Kinetics';
+    }
+    if (/thermo|enthalp|entrop|hess|calorim|gibbs|spontan|heat of|exotherm|endotherm|bond energy/i.test(cleanLower)) {
+      return 'Thermodynamics';
+    }
+    if (/electro|redox|galvanic|voltaic|nernst|faraday|anode|cathode|electroly|standard potential|voltage/i.test(cleanLower) || (/\bcell\b/i.test(cleanLower) && !cleanLower.includes('unit cell'))) {
+      return 'Electrochemistry';
+    }
+    if (/equilibr|solubil|ksp|\bka\b|\bkb\b|\bkc\b|\bkp\b|chatelier|common ion|reaction quotient/i.test(cleanLower)) {
+      return 'Equilibrium';
+    }
+    if (/acid|base|titrat|buffer|\bph\b|\bpka\b|\bpkb\b|neutraliz|bronsted|arrhenius/i.test(cleanLower)) {
+      return 'Acids & Bases';
+    }
+    if (/stoich|solution|molar|dilut|yield|limiti|avogadro|empirical|concentration|\bppm\b|colligat|osmotic|freezing point|boiling point/i.test(cleanLower)) {
+      return 'Stoichiometry & Solutions';
+    }
+    if (/state|gas|phase|pressur|vapor|ideal gas|real gas|van der waals|intermolecular|dipole|dispersion|hydrogen bond|crystal|lattice|solid|liquid/i.test(cleanLower)) {
+      return 'States of Matter & Phase Changes';
+    }
+    if (/atom|orbital|quantum|period|electron|lewis|vsepr|hybridiz|isotope|ionization|electronegativ|nuclide|radioact|decay|nuclear|bond/i.test(cleanLower)) {
+      return 'Atomic Structure & Periodicity';
+    }
+    if (/lab|descript|spectro|flame|color|qualitative|precipitat|filter|distill|chromatograph|coordination|complex ion|ligand|transition metal/i.test(cleanLower)) {
+      return 'Descriptive & Laboratory Chemistry';
+    }
     return 'Descriptive & Laboratory Chemistry';
   } else if (subj === 'physics') {
-    if (cleanLower.includes('kinemat') || cleanLower.includes('projectile') || cleanLower.includes('motion')) return 'Kinematics';
-    if (cleanLower.includes('dynamic') || cleanLower.includes('force') || cleanLower.includes('friction')) return 'Dynamics';
-    if (cleanLower.includes('mechanic') || cleanLower.includes('torque') || cleanLower.includes('momentum') || cleanLower.includes('energy') || cleanLower.includes('rotation') || cleanLower.includes('work')) return 'Mechanics';
-    if (cleanLower.includes('optic') || cleanLower.includes('light') || cleanLower.includes('lens') || cleanLower.includes('mirror') || cleanLower.includes('refract')) return 'Optics';
-    if (cleanLower.includes('electric') || cleanLower.includes('magnet') || cleanLower.includes('charge') || cleanLower.includes('circuit') || cleanLower.includes('field') || cleanLower.includes('current')) return 'Electromagnetism';
-    if (cleanLower.includes('wave') || cleanLower.includes('oscillat') || cleanLower.includes('harmonic') || cleanLower.includes('pendulum')) return 'Waves & Oscillations';
-    if (cleanLower.includes('quantum') || cleanLower.includes('photon') || cleanLower.includes('atomic')) return 'Quantum Mechanics';
-    if (cleanLower.includes('fluid') || cleanLower.includes('buoy') || cleanLower.includes('bernoulli')) return 'Fluid Mechanics';
+    if (/kinemat|projectile|motion/i.test(cleanLower)) return 'Kinematics';
+    if (/dynamic|force|friction/i.test(cleanLower)) return 'Dynamics';
+    if (/mechanic|torque|momentum|energy|rotation|work/i.test(cleanLower)) return 'Mechanics';
+    if (/optic|light|lens|mirror|refract/i.test(cleanLower)) return 'Optics';
+    if (/electric|magnet|charge|circuit|field|current/i.test(cleanLower)) return 'Electromagnetism';
+    if (/wave|oscillat|harmonic|pendulum/i.test(cleanLower)) return 'Waves & Oscillations';
+    if (/quantum|photon|atomic/i.test(cleanLower)) return 'Quantum Mechanics';
+    if (/fluid|buoy|bernoulli/i.test(cleanLower)) return 'Fluid Mechanics';
     return 'Mechanics';
   } else if (subj === 'math') {
-    if (cleanLower.includes('algebra') || cleanLower.includes('polynomial') || cleanLower.includes('equation') || cleanLower.includes('quadra')) return 'Algebra';
-    if (cleanLower.includes('geometr') || cleanLower.includes('trig') || cleanLower.includes('triangle') || cleanLower.includes('circle') || cleanLower.includes('angle')) return 'Geometry & Trigonometry';
-    if (cleanLower.includes('calculus') || cleanLower.includes('deriv') || cleanLower.includes('integral') || cleanLower.includes('limit')) return 'Calculus';
-    if (cleanLower.includes('statistic') || cleanLower.includes('probab') || cleanLower.includes('combinat') || cleanLower.includes('permut')) return 'Statistics & Probability';
-    if (cleanLower.includes('number theory') || cleanLower.includes('prime') || cleanLower.includes('modulo') || cleanLower.includes('divisib')) return 'Number Theory';
+    if (/algebra|polynomial|equation|quadra/i.test(cleanLower)) return 'Algebra';
+    if (/geometr|trig|triangle|circle|angle/i.test(cleanLower)) return 'Geometry & Trigonometry';
+    if (/calculus|deriv|integral|limit/i.test(cleanLower)) return 'Calculus';
+    if (/statistic|probab|combinat|permut/i.test(cleanLower)) return 'Statistics & Probability';
+    if (/number theory|prime|modulo|divisib/i.test(cleanLower)) return 'Number Theory';
     return 'Algebra';
   }
 
