@@ -189,8 +189,8 @@ function evaluateKeywordExpression(expression, userAnswer) {
 export default async function handler(req, res) {
   const { route } = req.query;
 
-  // Ensure tables exist (once per cold start)
-  if (!tablesEnsured) {
+  // Ensure tables exist (once per cold start, skipped for read-only get-exam)
+  if (route !== 'get-exam' && !tablesEnsured) {
     try {
       await bq.query(`
         CREATE TABLE IF NOT EXISTS \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` (
