@@ -353,7 +353,7 @@ Output format must be a JSON object matching this schema:
           }
 
           if (rollupTotal > 0) {
-            breakdownItems.push({ subject, topic: parent_topic, good_at: good_at || '', not_good_at: not_good_at || '' });
+            breakdownItems.push({ subject, topic: parent_topic, parent_topic: parent_topic, good_at: good_at || '', not_good_at: not_good_at || '' });
           }
         }
       }
@@ -438,6 +438,9 @@ Output format must be a JSON object matching this schema:
           const existing = uniqueBreakdownMap.get(key);
           if (!existing.good_at && item.good_at) existing.good_at = item.good_at;
           if (!existing.not_good_at && item.not_good_at) existing.not_good_at = item.not_good_at;
+          if ((!existing.parent_topic || existing.parent_topic === '') && item.parent_topic) {
+            existing.parent_topic = item.parent_topic;
+          }
         }
       }
       const uniqueBreakdownItems = Array.from(uniqueBreakdownMap.values());
