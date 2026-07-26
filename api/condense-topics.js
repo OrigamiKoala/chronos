@@ -118,17 +118,18 @@ export default async function handler(req, res) {
     const prompt = `You are an expert tutor and curriculum designer. Analyze the following topic breakdown data for a student.
 
 Your tasks:
-1. MERGES: Identify and consolidate duplicate or synonymous topic names within the SAME subject that represent the EXACT SAME concept (e.g., "kinetics", "chemical kinetics", and "reaction kinetics" should be merged into "Chemical Kinetics").
-   - DO NOT merge distinct specialized sub-topics into general ones (e.g., do NOT merge "michaelis-menten kinetics" into "kinetics").
+1. CONSOLIDATION & MERGES: Actively consolidate redundant, synonymous, or highly overlapping sub-topics within the SAME subject to streamline the student's dashboard and prevent topic bloat.
+   - Combine synonymous terms (e.g., "kinetics", "chemical kinetics", and "reaction kinetics" -> "Chemical Kinetics").
+   - Combine highly overlapping or tightly coupled sub-concepts into a clean, unified topic (e.g., "Hückel's Rule" and "Aromaticity" -> "Aromaticity", or "Hess's Law" and "Enthalpy Calculations" -> "Thermochemistry").
 
 2. PARENT ROLLUPS & RETAGGING: Identify specific detailed sub-topics (e.g., "Michaelis-Menten Kinetics", "Hess's Law", "Nernst Equation", "Snell's Law") and map them to their standard overall parent category (e.g., "Chemical Kinetics", "Thermodynamics", "Electrochemistry", "Optics").
    - This ensures questions tagged with narrow sub-topics are also tagged with the overall parent topic (e.g., "Chemical Kinetics, Michaelis-Menten Kinetics").
 
 CRITICAL CONSTRAINTS:
-1. DO combine topic names that are synonymous or equivalent descriptions of the same concept (e.g. "kinetics" and "chemical kinetics", "calc" and "calculus").
-2. DO NOT combine topics that are distinct specialized sub-concepts or advanced branches into single topics! (e.g., keep "michaelis-menten kinetics" as its own detailed topic).
-3. For parent_rollups, map specific sub-topics to their appropriate overall parent topic (e.g., "Michaelis-Menten Kinetics" -> parent "Chemical Kinetics", "Hess's Law" -> parent "Thermodynamics").
-4. For target topic names, use clean, standardized title-case capitalization (e.g. "Chemical Kinetics" or "Michaelis-Menten Kinetics").
+1. ACTIVELY SHRINK topic bloat: Combine duplicate, synonymous, or tightly coupled sub-topics (e.g. "Hückel's Rule" + "Aromaticity" -> "Aromaticity"; "Kinetics" + "Chemical Kinetics" -> "Chemical Kinetics").
+2. DO NOT combine completely distinct major fields or unrelated concepts (e.g., do not merge Thermodynamics into Kinetics).
+3. For merged topics, synthesize "good_at" and "not_good_at" descriptions into concise, clear, and comprehensive summaries.
+4. For target topic names, use clean, standardized title-case capitalization (e.g. "Aromaticity" or "Chemical Kinetics").
 5. If no topics need to be combined or rolled up, return empty arrays for "merges" and "parent_rollups".
 
 Input Data:
