@@ -529,6 +529,7 @@ function App() {
       if (data.strengths) localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
       if (data.weaknesses) localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
       if (data.topicBreakdowns) localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns));
+      if (data.parentRollups) localStorage.setItem('chronos_cache_parent_rollups', JSON.stringify(data.parentRollups));
       return;
     }
 
@@ -558,6 +559,7 @@ function App() {
           if (data.strengths) localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
           if (data.weaknesses) localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
           if (data.topicBreakdowns) localStorage.setItem('chronos_cache_topic_breakdowns', JSON.stringify(data.topicBreakdowns));
+          if (data.parentRollups) localStorage.setItem('chronos_cache_parent_rollups', JSON.stringify(data.parentRollups));
           if (onSuccess) {
             onSuccess(data);
           }
