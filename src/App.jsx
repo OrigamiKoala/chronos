@@ -197,15 +197,7 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  useEffect(() => {
-    if (user && currentScreen === 'dashboard') {
-      if (lastCondensedScreen !== currentScreen) {
-        condenseDuplicateTopics();
-      }
-    } else if (currentScreen !== 'dashboard') {
-      setLastCondensedScreen('');
-    }
-  }, [currentScreen, user?.user_id, lastCondensedScreen]);
+
 
   // Auto-login on mount (silent background sync)
   useEffect(() => {
@@ -516,12 +508,8 @@ function App() {
       }).catch(err => console.error("Failed to refresh user data:", err));
   };
 
-  const isCondensingRef = useRef(false);
-
   const condenseDuplicateTopics = useCallback((onSuccess = null) => {
-    if (!user || isCondensingRef.current) return;
-    isCondensingRef.current = true;
-    setLastCondensedScreen(currentScreen);
+    if (!user) return;
     fetch('/api/condense-topics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -541,11 +529,8 @@ function App() {
           }
         }
       })
-      .catch(err => console.error("Topic condensation failed:", err))
-      .finally(() => {
-        isCondensingRef.current = false;
-      });
-  }, [user?.user_id, currentScreen]);
+      .catch(err => console.error("Topic condensation failed:", err));
+  }, [user?.user_id]);
 
   const startExam = (config) => {
     if (!user) {

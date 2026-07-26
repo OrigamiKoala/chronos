@@ -34,27 +34,79 @@ const getSubjectColor = (subject) => {
   return CHART_COLORS[key] || CHART_COLORS.Math;
 };
 
-const OVERALL_TOPIC_NAMES = new Set([
-  'stoichiometry', 'thermodynamics', 'thermochemistry', 'kinetics', 'chemical kinetics',
-  'chemical equilibrium', 'equilibrium', 'electrochemistry', 'organic chemistry',
-  'inorganic chemistry', 'analytical chemistry', 'biochemistry', 'acids & bases',
-  'acids and bases', 'acid-base chemistry', 'atomic structure', 'chemical bonding',
-  'atomic structure & bonding', 'nuclear chemistry', 'periodic table', 'periodic trends',
-  'solutions', 'states of matter', 'gases',
-  'mechanics', 'kinematics', 'dynamics', 'newtonian mechanics', 'thermal physics',
-  'electromagnetism', 'electricity & magnetism', 'optics', 'geometrical optics',
-  'wave optics', 'quantum mechanics', 'quantum physics', 'waves & oscillations',
-  'oscillations', 'relativity', 'fluid mechanics', 'fluids', 'astrophysics', 'cosmology',
-  'nuclear physics', 'atomic physics',
-  'algebra', 'geometry', 'calculus', 'trigonometry', 'statistics', 'probability',
-  'statistics & probability', 'number theory', 'linear algebra', 'differential equations',
-  'discrete math', 'complex numbers', 'multivariable calculus'
-]);
+const CANONICAL_OVERALL_MAP = {
+  'kinetics': 'Chemical Kinetics',
+  'chemical kinetics': 'Chemical Kinetics',
+  'reaction kinetics': 'Chemical Kinetics',
+
+  'equilibrium': 'Chemical Equilibrium',
+  'chemical equilibrium': 'Chemical Equilibrium',
+
+  'thermodynamics': 'Thermodynamics',
+  'thermochemistry': 'Thermodynamics',
+
+  'acid-base chemistry': 'Acids & Bases',
+  'acids and bases': 'Acids & Bases',
+  'acids & bases': 'Acids & Bases',
+
+  'atomic structure': 'Atomic Structure & Bonding',
+  'chemical bonding': 'Atomic Structure & Bonding',
+  'atomic structure & bonding': 'Atomic Structure & Bonding',
+
+  'stoichiometry': 'Stoichiometry',
+  'electrochemistry': 'Electrochemistry',
+  'organic chemistry': 'Organic Chemistry',
+  'inorganic chemistry': 'Inorganic Chemistry',
+  'analytical chemistry': 'Analytical Chemistry',
+  'biochemistry': 'Biochemistry',
+  'nuclear chemistry': 'Nuclear Chemistry',
+  'periodic table': 'Periodic Trends',
+  'periodic trends': 'Periodic Trends',
+  'solutions': 'Solutions',
+  'states of matter': 'States of Matter & Gases',
+  'gases': 'States of Matter & Gases',
+
+  'mechanics': 'Mechanics',
+  'kinematics': 'Kinematics',
+  'dynamics': 'Dynamics',
+  'newtonian mechanics': 'Mechanics',
+  'thermal physics': 'Thermodynamics',
+  'electromagnetism': 'Electromagnetism',
+  'electricity & magnetism': 'Electromagnetism',
+  'optics': 'Optics',
+  'geometrical optics': 'Optics',
+  'wave optics': 'Optics',
+  'quantum mechanics': 'Quantum Mechanics',
+  'quantum physics': 'Quantum Mechanics',
+  'waves & oscillations': 'Waves & Oscillations',
+  'oscillations': 'Waves & Oscillations',
+  'relativity': 'Relativity',
+  'fluid mechanics': 'Fluid Mechanics',
+  'fluids': 'Fluid Mechanics',
+  'astrophysics': 'Astrophysics',
+  'cosmology': 'Astrophysics',
+  'nuclear physics': 'Nuclear Physics',
+  'atomic physics': 'Atomic Physics',
+
+  'algebra': 'Algebra',
+  'geometry': 'Geometry',
+  'calculus': 'Calculus',
+  'trigonometry': 'Trigonometry',
+  'statistics': 'Statistics & Probability',
+  'probability': 'Statistics & Probability',
+  'statistics & probability': 'Statistics & Probability',
+  'number theory': 'Number Theory',
+  'linear algebra': 'Linear Algebra',
+  'differential equations': 'Differential Equations',
+  'discrete math': 'Discrete Math',
+  'complex numbers': 'Complex Numbers',
+  'multivariable calculus': 'Multivariable Calculus'
+};
 
 const isOverallTopic = (topicName) => {
   if (!topicName) return false;
   const clean = topicName.trim().toLowerCase();
-  return OVERALL_TOPIC_NAMES.has(clean) || OVERALL_TOPIC_NAMES.has(clean + 's');
+  return Boolean(CANONICAL_OVERALL_MAP[clean] || CANONICAL_OVERALL_MAP[clean.replace(/s$/, '')]);
 };
 
 const baseChartOptions = {
@@ -661,63 +713,106 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     };
   }, [data]);
 
-  const buildChartDataFromList = (filtered) => {
-    if (!filtered || filtered.length === 0) return null;
-    const labels = new Array(filtered.length);
-    const chartData = new Array(filtered.length);
-    const backgroundColor = new Array(filtered.length);
-    const borderColor = new Array(filtered.length);
+  // Topic mastery mini-cards data grouped by overall topic
+  const topicCardsData = useMemo(() => {
+    if (!data?.topicMastery?.length) return [];
 
-    for (let i = 0; i < filtered.length; i++) {
-      const t = filtered[i];
-      const rate = Number((t.accuracy_rate?.value ?? t.accuracy_rate) || 0);
+    const filtered = selectedSubjectFilter === 'All'
+      ? data.topicMastery
+      : data.topicMastery.filter(t => t.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase());
 
-      labels[i] = t.sub_category;
-      chartData[i] = Math.round(rate * 100);
+    if (!filtered.length) return [];
 
-      if (rate >= 0.7) {
-        backgroundColor[i] = 'rgba(16, 185, 129, 0.5)';
-        borderColor[i] = '#10b981';
-      } else if (rate >= 0.5) {
-        backgroundColor[i] = 'rgba(245, 158, 11, 0.5)';
-        borderColor[i] = '#f59e0b';
+    const cardsMap = new Map();
+
+    const getOrCreateCard = (parentTitle, subject) => {
+      const key = parentTitle.toLowerCase();
+      if (!cardsMap.has(key)) {
+        cardsMap.set(key, {
+          title: parentTitle,
+          subject: subject || 'General',
+          directCorrect: 0,
+          directTotal: 0,
+          subtopicsMap: new Map()
+        });
+      }
+      return cardsMap.get(key);
+    };
+
+    for (const item of filtered) {
+      const origName = (item.sub_category || item.topic || '').trim();
+      if (!origName) continue;
+
+      const correct = Number((item.correct_count?.value ?? item.correct_count) || 0);
+      const total = Number((item.total_count?.value ?? item.total_count) || 0);
+      if (total <= 0) continue;
+
+      const cleanLower = origName.toLowerCase();
+      const canonicalParent = CANONICAL_OVERALL_MAP[cleanLower] || CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')];
+
+      if (canonicalParent) {
+        const card = getOrCreateCard(canonicalParent, item.subject);
+        card.directCorrect += correct;
+        card.directTotal += total;
       } else {
-        backgroundColor[i] = 'rgba(239, 68, 68, 0.5)';
-        borderColor[i] = '#ef4444';
+        let inferredParent = null;
+        for (const [key, val] of Object.entries(CANONICAL_OVERALL_MAP)) {
+          if (cleanLower.includes(key)) {
+            inferredParent = val;
+            break;
+          }
+        }
+        if (!inferredParent) {
+          inferredParent = origName.charAt(0).toUpperCase() + origName.slice(1);
+        }
+
+        const card = getOrCreateCard(inferredParent, item.subject);
+        const subKey = origName.toLowerCase();
+
+        if (!card.subtopicsMap.has(subKey)) {
+          card.subtopicsMap.set(subKey, {
+            name: origName,
+            correct,
+            total
+          });
+        } else {
+          const sub = card.subtopicsMap.get(subKey);
+          sub.correct += correct;
+          sub.total += total;
+        }
       }
     }
 
-    return {
-      labels,
-      datasets: [{
-        label: 'Accuracy %',
-        data: chartData,
-        backgroundColor,
-        borderColor,
-        borderWidth: 1,
-        borderRadius: 4,
-        barPercentage: 0.6,
-        minBarLength: 4
-      }]
-    };
-  };
+    const result = [];
+    for (const card of cardsMap.values()) {
+      const subtopics = Array.from(card.subtopicsMap.values()).map(s => ({
+        ...s,
+        accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0
+      })).sort((a, b) => a.accuracy - b.accuracy);
 
-  // Split topic mastery into overall topics and detailed sub-topics
-  const { overallTopicChartData, detailedTopicChartData } = useMemo(() => {
-    if (!data?.topicMastery?.length) return { overallTopicChartData: null, detailedTopicChartData: null };
-    const filtered = (selectedSubjectFilter === 'All'
-      ? data.topicMastery
-      : data.topicMastery.filter(t => t.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase())
-    ).filter(t => Number((t.total_count?.value ?? t.total_count) || 0) > 0)
-     .sort((a, b) => Number((a.accuracy_rate?.value ?? a.accuracy_rate) || 0) - Number((b.accuracy_rate?.value ?? b.accuracy_rate) || 0)); // lowest accuracy on top
+      let totalCorrect = card.directCorrect;
+      let totalTotal = card.directTotal;
 
-    const overallList = filtered.filter(t => isOverallTopic(t.sub_category));
-    const detailedList = filtered.filter(t => !isOverallTopic(t.sub_category));
+      if (totalTotal === 0) {
+        for (const s of subtopics) {
+          totalCorrect += s.correct;
+          totalTotal += s.total;
+        }
+      }
 
-    return {
-      overallTopicChartData: buildChartDataFromList(overallList),
-      detailedTopicChartData: buildChartDataFromList(detailedList)
-    };
+      const overallAccuracy = totalTotal > 0 ? Math.round((totalCorrect / totalTotal) * 100) : 0;
+
+      result.push({
+        title: card.title,
+        subject: card.subject,
+        overallAccuracy,
+        totalCorrect,
+        totalTotal,
+        subtopics
+      });
+    }
+
+    return result.sort((a, b) => a.overallAccuracy - b.overallAccuracy);
   }, [data, selectedSubjectFilter]);
 
   const missedADay = useMemo(() => {
@@ -1065,81 +1160,125 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
           </div>{/* end analytics-grid */}
 
-          {/* Overall & Detailed Topic Breakdown Charts */}
-          {(() => {
-            const renderTopicBarChart = (chartData, title, iconColor = "var(--success)", emptyMsg = "Complete exams to build topic mastery data") => {
-              if (!chartData?.labels?.length) {
-                return (
-                  <div className="glass-panel analytics-chart-panel" style={{ marginTop: '1rem' }}>
-                    <h4 className="analytics-chart-title">
-                      <BarChart3 size={18} color={iconColor} /> {title}
-                    </h4>
-                    <p className="analytics-empty">{emptyMsg}</p>
-                  </div>
-                );
-              }
+          {/* Topic Mastery Mini-Cards */}
+          <div style={{ marginTop: '1.5rem' }}>
+            <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
+              <BarChart3 size={18} color="var(--success)" /> Topic Mastery Breakdown
+            </h4>
 
-              const totalBars = chartData.labels.length;
-              const chartOpts = {
-                ...baseChartOptions,
-                indexAxis: 'y',
-                plugins: { ...baseChartOptions.plugins, legend: { display: false }, title: { display: false } },
-                scales: { ...baseChartOptions.scales, x: { ...baseChartOptions.scales.x, min: 0, max: 100 } }
-              };
-              const rowHeight = 32;
+            {topicCardsData.length === 0 ? (
+              <div className="glass-panel analytics-chart-panel">
+                <p className="analytics-empty">Complete exams to build topic mastery data</p>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '1rem'
+              }}>
+                {topicCardsData.map(card => {
+                  const badgeColor = card.overallAccuracy >= 70
+                    ? 'rgba(16, 185, 129, 0.2)'
+                    : card.overallAccuracy >= 50
+                      ? 'rgba(245, 158, 11, 0.2)'
+                      : 'rgba(239, 68, 68, 0.2)';
 
-              if (totalBars <= 4) {
-                const h = Math.max(150, totalBars * rowHeight);
-                return (
-                  <div className="glass-panel analytics-chart-panel" style={{ marginTop: '1rem' }}>
-                    <h4 className="analytics-chart-title">
-                      <BarChart3 size={18} color={iconColor} /> {title}
-                    </h4>
-                    <div style={{ height: h + 'px' }}>
-                      <Bar data={chartData} options={chartOpts} />
+                  const textColor = card.overallAccuracy >= 70
+                    ? '#10b981'
+                    : card.overallAccuracy >= 50
+                      ? '#f59e0b'
+                      : '#ef4444';
+
+                  return (
+                    <div 
+                      key={card.title} 
+                      className="glass-panel" 
+                      style={{ 
+                        padding: '1.25rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justify: 'space-between',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        background: 'var(--bg-tertiary)'
+                      }}
+                    >
+                      <div>
+                        {/* Header: Title & Overall % Badge */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', gap: '0.5rem' }}>
+                          <h5 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                            {card.title}
+                          </h5>
+                          <span style={{
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.85rem',
+                            fontWeight: '700',
+                            backgroundColor: badgeColor,
+                            color: textColor,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {card.overallAccuracy}%
+                          </span>
+                        </div>
+
+                        {/* Overall Progress Bar */}
+                        <div style={{
+                          height: '6px',
+                          width: '100%',
+                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                          borderRadius: '3px',
+                          overflow: 'hidden',
+                          marginBottom: '1rem'
+                        }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${card.overallAccuracy}%`,
+                            backgroundColor: textColor,
+                            borderRadius: '3px',
+                            transition: 'width 0.4s ease'
+                          }} />
+                        </div>
+
+                        {/* Subtopics List */}
+                        {card.subtopics.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {card.subtopics.map(sub => {
+                              const subColor = sub.accuracy >= 70 ? '#10b981' : sub.accuracy >= 50 ? '#f59e0b' : '#ef4444';
+                              return (
+                                <div 
+                                  key={sub.name} 
+                                  style={{ 
+                                    display: 'flex', 
+                                    justify: 'space-between', 
+                                    alignItems: 'center', 
+                                    fontSize: '0.82rem',
+                                    padding: '0.35rem 0.5rem',
+                                    borderRadius: '6px',
+                                    background: 'rgba(0, 0, 0, 0.2)'
+                                  }}
+                                >
+                                  <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
+                                    {sub.name}
+                                  </span>
+                                  <span style={{ fontWeight: '600', color: subColor }}>
+                                    {sub.accuracy}% <small style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.75rem' }}>({sub.correct}/{sub.total})</small>
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            Overall Topic ({card.totalCorrect}/{card.totalTotal} correct)
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              }
-
-              const mid = Math.ceil(totalBars / 2);
-              const leftData = {
-                labels: chartData.labels.slice(0, mid),
-                datasets: [{ ...chartData.datasets[0], data: chartData.datasets[0].data.slice(0, mid), backgroundColor: chartData.datasets[0].backgroundColor.slice(0, mid), borderColor: chartData.datasets[0].borderColor.slice(0, mid) }]
-              };
-              const rightData = {
-                labels: chartData.labels.slice(mid),
-                datasets: [{ ...chartData.datasets[0], data: chartData.datasets[0].data.slice(mid), backgroundColor: chartData.datasets[0].backgroundColor.slice(mid), borderColor: chartData.datasets[0].borderColor.slice(mid) }]
-              };
-              const leftH = Math.max(160, mid * rowHeight);
-              const rightH = Math.max(160, (totalBars - mid) * rowHeight);
-
-              return (
-                <div className="topic-breakdown-grid glass-panel analytics-chart-panel" style={{ marginTop: '1rem' }}>
-                  <div>
-                    <h4 className="analytics-chart-title">
-                      <BarChart3 size={18} color={iconColor} /> {title}
-                    </h4>
-                    <div style={{ height: leftH + 'px' }}>
-                      <Bar data={leftData} options={chartOpts} />
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                    <div style={{ height: rightH + 'px' }}>
-                      <Bar data={rightData} options={chartOpts} />
-                    </div>
-                  </div>
-                </div>
-              );
-            };
-
-            return (
-              <>
-                {renderTopicBarChart(overallTopicChartData, "Overall Topic Breakdown", "var(--success)", "No overall topic data available yet")}
-                {renderTopicBarChart(detailedTopicChartData, "Detailed Topic Breakdown", "var(--accent-primary)", "No detailed topic breakdown available yet")}
-              </>
-            );
-          })()}
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Strengths & Weaknesses */}
           {(() => {
