@@ -762,9 +762,9 @@ ${practiceSummaryText}
           )
         ),
         collectiveBreakdowns AS (
-          SELECT 'collectiveBreakdowns' AS type, TO_JSON_STRING(STRUCT(user_id, topic, good_at, not_good_at)) AS data
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-          WHERE user_id IN (SELECT user_id FROM myStudents)
+          SELECT 'collectiveBreakdowns' AS type, TO_JSON_STRING(STRUCT(user_id, sub_category AS topic, good_at, not_good_at)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+          WHERE user_id IN (SELECT user_id FROM myStudents) AND (good_at IS NOT NULL OR not_good_at IS NOT NULL)
         )
         SELECT 'user_info' AS type, TO_JSON_STRING(STRUCT(user_role, user_organization)) AS data FROM user_org
         UNION ALL

@@ -85,10 +85,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    await bq.query({
-      query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
-    }).catch(err => console.error("Add parent_topic column error:", err));
-
     // Fire all 6 independent reads in parallel
     const consolidatedQuery = `
       WITH elo AS (
@@ -121,19 +117,10 @@ export default async function handler(req, res) {
         WHERE user_id IN UNNEST(@usernames)
       ),
       breakdown AS (
-        SELECT 'breakdown' AS type, TO_JSON_STRING(STRUCT(user_id, topic, parent_topic, good_at, not_good_at)) AS data
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-        WHERE user_id IN UNNEST(@usernames)
+        SELECT 'breakdown' AS type, TO_JSON_STRING(STRUCT(user_id, sub_category AS topic, parent_topic, good_at, not_good_at)) AS data
+        FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+        WHERE user_id IN UNNEST(@usernames) AND (good_at IS NOT NULL OR not_good_at IS NOT NULL)
       ),
-      raw_topics AS (
-        SELECT 'raw_topic' AS type, TO_JSON_STRING(STRUCT(topic)) AS data
-        FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-        WHERE user_id IN UNNEST(@usernames) AND topic IS NOT NULL
-        UNION DISTINCT
-        SELECT 'raw_topic' AS type, TO_JSON_STRING(STRUCT(topic)) AS data
-        FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
-        WHERE topic IS NOT NULL
-      )
       SELECT type, data FROM elo
       UNION ALL
       SELECT type, data FROM tags
@@ -145,8 +132,6 @@ export default async function handler(req, res) {
       SELECT type, data FROM analysis
       UNION ALL
       SELECT type, data FROM breakdown
-      UNION ALL
-      SELECT type, data FROM raw_topics
     `;
 
     const params = { usernames };
@@ -158,7 +143,6 @@ export default async function handler(req, res) {
     const topicMastery = [];
     const analyses = [];
     const breakdowns = [];
-    const rawTopicsList = [];
 
     for (const r of rows) {
       try {
@@ -169,7 +153,6 @@ export default async function handler(req, res) {
         else if (r.type === 'mastery') topicMastery.push(parsedData);
         else if (r.type === 'analysis') analyses.push(parsedData);
         else if (r.type === 'breakdown') breakdowns.push(parsedData);
-        else if (r.type === 'raw_topic') rawTopicsList.push(parsedData);
       } catch (parseErr) {
         console.error("Failed to parse row data:", r, parseErr);
       }

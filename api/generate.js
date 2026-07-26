@@ -954,9 +954,9 @@ export default async function handler(req, res) {
           LIMIT 1
         ),
         topicBreakdown AS (
-          SELECT 'topicBreakdown' AS type, TO_JSON_STRING(STRUCT(topic, good_at, not_good_at)) AS data
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-          WHERE user_id = @targetUserId AND subject = @subject
+          SELECT 'topicBreakdown' AS type, TO_JSON_STRING(STRUCT(sub_category AS topic, good_at, not_good_at)) AS data
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+          WHERE user_id = @targetUserId AND subject = @subject AND (good_at IS NOT NULL OR not_good_at IS NOT NULL)
         ),
         mistakeAnalysis AS (
           SELECT 'mistakeAnalysis' AS type, TO_JSON_STRING(STRUCT(mistake_patterns)) AS data

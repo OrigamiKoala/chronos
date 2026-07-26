@@ -24,20 +24,23 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // 1. Ensure parent_topic column exists in both tables FIRST
+    // 1. Ensure columns exist in user_topic_mastery
     await Promise.all([
       bq.query({
-        query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
-      }).catch(err => console.error("Add breakdown parent_topic column error:", err)),
-      bq.query({
         query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
-      }).catch(err => console.error("Add mastery parent_topic column error:", err))
+      }).catch(err => console.error("Add mastery parent_topic column error:", err)),
+      bq.query({
+        query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` ADD COLUMN IF NOT EXISTS good_at STRING`
+      }).catch(err => console.error("Add mastery good_at column error:", err)),
+      bq.query({
+        query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` ADD COLUMN IF NOT EXISTS not_good_at STRING`
+      }).catch(err => console.error("Add mastery not_good_at column error:", err))
     ]);
 
     // 2. Fire repair queries and initial fetch in parallel
     const [breakdownResult] = await Promise.all([
       bq.query({
-        query: `SELECT topic, good_at, not_good_at, subject, parent_topic FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @username`,
+        query: `SELECT sub_category AS topic, good_at, not_good_at, subject, parent_topic FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = @username`,
         params: { username: sanitizedUser }
       }),
       bq.query({
@@ -47,11 +50,7 @@ export default async function handler(req, res) {
       bq.query({
         query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = @username AND (LOWER(sub_category) = LOWER(subject) OR LOWER(sub_category) IN ('general', 'general topics', 'science', 'kinetics', 'thermodynamics', 'electrochemistry', 'stoichiometry & solutions', 'equilibrium', 'acids & bases', 'descriptive & laboratory chemistry', 'atomic structure & periodicity', 'organic chemistry & biochemistry', 'kinetics & rate laws'))`,
         params: { username: sanitizedUser }
-      }).catch(err => console.error("Delete synthetic mastery error:", err)),
-      bq.query({
-        query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @username AND (LOWER(topic) = LOWER(subject) OR LOWER(topic) IN ('general', 'general topics', 'science'))`,
-        params: { username: sanitizedUser }
-      }).catch(err => console.error("Delete generic breakdown error:", err))
+      }).catch(err => console.error("Delete synthetic mastery error:", err))
     ]);
 
     const breakdownRows = breakdownResult[0];
@@ -78,9 +77,9 @@ export default async function handler(req, res) {
       });
 
       const [finalBreakdownRows] = await bq.query({
-        query: `SELECT topic, good_at, not_good_at, subject, parent_topic
-          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-          WHERE user_id = @username`,
+        query: `SELECT sub_category AS topic, good_at, not_good_at, subject, parent_topic
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+          WHERE user_id = @username AND (good_at IS NOT NULL OR not_good_at IS NOT NULL)`,
         params: { username: sanitizedUser }
       });
 
@@ -506,29 +505,56 @@ Output format must be a JSON object matching this schema:
 
       if (allDeleteSources.size > 0) {
         const sourcesList = Array.from(allDeleteSources).map(s => escapeSqlStr(s)).join(', ');
-        statements.push(`DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = ${safeUser} AND LOWER(topic) IN (${sourcesList});`);
         statements.push(`DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = ${safeUser} AND LOWER(sub_category) IN (${sourcesList});`);
       }
 
-      if (uniqueBreakdownItems.length > 0) {
-        const selects = uniqueBreakdownItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.topic)} AS topic, ${escapeSqlStr(item.parent_topic || '')} AS parent_topic, ${escapeSqlStr(item.good_at)} AS good_at, ${escapeSqlStr(item.not_good_at)} AS not_good_at`).join('\nUNION ALL\n');
-        statements.push(`
-          MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
-          USING (${selects}) S
-          ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-          WHEN MATCHED THEN UPDATE SET parent_topic = COALESCE(NULLIF(S.parent_topic, ''), T.parent_topic), good_at = COALESCE(NULLIF(S.good_at, ''), T.good_at), not_good_at = COALESCE(NULLIF(S.not_good_at, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP()
-          WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, parent_topic, good_at, not_good_at, updated_at) VALUES (S.user_id, S.subject, S.topic, S.parent_topic, S.good_at, S.not_good_at, CURRENT_TIMESTAMP());
-        `);
+      // Combine breakdown items (good_at, not_good_at, parent_topic) with mastery items (correct_count, total_count)
+      const combinedMasteryMap = new Map();
+      for (const item of uniqueBreakdownItems) {
+        const key = `${item.subject.toLowerCase()}:${item.topic.toLowerCase()}`;
+        combinedMasteryMap.set(key, {
+          subject: item.subject,
+          sub_category: item.topic,
+          parent_topic: item.parent_topic || '',
+          good_at: item.good_at || '',
+          not_good_at: item.not_good_at || '',
+          correct_count: 0,
+          total_count: 0,
+          accuracy_rate: 0
+        });
       }
+      for (const item of uniqueMasteryItems) {
+        const key = `${item.subject.toLowerCase()}:${item.sub_category.toLowerCase()}`;
+        if (combinedMasteryMap.has(key)) {
+          const existing = combinedMasteryMap.get(key);
+          existing.correct_count += item.correct_count;
+          existing.total_count += item.total_count;
+          existing.accuracy_rate = existing.total_count > 0 ? (existing.correct_count / existing.total_count) : 0;
+        } else {
+          combinedMasteryMap.set(key, {
+            subject: item.subject,
+            sub_category: item.sub_category,
+            parent_topic: generatedParentRollups[item.sub_category.toLowerCase()] || '',
+            good_at: '',
+            not_good_at: '',
+            correct_count: item.correct_count,
+            total_count: item.total_count,
+            accuracy_rate: item.accuracy_rate
+          });
+        }
+      }
+      const combinedMasteryItems = Array.from(combinedMasteryMap.values());
 
-      if (uniqueMasteryItems.length > 0) {
-        const selects = uniqueMasteryItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.sub_category)} AS sub_category, ${item.correct_count} AS correct_count, ${item.total_count} AS total_count, ${item.accuracy_rate} AS accuracy_rate, ${escapeSqlStr(generatedParentRollups[item.sub_category.toLowerCase()] || '')} AS parent_topic`).join('\nUNION ALL\n');
+      if (combinedMasteryItems.length > 0) {
+        const selects = combinedMasteryItems.map(item =>
+          `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.sub_category)} AS sub_category, ${item.correct_count} AS correct_count, ${item.total_count} AS total_count, ${item.accuracy_rate} AS accuracy_rate, ${escapeSqlStr(item.parent_topic)} AS parent_topic, ${escapeSqlStr(item.good_at)} AS good_at, ${escapeSqlStr(item.not_good_at)} AS not_good_at`
+        ).join('\nUNION ALL\n');
         statements.push(`
           MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T
           USING (${selects}) S
           ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category
-          WHEN MATCHED THEN UPDATE SET correct_count = S.correct_count, total_count = S.total_count, accuracy_rate = S.accuracy_rate, parent_topic = COALESCE(NULLIF(S.parent_topic, ''), T.parent_topic)
-          WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate, parent_topic) VALUES (S.user_id, S.sub_category, S.subject, S.correct_count, S.total_count, S.accuracy_rate, S.parent_topic);
+          WHEN MATCHED THEN UPDATE SET correct_count = S.correct_count, total_count = S.total_count, accuracy_rate = S.accuracy_rate, parent_topic = COALESCE(NULLIF(S.parent_topic, ''), T.parent_topic), good_at = COALESCE(NULLIF(S.good_at, ''), T.good_at), not_good_at = COALESCE(NULLIF(S.not_good_at, ''), T.not_good_at)
+          WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate, parent_topic, good_at, not_good_at) VALUES (S.user_id, S.sub_category, S.subject, S.correct_count, S.total_count, S.accuracy_rate, S.parent_topic, S.good_at, S.not_good_at);
         `);
       }
 

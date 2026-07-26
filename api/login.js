@@ -383,9 +383,9 @@ export default async function handler(req, res) {
          WHERE user_id = @username
         ) AS analysis_json,
         
-        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(topic, good_at, not_good_at, parent_topic)))
-         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-         WHERE user_id = @username
+        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(sub_category AS topic, good_at, not_good_at, parent_topic)))
+         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+         WHERE user_id = @username AND (good_at IS NOT NULL OR not_good_at IS NOT NULL)
         ) AS breakdown_json,
         
         (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(exam_id, subject, config_json, problems_json, answers_json, frq_submissions_json, current_question_index, created_at) ORDER BY created_at DESC))

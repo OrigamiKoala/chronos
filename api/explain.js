@@ -103,9 +103,9 @@ export default async function handler(req, res) {
            FROM \`${projectId}\`.\`chronos_users\`.\`user_mistake_analysis\` m
            WHERE m.user_id = v.student_id) as mistakes,
            
-          (SELECT ARRAY_AGG(STRUCT(t.subject, t.topic, t.good_at, t.not_good_at)) 
-           FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` t
-           WHERE t.user_id = v.student_id) as topics,
+          (SELECT ARRAY_AGG(STRUCT(t.subject, t.sub_category AS topic, t.good_at, t.not_good_at)) 
+           FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` t
+           WHERE t.user_id = v.student_id AND (t.good_at IS NOT NULL OR t.not_good_at IS NOT NULL)) as topics,
            
           (SELECT ARRAY_AGG(STRUCT(w.subject, w.detailed_analysis)) 
            FROM \`${projectId}\`.\`chronos_users\`.\`user_weakness_analysis\` w
