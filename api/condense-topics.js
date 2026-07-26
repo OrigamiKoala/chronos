@@ -136,26 +136,36 @@ export default async function handler(req, res) {
       };
     });
 
-    const prompt = `You are an expert tutor and curriculum designer. Analyze the following topic breakdown data for a student.
+    const prompt = `You are an expert tutor and curriculum designer specializing in USNCO (US National Chemistry Olympiad) standards. Analyze the following topic breakdown data for a student.
 
 Your tasks:
 1. AGGRESSIVE SUBTOPIC CLUSTERING & MERGES: Eliminate hyper-specific one-off subtopic fragmentation by aggressively merging low-count or narrowly phrased subtopics into clean, standardized subtopic clusters within the SAME subject.
    - Merge "Determination of Rate Laws", "Initial Rates Method", and "Reaction Orders" into "Rate Laws & Reaction Orders".
    - Merge "Arrhenius Equation Calculations" and "Activation Energy" into "Arrhenius & Activation Energy".
-   - Combine synonymous terms (e.g., "kinetics", "chemical kinetics", and "reaction kinetics" -> "Chemical Kinetics").
+   - Combine synonymous terms.
 
-2. MANDATORY PARENT CLASSIFICATION & ROLLUPS: Map EVERY subtopic in the input to an overarching parent category for its subject.
-   - Examples for Chemistry: "Volumetric Analysis" -> "Descriptive & Laboratory Chemistry"; "Arrhenius Equation" -> "Chemical Kinetics"; "VSEPR Theory" -> "Atomic Structure & Bonding"; "Hess's Law" -> "Thermodynamics"; "NMR Spectroscopy" -> "Organic Chemistry"; "Buffer Solutions" -> "Acids & Bases".
-   - Examples for Physics: "Projectile Motion" -> "Kinematics"; "Snell's Law" -> "Optics"; "Torque" -> "Dynamics".
-   - Examples for Math: "Integration by Parts" -> "Calculus"; "Matrices" -> "Algebra".
-   - Every single subtopic must appear in at least one parent_rollup's child_topics array.
+2. MANDATORY USNCO PARENT CLASSIFICATION & ROLLUPS: Map EVERY Chemistry subtopic in the input to EXACTLY ONE of the official 10 USNCO Standard Topics below:
+   1. Stoichiometry & Solutions
+   2. Descriptive & Laboratory Chemistry
+   3. States of Matter & Phase Changes
+   4. Thermodynamics
+   5. Kinetics
+   6. Equilibrium
+   7. Acids & Bases
+   8. Electrochemistry
+   9. Atomic Structure & Periodicity
+   10. Organic Chemistry & Biochemistry
+
+   For Physics: Use standard categories (Kinematics, Dynamics, Mechanics, Optics, Electromagnetism, Waves & Oscillations, Quantum Mechanics).
+   For Math: Use standard categories (Algebra, Calculus, Geometry & Trigonometry, Statistics & Probability).
+   Every single subtopic must appear in at least one parent_rollup's child_topics array under one of these standard parent categories.
 
 CRITICAL CONSTRAINTS:
-1. NO ORPHAN SUBTOPICS: Every subtopic must be mapped to a standard parent category in parent_rollups.
-2. DO NOT combine completely distinct major fields or unrelated concepts (e.g., do not merge Thermodynamics into Kinetics).
-3. Synthesize "good_at" and "not_good_at" descriptions when topics are merged or rolled up.
-4. Target names MUST be clean, standardized Title-Case.
-5. NEVER use generic subject names like "Chemistry", "Physics", "Math", "Science", or "General Topics" as parent_topic. parent_topic MUST be a specific major sub-field (e.g., "Chemical Kinetics", "Thermodynamics", "Organic Chemistry", "Descriptive & Laboratory Chemistry").
+1. STRICT USNCO TOPICS FOR CHEMISTRY: parent_topic for Chemistry MUST be EXACTLY one of the 10 official USNCO topics listed above. DO NOT invent arbitrary overall titles (e.g. DO NOT use "Heterogeneous Systems", "Spectroscopy", "Chemistry", "General Topics", or "Phase Equilibria" as parent_topic).
+2. NO ORPHAN SUBTOPICS: Every subtopic must be mapped to one of the 10 standard USNCO parent categories in parent_rollups.
+3. DO NOT combine completely distinct major fields or unrelated concepts.
+4. Synthesize "good_at" and "not_good_at" descriptions when topics are merged or rolled up.
+5. Target names MUST be clean, standardized Title-Case.
 
 Input Data:
 ${JSON.stringify(inputTopics, null, 2)}

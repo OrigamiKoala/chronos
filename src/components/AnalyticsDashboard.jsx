@@ -35,46 +35,57 @@ const getSubjectColor = (subject) => {
 };
 
 const CANONICAL_OVERALL_MAP = {
-  'kinetics': 'Chemical Kinetics',
-  'chemical kinetics': 'Chemical Kinetics',
-  'reaction kinetics': 'Chemical Kinetics',
+  // USNCO 10 Standard Chemistry Topics
+  'stoichiometry': 'Stoichiometry & Solutions',
+  'solutions': 'Stoichiometry & Solutions',
+  'stoichiometry & solutions': 'Stoichiometry & Solutions',
+  'stoichiometry and solutions': 'Stoichiometry & Solutions',
 
-  'equilibrium': 'Chemical Equilibrium',
-  'chemical equilibrium': 'Chemical Equilibrium',
+  'descriptive chemistry': 'Descriptive & Laboratory Chemistry',
+  'laboratory chemistry': 'Descriptive & Laboratory Chemistry',
+  'descriptive & laboratory chemistry': 'Descriptive & Laboratory Chemistry',
+  'descriptive & laboratory': 'Descriptive & Laboratory Chemistry',
+  'laboratory techniques': 'Descriptive & Laboratory Chemistry',
+  'analytical chemistry': 'Descriptive & Laboratory Chemistry',
+
+  'states of matter': 'States of Matter & Phase Changes',
+  'gases': 'States of Matter & Phase Changes',
+  'states of matter & phase changes': 'States of Matter & Phase Changes',
+  'phase changes': 'States of Matter & Phase Changes',
+  'states of matter & gases': 'States of Matter & Phase Changes',
 
   'thermodynamics': 'Thermodynamics',
   'thermochemistry': 'Thermodynamics',
+
+  'kinetics': 'Kinetics',
+  'chemical kinetics': 'Kinetics',
+  'reaction kinetics': 'Kinetics',
+
+  'equilibrium': 'Equilibrium',
+  'chemical equilibrium': 'Equilibrium',
 
   'acid-base chemistry': 'Acids & Bases',
   'acids and bases': 'Acids & Bases',
   'acids & bases': 'Acids & Bases',
 
-  'atomic structure': 'Atomic Structure & Bonding',
-  'chemical bonding': 'Atomic Structure & Bonding',
-  'atomic structure & bonding': 'Atomic Structure & Bonding',
-
-  'stoichiometry': 'Stoichiometry',
   'electrochemistry': 'Electrochemistry',
-  'organic chemistry': 'Organic Chemistry',
-  'inorganic chemistry': 'Inorganic Chemistry',
-  'analytical chemistry': 'Analytical Chemistry',
-  'biochemistry': 'Biochemistry',
-  'nuclear chemistry': 'Nuclear Chemistry',
-  'periodic table': 'Periodic Trends',
-  'periodic trends': 'Periodic Trends',
-  'descriptive & laboratory chemistry': 'Descriptive & Laboratory Chemistry',
-  'descriptive & laboratory': 'Descriptive & Laboratory Chemistry',
-  'descriptive chemistry': 'Descriptive & Laboratory Chemistry',
-  'laboratory chemistry': 'Descriptive & Laboratory Chemistry',
-  'laboratory techniques': 'Descriptive & Laboratory Chemistry',
-  'volumetric analysis': 'Descriptive & Laboratory Chemistry',
-  'gravimetric analysis': 'Descriptive & Laboratory Chemistry',
-  'qualitative analysis': 'Descriptive & Laboratory Chemistry',
 
-  'solutions': 'Solutions',
-  'states of matter': 'States of Matter & Gases',
-  'gases': 'States of Matter & Gases',
+  'atomic structure': 'Atomic Structure & Periodicity',
+  'atomic structure & bonding': 'Atomic Structure & Periodicity',
+  'atomic structure & periodicity': 'Atomic Structure & Periodicity',
+  'atomic structure and periodicity': 'Atomic Structure & Periodicity',
+  'chemical bonding': 'Atomic Structure & Periodicity',
+  'periodic trends': 'Atomic Structure & Periodicity',
+  'periodic table': 'Atomic Structure & Periodicity',
 
+  'organic chemistry': 'Organic Chemistry & Biochemistry',
+  'biochemistry': 'Organic Chemistry & Biochemistry',
+  'organic chemistry & biochemistry': 'Organic Chemistry & Biochemistry',
+  'organic chemistry and biochemistry': 'Organic Chemistry & Biochemistry',
+  'inorganic chemistry': 'Descriptive & Laboratory Chemistry',
+  'nuclear chemistry': 'Atomic Structure & Periodicity',
+
+  // Physics
   'mechanics': 'Mechanics',
   'kinematics': 'Kinematics',
   'dynamics': 'Dynamics',
@@ -92,15 +103,12 @@ const CANONICAL_OVERALL_MAP = {
   'relativity': 'Relativity',
   'fluid mechanics': 'Fluid Mechanics',
   'fluids': 'Fluid Mechanics',
-  'astrophysics': 'Astrophysics',
-  'cosmology': 'Astrophysics',
-  'nuclear physics': 'Nuclear Physics',
-  'atomic physics': 'Atomic Physics',
 
+  // Math
   'algebra': 'Algebra',
-  'geometry': 'Geometry',
+  'geometry': 'Geometry & Trigonometry',
   'calculus': 'Calculus',
-  'trigonometry': 'Trigonometry',
+  'trigonometry': 'Geometry & Trigonometry',
   'statistics': 'Statistics & Probability',
   'probability': 'Statistics & Probability',
   'statistics & probability': 'Statistics & Probability',
@@ -122,86 +130,21 @@ const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
   if (!origName) return subject || 'General';
   const cleanLower = origName.trim().toLowerCase();
 
-  // 1. Direct canonical overall topic (e.g., "Kinetics" -> "Chemical Kinetics")
+  // 1. Direct canonical map (e.g. "kinetics" -> "Kinetics")
   if (CANONICAL_OVERALL_MAP[cleanLower]) {
     return CANONICAL_OVERALL_MAP[cleanLower];
   }
-  if (CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')]) {
-    return CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')];
-  }
 
-  // 2. AI-determined parent mapping from AI Condenser
+  // 2. AI Condenser mapping
   if (aiParentMap && aiParentMap[cleanLower]) {
+    const parentClean = aiParentMap[cleanLower].trim().toLowerCase();
+    if (CANONICAL_OVERALL_MAP[parentClean]) {
+      return CANONICAL_OVERALL_MAP[parentClean];
+    }
     return aiParentMap[cleanLower];
   }
 
-  // 3. Domain Keyword Classifier
-  if (cleanLower.includes('kinet') || cleanLower.includes('rate') || cleanLower.includes('arrhenius') || cleanLower.includes('catalys') || cleanLower.includes('mechanism') || cleanLower.includes('half-life')) {
-    return 'Chemical Kinetics';
-  }
-  if (cleanLower.includes('thermo') || cleanLower.includes('heat') || cleanLower.includes('enthalp') || cleanLower.includes('entrop') || cleanLower.includes('gibbs') || cleanLower.includes('calorim') || cleanLower.includes('born-haber') || cleanLower.includes('hess')) {
-    return 'Thermodynamics';
-  }
-  if (cleanLower.includes('equilib') || cleanLower.includes('solub') || cleanLower.includes('ksp') || cleanLower.includes('le chatelier') || cleanLower.includes('complex ion') || cleanLower.includes('precipitat')) {
-    return 'Chemical Equilibrium';
-  }
-  if (cleanLower.includes('acid') || cleanLower.includes('base') || cleanLower.includes('buffer') || cleanLower.includes('ph') || cleanLower.includes('poh') || cleanLower.includes('brønsted') || cleanLower.includes('bronsted')) {
-    return 'Acids & Bases';
-  }
-  if (cleanLower.includes('bond') || cleanLower.includes('vsepr') || cleanLower.includes('orbital') || cleanLower.includes('lewis') || cleanLower.includes('hybrid') || cleanLower.includes('atom') || cleanLower.includes('electronegat') || cleanLower.includes('geometry') || cleanLower.includes('resonance')) {
-    return 'Atomic Structure & Bonding';
-  }
-  if (cleanLower.includes('analyt') || cleanLower.includes('volum') || cleanLower.includes('gravim') || cleanLower.includes('spectr') || cleanLower.includes('beer') || cleanLower.includes('chromat') || cleanLower.includes('lab') || cleanLower.includes('qualitat') || cleanLower.includes('titrat') || cleanLower.includes('technique')) {
-    return 'Descriptive & Laboratory Chemistry';
-  }
-  if (cleanLower.includes('organ') || cleanLower.includes('carbon') || cleanLower.includes('aromat') || cleanLower.includes('stereo') || cleanLower.includes('sn1') || cleanLower.includes('sn2') || cleanLower.includes('nmr') || cleanLower.includes('alkane') || cleanLower.includes('alkene') || cleanLower.includes('huckel') || cleanLower.includes('hückel')) {
-    return 'Organic Chemistry';
-  }
-  if (cleanLower.includes('inorgan') || cleanLower.includes('transition metal') || cleanLower.includes('coordinat') || cleanLower.includes('crystal field') || cleanLower.includes('halogen') || cleanLower.includes('interhalogen')) {
-    return 'Inorganic Chemistry';
-  }
-  if (cleanLower.includes('bio') || cleanLower.includes('enzyme') || cleanLower.includes('protein') || cleanLower.includes('amino') || cleanLower.includes('isoelectr') || cleanLower.includes('dna') || cleanLower.includes('rna') || cleanLower.includes('peptide')) {
-    return 'Biochemistry';
-  }
-  if (cleanLower.includes('stoichiom') || cleanLower.includes('limiting') || cleanLower.includes('yield') || cleanLower.includes('empirical') || cleanLower.includes('mole')) {
-    return 'Stoichiometry';
-  }
-  if (cleanLower.includes('electro') || cleanLower.includes('galvan') || cleanLower.includes('voltaic') || cleanLower.includes('redox') || cleanLower.includes('nernst') || cleanLower.includes('cell')) {
-    return 'Electrochemistry';
-  }
-  if (cleanLower.includes('solut') || cleanLower.includes('molar') || cleanLower.includes('molal') || cleanLower.includes('dilut') || cleanLower.includes('colligat')) {
-    return 'Solutions';
-  }
-  if (cleanLower.includes('gas') || cleanLower.includes('state') || cleanLower.includes('pressure') || cleanLower.includes('pv=nrt') || cleanLower.includes('phase') || cleanLower.includes('van der waals')) {
-    return 'States of Matter & Gases';
-  }
-
-  // Physics
-  if (cleanLower.includes('mechanic') || cleanLower.includes('force') || cleanLower.includes('work') || cleanLower.includes('energy') || cleanLower.includes('momentum') || cleanLower.includes('torque') || cleanLower.includes('rotation')) {
-    return 'Mechanics';
-  }
-  if (cleanLower.includes('kinematic') || cleanLower.includes('velocity') || cleanLower.includes('accelerat') || cleanLower.includes('projectile') || cleanLower.includes('motion') || cleanLower.includes('free fall')) {
-    return 'Kinematics';
-  }
-  if (cleanLower.includes('dynamic') || cleanLower.includes('newton') || cleanLower.includes('friction')) {
-    return 'Dynamics';
-  }
-  if (cleanLower.includes('optic') || cleanLower.includes('light') || cleanLower.includes('refract') || cleanLower.includes('reflect') || cleanLower.includes('lens')) {
-    return 'Optics';
-  }
-  if (cleanLower.includes('electric') || cleanLower.includes('magnet') || cleanLower.includes('charge') || cleanLower.includes('circuit') || cleanLower.includes('field')) {
-    return 'Electromagnetism';
-  }
-
-  // Mathematics
-  if (cleanLower.includes('calculus') || cleanLower.includes('deriv') || cleanLower.includes('integ') || cleanLower.includes('limit') || cleanLower.includes('series')) {
-    return 'Calculus';
-  }
-  if (cleanLower.includes('algeb') || cleanLower.includes('equation') || cleanLower.includes('polynomial') || cleanLower.includes('matrix')) {
-    return 'Algebra';
-  }
-
-  // 4. Standalone Topic Title Case Fallback
+  // 3. Title Case Fallback
   return origName.trim().charAt(0).toUpperCase() + origName.trim().slice(1);
 };
 
