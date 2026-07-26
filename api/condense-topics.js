@@ -224,8 +224,12 @@ Output format must be a JSON object matching this schema:
 
       if (responseObj && Array.isArray(responseObj.merges) && responseObj.merges.length > 0) {
         for (const merge of responseObj.merges) {
-          const { subject, source_topics, target_topic, good_at, not_good_at } = merge;
-          if (!subject || !source_topics || !target_topic || source_topics.length < 2) {
+          const majorTitles = [
+            'stoichiometry & solutions', 'descriptive & laboratory chemistry', 'states of matter & phase changes',
+            'thermodynamics', 'kinetics', 'equilibrium', 'acids & bases', 'electrochemistry',
+            'atomic structure & periodicity', 'organic chemistry & biochemistry'
+          ];
+          if (!subject || !source_topics || !target_topic || source_topics.length < 2 || majorTitles.includes(target_topic.toLowerCase().trim())) {
             continue;
           }
 

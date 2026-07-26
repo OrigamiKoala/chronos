@@ -885,6 +885,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       const normalizedSubName = origName.replace(/\s*\/\s*/g, ' & ').replace(/\s+and\s+/gi, ' & ').trim();
       const subKey = normalizedSubName.toLowerCase();
       if (subKey === majorParent.toLowerCase()) {
+        card.directCorrect += correct;
+        card.directTotal += total;
         continue;
       }
 
@@ -910,8 +912,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0
       })).sort((a, b) => a.accuracy - b.accuracy);
 
-      let totalCorrect = 0;
-      let totalTotal = 0;
+      let totalCorrect = card.directCorrect || 0;
+      let totalTotal = card.directTotal || 0;
       for (const s of subtopics) {
         totalCorrect += s.correct;
         totalTotal += s.total;
