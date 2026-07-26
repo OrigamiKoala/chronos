@@ -68,7 +68,11 @@ export default async function handler(req, res) {
       });
 
       const [examResultRows] = await bq.query({
-        query: `SELECT subject, results_json FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` WHERE user_id = @username`,
+        query: `SELECT h.subject, r.results_json
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` r
+          JOIN \`${projectId}\`.\`chronos_users\`.\`user_exam_history\` h
+            ON r.exam_id = h.exam_id AND r.user_id = h.user_id
+          WHERE r.user_id = @username`,
         params: { username: sanitizedUser }
       });
 

@@ -546,13 +546,48 @@ export default async function handler(req, res) {
       }
     }
 
-    let finalTopicMastery = Object.values(liveMasteryMap).map(m => ({
+    // Consolidate liveMasteryMap entries by normalized subtopic name
+    const consolidatedMasteryMap = {};
+    for (const m of Object.values(liveMasteryMap)) {
+      const normName = String(m.sub_category || '').replace(/\s*\/\s*/g, ' & ').replace(/\s+and\s+/gi, ' & ').trim();
+      if (!normName) continue;
+      const key = `${(m.subject || 'Chemistry').toLowerCase()}:${normName.toLowerCase()}`;
+      if (!consolidatedMasteryMap[key]) {
+        consolidatedMasteryMap[key] = { sub_category: normName, subject: m.subject, correct_count: 0, total_count: 0 };
+      }
+      consolidatedMasteryMap[key].correct_count += m.correct_count;
+      consolidatedMasteryMap[key].total_count += m.total_count;
+    }
+
+    let finalTopicMastery = Object.values(consolidatedMasteryMap).map(m => ({
       ...m,
       accuracy_rate: m.total_count > 0 ? m.correct_count / m.total_count : 0
     })).sort((a, b) => b.accuracy_rate - a.accuracy_rate);
 
-    const strengths = finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate >= 0.70).map(m => ({ topic: m.sub_category, subject: m.subject }));
-    const weaknesses = finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate < 0.65).map(m => ({ topic: m.sub_category, subject: m.subject }));
+    const majorCategoryTitles = new Set([
+      'stoichiometry & solutions', 'descriptive & laboratory chemistry', 'states of matter & phase changes',
+      'thermodynamics', 'kinetics', 'equilibrium', 'acids & bases', 'electrochemistry',
+      'atomic structure & periodicity', 'organic chemistry & biochemistry', 'algebra', 'geometry & trigonometry',
+      'calculus', 'statistics & probability', 'kinematics', 'electromagnetism'
+    ]);
+
+    const seenS = new Set();
+    const strengths = [];
+    for (const m of finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate >= 0.70)) {
+      const lower = m.sub_category.toLowerCase();
+      if (majorCategoryTitles.has(lower) || seenS.has(lower)) continue;
+      seenS.add(lower);
+      strengths.push({ topic: m.sub_category, subject: m.subject });
+    }
+
+    const seenW = new Set();
+    const weaknesses = [];
+    for (const m of finalTopicMastery.filter(m => m.total_count >= 3 && m.accuracy_rate < 0.65)) {
+      const lower = m.sub_category.toLowerCase();
+      if (majorCategoryTitles.has(lower) || seenW.has(lower)) continue;
+      seenW.add(lower);
+      weaknesses.push({ topic: m.sub_category, subject: m.subject });
+    }
 
     let detailedAnalysis = {};
     let topicBreakdowns = {};
