@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SetupScreen } from './components/SetupScreen';
 import { ExamScreen } from './components/ExamScreen';
 import { AnalyticsScreen } from './components/AnalyticsScreen';
