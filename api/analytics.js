@@ -117,7 +117,7 @@ export default async function handler(req, res) {
         WHERE user_id IN UNNEST(@usernames)
       ),
       breakdown AS (
-        SELECT 'breakdown' AS type, TO_JSON_STRING(STRUCT(user_id, topic, parent_topic, good_at, not_good_at)) AS data
+        SELECT 'breakdown' AS type, TO_JSON_STRING(STRUCT(user_id, topic, good_at, not_good_at)) AS data
         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
         WHERE user_id IN UNNEST(@usernames)
       ),

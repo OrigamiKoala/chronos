@@ -311,13 +311,13 @@ Output format must be a JSON object matching this schema:
       }
 
       if (breakdownItems.length > 0) {
-        const selects = breakdownItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.topic)} AS topic, ${escapeSqlStr(item.parent_topic || '')} AS parent_topic, ${escapeSqlStr(item.good_at)} AS good_at, ${escapeSqlStr(item.not_good_at)} AS not_good_at`).join('\nUNION ALL\n');
+        const selects = breakdownItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.topic)} AS topic, ${escapeSqlStr(item.good_at)} AS good_at, ${escapeSqlStr(item.not_good_at)} AS not_good_at`).join('\nUNION ALL\n');
         statements.push(`
           MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
           USING (${selects}) S
           ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
-          WHEN MATCHED THEN UPDATE SET parent_topic = COALESCE(NULLIF(S.parent_topic, ''), T.parent_topic), good_at = COALESCE(NULLIF(S.good_at, ''), T.good_at), not_good_at = COALESCE(NULLIF(S.not_good_at, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP()
-          WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, parent_topic, good_at, not_good_at, updated_at) VALUES (S.user_id, S.subject, S.topic, S.parent_topic, S.good_at, S.not_good_at, CURRENT_TIMESTAMP());
+          WHEN MATCHED THEN UPDATE SET good_at = COALESCE(NULLIF(S.good_at, ''), T.good_at), not_good_at = COALESCE(NULLIF(S.not_good_at, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP()
+          WHEN NOT MATCHED THEN INSERT (user_id, subject, topic, good_at, not_good_at, updated_at) VALUES (S.user_id, S.subject, S.topic, S.good_at, S.not_good_at, CURRENT_TIMESTAMP());
         `);
       }
 
