@@ -282,12 +282,15 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       });
       const d = await res.json();
       if (d && d.success) {
+        if (d.parentRollups) {
+          aiParentRollupsRef.current = { ...aiParentRollupsRef.current, ...d.parentRollups };
+        }
         setData(prev => ({
           ...prev,
           topicMastery: d.topicMastery || prev?.topicMastery,
           topicBreakdown: d.topicBreakdowns || prev?.topicBreakdown || prev?.topicBreakdowns,
           topicBreakdowns: d.topicBreakdowns || prev?.topicBreakdowns || prev?.topicBreakdown,
-          parentRollups: { ...(prev?.parentRollups || {}), ...(d.parentRollups || {}) },
+          parentRollups: { ...(prev?.parentRollups || {}), ...(aiParentRollupsRef.current) },
           strengths: d.strengths || prev?.strengths,
           weaknesses: d.weaknesses || prev?.weaknesses
         }));
@@ -842,7 +845,12 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     }
     if (data?.parentRollups) {
       for (const [child, parent] of Object.entries(data.parentRollups)) {
-        aiParentMap[child.toLowerCase()] = parent;
+        aiParentMap[child.trim().toLowerCase()] = parent;
+      }
+    }
+    if (aiParentRollupsRef.current) {
+      for (const [child, parent] of Object.entries(aiParentRollupsRef.current)) {
+        aiParentMap[child.trim().toLowerCase()] = parent;
       }
     }
 
@@ -1306,121 +1314,219 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 {condensing ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
                 {condensing ? 'Organizing...' : 'Organize Topics (AI)'}
               </button>
-            </div>
-
-            {topicCardsData.length === 0 ? (
+                        {topicCardsData.length === 0 ? (
               <div className="glass-panel analytics-chart-panel">
                 <p className="analytics-empty">Complete exams to build topic mastery data</p>
               </div>
             ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '1rem'
-              }}>
-                {topicCardsData.map(card => {
-                  const badgeColor = card.overallAccuracy >= 70
+              <>
+                {/* Standard Major Topic Cards Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                  gap: '1rem'
+                }}>
+                  {topicCardsData.filter(c => c.title.toLowerCase() !== 'other topics').map(card => {
+                    const badgeColor = card.overallAccuracy >= 70
+                      ? 'rgba(16, 185, 129, 0.2)'
+                      : card.overallAccuracy >= 50
+                        ? 'rgba(245, 158, 11, 0.2)'
+                        : 'rgba(239, 68, 68, 0.2)';
+
+                    const textColor = card.overallAccuracy >= 70
+                      ? '#10b981'
+                      : card.overallAccuracy >= 50
+                        ? '#f59e0b'
+                        : '#ef4444';
+
+                    return (
+                      <div
+                        key={card.title}
+                        className="glass-panel"
+                        style={{
+                          padding: '1.25rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justify: 'space-between',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          background: 'var(--bg-tertiary)'
+                        }}
+                      >
+                        <div>
+                          {/* Header: Title & Overall % Badge */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', gap: '0.5rem' }}>
+                            <h5 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                              {card.title}
+                            </h5>
+                            <span style={{
+                              padding: '0.2rem 0.6rem',
+                              borderRadius: '12px',
+                              fontSize: '0.85rem',
+                              fontWeight: '700',
+                              backgroundColor: badgeColor,
+                              color: textColor,
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {card.overallAccuracy}% <small style={{ opacity: 0.85, fontWeight: 'normal', fontSize: '0.75rem' }}>({card.totalCorrect}/{card.totalTotal})</small>
+                            </span>
+                          </div>
+
+                          {/* Overall Progress Bar */}
+                          <div style={{
+                            height: '6px',
+                            width: '100%',
+                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                            borderRadius: '3px',
+                            overflow: 'hidden',
+                            marginBottom: '1rem'
+                          }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${card.overallAccuracy}%`,
+                              backgroundColor: textColor,
+                              borderRadius: '3px',
+                              transition: 'width 0.4s ease'
+                            }} />
+                          </div>
+
+                          {/* Subtopics List */}
+                          {card.subtopics.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                              {card.subtopics.map(sub => {
+                                const subColor = sub.accuracy >= 70 ? '#10b981' : sub.accuracy >= 50 ? '#f59e0b' : '#ef4444';
+                                return (
+                                  <div
+                                    key={sub.name}
+                                    style={{
+                                      display: 'flex',
+                                      justify: 'space-between',
+                                      alignItems: 'center',
+                                      fontSize: '0.82rem',
+                                      padding: '0.35rem 0.5rem',
+                                      borderRadius: '6px',
+                                      background: 'rgba(0, 0, 0, 0.2)'
+                                    }}
+                                  >
+                                    <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
+                                      {sub.name}
+                                    </span>
+                                    <span style={{ fontWeight: '600', color: subColor }}>
+                                      {sub.accuracy}% <small style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.75rem' }}>({sub.correct}/{sub.total})</small>
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              Overall Topic ({card.totalCorrect}/{card.totalTotal} correct)
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Separate Full-Width "Other Topics" Card */}
+                {(() => {
+                  const otherCard = topicCardsData.find(c => c.title.toLowerCase() === 'other topics');
+                  if (!otherCard) return null;
+
+                  const badgeColor = otherCard.overallAccuracy >= 70
                     ? 'rgba(16, 185, 129, 0.2)'
-                    : card.overallAccuracy >= 50
+                    : otherCard.overallAccuracy >= 50
                       ? 'rgba(245, 158, 11, 0.2)'
                       : 'rgba(239, 68, 68, 0.2)';
 
-                  const textColor = card.overallAccuracy >= 70
+                  const textColor = otherCard.overallAccuracy >= 70
                     ? '#10b981'
-                    : card.overallAccuracy >= 50
+                    : otherCard.overallAccuracy >= 50
                       ? '#f59e0b'
                       : '#ef4444';
 
                   return (
                     <div
-                      key={card.title}
                       className="glass-panel"
                       style={{
+                        marginTop: '1.25rem',
                         padding: '1.25rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justify: 'space-between',
+                        width: '100%',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         background: 'var(--bg-tertiary)'
                       }}
                     >
-                      <div>
-                        {/* Header: Title & Overall % Badge */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', gap: '0.5rem' }}>
-                          <h5 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-                            {card.title}
-                          </h5>
-                          <span style={{
-                            padding: '0.2rem 0.6rem',
-                            borderRadius: '12px',
-                            fontSize: '0.85rem',
-                            fontWeight: '700',
-                            backgroundColor: badgeColor,
-                            color: textColor,
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {card.overallAccuracy}% <small style={{ opacity: 0.85, fontWeight: 'normal', fontSize: '0.75rem' }}>({card.totalCorrect}/{card.totalTotal})</small>
-                          </span>
-                        </div>
-
-                        {/* Overall Progress Bar */}
-                        <div style={{
-                          height: '6px',
-                          width: '100%',
-                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                          borderRadius: '3px',
-                          overflow: 'hidden',
-                          marginBottom: '1rem'
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', gap: '0.5rem' }}>
+                        <h5 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                          Other Topics
+                        </h5>
+                        <span style={{
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '12px',
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          backgroundColor: badgeColor,
+                          color: textColor,
+                          whiteSpace: 'nowrap'
                         }}>
-                          <div style={{
-                            height: '100%',
-                            width: `${card.overallAccuracy}%`,
-                            backgroundColor: textColor,
-                            borderRadius: '3px',
-                            transition: 'width 0.4s ease'
-                          }} />
-                        </div>
+                          {otherCard.overallAccuracy}% <small style={{ opacity: 0.85, fontWeight: 'normal', fontSize: '0.75rem' }}>({otherCard.totalCorrect}/{otherCard.totalTotal})</small>
+                        </span>
+                      </div>
 
-                        {/* Subtopics List */}
-                        {card.subtopics.length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            {card.subtopics.map(sub => {
-                              const subColor = sub.accuracy >= 70 ? '#10b981' : sub.accuracy >= 50 ? '#f59e0b' : '#ef4444';
-                              return (
-                                <div
-                                  key={sub.name}
-                                  style={{
-                                    display: 'flex',
-                                    justify: 'space-between',
-                                    alignItems: 'center',
-                                    fontSize: '0.82rem',
-                                    padding: '0.35rem 0.5rem',
-                                    borderRadius: '6px',
-                                    background: 'rgba(0, 0, 0, 0.2)'
-                                  }}
-                                >
-                                  <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
-                                    {sub.name}
-                                  </span>
-                                  <span style={{ fontWeight: '600', color: subColor }}>
-                                    {sub.accuracy}% <small style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.75rem' }}>({sub.correct}/{sub.total})</small>
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            Overall Topic ({card.totalCorrect}/{card.totalTotal} correct)
-                          </div>
-                        )}
+                      <div style={{
+                        height: '6px',
+                        width: '100%',
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        borderRadius: '3px',
+                        overflow: 'hidden',
+                        marginBottom: '1rem'
+                      }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${otherCard.overallAccuracy}%`,
+                          backgroundColor: textColor,
+                          borderRadius: '3px',
+                          transition: 'width 0.4s ease'
+                        }} />
+                      </div>
+
+                      {/* Multi-column grid for Other Topics subtopics */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                        gap: '0.5rem'
+                      }}>
+                        {otherCard.subtopics.map(sub => {
+                          const subColor = sub.accuracy >= 70 ? '#10b981' : sub.accuracy >= 50 ? '#f59e0b' : '#ef4444';
+                          return (
+                            <div
+                              key={sub.name}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontSize: '0.82rem',
+                                padding: '0.4rem 0.6rem',
+                                borderRadius: '6px',
+                                background: 'rgba(0, 0, 0, 0.2)'
+                              }}
+                            >
+                              <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
+                                {sub.name}
+                              </span>
+                              <span style={{ fontWeight: '600', color: subColor }}>
+                                {sub.accuracy}% <small style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.75rem' }}>({sub.correct}/{sub.total})</small>
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                })()}
+              </>
             )}
-          </div>
+          </div>  </div>
 
           {/* Strengths & Weaknesses */}
           {(() => {
