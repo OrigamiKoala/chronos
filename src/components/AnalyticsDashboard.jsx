@@ -1456,30 +1456,28 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                             <div style={{
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: '0.4rem',
-                              maxHeight: hasMoreSubtopics ? `${MAX_VISIBLE_SUBTOPICS * 2.2}rem` : 'none',
-                              overflow: 'hidden',
-                              position: 'relative'
+                              gap: '0.4rem'
                             }}>
-                              {card.subtopics.slice(0, hasMoreSubtopics ? MAX_VISIBLE_SUBTOPICS : undefined).map(sub => {
+                              {card.subtopics.slice(0, hasMoreSubtopics ? 4 : undefined).map(sub => {
                                 const subColor = sub.accuracy >= 70 ? '#10b981' : sub.accuracy >= 50 ? '#f59e0b' : '#ef4444';
                                 return (
                                   <div
                                     key={sub.name}
                                     style={{
                                       display: 'flex',
-                                      justify: 'space-between',
+                                      justifyContent: 'space-between',
                                       alignItems: 'center',
+                                      gap: '0.5rem',
                                       fontSize: '0.82rem',
                                       padding: '0.35rem 0.5rem',
                                       borderRadius: '6px',
                                       background: 'rgba(0, 0, 0, 0.2)'
                                     }}
                                   >
-                                    <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
+                                    <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
                                       {sub.name}
                                     </span>
-                                    <span style={{ fontWeight: '600', color: subColor }}>
+                                    <span style={{ fontWeight: '600', color: subColor, flexShrink: 0 }}>
                                       {sub.accuracy}% <small style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.75rem' }}>({sub.correct}/{sub.total})</small>
                                     </span>
                                   </div>
@@ -1487,19 +1485,16 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                               })}
                               {hasMoreSubtopics && (
                                 <div style={{
-                                  position: 'absolute',
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  height: '2.2rem',
-                                  background: 'linear-gradient(transparent, var(--bg-tertiary))',
                                   display: 'flex',
-                                  alignItems: 'flex-end',
+                                  alignItems: 'center',
                                   justifyContent: 'center',
-                                  paddingBottom: '0.25rem'
+                                  padding: '0.35rem 0.5rem',
+                                  borderRadius: '6px',
+                                  background: 'rgba(99, 102, 241, 0.08)',
+                                  border: '1px solid rgba(99, 102, 241, 0.15)'
                                 }}>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                                    +{card.subtopics.length - MAX_VISIBLE_SUBTOPICS} more — click to view all
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 500 }}>
+                                    +{card.subtopics.length - 4} more — click to view all
                                   </span>
                                 </div>
                               )}
