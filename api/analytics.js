@@ -537,9 +537,22 @@ function toCanonicalSubtopic(str) {
     const liveMasteryMap = {};
     const parentQuestionSets = {}; // Major topic -> Set of question IDs
 
+    const aiParentMap = {};
+    for (const b of breakdowns) {
+      if (b.topic && b.parent_topic) {
+        aiParentMap[b.topic.trim().toLowerCase()] = b.parent_topic;
+        aiParentMap[toCanonicalSubtopic(b.topic).toLowerCase()] = b.parent_topic;
+      }
+    }
+
     function getMajorTopicName(origName, subject) {
       if (!origName) return subject || 'General';
       const cleanLower = origName.trim().toLowerCase();
+      const canonicalKey = toCanonicalSubtopic(origName).toLowerCase();
+
+      if (aiParentMap[canonicalKey]) return aiParentMap[canonicalKey];
+      if (aiParentMap[cleanLower]) return aiParentMap[cleanLower];
+
       const subj = (subject || '').toLowerCase();
       if (subj === 'chemistry' || !subject || subj === 'general') {
         if (/organ|bio|polymer|hydrocarbon|alk|ester|alcohol|isomer|aromatic|substitut|nucleophil|electrophil|carbonyl|amine|amide|ketone|aldehyd|carboxylic|synthesis|stereochem|grignard|diels|sn1|sn2|e1|e2|chiral|enantiomer|diastereomer|resonance|functional group|reagent|aldol|enolate|peptide|fischer|cyclohexane|epox|carbocation|meso|stereospec/i.test(cleanLower)) return 'Organic Chemistry & Biochemistry';
