@@ -24,10 +24,15 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // 1. Fire repair queries and initial fetch in parallel
+    // 1. Ensure parent_topic column exists in schema FIRST
+    await bq.query({
+      query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
+    }).catch(err => console.error("Add parent_topic column error:", err));
+
+    // 2. Fire repair queries and initial fetch in parallel
     const [breakdownResult] = await Promise.all([
       bq.query({
-        query: `SELECT topic, good_at, not_good_at, subject FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @username`,
+        query: `SELECT topic, good_at, not_good_at, subject, parent_topic FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @username`,
         params: { username: sanitizedUser }
       }),
       bq.query({
@@ -38,9 +43,6 @@ export default async function handler(req, res) {
         query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = @username AND (LOWER(sub_category) = LOWER(subject) OR LOWER(sub_category) IN ('general', 'general topics', 'science', 'kinetics', 'thermodynamics', 'electrochemistry', 'stoichiometry & solutions', 'equilibrium', 'acids & bases', 'descriptive & laboratory chemistry', 'atomic structure & periodicity', 'organic chemistry & biochemistry', 'kinetics & rate laws'))`,
         params: { username: sanitizedUser }
       }).catch(err => console.error("Delete synthetic mastery error:", err)),
-      bq.query({
-        query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
-      }).catch(err => console.error("Add parent_topic column error:", err)),
       bq.query({
         query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` WHERE user_id = @username AND (LOWER(topic) = LOWER(subject) OR LOWER(topic) IN ('general', 'general topics', 'science'))`,
         params: { username: sanitizedUser }

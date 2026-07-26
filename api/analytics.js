@@ -85,6 +85,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    await bq.query({
+      query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
+    }).catch(err => console.error("Add parent_topic column error:", err));
+
     // Fire all 6 independent reads in parallel
     const consolidatedQuery = `
       WITH elo AS (
