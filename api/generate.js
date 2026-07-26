@@ -1166,7 +1166,7 @@ ${examples}
     [
       {
         "id": "A unique string ID",
-        "topic": "A comma-separated string containing AT LEAST ONE Major Topic AND AT LEAST ONE specific Minor Subtopic. For Chemistry, the Major Topic MUST be one of: 'Stoichiometry & Solutions', 'Descriptive & Laboratory Chemistry', 'States of Matter & Phase Changes', 'Thermodynamics', 'Kinetics', 'Equilibrium', 'Acids & Bases', 'Electrochemistry', 'Atomic Structure & Periodicity', 'Organic Chemistry & Biochemistry'. Example: 'Kinetics, Michaelis-Menten Kinetics' or 'Thermodynamics, Hess\\'s Law & Enthalpy' or 'Kinematics, Projectile Motion'.",
+        "topic": "A comma-separated string containing the EXACT string of at least one Major Topic AND at least one specific Minor Subtopic. For Chemistry, you MUST include the EXACT Major Topic string from: 'Stoichiometry & Solutions', 'Descriptive & Laboratory Chemistry', 'States of Matter & Phase Changes', 'Thermodynamics', 'Kinetics', 'Equilibrium', 'Acids & Bases', 'Electrochemistry', 'Atomic Structure & Periodicity', 'Organic Chemistry & Biochemistry'. Example: 'Kinetics, Michaelis-Menten Kinetics' or 'Michaelis-Menten Kinetics, Kinetics' or 'Thermodynamics, Hess\\'s Law & Enthalpy' or 'Kinematics, Projectile Motion'.",
         "question": "The text of the question. It should be challenging, clear, and require working suitable for the question format. CRITICAL: Do not include the answer choices here, if the question is multiple choice.",
         "type": ${typeSchemaDesc},${optionsSchemaDesc}${keywordExpressionSchemaDesc}
         "answer": ${answerSchemaDesc},

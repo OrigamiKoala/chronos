@@ -121,20 +121,14 @@ export default async function handler(req, res) {
         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
         WHERE user_id IN UNNEST(@usernames)
       ),
-      pairings AS (
-        SELECT 'pairings' AS type, TO_JSON_STRING(STRUCT(
-          TRIM(SPLIT(topic, ',')[SAFE_OFFSET(0)]) AS major_topic,
-          TRIM(SPLIT(topic, ',')[SAFE_OFFSET(1)]) AS minor_topic
-        )) AS data
+      raw_topics AS (
+        SELECT 'raw_topic' AS type, TO_JSON_STRING(STRUCT(topic)) AS data
         FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-        WHERE user_id IN UNNEST(@usernames) AND ARRAY_LENGTH(SPLIT(topic, ',')) > 1
+        WHERE user_id IN UNNEST(@usernames) AND topic IS NOT NULL
         UNION DISTINCT
-        SELECT 'pairings' AS type, TO_JSON_STRING(STRUCT(
-          TRIM(SPLIT(topic, ',')[SAFE_OFFSET(0)]) AS major_topic,
-          TRIM(SPLIT(topic, ',')[SAFE_OFFSET(1)]) AS minor_topic
-        )) AS data
+        SELECT 'raw_topic' AS type, TO_JSON_STRING(STRUCT(topic)) AS data
         FROM \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
-        WHERE ARRAY_LENGTH(SPLIT(topic, ',')) > 1
+        WHERE topic IS NOT NULL
       )
       SELECT type, data FROM elo
       UNION ALL
@@ -148,7 +142,7 @@ export default async function handler(req, res) {
       UNION ALL
       SELECT type, data FROM breakdown
       UNION ALL
-      SELECT type, data FROM pairings
+      SELECT type, data FROM raw_topics
     `;
 
     const params = { usernames };
@@ -160,7 +154,7 @@ export default async function handler(req, res) {
     const topicMastery = [];
     const analyses = [];
     const breakdowns = [];
-    const pairings = [];
+    const rawTopicsList = [];
 
     for (const r of rows) {
       try {
@@ -171,7 +165,7 @@ export default async function handler(req, res) {
         else if (r.type === 'mastery') topicMastery.push(parsedData);
         else if (r.type === 'analysis') analyses.push(parsedData);
         else if (r.type === 'breakdown') breakdowns.push(parsedData);
-        else if (r.type === 'pairings') pairings.push(parsedData);
+        else if (r.type === 'raw_topic') rawTopicsList.push(parsedData);
       } catch (parseErr) {
         console.error("Failed to parse row data:", r, parseErr);
       }
@@ -604,10 +598,35 @@ ${JSON.stringify(inputData, null, 2)}
       }
     }
 
+    const CANONICAL_MAJORS = [
+      'Stoichiometry & Solutions',
+      'Descriptive & Laboratory Chemistry',
+      'States of Matter & Phase Changes',
+      'Thermodynamics',
+      'Kinetics',
+      'Equilibrium',
+      'Acids & Bases',
+      'Electrochemistry',
+      'Atomic Structure & Periodicity',
+      'Organic Chemistry & Biochemistry',
+      'Kinematics', 'Dynamics', 'Mechanics', 'Optics', 'Electromagnetism', 'Waves & Oscillations', 'Quantum Mechanics', 'Fluid Mechanics',
+      'Algebra', 'Geometry & Trigonometry', 'Calculus', 'Statistics & Probability', 'Number Theory'
+    ];
+
     const parentRollups = {};
-    for (const p of pairings) {
-      if (p.major_topic && p.minor_topic) {
-        parentRollups[p.minor_topic.toLowerCase()] = p.major_topic;
+    for (const r of rawTopicsList) {
+      if (!r.topic || typeof r.topic !== 'string') continue;
+      const parts = r.topic.split(',').map(p => p.trim()).filter(Boolean);
+      if (parts.length < 2) continue;
+
+      const majorTag = parts.find(p => CANONICAL_MAJORS.some(m => m.toLowerCase() === p.toLowerCase()));
+      if (majorTag) {
+        const canonicalMajor = CANONICAL_MAJORS.find(m => m.toLowerCase() === majorTag.toLowerCase()) || majorTag;
+        for (const part of parts) {
+          if (part.toLowerCase() !== majorTag.toLowerCase()) {
+            parentRollups[part.toLowerCase()] = canonicalMajor;
+          }
+        }
       }
     }
     for (const b of breakdowns) {
