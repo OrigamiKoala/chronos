@@ -116,14 +116,20 @@ export default async function handler(req, res) {
     });
 
     const prompt = `You are an expert tutor and curriculum designer. Analyze the following topic breakdown data for a student.
-Your task is to identify and consolidate duplicate or redundant topic names within the SAME subject (e.g., "reaction kinetics" and "kinetics" should be merged into "Kinetics").
 
-Rules:
-1. ONLY combine topics that are truly duplicates or extremely similar variants representing the same concept within the same subject.
-2. DO NOT combine topics that are distinct sub-concepts or specialized fields (e.g., "kinetics" and "michealis-menten kinetics" or "enzyme kinetics" MUST remain separate).
-3. If two or more topics are combined, synthesize their "good_at" and "not_good_at" descriptions into concise, clear, and comprehensive summaries.
-4. For the target topic name, use clean, standardized title-case capitalization (e.g. "Kinetics" or "Reaction Kinetics").
-5. If no topics need to be combined, return an empty array for "merges".
+Your tasks:
+1. MERGES: Identify and consolidate duplicate or synonymous topic names within the SAME subject that represent the EXACT SAME concept (e.g., "kinetics", "chemical kinetics", and "reaction kinetics" should be merged into "Chemical Kinetics").
+   - DO NOT merge distinct specialized sub-topics into general ones (e.g., do NOT merge "michaelis-menten kinetics" into "kinetics").
+
+2. PARENT ROLLUPS & RETAGGING: Identify specific detailed sub-topics (e.g., "Michaelis-Menten Kinetics", "Hess's Law", "Nernst Equation", "Snell's Law") and map them to their standard overall parent category (e.g., "Chemical Kinetics", "Thermodynamics", "Electrochemistry", "Optics").
+   - This ensures questions tagged with narrow sub-topics are also tagged with the overall parent topic (e.g., "Chemical Kinetics, Michaelis-Menten Kinetics").
+
+CRITICAL CONSTRAINTS:
+1. DO combine topic names that are synonymous or equivalent descriptions of the same concept (e.g. "kinetics" and "chemical kinetics", "calc" and "calculus").
+2. DO NOT combine topics that are distinct specialized sub-concepts or advanced branches into single topics! (e.g., keep "michaelis-menten kinetics" as its own detailed topic).
+3. For parent_rollups, map specific sub-topics to their appropriate overall parent topic (e.g., "Michaelis-Menten Kinetics" -> parent "Chemical Kinetics", "Hess's Law" -> parent "Thermodynamics").
+4. For target topic names, use clean, standardized title-case capitalization (e.g. "Chemical Kinetics" or "Michaelis-Menten Kinetics").
+5. If no topics need to be combined or rolled up, return empty arrays for "merges" and "parent_rollups".
 
 Input Data:
 ${JSON.stringify(inputTopics, null, 2)}
@@ -132,11 +138,20 @@ Output format must be a JSON object matching this schema:
 {
   "merges": [
     {
-      "subject": "the subject of the topics (e.g. Chemistry)",
+      "subject": "the subject (e.g. Chemistry)",
       "source_topics": ["array of exact topic names to merge"],
       "target_topic": "the new consolidated topic name",
       "good_at": "the synthesized description of what the user is good at in this topic",
       "not_good_at": "the synthesized description of what the user needs help with in this topic"
+    }
+  ],
+  "parent_rollups": [
+    {
+      "subject": "the subject (e.g. Chemistry)",
+      "parent_topic": "the overarching parent category (e.g. Chemical Kinetics)",
+      "child_topics": ["array of specific sub-topic names that belong under this parent category"],
+      "good_at": "the synthesized description for the overall parent category",
+      "not_good_at": "the synthesized description for the overall parent category"
     }
   ]
 }`;
@@ -171,8 +186,8 @@ Output format must be a JSON object matching this schema:
           for (const source of source_topics) {
             const m = masteryRows.find(row => row.sub_category.toLowerCase() === source.toLowerCase() && row.subject.toLowerCase() === subject.toLowerCase());
             if (m) {
-              mergedCorrect += Number(m.correct_count || 0);
-              mergedTotal += Number(m.total_count || 0);
+              mergedCorrect += Number((m.correct_count?.value ?? m.correct_count) || 0);
+              mergedTotal += Number((m.total_count?.value ?? m.total_count) || 0);
             }
           }
           const mergedAccuracy = mergedTotal > 0 ? (mergedCorrect / mergedTotal) : 0.0;
@@ -257,6 +272,116 @@ Output format must be a JSON object matching this schema:
           }).catch(err => console.error("Failed to update pregenerated_questions for condense:", err));
 
           mergedCount++;
+        }
+      }
+
+      // Process parent rollups so that specific sub-topics are also factored into overall parent categories
+      if (responseObj && Array.isArray(responseObj.parent_rollups) && responseObj.parent_rollups.length > 0) {
+        for (const rollup of responseObj.parent_rollups) {
+          const { subject, parent_topic, child_topics, good_at, not_good_at } = rollup;
+          if (!subject || !parent_topic || !Array.isArray(child_topics) || child_topics.length === 0) {
+            continue;
+          }
+
+          // Refetch fresh mastery rows to include any merges that just happened
+          const [currentMasteryRows] = await bq.query({
+            query: `SELECT sub_category, subject, correct_count, total_count, accuracy_rate
+              FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
+              WHERE user_id = @username AND LOWER(subject) = LOWER(@subject)`,
+            params: { username: sanitizedUser, subject }
+          });
+
+          let rollupCorrect = 0;
+          let rollupTotal = 0;
+          const lowerChildren = child_topics.map(c => c.toLowerCase());
+          lowerChildren.push(parent_topic.toLowerCase());
+
+          for (const m of currentMasteryRows) {
+            const catName = (m.sub_category || '').toLowerCase();
+            if (lowerChildren.includes(catName)) {
+              rollupCorrect += Number((m.correct_count?.value ?? m.correct_count) || 0);
+              rollupTotal += Number((m.total_count?.value ?? m.total_count) || 0);
+            }
+          }
+
+          if (rollupTotal > 0) {
+            const rollupAccuracy = rollupCorrect / rollupTotal;
+
+            // 1. Upsert parent topic into breakdown
+            await bq.query({
+              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
+                USING (SELECT @username AS user_id, @subject AS subject, @target AS topic) S
+                ON T.user_id = S.user_id AND T.subject = S.subject AND T.topic = S.topic
+                WHEN MATCHED THEN
+                  UPDATE SET good_at = COALESCE(NULLIF(@goodAt, ''), T.good_at), not_good_at = COALESCE(NULLIF(@notGoodAt, ''), T.not_good_at), updated_at = CURRENT_TIMESTAMP()
+                WHEN NOT MATCHED THEN
+                  INSERT (user_id, subject, topic, good_at, not_good_at, updated_at)
+                  VALUES (@username, @subject, @target, @goodAt, @notGoodAt, CURRENT_TIMESTAMP())`,
+              params: { username: sanitizedUser, subject, target: parent_topic, goodAt: good_at || '', notGoodAt: not_good_at || '' }
+            }).catch(err => console.error("Failed to rollup parent breakdown:", err));
+
+            // 2. Upsert parent topic into mastery
+            await bq.query({
+              query: `MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T
+                USING (SELECT @username AS user_id, @subject AS subject, @target AS sub_category) S
+                ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category
+                WHEN MATCHED THEN
+                  UPDATE SET correct_count = @correct, total_count = @total, accuracy_rate = @accuracy
+                WHEN NOT MATCHED THEN
+                  INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate)
+                  VALUES (@username, @target, @subject, @correct, @total, @accuracy)`,
+              params: { username: sanitizedUser, subject, target: parent_topic, correct: rollupCorrect, total: rollupTotal, accuracy: rollupAccuracy },
+              types: { correct: 'INT64', total: 'INT64', accuracy: 'FLOAT64' }
+            }).catch(err => console.error("Failed to rollup parent mastery:", err));
+
+            // 3. Retag questions in pregenerated_questions to include parent_topic if missing
+            await bq.query({
+              query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
+                SET topic = ARRAY_TO_STRING(
+                  ARRAY(
+                    SELECT DISTINCT TRIM(part)
+                    FROM UNNEST(SPLIT(CONCAT(@parentTopic, ', ', topic), ',')) part
+                    WHERE TRIM(part) != ''
+                  ),
+                  ', '
+                )
+                WHERE LOWER(subject) = LOWER(@subject)
+                  AND EXISTS (
+                    SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part
+                    WHERE LOWER(TRIM(part)) IN UNNEST(@childSources)
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part
+                    WHERE LOWER(TRIM(part)) = LOWER(@parentTopic)
+                  )`,
+              params: { subject, parentTopic: parent_topic, childSources: child_topics.map(c => c.toLowerCase()) }
+            }).catch(err => console.error("Failed to retag pregenerated_questions for parent rollup:", err));
+
+            // 4. Retag questions in user_wrong_problems to include parent_topic if missing
+            await bq.query({
+              query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+                SET topic = ARRAY_TO_STRING(
+                  ARRAY(
+                    SELECT DISTINCT TRIM(part)
+                    FROM UNNEST(SPLIT(CONCAT(@parentTopic, ', ', topic), ',')) part
+                    WHERE TRIM(part) != ''
+                  ),
+                  ', '
+                )
+                WHERE user_id = @username AND LOWER(subject) = LOWER(@subject)
+                  AND EXISTS (
+                    SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part
+                    WHERE LOWER(TRIM(part)) IN UNNEST(@childSources)
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part
+                    WHERE LOWER(TRIM(part)) = LOWER(@parentTopic)
+                  )`,
+              params: { username: sanitizedUser, subject, parentTopic: parent_topic, childSources: child_topics.map(c => c.toLowerCase()) }
+            }).catch(err => console.error("Failed to retag user_wrong_problems for parent rollup:", err));
+
+            mergedCount++;
+          }
         }
       }
     }

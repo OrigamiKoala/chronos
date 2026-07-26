@@ -25,7 +25,29 @@ const CHART_COLORS = {
   concept: { line: '#ef4444', bg: 'rgba(239, 68, 68, 0.25)' },
   intuition: { line: '#a855f7', bg: 'rgba(168, 85, 247, 0.2)' },
   efficiency: { line: '#06b6d4', bg: 'rgba(6, 182, 212, 0.3)' },
-  time: { line: '#ec4899', bg: 'rgba(236, 72, 153, 0.2)' }
+};
+
+const OVERALL_TOPIC_NAMES = new Set([
+  'stoichiometry', 'thermodynamics', 'thermochemistry', 'kinetics', 'chemical kinetics',
+  'chemical equilibrium', 'equilibrium', 'electrochemistry', 'organic chemistry',
+  'inorganic chemistry', 'analytical chemistry', 'biochemistry', 'acids & bases',
+  'acids and bases', 'acid-base chemistry', 'atomic structure', 'chemical bonding',
+  'atomic structure & bonding', 'nuclear chemistry', 'periodic table', 'periodic trends',
+  'solutions', 'states of matter', 'gases',
+  'mechanics', 'kinematics', 'dynamics', 'newtonian mechanics', 'thermal physics',
+  'electromagnetism', 'electricity & magnetism', 'optics', 'geometrical optics',
+  'wave optics', 'quantum mechanics', 'quantum physics', 'waves & oscillations',
+  'oscillations', 'relativity', 'fluid mechanics', 'fluids', 'astrophysics', 'cosmology',
+  'nuclear physics', 'atomic physics',
+  'algebra', 'geometry', 'calculus', 'trigonometry', 'statistics', 'probability',
+  'statistics & probability', 'number theory', 'linear algebra', 'differential equations',
+  'discrete math', 'complex numbers', 'multivariable calculus'
+]);
+
+const isOverallTopic = (topicName) => {
+  if (!topicName) return false;
+  const clean = topicName.trim().toLowerCase();
+  return OVERALL_TOPIC_NAMES.has(clean) || OVERALL_TOPIC_NAMES.has(clean + 's');
 };
 
 const baseChartOptions = {
@@ -632,15 +654,8 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     };
   }, [data]);
 
-  // Topic mastery horizontal bar
-  const topicChartData = useMemo(() => {
-    if (!data?.topicMastery?.length) return null;
-    const filtered = (selectedSubjectFilter === 'All'
-      ? data.topicMastery
-      : data.topicMastery.filter(t => t.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase())
-    ).filter(t => Number((t.total_count?.value ?? t.total_count) || 0) > 0)
-     .sort((a, b) => Number((a.accuracy_rate?.value ?? a.accuracy_rate) || 0) - Number((b.accuracy_rate?.value ?? b.accuracy_rate) || 0)); // lowest accuracy on top
-
+  const buildChartDataFromList = (filtered) => {
+    if (!filtered || filtered.length === 0) return null;
     const labels = new Array(filtered.length);
     const chartData = new Array(filtered.length);
     const backgroundColor = new Array(filtered.length);
@@ -677,6 +692,24 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         barPercentage: 0.6,
         minBarLength: 4
       }]
+    };
+  };
+
+  // Split topic mastery into overall topics and detailed sub-topics
+  const { overallTopicChartData, detailedTopicChartData } = useMemo(() => {
+    if (!data?.topicMastery?.length) return { overallTopicChartData: null, detailedTopicChartData: null };
+    const filtered = (selectedSubjectFilter === 'All'
+      ? data.topicMastery
+      : data.topicMastery.filter(t => t.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase())
+    ).filter(t => Number((t.total_count?.value ?? t.total_count) || 0) > 0)
+     .sort((a, b) => Number((a.accuracy_rate?.value ?? a.accuracy_rate) || 0) - Number((b.accuracy_rate?.value ?? b.accuracy_rate) || 0)); // lowest accuracy on top
+
+    const overallList = filtered.filter(t => isOverallTopic(t.sub_category));
+    const detailedList = filtered.filter(t => !isOverallTopic(t.sub_category));
+
+    return {
+      overallTopicChartData: buildChartDataFromList(overallList),
+      detailedTopicChartData: buildChartDataFromList(detailedList)
     };
   }, [data, selectedSubjectFilter]);
 
@@ -1025,51 +1058,81 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
           </div>{/* end analytics-grid */}
 
-          {/* Topic Mastery — full width, two columns */}
-          {topicChartData?.labels?.length ? (() => {
-            const mid = Math.ceil(topicChartData.labels.length / 2);
-            const leftData = {
-              labels: topicChartData.labels.slice(0, mid),
-              datasets: [{ ...topicChartData.datasets[0], data: topicChartData.datasets[0].data.slice(0, mid), backgroundColor: topicChartData.datasets[0].backgroundColor.slice(0, mid), borderColor: topicChartData.datasets[0].borderColor.slice(0, mid) }]
+          {/* Overall & Detailed Topic Breakdown Charts */}
+          {(() => {
+            const renderTopicBarChart = (chartData, title, iconColor = "var(--success)", emptyMsg = "Complete exams to build topic mastery data") => {
+              if (!chartData?.labels?.length) {
+                return (
+                  <div className="glass-panel analytics-chart-panel" style={{ marginTop: '1rem' }}>
+                    <h4 className="analytics-chart-title">
+                      <BarChart3 size={18} color={iconColor} /> {title}
+                    </h4>
+                    <p className="analytics-empty">{emptyMsg}</p>
+                  </div>
+                );
+              }
+
+              const totalBars = chartData.labels.length;
+              const chartOpts = {
+                ...baseChartOptions,
+                indexAxis: 'y',
+                plugins: { ...baseChartOptions.plugins, legend: { display: false }, title: { display: false } },
+                scales: { ...baseChartOptions.scales, x: { ...baseChartOptions.scales.x, min: 0, max: 100 } }
+              };
+              const rowHeight = 32;
+
+              if (totalBars <= 4) {
+                const h = Math.max(150, totalBars * rowHeight);
+                return (
+                  <div className="glass-panel analytics-chart-panel" style={{ marginTop: '1rem' }}>
+                    <h4 className="analytics-chart-title">
+                      <BarChart3 size={18} color={iconColor} /> {title}
+                    </h4>
+                    <div style={{ height: h + 'px' }}>
+                      <Bar data={chartData} options={chartOpts} />
+                    </div>
+                  </div>
+                );
+              }
+
+              const mid = Math.ceil(totalBars / 2);
+              const leftData = {
+                labels: chartData.labels.slice(0, mid),
+                datasets: [{ ...chartData.datasets[0], data: chartData.datasets[0].data.slice(0, mid), backgroundColor: chartData.datasets[0].backgroundColor.slice(0, mid), borderColor: chartData.datasets[0].borderColor.slice(0, mid) }]
+              };
+              const rightData = {
+                labels: chartData.labels.slice(mid),
+                datasets: [{ ...chartData.datasets[0], data: chartData.datasets[0].data.slice(mid), backgroundColor: chartData.datasets[0].backgroundColor.slice(mid), borderColor: chartData.datasets[0].borderColor.slice(mid) }]
+              };
+              const leftH = Math.max(160, mid * rowHeight);
+              const rightH = Math.max(160, (totalBars - mid) * rowHeight);
+
+              return (
+                <div className="topic-breakdown-grid glass-panel analytics-chart-panel" style={{ marginTop: '1rem' }}>
+                  <div>
+                    <h4 className="analytics-chart-title">
+                      <BarChart3 size={18} color={iconColor} /> {title}
+                    </h4>
+                    <div style={{ height: leftH + 'px' }}>
+                      <Bar data={leftData} options={chartOpts} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                    <div style={{ height: rightH + 'px' }}>
+                      <Bar data={rightData} options={chartOpts} />
+                    </div>
+                  </div>
+                </div>
+              );
             };
-            const rightData = {
-              labels: topicChartData.labels.slice(mid),
-              datasets: [{ ...topicChartData.datasets[0], data: topicChartData.datasets[0].data.slice(mid), backgroundColor: topicChartData.datasets[0].backgroundColor.slice(mid), borderColor: topicChartData.datasets[0].borderColor.slice(mid) }]
-            };
-            const chartOpts = {
-              ...baseChartOptions,
-              indexAxis: 'y',
-              plugins: { ...baseChartOptions.plugins, legend: { display: false }, title: { display: false } },
-              scales: { ...baseChartOptions.scales, x: { ...baseChartOptions.scales.x, min: 0, max: 100 } }
-            };
-            const rowHeight = 32;
-            const leftH = Math.max(200, mid * rowHeight);
-            const rightH = Math.max(200, (topicChartData.labels.length - mid) * rowHeight);
+
             return (
-              <div className="topic-breakdown-grid glass-panel analytics-chart-panel" style={{ marginTop: '1rem' }}>
-                <div>
-                  <h4 className="analytics-chart-title">
-                    <BarChart3 size={18} color="var(--success)" /> Topic Breakdown
-                  </h4>
-                  <div style={{ height: leftH + 'px' }}>
-                    <Bar data={leftData} options={chartOpts} />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                  <div style={{ height: rightH + 'px' }}>
-                    <Bar data={rightData} options={chartOpts} />
-                  </div>
-                </div>
-              </div>
+              <>
+                {renderTopicBarChart(overallTopicChartData, "Overall Topic Breakdown", "var(--success)", "No overall topic data available yet")}
+                {renderTopicBarChart(detailedTopicChartData, "Detailed Topic Breakdown", "var(--accent-primary)", "No detailed topic breakdown available yet")}
+              </>
             );
-          })() : (
-            <div className="glass-panel analytics-chart-panel" style={{ marginTop: '1rem' }}>
-              <h4 className="analytics-chart-title">
-                <BarChart3 size={18} color="var(--success)" /> Topic Breakdown
-              </h4>
-              <p className="analytics-empty">Complete exams to build topic mastery data</p>
-            </div>
-          )}
+          })()}
 
           {/* Strengths & Weaknesses */}
           {(() => {
