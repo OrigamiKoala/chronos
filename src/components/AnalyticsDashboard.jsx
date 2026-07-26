@@ -829,6 +829,42 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
   }, [data]);
 
   // Topic mastery mini-cards data grouped by overall topic via AI parent map
+  const toCanonicalSubtopic = (str) => {
+    if (!str) return '';
+    let s = String(str).trim()
+      .replace(/\s*\/\s*/g, ' & ')
+      .replace(/\s+and\s+/gi, ' & ')
+      .replace(/\s+/g, ' ');
+
+    let lower = s.toLowerCase();
+
+    lower = lower
+      .replace(/equilibria$/i, 'equilibrium')
+      .replace(/mechanisms$/i, 'mechanism')
+      .replace(/laws$/i, 'law')
+      .replace(/reactions$/i, 'reaction')
+      .replace(/diagrams$/i, 'diagram')
+      .replace(/plots$/i, 'plot')
+      .replace(/calculations$/i, 'calculation')
+      .replace(/constants$/i, 'constant')
+      .replace(/equations$/i, 'equation')
+      .replace(/cells$/i, 'cell')
+      .replace(/potentials$/i, 'potential')
+      .replace(/relations$/i, 'relation')
+      .replace(/effects$/i, 'effect')
+      .replace(/changes$/i, 'change')
+      .replace(/orders$/i, 'order');
+
+    lower = lower.replace(/^(chemical|general|basic)\s+/i, '');
+
+    if (/^acid-base|^acid base/i.test(lower)) return 'Acid-Base Equilibria';
+    if (/^reaction kinetics|^reaction mechanism|^kinetic/i.test(lower)) return 'Reaction Kinetics & Mechanisms';
+    if (/^first law/i.test(lower)) return 'First Law of Thermodynamics';
+    if (/^solubility/i.test(lower) && !lower.includes('product')) return 'Solubility & Ksp';
+
+    return lower.split(' ').map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+  };
+
   const topicCardsData = useMemo(() => {
     if (!data?.topicMastery?.length) return [];
 
@@ -877,42 +913,6 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       }
       return cardsMap.get(key);
     };
-
-const toCanonicalSubtopic = (str) => {
-  if (!str) return '';
-  let s = String(str).trim()
-    .replace(/\s*\/\s*/g, ' & ')
-    .replace(/\s+and\s+/gi, ' & ')
-    .replace(/\s+/g, ' ');
-
-  let lower = s.toLowerCase();
-
-  lower = lower
-    .replace(/equilibria$/i, 'equilibrium')
-    .replace(/mechanisms$/i, 'mechanism')
-    .replace(/laws$/i, 'law')
-    .replace(/reactions$/i, 'reaction')
-    .replace(/diagrams$/i, 'diagram')
-    .replace(/plots$/i, 'plot')
-    .replace(/calculations$/i, 'calculation')
-    .replace(/constants$/i, 'constant')
-    .replace(/equations$/i, 'equation')
-    .replace(/cells$/i, 'cell')
-    .replace(/potentials$/i, 'potential')
-    .replace(/relations$/i, 'relation')
-    .replace(/effects$/i, 'effect')
-    .replace(/changes$/i, 'change')
-    .replace(/orders$/i, 'order');
-
-  lower = lower.replace(/^(chemical|general|basic)\s+/i, '');
-
-  if (/^acid-base|^acid base/i.test(lower)) return 'Acid-Base Equilibria';
-  if (/^reaction kinetics|^reaction mechanism|^kinetic/i.test(lower)) return 'Reaction Kinetics & Mechanisms';
-  if (/^first law/i.test(lower)) return 'First Law of Thermodynamics';
-  if (/^solubility/i.test(lower) && !lower.includes('product')) return 'Solubility & Ksp';
-
-  return lower.split(' ').map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
-};
 
     for (const item of filtered) {
       const origName = (item.sub_category || item.topic || '').trim();
