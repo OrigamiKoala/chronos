@@ -224,6 +224,7 @@ Output format must be a JSON object matching this schema:
 
       if (responseObj && Array.isArray(responseObj.merges) && responseObj.merges.length > 0) {
         for (const merge of responseObj.merges) {
+          const { subject, source_topics, target_topic, good_at, not_good_at } = merge;
           const majorTitles = [
             'stoichiometry & solutions', 'descriptive & laboratory chemistry', 'states of matter & phase changes',
             'thermodynamics', 'kinetics', 'equilibrium', 'acids & bases', 'electrochemistry',
@@ -305,6 +306,37 @@ Output format must be a JSON object matching this schema:
         }
       }
 
+      // Deduplicate breakdownItems by (subject, topic)
+      const uniqueBreakdownMap = new Map();
+      for (const item of breakdownItems) {
+        if (!item.subject || !item.topic) continue;
+        const key = `${item.subject.toLowerCase()}:${item.topic.toLowerCase()}`;
+        if (!uniqueBreakdownMap.has(key)) {
+          uniqueBreakdownMap.set(key, { ...item });
+        } else {
+          const existing = uniqueBreakdownMap.get(key);
+          if (!existing.good_at && item.good_at) existing.good_at = item.good_at;
+          if (!existing.not_good_at && item.not_good_at) existing.not_good_at = item.not_good_at;
+        }
+      }
+      const uniqueBreakdownItems = Array.from(uniqueBreakdownMap.values());
+
+      // Deduplicate masteryItems by (subject, sub_category)
+      const uniqueMasteryMap = new Map();
+      for (const item of masteryItems) {
+        if (!item.subject || !item.sub_category) continue;
+        const key = `${item.subject.toLowerCase()}:${item.sub_category.toLowerCase()}`;
+        if (!uniqueMasteryMap.has(key)) {
+          uniqueMasteryMap.set(key, { ...item });
+        } else {
+          const existing = uniqueMasteryMap.get(key);
+          existing.correct_count += item.correct_count;
+          existing.total_count += item.total_count;
+          existing.accuracy_rate = existing.total_count > 0 ? (existing.correct_count / existing.total_count) : 0;
+        }
+      }
+      const uniqueMasteryItems = Array.from(uniqueMasteryMap.values());
+
       const safeUser = escapeSqlStr(sanitizedUser);
       const statements = [];
 
@@ -314,8 +346,8 @@ Output format must be a JSON object matching this schema:
         statements.push(`DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` WHERE user_id = ${safeUser} AND LOWER(sub_category) IN (${sourcesList});`);
       }
 
-      if (breakdownItems.length > 0) {
-        const selects = breakdownItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.topic)} AS topic, ${escapeSqlStr(item.good_at)} AS good_at, ${escapeSqlStr(item.not_good_at)} AS not_good_at`).join('\nUNION ALL\n');
+      if (uniqueBreakdownItems.length > 0) {
+        const selects = uniqueBreakdownItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.topic)} AS topic, ${escapeSqlStr(item.good_at)} AS good_at, ${escapeSqlStr(item.not_good_at)} AS not_good_at`).join('\nUNION ALL\n');
         statements.push(`
           MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` T
           USING (${selects}) S
@@ -325,8 +357,8 @@ Output format must be a JSON object matching this schema:
         `);
       }
 
-      if (masteryItems.length > 0) {
-        const selects = masteryItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.sub_category)} AS sub_category, ${item.correct_count} AS correct_count, ${item.total_count} AS total_count, ${item.accuracy_rate} AS accuracy_rate`).join('\nUNION ALL\n');
+      if (uniqueMasteryItems.length > 0) {
+        const selects = uniqueMasteryItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.sub_category)} AS sub_category, ${item.correct_count} AS correct_count, ${item.total_count} AS total_count, ${item.accuracy_rate} AS accuracy_rate`).join('\nUNION ALL\n');
         statements.push(`
           MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T
           USING (${selects}) S
