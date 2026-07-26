@@ -129,19 +129,20 @@ export default async function handler(req, res) {
 Your tasks:
 1. AGGRESSIVE SUBTOPIC CLUSTERING & MERGES: Eliminate hyper-specific one-off subtopic fragmentation by aggressively merging low-count or narrowly phrased subtopics into clean, standardized subtopic clusters within the SAME subject.
    - Merge "Determination of Rate Laws", "Initial Rates Method", and "Reaction Orders" into "Rate Laws & Reaction Orders".
-   - Merge "Arrhenius Equation Calculations" and "Activation Energy" into "Arrhenius Equation & Activation Energy".
-   - Merge "Hückel's Rule" and "Aromatic Compounds" into "Aromaticity".
+   - Merge "Arrhenius Equation Calculations" and "Activation Energy" into "Arrhenius & Activation Energy".
    - Combine synonymous terms (e.g., "kinetics", "chemical kinetics", and "reaction kinetics" -> "Chemical Kinetics").
 
-2. PARENT ROLLUPS & RETAGGING: Map specific subtopics to their standard overall parent category (e.g., "Chemical Kinetics", "Thermodynamics", "Electrochemistry", "Organic Chemistry").
-   - Ensures questions tagged with subtopics are also tagged with their parent category (e.g., "Chemical Kinetics, Rate Laws & Reaction Orders").
+2. MANDATORY PARENT CLASSIFICATION & ROLLUPS: Map EVERY subtopic in the input to an overarching parent category for its subject.
+   - Examples for Chemistry: "Volumetric Analysis" -> "Descriptive & Laboratory Chemistry"; "Arrhenius Equation" -> "Chemical Kinetics"; "VSEPR Theory" -> "Atomic Structure & Bonding"; "Hess's Law" -> "Thermodynamics"; "NMR Spectroscopy" -> "Organic Chemistry"; "Buffer Solutions" -> "Acids & Bases".
+   - Examples for Physics: "Projectile Motion" -> "Kinematics"; "Snell's Law" -> "Optics"; "Torque" -> "Dynamics".
+   - Examples for Math: "Integration by Parts" -> "Calculus"; "Matrices" -> "Algebra".
+   - Every single subtopic must appear in at least one parent_rollup's child_topics array.
 
 CRITICAL CONSTRAINTS:
-1. ELIMINATE ONE-OFF SUBTOPIC SPAM: Actively combine minor/specific variants into clean, reusable subtopic clusters.
+1. NO ORPHAN SUBTOPICS: Every subtopic must be mapped to a standard parent category in parent_rollups.
 2. DO NOT combine completely distinct major fields or unrelated concepts (e.g., do not merge Thermodynamics into Kinetics).
-3. Synthesize "good_at" and "not_good_at" descriptions when topics are merged.
-4. Target names MUST be clean, standardized Title-Case (e.g., "Rate Laws & Reaction Orders", "Chemical Kinetics").
-5. If no topics need to be combined or rolled up, return empty arrays for "merges" and "parent_rollups".
+3. Synthesize "good_at" and "not_good_at" descriptions when topics are merged or rolled up.
+4. Target names MUST be clean, standardized Title-Case.
 
 Input Data:
 ${JSON.stringify(inputTopics, null, 2)}

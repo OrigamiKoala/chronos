@@ -112,123 +112,17 @@ const CANONICAL_OVERALL_MAP = {
   'multivariable calculus': 'Multivariable Calculus'
 };
 
-const SUBTOPIC_TO_MAJOR_MAP = {
-  // Descriptive & Laboratory Chemistry / Analytical
-  'volumetric analysis': 'Descriptive & Laboratory Chemistry',
-  'volumetric': 'Descriptive & Laboratory Chemistry',
-  'gravimetric analysis': 'Descriptive & Laboratory Chemistry',
-  'gravimetric': 'Descriptive & Laboratory Chemistry',
-  'qualitative analysis': 'Descriptive & Laboratory Chemistry',
-  'spectrophotometry': 'Descriptive & Laboratory Chemistry',
-  'beer\'s law': 'Descriptive & Laboratory Chemistry',
-  'beers law': 'Descriptive & Laboratory Chemistry',
-  'chromatography': 'Descriptive & Laboratory Chemistry',
-  'flame test': 'Descriptive & Laboratory Chemistry',
-  'error analysis': 'Descriptive & Laboratory Chemistry',
-  'laboratory techniques': 'Descriptive & Laboratory Chemistry',
-  'lab techniques': 'Descriptive & Laboratory Chemistry',
-  'analytical chemistry': 'Descriptive & Laboratory Chemistry',
-
-  // Chemistry - Kinetics
-  'arrhenius equation': 'Chemical Kinetics',
-  'arrhenius': 'Chemical Kinetics',
-  'reaction rate': 'Chemical Kinetics',
-  'reaction rates': 'Chemical Kinetics',
-  'rate law': 'Chemical Kinetics',
-  'michaelis-menten': 'Chemical Kinetics',
-  'enzyme kinetics': 'Chemical Kinetics',
-  'activation energy': 'Chemical Kinetics',
-  'catalysis': 'Chemical Kinetics',
-
-  // Chemistry - Equilibrium
-  'solubility': 'Chemical Equilibrium',
-  'solubility equilibria': 'Chemical Equilibrium',
-  'solubility and complex ion equilibria': 'Chemical Equilibrium',
-  'complex ion': 'Chemical Equilibrium',
-  'complex ion equilibria': 'Chemical Equilibrium',
-  'fractional precipitation': 'Chemical Equilibrium',
-  'common ion effect': 'Chemical Equilibrium',
-  'le chatelier': 'Chemical Equilibrium',
-  'equilibrium constant': 'Chemical Equilibrium',
-
-  // Chemistry - Thermodynamics
-  'born-haber': 'Thermodynamics',
-  'born-haber cycle': 'Thermodynamics',
-  'hess': 'Thermodynamics',
-  'hess\'s law': 'Thermodynamics',
-  'enthalpy': 'Thermodynamics',
-  'entropy': 'Thermodynamics',
-  'gibbs free energy': 'Thermodynamics',
-  'calorimetry': 'Thermodynamics',
-  'spontaneity': 'Thermodynamics',
-
-  // Chemistry - Atomic Structure & Bonding
-  'vsepr': 'Atomic Structure & Bonding',
-  'vsepr theory': 'Atomic Structure & Bonding',
-  'bond angle': 'Atomic Structure & Bonding',
-  'bond angles': 'Atomic Structure & Bonding',
-  'hybridization': 'Atomic Structure & Bonding',
-  'molecular orbital': 'Atomic Structure & Bonding',
-  'lewis structure': 'Atomic Structure & Bonding',
-  'electronegativity': 'Atomic Structure & Bonding',
-  'bonding': 'Atomic Structure & Bonding',
-
-  // Chemistry - Organic
-  'nmr': 'Organic Chemistry',
-  'nmr spectroscopy': 'Organic Chemistry',
-  'carbonyl': 'Organic Chemistry',
-  'carbonyl chemistry': 'Organic Chemistry',
-  'aromaticity': 'Organic Chemistry',
-  'huckel': 'Organic Chemistry',
-  'hückel': 'Organic Chemistry',
-  'stereochemistry': 'Organic Chemistry',
-  'sn1': 'Organic Chemistry',
-  'sn2': 'Organic Chemistry',
-
-  // Chemistry - Inorganic
-  'interhalogen': 'Inorganic Chemistry',
-  'interhalogens': 'Inorganic Chemistry',
-  'complex chemistry': 'Inorganic Chemistry',
-  'coordination chemistry': 'Inorganic Chemistry',
-  'crystal field theory': 'Inorganic Chemistry',
-  'transition metals': 'Inorganic Chemistry',
-
-  // Chemistry - Biochemistry
-  'isoelectric': 'Biochemistry',
-  'isoelectric point': 'Biochemistry',
-  'isoelectronic': 'Biochemistry',
-  'isoelectronic point': 'Biochemistry',
-  'amino acids': 'Biochemistry',
-  'proteins': 'Biochemistry',
-
-  // Chemistry - Acids & Bases
-  'buffer': 'Acids & Bases',
-  'buffer solutions': 'Acids & Bases',
-  'titration': 'Acids & Bases',
-  'ph': 'Acids & Bases',
-
-  // Physics
-  'projectile motion': 'Kinematics',
-  'free fall': 'Kinematics',
-  'circular motion': 'Mechanics',
-  'rotational dynamics': 'Dynamics',
-  'torque': 'Dynamics',
-  'work-energy theorem': 'Mechanics',
-  'snell': 'Optics',
-  'refraction': 'Optics',
-
-  // Math
-  'integration by parts': 'Calculus',
-  'derivatives': 'Calculus',
-  'limits': 'Calculus',
-  'taylor series': 'Calculus'
+const isOverallTopic = (topicName) => {
+  if (!topicName) return false;
+  const clean = topicName.trim().toLowerCase();
+  return Boolean(CANONICAL_OVERALL_MAP[clean] || CANONICAL_OVERALL_MAP[clean.replace(/s$/, '')]);
 };
 
-const getMajorTopicCardName = (origName, subject) => {
-  if (!origName) return subject ? `${subject} Concepts` : 'General Concepts';
+const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
+  if (!origName) return subject || 'General';
   const cleanLower = origName.trim().toLowerCase();
 
-  // 1. Direct canonical map
+  // 1. Direct canonical overall topic (e.g., "Kinetics" -> "Chemical Kinetics")
   if (CANONICAL_OVERALL_MAP[cleanLower]) {
     return CANONICAL_OVERALL_MAP[cleanLower];
   }
@@ -236,163 +130,13 @@ const getMajorTopicCardName = (origName, subject) => {
     return CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')];
   }
 
-  // 2. Direct subtopic map
-  if (SUBTOPIC_TO_MAJOR_MAP[cleanLower]) {
-    return SUBTOPIC_TO_MAJOR_MAP[cleanLower];
+  // 2. AI-determined parent mapping from AI Condenser (e.g., "Volumetric Analysis" -> "Descriptive & Laboratory Chemistry")
+  if (aiParentMap && aiParentMap[cleanLower]) {
+    return aiParentMap[cleanLower];
   }
 
-  // 3. Substring match in subtopic or canonical maps
-  for (const [subKey, majorName] of Object.entries(SUBTOPIC_TO_MAJOR_MAP)) {
-    if (cleanLower.includes(subKey)) {
-      return majorName;
-    }
-  }
-  for (const [canonKey, majorName] of Object.entries(CANONICAL_OVERALL_MAP)) {
-    if (cleanLower.includes(canonKey)) {
-      return majorName;
-    }
-  }
-
-  // 4. Comprehensive Keyword Domain Classifier
-  // Chemistry
-  if (cleanLower.includes('kinet') || cleanLower.includes('rate') || cleanLower.includes('arrhenius') || cleanLower.includes('catalys') || cleanLower.includes('mechanism') || cleanLower.includes('half-life')) {
-    return 'Chemical Kinetics';
-  }
-  if (cleanLower.includes('thermo') || cleanLower.includes('heat') || cleanLower.includes('enthalp') || cleanLower.includes('entrop') || cleanLower.includes('gibbs') || cleanLower.includes('calorim') || cleanLower.includes('born-haber') || cleanLower.includes('hess')) {
-    return 'Thermodynamics';
-  }
-  if (cleanLower.includes('equilib') || cleanLower.includes('solub') || cleanLower.includes('ksp') || cleanLower.includes('le chatelier') || cleanLower.includes('complex ion') || cleanLower.includes('precipitat')) {
-    return 'Chemical Equilibrium';
-  }
-  if (cleanLower.includes('acid') || cleanLower.includes('base') || cleanLower.includes('buffer') || cleanLower.includes('ph') || cleanLower.includes('poh') || cleanLower.includes('brønsted') || cleanLower.includes('bronsted')) {
-    return 'Acids & Bases';
-  }
-  if (cleanLower.includes('bond') || cleanLower.includes('vsepr') || cleanLower.includes('orbital') || cleanLower.includes('lewis') || cleanLower.includes('hybrid') || cleanLower.includes('atom') || cleanLower.includes('electronegat') || cleanLower.includes('geometry') || cleanLower.includes('resonance')) {
-    return 'Atomic Structure & Bonding';
-  }
-  if (cleanLower.includes('analyt') || cleanLower.includes('volum') || cleanLower.includes('gravim') || cleanLower.includes('spectr') || cleanLower.includes('beer') || cleanLower.includes('chromat') || cleanLower.includes('lab') || cleanLower.includes('qualitat') || cleanLower.includes('titrat') || cleanLower.includes('technique')) {
-    return 'Descriptive & Laboratory Chemistry';
-  }
-  if (cleanLower.includes('organ') || cleanLower.includes('carbon') || cleanLower.includes('aromat') || cleanLower.includes('stereo') || cleanLower.includes('sn1') || cleanLower.includes('sn2') || cleanLower.includes('nmr') || cleanLower.includes('alkane') || cleanLower.includes('alkene')) {
-    return 'Organic Chemistry';
-  }
-  if (cleanLower.includes('inorgan') || cleanLower.includes('transition metal') || cleanLower.includes('coordinat') || cleanLower.includes('crystal field') || cleanLower.includes('halogen') || cleanLower.includes('interhalogen')) {
-    return 'Inorganic Chemistry';
-  }
-  if (cleanLower.includes('bio') || cleanLower.includes('enzyme') || cleanLower.includes('protein') || cleanLower.includes('amino') || cleanLower.includes('isoelectr') || cleanLower.includes('dna') || cleanLower.includes('rna') || cleanLower.includes('peptide')) {
-    return 'Biochemistry';
-  }
-  if (cleanLower.includes('stoichiom') || cleanLower.includes('limiting') || cleanLower.includes('yield') || cleanLower.includes('empirical') || cleanLower.includes('mole')) {
-    return 'Stoichiometry';
-  }
-  if (cleanLower.includes('electro') || cleanLower.includes('galvan') || cleanLower.includes('voltaic') || cleanLower.includes('redox') || cleanLower.includes('nernst') || cleanLower.includes('cell')) {
-    return 'Electrochemistry';
-  }
-  if (cleanLower.includes('solut') || cleanLower.includes('molar') || cleanLower.includes('molal') || cleanLower.includes('dilut') || cleanLower.includes('colligat')) {
-    return 'Solutions';
-  }
-  if (cleanLower.includes('gas') || cleanLower.includes('state') || cleanLower.includes('pressure') || cleanLower.includes('pv=nrt') || cleanLower.includes('phase') || cleanLower.includes('van der waals')) {
-    return 'States of Matter & Gases';
-  }
-
-  // Physics
-  if (cleanLower.includes('mechanic') || cleanLower.includes('force') || cleanLower.includes('work') || cleanLower.includes('energy') || cleanLower.includes('momentum') || cleanLower.includes('torque') || cleanLower.includes('rotation')) {
-    return 'Mechanics';
-  }
-  if (cleanLower.includes('kinematic') || cleanLower.includes('velocity') || cleanLower.includes('accelerat') || cleanLower.includes('projectile') || cleanLower.includes('motion') || cleanLower.includes('free fall')) {
-    return 'Kinematics';
-  }
-  if (cleanLower.includes('dynamic') || cleanLower.includes('newton') || cleanLower.includes('friction')) {
-    return 'Dynamics';
-  }
-  if (cleanLower.includes('optic') || cleanLower.includes('light') || cleanLower.includes('refract') || cleanLower.includes('reflect') || cleanLower.includes('lens') || cleanLower.includes('snell')) {
-    return 'Optics';
-  }
-  if (cleanLower.includes('electric') || cleanLower.includes('magnet') || cleanLower.includes('charge') || cleanLower.includes('circuit') || cleanLower.includes('field') || cleanLower.includes('induction')) {
-    return 'Electromagnetism';
-  }
-  if (cleanLower.includes('wave') || cleanLower.includes('oscillation') || cleanLower.includes('harmonic') || cleanLower.includes('frequency')) {
-    return 'Waves & Oscillations';
-  }
-  if (cleanLower.includes('quantum') || cleanLower.includes('photoelectric') || cleanLower.includes('photon')) {
-    return 'Quantum Mechanics';
-  }
-
-  // Mathematics
-  if (cleanLower.includes('calculus') || cleanLower.includes('deriv') || cleanLower.includes('integ') || cleanLower.includes('limit') || cleanLower.includes('series') || cleanLower.includes('taylor')) {
-    return 'Calculus';
-  }
-  if (cleanLower.includes('algeb') || cleanLower.includes('equation') || cleanLower.includes('polynomial') || cleanLower.includes('matrix') || cleanLower.includes('vector')) {
-    return 'Algebra';
-  }
-  if (cleanLower.includes('geomet') || cleanLower.includes('trig') || cleanLower.includes('triangle') || cleanLower.includes('angle') || cleanLower.includes('circle')) {
-    return 'Geometry & Trigonometry';
-  }
-  if (cleanLower.includes('statist') || cleanLower.includes('probab') || cleanLower.includes('mean') || cleanLower.includes('variance') || cleanLower.includes('distribution')) {
-    return 'Statistics & Probability';
-  }
-
-  const subLower = (subject || '').toLowerCase();
-  if (subLower.includes('chem')) return 'Descriptive & Laboratory Chemistry';
-  if (subLower.includes('phys')) return 'Mechanics';
-  if (subLower.includes('math')) return 'Algebra';
-
-  return subject ? `${subject} Concepts` : 'General Concepts';
-};
-
-const normalizeSubtopicName = (name) => {
-  if (!name) return 'General';
-  const clean = name.trim().toLowerCase();
-
-  // Laboratory / Descriptive Chemistry
-  if (clean.includes('volumetric') || clean.includes('titration curve') || clean.includes('titrant')) return 'Volumetric Analysis & Titrations';
-  if (clean.includes('gravimetric')) return 'Gravimetric Analysis';
-  if (clean.includes('spectrophotomet') || clean.includes('beer') || clean.includes('absorbance')) return "Beer's Law & Spectrophotometry";
-  if (clean.includes('chromatograph')) return 'Chromatography';
-  if (clean.includes('qualitative') || clean.includes('flame test') || clean.includes('precipitate test')) return 'Qualitative Analysis & Flame Tests';
-  if (clean.includes('lab') || clean.includes('error analysis')) return 'Laboratory Techniques & Error Analysis';
-
-  // Kinetics
-  if (clean.includes('arrhenius') || clean.includes('activation energy')) return 'Arrhenius & Activation Energy';
-  if (clean.includes('rate law') || clean.includes('initial rate') || clean.includes('order of reaction') || clean.includes('reaction order')) return 'Rate Laws & Reaction Orders';
-  if (clean.includes('michaelis') || clean.includes('enzyme')) return 'Enzyme Kinetics & Michaelis-Menten';
-
-  // Equilibrium
-  if (clean.includes('solubility') || clean.includes('ksp') || clean.includes('precipitation')) return 'Solubility & Ksp Equilibria';
-  if (clean.includes('le chatelier') || clean.includes('equilibrium constant')) return "Le Chatelier's Principle & Equilibrium";
-  if (clean.includes('complex ion')) return 'Complex Ion Equilibria';
-
-  // Thermodynamics
-  if (clean.includes('hess') || clean.includes('enthalpy')) return "Hess's Law & Enthalpy";
-  if (clean.includes('born-haber') || clean.includes('lattice')) return 'Born-Haber Cycle & Lattice Energy';
-  if (clean.includes('entropy') || clean.includes('gibbs') || clean.includes('spontaneous') || clean.includes('free energy')) return 'Entropy & Free Energy';
-
-  // Atomic Structure & Bonding
-  if (clean.includes('vsepr') || clean.includes('geometry') || clean.includes('bond angle')) return 'VSEPR & Molecular Geometry';
-  if (clean.includes('hybrid') || clean.includes('orbital') || clean.includes('mo theory')) return 'Hybridization & MO Theory';
-  if (clean.includes('lewis') || clean.includes('resonance')) return 'Lewis Structures & Resonance';
-  if (clean.includes('electronegativity') || clean.includes('polar')) return 'Periodic Trends & Polarity';
-
-  // Organic Chemistry
-  if (clean.includes('nmr') || clean.includes('spectroscopy') || clean.includes('ir spec')) return 'NMR & Spectroscopy';
-  if (clean.includes('carbonyl') || clean.includes('ketone') || clean.includes('aldehyde')) return 'Carbonyl Chemistry';
-  if (clean.includes('aromatic') || clean.includes('huckel') || clean.includes('hückel')) return 'Aromaticity & Hückel Rule';
-  if (clean.includes('stereochemistry') || clean.includes('chiral')) return 'Stereochemistry & Isomers';
-
-  // Biochemistry
-  if (clean.includes('isoelectric') || clean.includes('isoelectronic') || clean.includes('zwitterion')) return 'Isoelectric Point & Amino Acids';
-
-  // Acids & Bases
-  if (clean.includes('buffer') || clean.includes('titration') || clean.includes('ph')) return 'Buffer Solutions & Titrations';
-
-  // Fallback: Clean Titlecase
-  return name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
-};
-
-const isOverallTopic = (topicName) => {
-  if (!topicName) return false;
-  const clean = topicName.trim().toLowerCase();
-  return Boolean(CANONICAL_OVERALL_MAP[clean] || CANONICAL_OVERALL_MAP[clean.replace(/s$/, '')]);
+  // 3. Fallback: Subject card (e.g. "Chemistry", "Physics", "Math")
+  return subject || 'General';
 };
 
 const baseChartOptions = {
@@ -999,7 +743,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
     };
   }, [data]);
 
-  // Topic mastery mini-cards data grouped by overall topic
+  // Topic mastery mini-cards data grouped by overall topic via AI parent map
   const topicCardsData = useMemo(() => {
     if (!data?.topicMastery?.length) return [];
 
@@ -1008,6 +752,21 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       : data.topicMastery.filter(t => t.subject?.toLowerCase() === selectedSubjectFilter.toLowerCase());
 
     if (!filtered.length) return [];
+
+    // Build AI parent mapping from breakdown data established by AI Condenser
+    const aiParentMap = {};
+    if (data?.topicBreakdown) {
+      for (const [topic, details] of Object.entries(data.topicBreakdown)) {
+        if (details.parent_topic) {
+          aiParentMap[topic.toLowerCase()] = details.parent_topic;
+        }
+      }
+    }
+    if (data?.parentRollups) {
+      for (const [child, parent] of Object.entries(data.parentRollups)) {
+        aiParentMap[child.toLowerCase()] = parent;
+      }
+    }
 
     const cardsMap = new Map();
 
@@ -1034,7 +793,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       const correct = Number((item.correct_count?.value ?? item.correct_count) || 0);
 
       const cleanLower = origName.toLowerCase();
-      const majorParent = getMajorTopicCardName(origName, item.subject);
+      const majorParent = getMajorTopicCardName(origName, item.subject, aiParentMap);
       const card = getOrCreateCard(majorParent, item.subject);
 
       const isDirectMajor = (CANONICAL_OVERALL_MAP[cleanLower] || CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')]) === majorParent;
@@ -1043,12 +802,11 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         card.directCorrect += correct;
         card.directTotal += total;
       } else {
-        const normName = normalizeSubtopicName(origName);
-        const subKey = normName.toLowerCase();
+        const subKey = origName.toLowerCase();
 
         if (!card.subtopicsMap.has(subKey)) {
           card.subtopicsMap.set(subKey, {
-            name: normName,
+            name: origName,
             correct,
             total
           });
