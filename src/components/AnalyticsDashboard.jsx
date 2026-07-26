@@ -865,66 +865,46 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       if (total <= 0) continue;
       const correct = Number((item.correct_count?.value ?? item.correct_count) || 0);
 
-      const cleanLower = origName.toLowerCase();
       const majorParent = getMajorTopicCardName(origName, item.subject, aiParentMap);
       const card = getOrCreateCard(majorParent, item.subject);
 
-      const isDirectMajor = (CANONICAL_OVERALL_MAP[cleanLower] || CANONICAL_OVERALL_MAP[cleanLower.replace(/s$/, '')]) === majorParent;
-
-      if (isDirectMajor) {
-        card.directCorrect += correct;
-        card.directTotal += total;
+      const subKey = origName.toLowerCase();
+      if (!card.subtopicsMap.has(subKey)) {
+        card.subtopicsMap.set(subKey, {
+          name: origName,
+          correct,
+          total
+        });
       } else {
-        const subKey = origName.toLowerCase();
-
-        if (!card.subtopicsMap.has(subKey)) {
-          card.subtopicsMap.set(subKey, {
-            name: origName,
-            correct,
-            total
-          });
-        } else {
-          const sub = card.subtopicsMap.get(subKey);
-          sub.correct += correct;
-          sub.total += total;
-        }
+        const sub = card.subtopicsMap.get(subKey);
+        sub.correct += correct;
+        sub.total += total;
       }
     }
 
     const result = [];
     for (const card of cardsMap.values()) {
-      let subtopics = Array.from(card.subtopicsMap.values()).map(s => ({
+      const subtopics = Array.from(card.subtopicsMap.values()).map(s => ({
         name: s.name,
         correct: s.correct,
         total: s.total,
         accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0
-      }));
+      })).sort((a, b) => a.accuracy - b.accuracy);
 
-      let totalCorrect = card.directCorrect;
-      let totalTotal = card.directTotal;
+      // Find major topic row matching card title if it exists directly in subtopics
+      const majorRow = subtopics.find(s => s.name.toLowerCase() === card.title.toLowerCase());
+      let totalCorrect = 0;
+      let totalTotal = 0;
 
-      let subTotalSum = 0;
-      let subCorrectSum = 0;
-      for (const s of subtopics) {
-        subTotalSum += s.total;
-        subCorrectSum += s.correct;
+      if (majorRow) {
+        totalCorrect = majorRow.correct;
+        totalTotal = majorRow.total;
+      } else {
+        for (const s of subtopics) {
+          totalCorrect += s.correct;
+          totalTotal += s.total;
+        }
       }
-
-      if (totalTotal > 0 && totalTotal > subTotalSum) {
-        const unclassifiedTotal = totalTotal - subTotalSum;
-        const unclassifiedCorrect = Math.max(0, totalCorrect - subCorrectSum);
-        subtopics.push({
-          name: `General ${card.title}`,
-          correct: unclassifiedCorrect,
-          total: unclassifiedTotal,
-          accuracy: unclassifiedTotal > 0 ? Math.round((unclassifiedCorrect / unclassifiedTotal) * 100) : 0
-        });
-      } else if (totalTotal === 0) {
-        totalCorrect = subCorrectSum;
-        totalTotal = subTotalSum;
-      }
-
-      subtopics.sort((a, b) => a.accuracy - b.accuracy);
 
       const overallAccuracy = totalTotal > 0 ? Math.round((totalCorrect / totalTotal) * 100) : 0;
 
