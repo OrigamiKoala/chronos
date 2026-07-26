@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     });
 
     // Helper function to return final updated state
-    const fetchAndResponseFinalState = async (mergedCount = 0) => {
+    const fetchAndResponseFinalState = async (mergedCount = 0, activeParentRollups = {}) => {
       const [finalMasteryRows] = await bq.query({
         query: `SELECT sub_category, subject, correct_count, total_count, accuracy_rate
           FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
@@ -87,7 +87,6 @@ export default async function handler(req, res) {
         .map(m => ({ topic: m.sub_category, subject: m.subject }));
 
       const topicBreakdowns = {};
-      const parentRollups = {};
       for (const b of finalBreakdownRows) {
         topicBreakdowns[b.topic] = {
           good_at: b.good_at,
@@ -101,7 +100,7 @@ export default async function handler(req, res) {
         strengths,
         weaknesses,
         topicBreakdowns,
-        parentRollups,
+        parentRollups: activeParentRollups,
         topicMastery
       });
     };
@@ -298,12 +297,24 @@ Output format must be a JSON object matching this schema:
         `);
       }
 
+      const generatedParentRollups = {};
+      if (responseObj && Array.isArray(responseObj.parent_rollups)) {
+        for (const rollup of responseObj.parent_rollups) {
+          if (rollup.parent_topic && Array.isArray(rollup.child_topics)) {
+            for (const child of rollup.child_topics) {
+              generatedParentRollups[child.toLowerCase()] = rollup.parent_topic;
+            }
+          }
+        }
+      }
+
       if (statements.length > 0) {
         await bq.query({ query: statements.join('\n') }).catch(err => console.error("Batch BigQuery execution error:", err));
       }
+      return await fetchAndResponseFinalState(mergedCount, generatedParentRollups);
     }
 
-    return await fetchAndResponseFinalState(mergedCount);
+    return await fetchAndResponseFinalState(0, {});
 
   } catch (err) {
     console.error('Condense topics error:', err);
