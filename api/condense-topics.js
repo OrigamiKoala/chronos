@@ -218,27 +218,41 @@ Output format must be a JSON object matching this schema:
             types: { correct: 'INT64', total: 'INT64', accuracy: 'FLOAT64' }
           });
 
-          // 5. Update question category tags in user_problem_tags
-          await bq.query({
-            query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
-              SET tag = @target
-              WHERE user_id = @username AND LOWER(tag) IN UNNEST(@sources)`,
-            params: { username: sanitizedUser, target: target_topic, sources: source_topics.map(s => s.toLowerCase()) }
-          }).catch(err => console.error("Failed to update user_problem_tags for condense:", err));
-
-          // 6. Update question category topics in user_wrong_problems
+          // 6. Update question category topics in user_wrong_problems (supporting comma-separated topics)
           await bq.query({
             query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-              SET topic = @target
-              WHERE user_id = @username AND LOWER(subject) = LOWER(@subject) AND LOWER(topic) IN UNNEST(@sources)`,
+              SET topic = ARRAY_TO_STRING(
+                ARRAY(
+                  SELECT DISTINCT IF(LOWER(TRIM(part)) IN UNNEST(@sources), @target, TRIM(part))
+                  FROM UNNEST(SPLIT(topic, ',')) part
+                  WHERE TRIM(part) != ''
+                ),
+                ', '
+              )
+              WHERE user_id = @username AND LOWER(subject) = LOWER(@subject)
+                AND EXISTS (
+                  SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part
+                  WHERE LOWER(TRIM(part)) IN UNNEST(@sources)
+                )`,
             params: { username: sanitizedUser, subject, target: target_topic, sources: source_topics.map(s => s.toLowerCase()) }
           }).catch(err => console.error("Failed to update user_wrong_problems for condense:", err));
 
-          // 7. Update topic in pregenerated_questions
+          // 7. Update topic in pregenerated_questions (supporting comma-separated topics)
           await bq.query({
             query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`pregenerated_questions\`
-              SET topic = @target
-              WHERE LOWER(subject) = LOWER(@subject) AND LOWER(topic) IN UNNEST(@sources)`,
+              SET topic = ARRAY_TO_STRING(
+                ARRAY(
+                  SELECT DISTINCT IF(LOWER(TRIM(part)) IN UNNEST(@sources), @target, TRIM(part))
+                  FROM UNNEST(SPLIT(topic, ',')) part
+                  WHERE TRIM(part) != ''
+                ),
+                ', '
+              )
+              WHERE LOWER(subject) = LOWER(@subject)
+                AND EXISTS (
+                  SELECT 1 FROM UNNEST(SPLIT(topic, ',')) part
+                  WHERE LOWER(TRIM(part)) IN UNNEST(@sources)
+                )`,
             params: { subject, target: target_topic, sources: source_topics.map(s => s.toLowerCase()) }
           }).catch(err => console.error("Failed to update pregenerated_questions for condense:", err));
 
