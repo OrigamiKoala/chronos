@@ -407,12 +407,14 @@ export default async function handler(req, res) {
 
       // 2. Find and update the specific question
       let questionFound = false;
-      for (const r of results) {
-        if (r.id === questionId) {
-          r.isCorrect = true;
+      let questionIndex = -1;
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].id === questionId) {
+          results[i].isCorrect = true;
           if (explanation) {
-            r.aiExplanation = explanation;
+            results[i].aiExplanation = explanation;
           }
+          questionIndex = i;
           questionFound = true;
           break;
         }
@@ -452,7 +454,7 @@ export default async function handler(req, res) {
       const newRatingVal = Math.max(100, oldRating + newRatingChange);
       const ratingDiff = newRatingVal - hist.new_rating;
 
-      // 5. Update user_exam_results, user_exam_history, delete wrong problem entry, and update active ELO
+      // 5. Update user_exam_results, user_exam_history, delete wrong problem entry, clear non-unsure tags, and update active ELO
       let ratingColumn = 'math_rating';
       if (subject === 'Physics') ratingColumn = 'physics_rating';
       else if (subject === 'Chemistry') ratingColumn = 'chemistry_rating';
@@ -483,6 +485,11 @@ export default async function handler(req, res) {
           query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
             WHERE exam_id = @examId AND question_id = @questionId AND user_id = @username`,
           params: { examId, questionId, username: sanitizedUser }
+        }),
+        bq.query({
+          query: `DELETE FROM \`${projectId}\`.\`chronos_users\`.\`user_problem_tags\`
+            WHERE exam_id = @examId AND user_id = @username AND question_index = @questionIndex AND tag != 'unsure'`,
+          params: { examId, username: sanitizedUser, questionIndex }
         }),
         bq.query({
           query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`

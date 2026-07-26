@@ -404,6 +404,17 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         return next;
       });
 
+      if (data.shouldRemarkCorrect) {
+        setTags(prev => {
+          if (prev[index] && prev[index] !== 'unsure') {
+            const next = { ...prev };
+            delete next[index];
+            return next;
+          }
+          return prev;
+        });
+      }
+
       if (user && examId) {
         if (data.shouldRemarkCorrect) {
           fetch('/api/remark-correct', {
