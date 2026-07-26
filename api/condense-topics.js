@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   try {
     // 1. Fetch current breakdowns and mastery
     const getTopicsQuery = `
-      SELECT topic, good_at, not_good_at, subject, parent_topic
+      SELECT topic, good_at, not_good_at, subject
       FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
       WHERE user_id = @username
     `;
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       });
 
       const [finalBreakdownRows] = await bq.query({
-        query: `SELECT topic, good_at, not_good_at, subject, parent_topic
+        query: `SELECT topic, good_at, not_good_at, subject
           FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
           WHERE user_id = @username`,
         params: { username: sanitizedUser }
@@ -106,12 +106,8 @@ export default async function handler(req, res) {
       for (const b of finalBreakdownRows) {
         topicBreakdowns[b.topic] = {
           good_at: b.good_at,
-          not_good_at: b.not_good_at,
-          parent_topic: b.parent_topic
+          not_good_at: b.not_good_at
         };
-        if (b.parent_topic) {
-          parentRollups[b.topic.toLowerCase()] = b.parent_topic;
-        }
       }
 
       return res.status(200).json({
@@ -135,7 +131,6 @@ export default async function handler(req, res) {
       return {
         subject: row.subject,
         topic: row.topic,
-        parent_topic: row.parent_topic || null,
         good_at: row.good_at,
         not_good_at: row.not_good_at,
         correct_count: mastery ? Number(mastery.correct_count || 0) : 0,
@@ -429,15 +424,6 @@ Output format must be a JSON object matching this schema:
                   )`,
               params: { username: sanitizedUser, subject, parentTopic: parent_topic, childSources: child_topics.map(c => c.toLowerCase()) }
             }).catch(err => console.error("Failed to retag user_wrong_problems for parent rollup:", err));
-
-            // 5. Save parent_topic mapping for all child subtopics in user_topic_breakdown
-            await bq.query({
-              query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
-                SET parent_topic = @parentTopic
-                WHERE user_id = @username AND LOWER(subject) = LOWER(@subject)
-                  AND LOWER(topic) IN UNNEST(@childSources)`,
-              params: { username: sanitizedUser, subject, parentTopic: parent_topic, childSources: child_topics.map(c => c.toLowerCase()) }
-            }).catch(err => console.error("Failed to set parent_topic in user_topic_breakdown:", err));
 
             mergedCount++;
           }

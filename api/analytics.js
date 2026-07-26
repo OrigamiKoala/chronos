@@ -117,7 +117,7 @@ export default async function handler(req, res) {
         WHERE user_id IN UNNEST(@usernames)
       ),
       breakdown AS (
-        SELECT 'breakdown' AS type, TO_JSON_STRING(STRUCT(user_id, topic, good_at, not_good_at, parent_topic)) AS data
+        SELECT 'breakdown' AS type, TO_JSON_STRING(STRUCT(user_id, topic, good_at, not_good_at)) AS data
         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\`
         WHERE user_id IN UNNEST(@usernames)
       )
@@ -591,12 +591,8 @@ ${JSON.stringify(inputData, null, 2)}
       if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
         topicBreakdowns[topic] = {
           good_at: b.good_at,
-          not_good_at: b.not_good_at,
-          parent_topic: b.parent_topic
+          not_good_at: b.not_good_at
         };
-        if (b.parent_topic) {
-          parentRollups[topic.toLowerCase()] = b.parent_topic;
-        }
       }
     }
 
