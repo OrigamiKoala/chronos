@@ -144,8 +144,40 @@ const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
     return aiParentMap[cleanLower];
   }
 
-  // 3. Title Case Fallback
-  return origName.trim().charAt(0).toUpperCase() + origName.trim().slice(1);
+  // 3. Keyword / Concept matching against major standard categories
+  const subj = (subject || '').toLowerCase();
+  if (subj === 'chemistry' || !subject || subj === 'general') {
+    if (cleanLower.includes('kineti')) return 'Kinetics';
+    if (cleanLower.includes('thermo') || cleanLower.includes('enthalp') || cleanLower.includes('entrop') || cleanLower.includes('hess') || cleanLower.includes('calorim')) return 'Thermodynamics';
+    if (cleanLower.includes('acid') || cleanLower.includes('base') || cleanLower.includes('titrat') || cleanLower.includes('buffer') || cleanLower.includes('ph')) return 'Acids & Bases';
+    if (cleanLower.includes('electro') || cleanLower.includes('redox') || cleanLower.includes('cell') || cleanLower.includes('nernst') || cleanLower.includes('voltage') || cleanLower.includes('faraday')) return 'Electrochemistry';
+    if (cleanLower.includes('equilibr') || cleanLower.includes('solubil') || cleanLower.includes('ksp') || cleanLower.includes('chatelier')) return 'Equilibrium';
+    if (cleanLower.includes('stoich') || cleanLower.includes('solution') || cleanLower.includes('molar') || cleanLower.includes('dilut') || cleanLower.includes('yield') || cleanLower.includes('limiti')) return 'Stoichiometry & Solutions';
+    if (cleanLower.includes('state') || cleanLower.includes('gas') || cleanLower.includes('phase') || cleanLower.includes('pressur') || cleanLower.includes('vapor') || cleanLower.includes('ideal gas')) return 'States of Matter & Phase Changes';
+    if (cleanLower.includes('atom') || cleanLower.includes('orbital') || cleanLower.includes('quantum') || cleanLower.includes('bond') || cleanLower.includes('period') || cleanLower.includes('electron') || cleanLower.includes('lewis') || cleanLower.includes('vsepr')) return 'Atomic Structure & Periodicity';
+    if (cleanLower.includes('organ') || cleanLower.includes('bio') || cleanLower.includes('polymer') || cleanLower.includes('hydrocarbon') || cleanLower.includes('alk') || cleanLower.includes('ester') || cleanLower.includes('alcohol') || cleanLower.includes('isomer')) return 'Organic Chemistry & Biochemistry';
+    if (cleanLower.includes('lab') || cleanLower.includes('descript') || cleanLower.includes('spectro') || cleanLower.includes('flame') || cleanLower.includes('color') || cleanLower.includes('qualitative') || cleanLower.includes('precipitat')) return 'Descriptive & Laboratory Chemistry';
+    return 'Descriptive & Laboratory Chemistry';
+  } else if (subj === 'physics') {
+    if (cleanLower.includes('kinemat') || cleanLower.includes('projectile') || cleanLower.includes('motion')) return 'Kinematics';
+    if (cleanLower.includes('dynamic') || cleanLower.includes('force') || cleanLower.includes('friction')) return 'Dynamics';
+    if (cleanLower.includes('mechanic') || cleanLower.includes('torque') || cleanLower.includes('momentum') || cleanLower.includes('energy') || cleanLower.includes('rotation') || cleanLower.includes('work')) return 'Mechanics';
+    if (cleanLower.includes('optic') || cleanLower.includes('light') || cleanLower.includes('lens') || cleanLower.includes('mirror') || cleanLower.includes('refract')) return 'Optics';
+    if (cleanLower.includes('electric') || cleanLower.includes('magnet') || cleanLower.includes('charge') || cleanLower.includes('circuit') || cleanLower.includes('field') || cleanLower.includes('current')) return 'Electromagnetism';
+    if (cleanLower.includes('wave') || cleanLower.includes('oscillat') || cleanLower.includes('harmonic') || cleanLower.includes('pendulum')) return 'Waves & Oscillations';
+    if (cleanLower.includes('quantum') || cleanLower.includes('photon') || cleanLower.includes('atomic')) return 'Quantum Mechanics';
+    if (cleanLower.includes('fluid') || cleanLower.includes('buoy') || cleanLower.includes('bernoulli')) return 'Fluid Mechanics';
+    return 'Mechanics';
+  } else if (subj === 'math') {
+    if (cleanLower.includes('algebra') || cleanLower.includes('polynomial') || cleanLower.includes('equation') || cleanLower.includes('quadra')) return 'Algebra';
+    if (cleanLower.includes('geometr') || cleanLower.includes('trig') || cleanLower.includes('triangle') || cleanLower.includes('circle') || cleanLower.includes('angle')) return 'Geometry & Trigonometry';
+    if (cleanLower.includes('calculus') || cleanLower.includes('deriv') || cleanLower.includes('integral') || cleanLower.includes('limit')) return 'Calculus';
+    if (cleanLower.includes('statistic') || cleanLower.includes('probab') || cleanLower.includes('combinat') || cleanLower.includes('permut')) return 'Statistics & Probability';
+    if (cleanLower.includes('number theory') || cleanLower.includes('prime') || cleanLower.includes('modulo') || cleanLower.includes('divisib')) return 'Number Theory';
+    return 'Algebra';
+  }
+
+  return subject || 'General';
 };
 
 const baseChartOptions = {
