@@ -276,9 +276,48 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       });
   };
 
-  useEffect(() => {
-    fetchOrgMembers();
-  }, [user?.user_organization]);
+  const handleCondense = async () => {
+    if (condensing || !user?.user_id) return;
+    setCondensing(true);
+    if (onCondense) {
+      onCondense((condensedData) => {
+        setCondensing(false);
+        if (condensedData) {
+          setData(prev => ({
+            ...prev,
+            topicMastery: condensedData.topicMastery || prev?.topicMastery,
+            topicBreakdown: condensedData.topicBreakdowns || prev?.topicBreakdown,
+            parentRollups: condensedData.parentRollups || prev?.parentRollups,
+            strengths: condensedData.strengths || prev?.strengths,
+            weaknesses: condensedData.weaknesses || prev?.weaknesses
+          }));
+        }
+      });
+    } else {
+      try {
+        const res = await fetch('/api/condense-topics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user.user_id })
+        });
+        const d = await res.json();
+        setCondensing(false);
+        if (d.success) {
+          setData(prev => ({
+            ...prev,
+            topicMastery: d.topicMastery || prev?.topicMastery,
+            topicBreakdown: d.topicBreakdowns || prev?.topicBreakdown,
+            parentRollups: d.parentRollups || prev?.parentRollups,
+            strengths: d.strengths || prev?.strengths,
+            weaknesses: d.weaknesses || prev?.weaknesses
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to condense topics:", err);
+        setCondensing(false);
+      }
+    }
+  };
 
   const handleUpdateRole = async (targetUser, newRole) => {
     try {
@@ -523,20 +562,9 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
       .then(d => {
         setData(d);
         setLoading(false);
-        if (onCondense && !hasCondensedRef.current) {
+        if (!hasCondensedRef.current) {
           hasCondensedRef.current = true;
-          onCondense((condensedData) => {
-            setData(prev => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                topicMastery: condensedData.topicMastery,
-                topicBreakdowns: condensedData.topicBreakdowns,
-                strengths: condensedData.strengths,
-                weaknesses: condensedData.weaknesses
-              };
-            });
-          });
+          handleCondense();
         }
       })
       .catch(e => { setError(e.message); setLoading(false); });
@@ -975,43 +1003,25 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
               {s}
             </button>
           ))}
-          {onCondense && (
-            <button
-              className="btn btn-outline"
-              disabled={condensing}
-              style={{
-                padding: '0.35rem 0.75rem',
-                fontSize: '0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                color: 'var(--accent-primary)',
-                borderColor: 'rgba(99, 102, 241, 0.4)',
-                background: 'rgba(99, 102, 241, 0.1)',
-                marginLeft: '0.5rem'
-              }}
-              onClick={() => {
-                if (condensing) return;
-                setCondensing(true);
-                onCondense((condensedData) => {
-                  setCondensing(false);
-                  if (condensedData) {
-                    setData(prev => ({
-                      ...prev,
-                      topicMastery: condensedData.topicMastery || prev?.topicMastery,
-                      topicBreakdown: condensedData.topicBreakdowns || prev?.topicBreakdown,
-                      parentRollups: condensedData.parentRollups || prev?.parentRollups,
-                      strengths: condensedData.strengths || prev?.strengths,
-                      weaknesses: condensedData.weaknesses || prev?.weaknesses
-                    }));
-                  }
-                });
-              }}
-            >
-              {condensing ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
-              {condensing ? 'Organizing...' : 'Organize Topics (AI)'}
-            </button>
-          )}
+          <button
+            className="btn btn-outline"
+            disabled={condensing}
+            style={{
+              padding: '0.35rem 0.75rem',
+              fontSize: '0.8rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              color: 'var(--accent-primary)',
+              borderColor: 'rgba(99, 102, 241, 0.4)',
+              background: 'rgba(99, 102, 241, 0.1)',
+              marginLeft: '0.5rem'
+            }}
+            onClick={handleCondense}
+          >
+            {condensing ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+            {condensing ? 'Organizing...' : 'Organize Topics (AI)'}
+          </button>
           {onBack && (
             <button className="btn btn-outline" onClick={onBack} style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
               <ArrowLeft size={14} /> Back
@@ -1303,9 +1313,29 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
 
           {/* Topic Mastery Mini-Cards */}
           <div style={{ marginTop: '1.5rem' }}>
-            <h4 className="analytics-chart-title" style={{ marginBottom: '1rem' }}>
-              <BarChart3 size={18} color="var(--success)" /> Topic Mastery Breakdown
-            </h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h4 className="analytics-chart-title" style={{ margin: 0 }}>
+                <BarChart3 size={18} color="var(--success)" /> Topic Mastery Breakdown
+              </h4>
+              <button
+                className="btn btn-outline"
+                disabled={condensing}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  color: 'var(--accent-primary)',
+                  borderColor: 'rgba(99, 102, 241, 0.4)',
+                  background: 'rgba(99, 102, 241, 0.1)'
+                }}
+                onClick={handleCondense}
+              >
+                {condensing ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                {condensing ? 'Organizing...' : 'Organize Topics (AI)'}
+              </button>
+            </div>
 
             {topicCardsData.length === 0 ? (
               <div className="glass-panel analytics-chart-panel">
