@@ -11,6 +11,27 @@ const renderChemicalValue = (val, size = 70) => {
   return <ChemicalText text={val} theme="dark" defaultWidth={size} defaultHeight={size} />;
 };
 
+const getAnswerContent = (answer, options) => {
+  if (!answer) return '';
+  let parsedOptions = options;
+  if (typeof options === 'string') {
+    try {
+      parsedOptions = JSON.parse(options);
+    } catch {
+      parsedOptions = null;
+    }
+  }
+
+  const ansStr = String(answer).trim();
+  if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
+    const letterIdx = ['A', 'B', 'C', 'D'].indexOf(ansStr.toUpperCase());
+    if (letterIdx !== -1 && parsedOptions[letterIdx]) {
+      return parsedOptions[letterIdx];
+    }
+  }
+  return answer;
+};
+
 export function ReviewScreen({ user, onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -542,7 +563,7 @@ export function ReviewScreen({ user, onBack }) {
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', padding: '1rem 1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
                 <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Correct Answer:</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                  {renderChemicalValue(q.correct_answer)}
+                  {renderChemicalValue(getAnswerContent(q.correct_answer, q.options))}
                 </div>
               </div>
 
@@ -881,11 +902,11 @@ export function ReviewScreen({ user, onBack }) {
                   }}>
                     <div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Your Attempted Answer:</div>
-                      <div style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--danger)' }}>{renderChemicalValue(q.user_answer)}</div>
+                      <div style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--danger)' }}>{renderChemicalValue(getAnswerContent(q.user_answer, q.options))}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Correct Answer:</div>
-                      <div style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--success)' }}>{renderChemicalValue(q.correct_answer)}</div>
+                      <div style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--success)' }}>{renderChemicalValue(getAnswerContent(q.correct_answer, q.options))}</div>
                     </div>
                   </div>
 
