@@ -177,7 +177,7 @@ const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
     if (/lab|descript|spectro|flame|color|qualitative|precipitat|filter|distill|chromatograph|coordination|complex ion|ligand|transition metal/i.test(cleanLower)) {
       return 'Descriptive & Laboratory Chemistry';
     }
-    return 'Descriptive & Laboratory Chemistry';
+    return 'Other Topics';
   } else if (subj === 'physics') {
     if (/kinemat|projectile|motion/i.test(cleanLower)) return 'Kinematics';
     if (/dynamic|force|friction/i.test(cleanLower)) return 'Dynamics';
@@ -187,17 +187,17 @@ const getMajorTopicCardName = (origName, subject, aiParentMap = {}) => {
     if (/wave|oscillat|harmonic|pendulum/i.test(cleanLower)) return 'Waves & Oscillations';
     if (/quantum|photon|atomic/i.test(cleanLower)) return 'Quantum Mechanics';
     if (/fluid|buoy|bernoulli/i.test(cleanLower)) return 'Fluid Mechanics';
-    return 'Mechanics';
+    return 'Other Topics';
   } else if (subj === 'math') {
     if (/algebra|polynomial|equation|quadra/i.test(cleanLower)) return 'Algebra';
     if (/geometr|trig|triangle|circle|angle/i.test(cleanLower)) return 'Geometry & Trigonometry';
     if (/calculus|deriv|integral|limit/i.test(cleanLower)) return 'Calculus';
     if (/statistic|probab|combinat|permut/i.test(cleanLower)) return 'Statistics & Probability';
     if (/number theory|prime|modulo|divisib/i.test(cleanLower)) return 'Number Theory';
-    return 'Algebra';
+    return 'Other Topics';
   }
 
-  return subject || 'General';
+  return 'Other Topics';
 };
 
 const baseChartOptions = {
