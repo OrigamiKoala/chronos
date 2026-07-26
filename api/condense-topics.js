@@ -24,10 +24,15 @@ export default async function handler(req, res) {
   const sanitizedUser = username.trim().toLowerCase();
 
   try {
-    // 1. Ensure parent_topic column exists in schema FIRST
-    await bq.query({
-      query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
-    }).catch(err => console.error("Add parent_topic column error:", err));
+    // 1. Ensure parent_topic column exists in both tables FIRST
+    await Promise.all([
+      bq.query({
+        query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_breakdown\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
+      }).catch(err => console.error("Add breakdown parent_topic column error:", err)),
+      bq.query({
+        query: `ALTER TABLE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` ADD COLUMN IF NOT EXISTS parent_topic STRING`
+      }).catch(err => console.error("Add mastery parent_topic column error:", err))
+    ]);
 
     // 2. Fire repair queries and initial fetch in parallel
     const [breakdownResult] = await Promise.all([
@@ -482,13 +487,26 @@ Output format must be a JSON object matching this schema:
       }
 
       if (uniqueMasteryItems.length > 0) {
-        const selects = uniqueMasteryItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.sub_category)} AS sub_category, ${item.correct_count} AS correct_count, ${item.total_count} AS total_count, ${item.accuracy_rate} AS accuracy_rate`).join('\nUNION ALL\n');
+        const selects = uniqueMasteryItems.map(item => `SELECT ${safeUser} AS user_id, ${escapeSqlStr(item.subject)} AS subject, ${escapeSqlStr(item.sub_category)} AS sub_category, ${item.correct_count} AS correct_count, ${item.total_count} AS total_count, ${item.accuracy_rate} AS accuracy_rate, ${escapeSqlStr(generatedParentRollups[item.sub_category.toLowerCase()] || '')} AS parent_topic`).join('\nUNION ALL\n');
         statements.push(`
           MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T
           USING (${selects}) S
           ON T.user_id = S.user_id AND T.subject = S.subject AND T.sub_category = S.sub_category
-          WHEN MATCHED THEN UPDATE SET correct_count = S.correct_count, total_count = S.total_count, accuracy_rate = S.accuracy_rate
-          WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate) VALUES (S.user_id, S.sub_category, S.subject, S.correct_count, S.total_count, S.accuracy_rate);
+          WHEN MATCHED THEN UPDATE SET correct_count = S.correct_count, total_count = S.total_count, accuracy_rate = S.accuracy_rate, parent_topic = COALESCE(NULLIF(S.parent_topic, ''), T.parent_topic)
+          WHEN NOT MATCHED THEN INSERT (user_id, sub_category, subject, correct_count, total_count, accuracy_rate, parent_topic) VALUES (S.user_id, S.sub_category, S.subject, S.correct_count, S.total_count, S.accuracy_rate, S.parent_topic);
+        `);
+      }
+
+      // Write parent_topic into ALL existing mastery rows using generatedParentRollups
+      const rollupEntries = Object.entries(generatedParentRollups).filter(([, parent]) => parent);
+      if (rollupEntries.length > 0) {
+        const rollupSelects = rollupEntries.map(([child, parent]) => `SELECT ${escapeSqlStr(child)} AS sub_category_lower, ${escapeSqlStr(parent)} AS parent_topic`).join('\nUNION ALL\n');
+        statements.push(`
+          MERGE \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\` T
+          USING (${rollupSelects}) S
+          ON T.user_id = ${safeUser} AND LOWER(T.sub_category) = S.sub_category_lower
+          WHEN MATCHED AND (T.parent_topic IS NULL OR T.parent_topic = '') THEN
+            UPDATE SET parent_topic = S.parent_topic;
         `);
       }
 

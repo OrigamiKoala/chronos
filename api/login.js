@@ -373,7 +373,7 @@ export default async function handler(req, res) {
          )
         ) AS history_json,
         
-        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(sub_category, subject, accuracy_rate, total_count)))
+        (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(sub_category, subject, accuracy_rate, total_count, parent_topic)))
          FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
          WHERE user_id = @username
         ) AS mastery_json,
@@ -571,6 +571,13 @@ export default async function handler(req, res) {
 
     const topicBreakdowns = {};
     const parentRollups = {};
+    // Build parentRollups from mastery rows first (covers all subtopics)
+    for (const m of mastery) {
+      if (m.parent_topic && m.sub_category && typeof m.sub_category === 'string') {
+        parentRollups[m.sub_category.trim().toLowerCase()] = m.parent_topic;
+      }
+    }
+    // Build topicBreakdowns and override parentRollups with breakdown data (more up-to-date)
     for (const b of breakdowns) {
       const topic = b.topic;
       if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {

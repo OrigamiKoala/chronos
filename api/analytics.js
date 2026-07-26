@@ -111,7 +111,7 @@ export default async function handler(req, res) {
         WHERE r.user_id IN UNNEST(@usernames)
       ),
       mastery AS (
-        SELECT 'mastery' AS type, TO_JSON_STRING(STRUCT(user_id, sub_category, subject, correct_count, total_count, accuracy_rate)) AS data
+        SELECT 'mastery' AS type, TO_JSON_STRING(STRUCT(user_id, sub_category, subject, correct_count, total_count, accuracy_rate, parent_topic)) AS data
         FROM \`${projectId}\`.\`chronos_users\`.\`user_topic_mastery\`
         WHERE user_id IN UNNEST(@usernames) AND total_count > 0
       ),
@@ -792,6 +792,15 @@ ${JSON.stringify(inputData, null, 2)}
     ];
 
     const parentRollups = {};
+    // Build parentRollups from mastery rows (covers all subtopics)
+    for (const m of topicMastery) {
+      const sub = m.sub_category;
+      if (m.parent_topic && typeof sub === 'string' && sub !== '__proto__' && sub !== 'constructor' && sub !== 'prototype') {
+        parentRollups[sub.trim().toLowerCase()] = m.parent_topic;
+        parentRollups[toCanonicalSubtopic(sub).toLowerCase()] = m.parent_topic;
+      }
+    }
+    // Also build from breakdown rows (may have more up-to-date AI mappings)
     for (const b of breakdowns) {
       const topic = b.topic;
       if (typeof topic === 'string' && topic !== '__proto__' && topic !== 'constructor' && topic !== 'prototype') {
