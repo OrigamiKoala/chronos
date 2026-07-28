@@ -216,7 +216,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
           svgContent = part;
         }
 
-        // If this part is an SVG block, render it inside a clean white canvas container
+        // If this part is an SVG block, adapt it to dark mode and render it inside a dark card container.
         if (isSvg) {
           let cleanedSvg = svgContent;
           const svgMatch = cleanedSvg.match(/<svg[\s\S]*?<\/svg>/i);
@@ -224,24 +224,29 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
             cleanedSvg = svgMatch[0];
           }
 
+          cleanedSvg = cleanedSvg
+            .replace(/stroke\s*=\s*['"](?:black|#000000|#000)['"]/gi, "stroke='currentColor'")
+            .replace(/fill\s*=\s*['"](?:black|#000000|#000)['"]/gi, "fill='currentColor'")
+            .replace(/fill\s*=\s*['"](?:white|#ffffff|#fff)['"]/gi, "fill='none'")
+            .replace(/background(-color)?\s*:\s*(?:white|#ffffff|#fff|black|#000000|#000)/gi, "background:transparent")
+            .replace(/stroke\s*:\s*(?:black|#000000|#000)/gi, "stroke:currentColor")
+            .replace(/fill\s*:\s*(?:black|#000000|#000)/gi, "fill:currentColor");
+
           return (
             <span
               key={partIndex}
               className="svg-diagram-container"
-              style={{ display: 'block', margin: '20px auto', maxWidth: '100%', textAlign: 'center' }}
+              style={{ display: 'block', margin: '20px auto', maxWidth: '580px', color: 'var(--text-primary)' }}
             >
               <span
                 style={{
-                  display: 'inline-block',
-                  backgroundColor: '#ffffff',
-                  color: '#111827',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '12px',
+                  display: 'block',
+                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '10px',
                   padding: '16px',
-                  overflowX: 'auto',
-                  maxWidth: '100%',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                  lineHeight: 1,
+                  overflow: 'auto',
+                  lineHeight: 'normal',
                 }}
                 dangerouslySetInnerHTML={{ __html: cleanedSvg }}
               />

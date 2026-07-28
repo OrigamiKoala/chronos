@@ -1674,7 +1674,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
         <div style={{ display: workSubmitted ? 'none' : 'block' }}>
           <div>
             <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
-              <p><ChemicalText text={problem.question} theme="dark" /></p>
+              <p><ChemicalText text={problem.question || problem.question_text} theme="dark" /></p>
             </div>
 
             <div style={{ marginBottom: '2rem' }}>
@@ -1761,7 +1761,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       {problem.type !== 'free_response' && (
         <>
           <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
-            <p><ChemicalText text={problem.question} theme="dark" /></p>
+            <p><ChemicalText text={problem.question || problem.question_text} theme="dark" /></p>
           </div>
 
           {problem.type === 'multiple_choice' && problem.options && (
