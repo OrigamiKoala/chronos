@@ -196,9 +196,8 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
 
   if (!cleanText) return null;
 
-  // Split by LaTeX blocks ($...$, $$...$$, \(...\), \[...\], \begin{env}...\end{env}), SVG blocks wrapped in ```xml ... ```, raw SVG blocks,
-  // smiles tag blocks (<smiles>...</smiles>), and markdown bold (**...**) / italic (*...*)
-  const parts = cleanText.split(/(\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\end\{[a-zA-Z]+\*?\}|```xml[\s\S]*?<\/svg>[\s\S]*?```|\[\[SVG:[\s\S]*?\]\]|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
+  // Split by SVG blocks, SMILES blocks, LaTeX blocks ($...$, $$...$$, \(...\), \[...\], \begin{env}...\end{env}), and markdown bold (**...**) / italic (*...*)
+  const parts = cleanText.split(/(\[\[SVG:[\s\S]*?\]\]|```(?:xml|html|svg)?[\s\S]*?<svg[\s\S]*?<\/svg>[\s\S]*?```|<svg[\s\S]*?<\/svg>|<smiles>[\s\S]*?<\/smiles>|\$\$[\s\S]*?\$\$|\$[^$]+?\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\begin\{[a-zA-Z]+\*?\}[\s\S]*?\\end\{[a-zA-Z]+\*?\}|\*\*[^*]+\*\*|\*[^*]+\*)/gi);
 
   return (
     <span ref={containerRef} key={cleanText} style={{ display: 'inline', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -206,43 +205,43 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
         let isSvg = false;
         let svgContent = part;
 
-        if (part.startsWith('```xml') && part.includes('<svg') && part.endsWith('```')) {
+        if (part.startsWith('[[SVG:')) {
           isSvg = true;
-          // Strip off the ```xml and ``` block delimiters
-          svgContent = part.replace(/^```xml\s*/, '').replace(/\s*```$/, '');
-        } else if (part.startsWith('[[SVG:')) {
+          svgContent = part.replace(/^\[\[SVG:\s*/i, '').replace(/\s*\]\]$/, '');
+        } else if (/^```(?:xml|html|svg)?/i.test(part) && part.includes('<svg')) {
           isSvg = true;
-          // Strip off the [[SVG: and ]] markers
-          svgContent = part.replace(/^\[\[SVG:\s*/, '').replace(/\s*\]\]$/, '');
-        } else if (part.startsWith('<svg')) {
+          svgContent = part.replace(/^```(?:xml|html|svg)?\s*/i, '').replace(/\s*```$/, '');
+        } else if (part.toLowerCase().includes('<svg') && part.toLowerCase().includes('</svg>')) {
           isSvg = true;
+          svgContent = part;
         }
 
-        // If this part is an SVG block, adapt it to dark mode and render it inside a dark card container.
+        // If this part is an SVG block, render it inside a clean white canvas container
         if (isSvg) {
-          const cleanedSvg = svgContent
-            .replace(/stroke\s*=\s*['"](?:black|#000000|#000)['"]/gi, "stroke='currentColor'")
-            .replace(/fill\s*=\s*['"](?:black|#000000|#000)['"]/gi, "fill='currentColor'")
-            .replace(/fill\s*=\s*['"](?:white|#ffffff|#fff)['"]/gi, "fill='none'")
-            .replace(/background\s*:\s*(?:white|#ffffff|#fff|black|#000000|#000)/gi, "background:transparent")
-            .replace(/stroke\s*:\s*(?:black|#000000|#000)/gi, "stroke:currentColor")
-            .replace(/fill\s*:\s*(?:black|#000000|#000)/gi, "fill:currentColor");
+          let cleanedSvg = svgContent;
+          const svgMatch = cleanedSvg.match(/<svg[\s\S]*?<\/svg>/i);
+          if (svgMatch) {
+            cleanedSvg = svgMatch[0];
+          }
 
           return (
             <span
               key={partIndex}
               className="svg-diagram-container"
-              style={{ display: 'block', margin: '20px auto', maxWidth: '580px', color: 'var(--text-primary)' }}
+              style={{ display: 'block', margin: '20px auto', maxWidth: '100%', textAlign: 'center' }}
             >
               <span
                 style={{
-                  display: 'block',
-                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '10px',
+                  display: 'inline-block',
+                  backgroundColor: '#ffffff',
+                  color: '#111827',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
                   padding: '16px',
-                  overflow: 'hidden',
-                  lineHeight: 0,
+                  overflowX: 'auto',
+                  maxWidth: '100%',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  lineHeight: 1,
                 }}
                 dangerouslySetInnerHTML={{ __html: cleanedSvg }}
               />
