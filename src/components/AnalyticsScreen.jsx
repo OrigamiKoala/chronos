@@ -398,13 +398,14 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
           next[index] = {
             ...next[index],
             aiExplanation: data.explanation,
-            isCorrect: data.shouldRemarkCorrect ? true : next[index].isCorrect
+            isCorrect: (data.shouldRemarkCorrect || data.shouldNullify) ? true : next[index].isCorrect,
+            isNullified: data.shouldNullify ? true : next[index].isNullified
           };
         }
         return next;
       });
 
-      if (data.shouldRemarkCorrect) {
+      if (data.shouldRemarkCorrect || data.shouldNullify) {
         setTags(prev => {
           if (prev[index] && prev[index] !== 'unsure') {
             const next = { ...prev };
@@ -416,7 +417,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       }
 
       if (user && examId) {
-        if (data.shouldRemarkCorrect) {
+        if (data.shouldRemarkCorrect || data.shouldNullify) {
           fetch('/api/remark-correct', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -427,7 +428,8 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
               subject,
               topic: problemObj.topic || 'General',
               explanation: data.explanation,
-              interactionIds: nextInteractionIds
+              interactionIds: nextInteractionIds,
+              isNullified: data.shouldNullify || false
             })
           })
             .then(res => {
@@ -904,7 +906,14 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                          </span>
                          <TriangleIcon size={18} color="var(--warning)" />
                        </>
-                     ) : r.isCorrect ? (
+                     ) : (r.isNullified || r.shouldNullify) ? (
+                        <>
+                          <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--warning)' }}>
+                            Nullified Question (Full Credit)
+                          </span>
+                          <AlertTriangle size={18} color="var(--warning)" />
+                        </>
+                      ) : r.isCorrect ? (
                        <CheckCircle2 size={18} />
                      ) : (
                        <XCircle size={18} />

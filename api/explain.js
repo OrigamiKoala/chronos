@@ -238,7 +238,10 @@ ${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.
     <description>Provide a highly clear, detailed, and pedagogically sound explanation of the problem, the concepts involved, and why the correct answer is indeed correct.</description>
     <subject_specific_instructions>${subjectInstructions}</subject_specific_instructions>
   </task>
-  <task id="2">Critically review the user's answer. If their attempt was marked 'Incorrect', determine if it is actually mathematically, chemically, or scientifically equivalent to the correct answer (for example: minor rounding differences, spelling variations, standard hyphen vs unicode minus sign, spacing or symbol differences, or alternative valid representations). If it is indeed equivalent and correct, set 'shouldRemarkCorrect' to true. Otherwise, set it to false. Also consider that the answer key may not be correct. If the answer key is incorrect, and the student is correct, mark the question correct.</task>
+  <task id="2">Critically review the question and the user's attempt.
+1. If the question itself is bad, flawed, ambiguous, missing critical information, has erroneous/impossible options, or has an unsolvable/wrong answer key, set "shouldNullify" to true AND set "shouldRemarkCorrect" to true (to nullify the flawed question and grant the student full credit).
+2. If the question is valid but the user's answer is mathematically, chemically, or scientifically equivalent to the correct answer (or if the answer key is wrong and the student is correct), set "shouldRemarkCorrect" to true and "shouldNullify" to false.
+3. Otherwise, set both "shouldRemarkCorrect" and "shouldNullify" to false.</task>
 </tasks>
 
 <output_requirements>
@@ -246,7 +249,8 @@ ${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.
   <schema>
     {
       "explanation": "Clear, detailed step-by-step explanation (without markdown headers or greetings)",
-      "shouldRemarkCorrect": true or false
+      "shouldRemarkCorrect": true or false,
+      "shouldNullify": true or false
     }
   </schema>
 </output_requirements>`;
@@ -269,26 +273,34 @@ ${userQuery || 'Explain the correct answer, step-by-step, and why it is correct.
 
     let explanationText = '';
     let shouldRemarkCorrectVal = false;
+    let shouldNullifyVal = false;
 
     const parsed = parseJSONResponse(response.output_text || '');
     if (parsed) {
       explanationText = parsed.explanation;
       shouldRemarkCorrectVal = parsed.shouldRemarkCorrect || false;
+      shouldNullifyVal = parsed.shouldNullify || false;
     } else if (response.output_text) {
       console.warn('Failed to parse JSON response from Gemini, using robust extractors as fallback.');
       explanationText = extractExplanationFallback(response.output_text);
       shouldRemarkCorrectVal = extractShouldRemarkCorrectFallback(response.output_text);
+      shouldNullifyVal = /"shouldNullify"\s*:\s*true/i.test(response.output_text);
     } else {
       explanationText = 'The AI did not return a response. The request may have been blocked by safety filters. Please try again.';
     }
 
-    if (isCorrect) {
+    if (shouldNullifyVal) {
+      shouldRemarkCorrectVal = true;
+    }
+
+    if (isCorrect && !shouldNullifyVal) {
       shouldRemarkCorrectVal = false;
     }
 
     return res.status(200).json({
       explanation: explanationText,
       shouldRemarkCorrect: shouldRemarkCorrectVal,
+      shouldNullify: shouldNullifyVal,
       interactionId: response.id || null
     });
   } catch (err) {

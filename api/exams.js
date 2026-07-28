@@ -359,7 +359,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { username, examId, questionId, subject, topic, explanation, interactionIds } = req.body;
+    const { username, examId, questionId, subject, topic, explanation, interactionIds, isNullified, shouldNullify } = req.body;
 
     if (!username || !examId || !questionId || !subject || !topic) {
       return res.status(400).json({ error: 'Missing required parameters' });
@@ -411,6 +411,10 @@ export default async function handler(req, res) {
       for (let i = 0; i < results.length; i++) {
         if (results[i].id === questionId) {
           results[i].isCorrect = true;
+          results[i].score = 1.0;
+          if (isNullified || shouldNullify) {
+            results[i].isNullified = true;
+          }
           if (explanation) {
             results[i].aiExplanation = explanation;
           }
