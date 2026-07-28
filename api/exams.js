@@ -102,7 +102,7 @@ async function saveQuestionsToPregenerated(questions, subject) {
 
 
 const projectId = process.env.BIGQUERY_PROJECT_ID || 'chronos-stress-sandbox';
-const ELO_ALGORITHM_VERSION = 3;
+const ELO_ALGORITHM_VERSION = 4;
 let tablesEnsured = false;
 let tagsTableEnsured = false;
 
@@ -494,9 +494,9 @@ export default async function handler(req, res) {
         }),
         bq.query({
           query: `UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
-            SET ${ratingColumn} = ${ratingColumn} + @ratingDiff
+            SET ${ratingColumn} = @newRatingVal
             WHERE user_id = @username`,
-          params: { ratingDiff, username: sanitizedUser }
+          params: { newRatingVal, username: sanitizedUser }
         })
       ];
 

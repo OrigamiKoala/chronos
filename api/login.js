@@ -10,7 +10,7 @@ const bq = new BigQuery({
   },
 });
 
-const ELO_ALGORITHM_VERSION = 3;
+const ELO_ALGORITHM_VERSION = 4;
 let schemaEnsured = false;
 
 import crypto from 'crypto';
