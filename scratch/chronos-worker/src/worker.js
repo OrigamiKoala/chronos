@@ -1558,7 +1558,6 @@ Return ONLY a valid JSON array (one object per Question ID):
       const avgQuestionRating = sumRatings / totalQuestions;
 
       let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
-      if (avgQuestionRating < currentRating) expectedScore = Math.max(expectedScore, 0.75);
 
       let isChallenged = false;
       try {

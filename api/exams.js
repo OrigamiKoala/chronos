@@ -437,9 +437,6 @@ export default async function handler(req, res) {
       const questionMultiplier = Math.sqrt(totalCount / 5);
 
       let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - oldRating) / 400));
-      if (avgQuestionRating < oldRating) {
-        expectedScore = Math.max(expectedScore, 0.75);
-      }
 
       // Solve for original K factor (either 32 or 250)
       const originalScore = (correctCount - 1) / totalCount;
@@ -850,9 +847,6 @@ export default async function handler(req, res) {
       const avgQuestionRating = sumQuestionRatings / totalQuestions;
 
       let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
-      if (avgQuestionRating < currentRating) {
-        expectedScore = Math.max(expectedScore, 0.75);
-      }
 
       let isChallenged = false;
       try {

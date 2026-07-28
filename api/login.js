@@ -476,9 +476,6 @@ export default async function handler(req, res) {
         const avgQuestionRating = sumQuestionRatings > 0 ? (sumQuestionRatings / totalQuestions) : 1000;
 
         let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
-        if (avgQuestionRating < currentRating) {
-          expectedScore = Math.max(expectedScore, 0.75);
-        }
 
         if (score < 0.75) {
           subjectConsecutiveFailCount[sub]++;

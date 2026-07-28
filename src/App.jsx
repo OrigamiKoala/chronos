@@ -659,9 +659,6 @@ function App() {
     const avgQuestionRating = sumQuestionRatings / totalQuestions;
 
     let expectedScore = 1 / (1 + Math.pow(10, (avgQuestionRating - currentRating) / 400));
-    if (avgQuestionRating < currentRating) {
-      expectedScore = Math.max(expectedScore, 0.75);
-    }
     const subHistory = [...history].filter(h => h.subject === subject).reverse();
     let isChallenged = false;
     let consecutiveFailCount = 0;
