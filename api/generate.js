@@ -1091,7 +1091,7 @@ Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high scho
     let keywordExpressionSchemaDesc = parsedTypes.includes('short_answer')
       ? `\n  "keywordExpression": "A logical boolean expression representing answer correctness (e.g., 'gravity AND newton' or 'O2 OR oxygen' or \\"'carbon dioxide' OR CO2\\"). Use AND, OR, NOT, parentheses, and single quotes for multi-word phrases. Required ONLY if type is short_answer.",`
       : ``;
-    let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
+    let answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D' (MUST vary and mix up correct choices evenly across A, B, C, and D — do NOT make all or most answers 'A'). For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
 
     let lessonInstructions = '';
     if (lessonTitle || lessonDescription) {
@@ -1160,6 +1160,7 @@ ${examples}
     <rule>Do NOT output your thought process in any field of the JSON. Only output the final, fully refined question parameters.</rule>
     <rule>Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with '['.</rule>
     <rule>For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Keep simple, purely qualitative text options that do not contain mathematical or chemical terms in plain, un-delimited text format.</rule>
+    <rule>CRITICAL FOR MULTIPLE CHOICE QUESTIONS: You MUST mix up and randomize the correct answer choice ('answer') evenly across 'A', 'B', 'C', and 'D'. NOT all or most answers should be "A". Ensure a balanced and unpredictable distribution of correct answer letters (A, B, C, D) across all generated multiple choice questions.</rule>
   </general_rules>
 
   <schema_type>json_array</schema_type>
@@ -1188,10 +1189,11 @@ ${examples}
 Generate exactly ${needed} ${normSubject} problems. The average difficulty of the generated questions must be exactly ${difficulty} (on a scale of 0 to 10). No single question should have a difficulty more than 2 units away from this average (i.e. every question's difficulty must be in the range [${Math.max(0, difficulty - 2)}, ${Math.min(10, difficulty + 2)}]).
 
 <rules>
-1. ${typeInstruction}`;
+1. ${typeInstruction}
+2. CRITICAL FOR MULTIPLE CHOICE QUESTIONS: Mix up the correct answer choice ('answer') positions evenly across 'A', 'B', 'C', and 'D'. NOT all or most answers should be "A".`;
 
       if (topics && typeof topics === 'string' && topics.trim()) {
-        prompt += `\n2. The generated questions MUST be about the following topics: ${topics.trim()}.`;
+        prompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
       }
 
       prompt += `
