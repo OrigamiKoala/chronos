@@ -706,17 +706,13 @@ function App() {
       localStorage.setItem('chronos_guest_history', JSON.stringify([immediateHistoryItem, ...guestHistory]));
     }
 
-    // Cache current exam submission to local active exam state so it can be resumed/resubmitted if session expired
-    const activeExamBackup = {
-      exam_id: examIdStr,
-      subject,
-      config: examConfig,
-      results,
-      updated_at: new Date().toISOString()
-    };
-    const cachedActiveExams = activeExams.filter(e => e.exam_id !== examIdStr);
-    const savedActiveExams = [activeExamBackup, ...cachedActiveExams];
-    localStorage.setItem('chronos_cache_active_exams', JSON.stringify(savedActiveExams));
+    // Remove completed exam from active exams state and local storage cache
+    setActiveExams(prev => {
+      const updated = prev.filter(e => e.exam_id !== examIdStr);
+      localStorage.setItem('chronos_cache_active_exams', JSON.stringify(updated));
+      return updated;
+    });
+    localStorage.removeItem('chronos_cache_active_exam');
 
     fetch('/api/submit-exam', {
       method: 'POST',
@@ -762,9 +758,12 @@ function App() {
           setGradingLoading(false);
           return;
         }
-        setActiveExams(prev => prev.filter(e => e.exam_id !== examIdStr));
+        setActiveExams(prev => {
+          const updated = prev.filter(e => e.exam_id !== examIdStr);
+          localStorage.setItem('chronos_cache_active_exams', JSON.stringify(updated));
+          return updated;
+        });
         setExamConfig(null);
-        localStorage.setItem('chronos_cache_active_exams', JSON.stringify(activeExams.filter(e => e.exam_id !== examIdStr)));
         // Overwrite results, rating, and change with AI-graded values if present
         if (submitData.results) {
           setExamResults({
