@@ -1059,18 +1059,18 @@ function App() {
                         <Shield size={14} /> Admin
                       </button>
                     )}
-                     <button
-                       className="btn btn-outline"
-                       style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
-                       onClick={() => {
-                         setProfileJoinCode(user.user_organization === 'Rancho MATHCOUNTS' ? 'RanchoMC' : '');
-                         setProfileRole(user.user_role || '');
-                         setShowProfileModal(true);
-                         setShowUserDropdown(false);
-                       }}
-                     >
-                       <Settings size={14} /> Settings
-                     </button>
+                    <button
+                      className="btn btn-outline"
+                      style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
+                      onClick={() => {
+                        setProfileJoinCode(user.user_organization === 'Rancho MATHCOUNTS' ? 'RanchoMC' : '');
+                        setProfileRole(user.user_role || '');
+                        setShowProfileModal(true);
+                        setShowUserDropdown(false);
+                      }}
+                    >
+                      <Settings size={14} /> Settings
+                    </button>
                     <button
                       className="btn btn-outline"
                       style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', color: 'var(--danger)', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}
@@ -1121,215 +1121,215 @@ function App() {
                 {user && (
                   <div className="dashboard-panel-wrapper">
                     <div className="glass-panel animate-fade-in" style={{ padding: 'var(--panel-padding)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-                    <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {user.user_id}'s {selectedSubject} Dashboard
-                    </h3>
+                      <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {user.user_id}'s {selectedSubject} Dashboard
+                      </h3>
 
-                    {activeExams && activeExams.length > 0 && activeExams.map((exam, index) => {
-                      const numQs = exam.config?.numQuestions || exam.problems?.length || 0;
-                      const dateFormatted = exam.created_at ? formatDate(exam.created_at) : 'In progress';
-                      return (
-                        <div
-                          key={exam.exam_id || index}
-                          style={{
-                            background: 'rgba(99, 102, 241, 0.08)',
-                            border: '1px solid rgba(99, 102, 241, 0.3)',
-                            borderRadius: 'var(--radius-md)',
-                            padding: '1rem',
-                            marginBottom: '1rem',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            boxSizing: 'border-box'
-                          }}
-                        >
-                          <div>
-                            <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600' }}>
-                              Resume Exam?
-                            </h4>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                              {exam.subject} • {numQs} Qs • Started {dateFormatted}
-                            </span>
+                      {activeExams && activeExams.length > 0 && activeExams.map((exam, index) => {
+                        const numQs = exam.config?.numQuestions || exam.problems?.length || 0;
+                        const dateFormatted = exam.created_at ? formatDate(exam.created_at) : 'In progress';
+                        return (
+                          <div
+                            key={exam.exam_id || index}
+                            style={{
+                              background: 'rgba(99, 102, 241, 0.08)',
+                              border: '1px solid rgba(99, 102, 241, 0.3)',
+                              borderRadius: 'var(--radius-md)',
+                              padding: '1rem',
+                              marginBottom: '1rem',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            <div>
+                              <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: '600' }}>
+                                Resume Exam?
+                              </h4>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                {exam.subject} • {numQs} Qs • Started {dateFormatted}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button
+                                className="btn btn-primary"
+                                style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+                                onClick={() => handleResumeExam(exam)}
+                              >
+                                Resume
+                              </button>
+                              <button
+                                className="btn btn-outline"
+                                style={{
+                                  padding: '0.4rem 1rem',
+                                  fontSize: '0.85rem',
+                                  borderColor: '#ef4444',
+                                  color: '#ef4444',
+                                  background: 'transparent'
+                                }}
+                                onClick={() => handleDeleteExam(exam.exam_id)}
+                                disabled={deletingExamId === exam.exam_id}
+                              >
+                                {deletingExamId === exam.exam_id ? 'Discarding...' : 'Delete'}
+                              </button>
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button
-                              className="btn btn-primary"
-                              style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
-                              onClick={() => handleResumeExam(exam)}
-                            >
-                              Resume
-                            </button>
+                        );
+                      })}
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
+                          <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Strengths</h4>
+                          {filteredStrengths.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                              {filteredStrengths.map((s, i) => (
+                                <span
+                                  key={i}
+                                  style={{
+                                    background: 'rgba(74, 222, 128, 0.1)',
+                                    color: 'var(--success)',
+                                    padding: '0.25rem 0.6rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                    border: selectedTopicDetail?.topic === s && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent',
+                                    transition: 'all 0.2s ease',
+                                    userSelect: 'none'
+                                  }}
+                                  onClick={() => setSelectedTopicDetail(prev => prev?.topic === s && prev?.type === 'strength' ? null : { topic: s, type: 'strength' })}
+                                >
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal strengths!</span>
+                          )}
+                        </div>
+                        <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-sm)' }}>
+                          <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Weaknesses</h4>
+                          {filteredWeaknesses.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                              {filteredWeaknesses.map((w, i) => (
+                                <span
+                                  key={i}
+                                  style={{
+                                    background: 'rgba(248, 113, 113, 0.1)',
+                                    color: 'var(--danger)',
+                                    padding: '0.25rem 0.6rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                    border: selectedTopicDetail?.topic === w && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent',
+                                    transition: 'all 0.2s ease',
+                                    userSelect: 'none'
+                                  }}
+                                  onClick={() => setSelectedTopicDetail(prev => prev?.topic === w && prev?.type === 'weakness' ? null : { topic: w, type: 'weakness' })}
+                                >
+                                  {w}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal weaknesses!</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {selectedTopicDetail && (
+                        <div style={{
+                          marginBottom: '1.5rem',
+                          padding: 'var(--card-padding-sm)',
+                          background: selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.03)' : 'rgba(248, 113, 113, 0.03)',
+                          border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)'}`,
+                          borderRadius: 'var(--radius-md)',
+                          animation: 'fade-in 0.3s ease'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                            <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>
+                              <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
+                            </h4>
                             <button
                               className="btn btn-outline"
-                              style={{
-                                padding: '0.4rem 1rem',
-                                fontSize: '0.85rem',
-                                borderColor: '#ef4444',
-                                color: '#ef4444',
-                                background: 'transparent'
-                              }}
-                              onClick={() => handleDeleteExam(exam.exam_id)}
-                              disabled={deletingExamId === exam.exam_id}
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }}
+                              onClick={() => setSelectedTopicDetail(null)}
                             >
-                              {deletingExamId === exam.exam_id ? 'Discarding...' : 'Delete'}
+                              Close
                             </button>
                           </div>
-                        </div>
-                      );
-                    })}
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                      <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
-                        <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Strengths</h4>
-                        {filteredStrengths.length > 0 ? (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                            {filteredStrengths.map((s, i) => (
-                              <span
-                                key={i}
-                                style={{
-                                  background: 'rgba(74, 222, 128, 0.1)',
-                                  color: 'var(--success)',
-                                  padding: '0.25rem 0.6rem',
-                                  borderRadius: '4px',
-                                  fontSize: '0.75rem',
-                                  cursor: 'pointer',
-                                  border: selectedTopicDetail?.topic === s && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent',
-                                  transition: 'all 0.2s ease',
-                                  userSelect: 'none'
-                                }}
-                                onClick={() => setSelectedTopicDetail(prev => prev?.topic === s && prev?.type === 'strength' ? null : { topic: s, type: 'strength' })}
-                              >
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal strengths!</span>
-                        )}
-                      </div>
-                      <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-sm)' }}>
-                        <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Weaknesses</h4>
-                        {filteredWeaknesses.length > 0 ? (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                            {filteredWeaknesses.map((w, i) => (
-                              <span
-                                key={i}
-                                style={{
-                                  background: 'rgba(248, 113, 113, 0.1)',
-                                  color: 'var(--danger)',
-                                  padding: '0.25rem 0.6rem',
-                                  borderRadius: '4px',
-                                  fontSize: '0.75rem',
-                                  cursor: 'pointer',
-                                  border: selectedTopicDetail?.topic === w && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent',
-                                  transition: 'all 0.2s ease',
-                                  userSelect: 'none'
-                                }}
-                                onClick={() => setSelectedTopicDetail(prev => prev?.topic === w && prev?.type === 'weakness' ? null : { topic: w, type: 'weakness' })}
-                              >
-                                {w}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal weaknesses!</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedTopicDetail && (
-                      <div style={{
-                        marginBottom: '1.5rem',
-                        padding: 'var(--card-padding-sm)',
-                        background: selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.03)' : 'rgba(248, 113, 113, 0.03)',
-                        border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)'}`,
-                        borderRadius: 'var(--radius-md)',
-                        animation: 'fade-in 0.3s ease'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}>
-                            <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>
-                          </h4>
-                          <button
-                            className="btn btn-outline"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto' }}
-                            onClick={() => setSelectedTopicDetail(null)}
-                          >
-                            Close
-                          </button>
-                        </div>
-                        {topicBreakdowns[selectedTopicDetail.topic] ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
-                            <div>
-                              <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✓ What you are good at:</span>
-                              <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].good_at}</span>
-                            </div>
-                            <div>
-                              <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✗ What you are not good at:</span>
-                              <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                            No specific AI-breakdown stored yet for this topic. Complete more sessions to analyze details!
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-
-
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                      <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem', color: 'var(--text-primary)', flexShrink: 0 }}>History</h4>
-                      {history.length > 0 ? (
-                        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
-                          {history.map((h, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                background: 'var(--bg-tertiary)',
-                                padding: '0.75rem',
-                                borderRadius: 'var(--radius-sm)',
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                fontSize: '0.85rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                              }}
-                              className="history-row"
-                              onClick={() => loadingExamId === null && reviewPastExam(h)}
-                            >
+                          {topicBreakdowns[selectedTopicDetail.topic] ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
                               <div>
-                                <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>
-                                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{formatDate(h.created_at)}</span>
+                                <span style={{ color: 'var(--success)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✓ What you are good at:</span>
+                                <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].good_at}</span>
                               </div>
-                              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                <span style={{ color: h.accuracy >= 0.70 ? 'var(--success)' : h.accuracy >= 0.40 ? 'var(--warning)' : 'var(--danger)' }}>{Math.round(h.accuracy * 100)}% Acc</span>
-                                <strong style={{ color: h.rating_change >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                                  {h.rating_change >= 0 ? `+${h.rating_change}` : h.rating_change} ({h.new_rating})
-                                </strong>
-                                <span style={{
-                                  fontSize: '0.75rem',
-                                  color: 'var(--accent-secondary)',
-                                  textDecoration: 'underline',
-                                  marginLeft: '0.5rem',
-                                  opacity: 0.8
-                                }}>
-                                  {loadingExamId === h.exam_id ? 'Loading...' : 'Review'}
-                                </span>
+                              <div>
+                                <span style={{ color: 'var(--danger)', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>✗ What you are not good at:</span>
+                                <span style={{ color: 'var(--text-secondary)' }}>{topicBreakdowns[selectedTopicDetail.topic].not_good_at}</span>
                               </div>
                             </div>
-                          ))}
+                          ) : (
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                              No specific AI-breakdown stored yet for this topic. Complete more sessions to analyze details!
+                            </span>
+                          )}
                         </div>
-                      ) : (
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No tests taken yet. Start a session to build your history!</p>
                       )}
+
+
+
+                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                        <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem', color: 'var(--text-primary)', flexShrink: 0 }}>History</h4>
+                        {history.length > 0 ? (
+                          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
+                            {history.map((h, i) => (
+                              <div
+                                key={i}
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  background: 'var(--bg-tertiary)',
+                                  padding: '0.75rem',
+                                  borderRadius: 'var(--radius-sm)',
+                                  border: '1px solid rgba(255,255,255,0.05)',
+                                  fontSize: '0.85rem',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                }}
+                                className="history-row"
+                                onClick={() => loadingExamId === null && reviewPastExam(h)}
+                              >
+                                <div>
+                                  <strong style={{ color: 'var(--accent-primary)' }}>{h.subject}</strong>
+                                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{formatDate(h.created_at)}</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                  <span style={{ color: h.accuracy >= 0.70 ? 'var(--success)' : h.accuracy >= 0.40 ? 'var(--warning)' : 'var(--danger)' }}>{Math.round(h.accuracy * 100)}% Acc</span>
+                                  <strong style={{ color: h.rating_change >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                                    {h.rating_change >= 0 ? `+${h.rating_change}` : h.rating_change} ({h.new_rating})
+                                  </strong>
+                                  <span style={{
+                                    fontSize: '0.75rem',
+                                    color: 'var(--accent-secondary)',
+                                    textDecoration: 'underline',
+                                    marginLeft: '0.5rem',
+                                    opacity: 0.8
+                                  }}>
+                                    {loadingExamId === h.exam_id ? 'Loading...' : 'Review'}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No tests taken yet. Start a session to build your history!</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
               </div>
             )}
             {currentScreen === 'exam' && examConfig && (
@@ -1400,6 +1400,7 @@ function App() {
       }}>
         <div>Contact: Discord @origamikoala</div>
         <div style={{ marginTop: '0.35rem' }}>Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a></div>
+        <div style={{ marginTop: '0.35rem' }}>Like this project? Consider supporting me on <a href="https://www.patreon.com/cw/origamikoala" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Patreon</a>.</div>
       </footer>
 
       {/* Sign-In Conversion Warning Modal */}
