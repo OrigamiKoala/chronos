@@ -13,7 +13,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle as TriangleIcon, BookOpen, Save, Check, Clock, Info } from 'lucide-react';
+import { Activity, CheckCircle2, XCircle, TrendingUp, Award, BrainCircuit, Loader2, HelpCircle, AlertTriangle, AlertTriangle as TriangleIcon, BookOpen, Save, Check, Clock, Info } from 'lucide-react';
 import { ChemicalText, SmilesRenderer } from './ChemicalText';
 import { isSmiles } from './chemicalHelpers';
 import { normalizeAnswer } from './ExamScreen';
