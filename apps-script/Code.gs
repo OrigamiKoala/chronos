@@ -1,7 +1,6 @@
 const sheet = SpreadsheetApp.getActiveSpreadsheet();
 const dashboardSheet = sheet.getSheetByName("Dashboard");
 const logSheet = sheet.getSheetByName("Log");
-
 var VERCEL_BASE = 'https://chronos-bot.vercel.app';
 
 function doGet() {
@@ -31,9 +30,6 @@ function apiProxy(path, method, body) {
     contentType: 'application/json',
   };
 }
-
-
-
 function cellToHtml(range) {
   let values = range.getRichTextValues();
 
