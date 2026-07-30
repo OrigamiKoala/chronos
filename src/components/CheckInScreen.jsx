@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, UserCheck, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
-const SCRIPT_URL = 'https://script.google.com/a/macros/iusd.org/s/AKfycbwvP1A_NnGe2NT-XhLrMO-6VDYbGcIhytNigzMQRnZEV4Sb0Hmm06-A25XWasFYylTR8w/exec';
+const API_ENDPOINT = '/api/check-in';
 
 export function CheckInScreen({ onBack }) {
   const [information, setInformation] = useState('');
@@ -18,10 +18,10 @@ export function CheckInScreen({ onBack }) {
   const [studentName, setStudentName] = useState('');
   const [responseMessage, setResponseMessage] = useState('');
 
-  // Fetch initial updates/information from Google Apps Script endpoint
+  // Fetch initial updates/information via Vercel serverless proxy
   useEffect(() => {
     let isMounted = true;
-    fetch(`${SCRIPT_URL}?action=info`)
+    fetch(`${API_ENDPOINT}?action=info`)
       .then(res => res.json())
       .then(data => {
         if (isMounted && data && data.information) {
@@ -29,7 +29,7 @@ export function CheckInScreen({ onBack }) {
         }
       })
       .catch(err => {
-        console.warn('Could not fetch info update from Apps Script endpoint:', err);
+        console.warn('Could not fetch info update from API endpoint:', err);
       });
     return () => {
       isMounted = false;
@@ -56,20 +56,19 @@ export function CheckInScreen({ onBack }) {
     let result = null;
 
     try {
-      // Try POST request first
-      const response = await fetch(SCRIPT_URL, {
+      const response = await fetch(API_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (response.ok) {
         result = await response.json();
       }
     } catch (err) {
-      console.warn('POST submission failed, trying GET fallback:', err);
+      console.warn('POST submission via API proxy failed, trying GET fallback:', err);
     }
 
-    // Fallback to GET if POST failed
+    // Fallback to GET via API proxy if POST fails
     if (!result) {
       try {
         const queryParams = new URLSearchParams({
@@ -79,7 +78,7 @@ export function CheckInScreen({ onBack }) {
           leavingText: payload.leavingText
         }).toString();
         
-        const getRes = await fetch(`${SCRIPT_URL}?${queryParams}`);
+        const getRes = await fetch(`${API_ENDPOINT}?${queryParams}`);
         if (getRes.ok) {
           result = await getRes.json();
         }
