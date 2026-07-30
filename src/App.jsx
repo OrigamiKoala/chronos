@@ -9,22 +9,28 @@ import { TestScreen } from './components/TestScreen';
 import { ReviewScreen } from './components/ReviewScreen';
 import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
 
-// Cookie helpers
-function setCookie(name, value, days = 90) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+// Persisted identity helpers (localStorage-backed, not cookies).
+// Apps Script serves this app inside a cross-origin (googleusercontent.com)
+// iframe nested under script.google.com, so document.cookie is third-party
+// storage there and gets blocked/wiped by Chrome's cookie restrictions.
+// localStorage isn't subject to that same blocking, so these keep the
+// original getCookie/setCookie/eraseCookie call sites working unchanged.
+function setCookie(name, value) {
+  try {
+    localStorage.setItem(name, value);
+  } catch (e) {
+    // storage unavailable (e.g. quota, private browsing) - ignore
+  }
 }
 
 function getCookie(name) {
-  if (typeof document === 'undefined') return '';
-  return document.cookie.split('; ').reduce((r, v) => {
-    const parts = v.split('=');
-    return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-  }, '');
+  if (typeof localStorage === 'undefined') return '';
+  return localStorage.getItem(name) || '';
 }
 
 function eraseCookie(name) {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(name);
 }
 
 // Cache helper
@@ -41,7 +47,7 @@ const getCachedItem = (key, fallback) => {
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
-    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+    const path = typeof window !== 'undefined' ? (window.location.hash.slice(1) || '/') : '/';
     if (path === '/teacher') return 'teacher';
     if (path === '/admin') return 'admin';
     if (path === '/test') return 'test';
@@ -167,7 +173,7 @@ function App() {
 
 
   const navigateTo = (path) => {
-    window.history.pushState({}, '', path);
+    window.location.hash = path;
     if (path === '/teacher') {
       setCurrentScreen('teacher');
     } else if (path === '/admin') {
@@ -182,8 +188,8 @@ function App() {
   };
 
   useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
+    const handleHashChange = () => {
+      const path = window.location.hash.slice(1) || '/';
       if (path === '/teacher') {
         setCurrentScreen('teacher');
       } else if (path === '/admin') {
@@ -196,8 +202,8 @@ function App() {
         setCurrentScreen('setup');
       }
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
 

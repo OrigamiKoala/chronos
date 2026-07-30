@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:appsscript": "vite build && cp dist/index.html apps-script/Index.html",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -37,6 +38,7 @@
     "jest": "^30.4.2",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.11",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vite-plugin-singlefile": "^2.3.3"
   }
 }
