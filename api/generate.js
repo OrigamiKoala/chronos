@@ -765,103 +765,57 @@ const chem_excluded_topics = `
 </excluded_topics>
 `;
 
+const shared_constraints = `
+<shared_constraints id="SC">
+Binding on every role below.
+
+Content
+1. Stay within the syllabus, but test to maximum conceptual depth. Avoid every excluded topic.
+2. BANISH any question, setup, or testing format seen in past exams or standard textbooks. Questions must be 100% original and test known concepts from completely unprecedented angles - never solvable by memory or template-matching.
+3. Problems must be significantly harder than past exams.
+4. Traps must be deeply hidden and non-obvious, engineered so an advanced student falls in without realizing. The correct answer should feel counterintuitive because of the trap.
+5. Increase difficulty by coupling unexpected systems.
+6. Every question must be fully solvable and sound. No hand-waving.
+7. Solvable with a scientific calculator ONLY; excessive computation is beyond the scope of olympiads.
+8. Multiple choice: exactly ONE correct answer. Each of the 3 distractors must be the actual result of a common misconception or of falling into the trap.
+9. free_response at high difficulty (IMO, USAMO, IPhO, IChO): the question MUST require a comprehensive proof, step-by-step derivation, or synthesis mechanism, NOT just a final numerical value.
+
+Voice
+10. Match the style and tone of past olympiad exams, at higher difficulty.
+11. Strictly neutral. NEVER include hints, warnings, or clarifying instructions (e.g. "Do not assume...", "Account for...", "Do not rely on..."). NEVER hint at the solution or the trap. No commentary.
+
+Formatting
+12. LaTeX for all equations, formulas, units, and variables; mhchem for chemical formulas.
+13. Draw organic species as 2D/3D representations (zigzag carbon chains) using SMILES. <important>CRITICAL: wrap every SMILES string in <smiles>...</smiles> tags (e.g. <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>).</important>
+14. Diagrams as inline SVG embedded in the question text via [[SVG: <svg ...>...</svg>]] markers. Aim for at least half of all questions to carry an SVG figure - titration curves, phase diagrams, energy-level and orbital diagrams, reaction coordinate plots, crystallographic unit cells, spectroscopy traces. Primitive shapes only (<line>, <circle>, <rect>, <path>, <text>, <polygon>); inline attributes only (no CSS <style> blocks); transparent or dark background (never a white background or rect - use light or white strokes); single quotes for all attribute values, for JSON compatibility.
+15. ANY SVG graph <important>MUST HAVE SCALES</important> on the axes.
+16. Never round or truncate values; preserve full numerical accuracy.
+</shared_constraints>
+`;
+
 const agents_description = `
 <agents>
-## Agent: Brainstorm
-- **Instructions**:
-  - Role: You are an expert coach for students competing at the national level of olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. Never ask questions similar to past exams. Every problem must test existing syllabus knowledge in completely different, unprecedented ways, incorporating hidden conceptual traps that students have never encountered before and will easily fall into without realizing.
-  - Goal: Brainstorm a list of novel olympiad-style problem topics, hidden traps, and original ideas to send to the Writer agent.
-  - Steps:
-    1. Determine the style and scope of the olympiad exam, as well as how many questions there should be.
-    2. Brainstorm <important>brand-new, unprecedented ways of testing a student's knowledge for each individual problem.</important> These must NOT have appeared in past exams or standard textbooks. They must test concepts from completely different angles.
-    3. For each idea, construct a counterintuitive chemical or physical system featuring hidden conceptual traps—traps the student has never encountered before and could easily fall into without realizing.
-    4. Generate a "Master Outline" containing all brainstormed ideas for each problem.
-  - Constraints:
-    - Stay within scope of syllabus, but test to maximum depth.
-    - <important>BANISH any question or setup seen in past exams or textbooks. Questions must be 100% brand-new and original.</important>
-    - Avoid topics listed in excluded topics.
-    - Focus heavily on hidden conceptual traps where the correct answer is counterintuitive and students will unknowingly fall into the trap.
-    - Increase difficulty by coupling unexpected systems.
-    - The problems should be significantly harder than past questions.
----
+Play each role below in sequence, completing each in full before starting the next. Every role obeys <shared_constraints id="SC"> above.
 
-## Agent: Writer
-- **Instructions**:
-  - Role: You are a creative olympiad question writer.
-  - Goal: Write out the problem text for each olympiad problem, as well as answer choices for multiple choice questions.
-  - Steps:
-    1. Read through the "Master Outline" document created by the Brainstorm agent for the problem sketches.
-    2. For each problem, write out the problem text using proper LaTeX formatting, using mhchem for chemical formulas. Use SMILES to draw chemical structures and SVG for diagrams. ANY SVG graphs <important>MUST HAVE SCALES</important> on the axes. Write all problems live into a "Problems" document.
-    3. For multiple choice questions ONLY, calculate or derive 3 incorrect answer choices that result directly from falling into the conceptual trap. Then, write the LaTeX, SMILES, and/or SVG code for these answer choices and the correct answer choice. Add these to the "Problems" document.
-  - Constraints:
-    - Use the sketches from the "Master Outline" document.
-    - Write in the same style/tone as past olympiad exams, but make the questions harder.
-    - Incorrect answer choices should correspond to the common misconceptions and errors that students would likely make when falling into the hidden conceptual trap. 
-    - Keep a strictly neutral tone. NEVER include hints, warnings, or clarifying instructions (e.g., "Do not assume...", "Account for...", "Do not rely on...").
-    - NEVER hint at the problem solution or trap. 
-    - Do not include any commentary.
-    - Questions must be solvable with a scientific calculator ONLY. Excessive computation is beyond the scope of olympiads.
-    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. <important>CRITICAL: You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>).</important> Use LaTeX for all equations, formulas, units, and variables.
-    - The traps must be deeply hidden and non-obvious—specifically engineered so an advanced student falls into them without realizing.
-    - For calculation questions, do NOT round or truncate to ensure numerical accuracy.
-    - SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
-    - For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
-    - <important>No question or testing format should have been seen before. Test existing syllabus knowledge in completely different, unprecedented ways with hidden traps students have never encountered before.</important>
----
+<agent name="Brainstorm">
+Expert coach for national-level olympiad students. For each problem, invent a brand-new, unprecedented way to test the student's existing syllabus knowledge - an angle that has NOT appeared in past exams or standard textbooks - then build it into a counterintuitive chemical or physical system carrying a hidden trap the student has never encountered. Output a "Master Outline" of every idea.
+</agent>
 
-## Agent: Solver
-- **Instructions**:
-  - Role: You are an advanced science olympiad student competing at the international level.
-  - Goal: Test-solve problems and ensure they are of high quality, are free from errors, and have correct solutions. Then, write solutions.
-  - Steps:
-    1. Read through the "Problems" document generated by the Writer agent. 
-    2. Solve each problem as if you were taking the test.
-    3. Ensure the problems are high-quality, and can be solved realistically by an advanced high school olympiad student using ONLY a scientific calculator.
-    4. Output a "Solutions" document with detailed solutions. Write out the full solution in a clear, step-by-step format, explaining the reasoning and calculations involved, as well as the trap(s).
-    5. If a problem is of low quality, alert the Director agent so another question can be generated to replace it.
-  - Constraints:
-    - The solutions should be clear and detailed, yet still concise.
-    - The problems should all be solvable with ONLY a scientific calculator.
-    - Multiple choice questions should have exactly ONE correct answer.
+<agent name="Writer">
+Creative olympiad question writer. Working from the Master Outline sketches, write out each problem's text. For multiple choice ONLY, derive 3 incorrect choices that each follow directly from falling into the conceptual trap, then write all four choices. Output a "Problems" document.
+</agent>
 
----
+<agent name="Solver">
+Advanced science olympiad student at international level. Solve each problem in "Problems" as if sitting the exam, confirming each is realistically solvable by an advanced high school student with a scientific calculator alone. Output a "Solutions" document giving full step-by-step reasoning, calculations, and an explanation of each trap - clear and detailed yet concise. Flag any low-quality problem so it can be replaced.
+</agent>
 
-## Agent: Reviewer
-- **Instructions**: 
-  - Role: You are an expert test writer for national science olympiads like the AIME, USAPhO, and USNCO.
-  - Goal: Review the exam to ensure it is high quality and that there are no errors. You are very nitpicky and hate bad or mediocre questions.
-  - Steps:
-    1. Understand the scope and format of the exam. Get a feel for the style and tone of the exam.
-    2. Read through the "Problems" document generated by the Writer agent and the "Solutions" document generated by the Solver agent.
-    3. Check to ensure each problem satisfies all of the problem constraints listed below.
-    4. If a problem has a problem, alert the Director so it can be fixed or replaced.
-  - Problem Constraints:
-    - Every question must be fully solvable and sound. No hand-waving.
-    - The problems should be more difficult than past exams.
-    - <important>BANISH any question or testing format seen in past exams or standard textbooks. Questions must be 100% brand-new, original, and test concepts in completely unprecedented ways.</important>
-    - <important>Conceptual traps must be deeply hidden and non-obvious—specifically engineered so an advanced student falls into them without realizing (traps they have never encountered before).</important>
-    - Avoid topics listed in excluded topics.
-    - The correct answers should be counterintuitive due to the subtle, hidden trap.
-    - The problem texts should be written in the same style/tone as past olympiad exams, but make the questions harder.
-    - Incorrect answer choices should correspond to valid misconceptions or falling into the hidden conceptual trap. 
-    - Keep a strictly neutral tone. NEVER include hints, warnings, or clarifying instructions (e.g., "Do not assume...", "Account for...", "Do not rely on...").
-    - NEVER hint at the problem solution or trap. 
-    - Do not include any commentary.
-    - Questions must be solvable with a scientific calculator ONLY. Excessive computation is beyond the scope of olympiads.
-    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. <important>CRITICAL: You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>).</important> Use LaTeX for all equations, formulas, units, and variables.
-    - ANY SVG GRAPHS <important>MUST HAVE SCALES</important> on the axes.
-    - SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
-    - For calculation questions, any answer choices/solutions should not round or truncate to ensure numerical accuracy.
-    - The solutions should be clear and detailed, yet still concise.
-    - Multiple choice questions should have exactly ONE correct answer.
-    - For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
----
+<agent name="Reviewer">
+Expert olympiad test writer, very nitpicky, hates bad or mediocre questions. Audit every problem and its solution against SC item by item, and verify each solution is correct. Anything that fails is fixed or replaced.
+</agent>
 
-## Agent: Compiler
-- **Instructions**: 
-  - Goal: Compile all the questions generated into the correct output format (see Output Requirements).
-  - Context: The problems and solutions are listed in the "Problems" and "Solutions" documents. The format is listed in the Output Requirements.
-  - Output the JSON for the entire exam.
+<agent name="Compiler">
+Emit the final exam as JSON exactly per <output_requirements>.
+</agent>
 </agents>
 `;
 
@@ -1136,14 +1090,12 @@ ${lessonInstructions}
 Write questions for a user's practice tests that perfectly mirror official styling but features significantly elevated problem difficulty, demanding deep structural, thermodynamic, and mechanistic insight. The exam must be indistinguishable from an official paper in tone, typography, formatting, style, and difficulty. Target the user's weak areas ( ${weaknesses} ).
 </goal>
 
-<context>
-You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
-</context>
-
 ${syllabus}
 
+${shared_constraints}
+
 <generation_pipeline>
-You will stimulate different agent roles, completing a full generation pipeline:
+You will simulate the agent roles below in turn, completing a full generation pipeline:
 
 ${agents_description}
 
@@ -1160,8 +1112,6 @@ ${examples}
     <rule>Do NOT output your thought process in any field of the JSON. Only output the final, fully refined question parameters.</rule>
     <rule>Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with '['.</rule>
     <rule>For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Keep simple, purely qualitative text options that do not contain mathematical or chemical terms in plain, un-delimited text format.</rule>
-    <rule>CRITICAL FOR MULTIPLE CHOICE QUESTIONS: You MUST mix up and randomize the correct answer choice ('answer') evenly across 'A', 'B', 'C', and 'D'. NOT all or most answers should be "A". Ensure a balanced and unpredictable distribution of correct answer letters (A, B, C, D) across all generated multiple choice questions.</rule>
-    <rule><important>UNIFORM HIGH QUALITY MANDATE: You MUST NOT allow question quality, depth, or creativity to degrade in later questions. Treat every single question in the generated batch with equal rigor. The last question in the list must be just as creative, challenging, hyper-realistic, and meticulously crafted as the first question.</important></rule>
   </general_rules>
 
   <schema_type>json_array</schema_type>
@@ -1195,7 +1145,7 @@ Generate exactly ${needed} ${normSubject} problems. The average difficulty of th
 3. <important>STRICT QUALITY CONSISTENCY: Maintain a uniform standard of high quality across ALL generated questions. Do NOT allow quality, creativity, or depth to drop in later questions. Every question must receive identical rigor, effort, and attention.</important>`;
 
       if (topics && typeof topics === 'string' && topics.trim()) {
-        prompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
+        prompt += `\n4. The generated questions MUST be about the following topics: ${topics.trim()}.`;
       }
 
       prompt += `
