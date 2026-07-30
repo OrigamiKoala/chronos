@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:appsscript": "vite build && cp dist/index.html apps-script/Index.html",
     "lint": "eslint .",
     "preview": "vite preview"
   },
