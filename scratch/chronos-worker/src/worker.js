@@ -1203,7 +1203,7 @@ The output must be a pure JSON array with the following schema for each object:
         const typeInstruction = needed >= parsedTypes.length
           ? `You MUST ensure the output contains a mix of all requested types: ${parsedTypes.join(', ')}. Every type MUST appear at least once.`
           : `Each question MUST be one of: ${parsedTypes.join(', ')}.`;
-        return `Generate exactly ${needed} ${normSubject} problems. Average difficulty must be exactly ${studentDifficulty} (range [${Math.max(0, studentDifficulty - 2)}, ${Math.min(10, studentDifficulty + 2)}]).\nFollow these strict rules:\n1. ${typeInstruction}`;
+        return `Generate exactly ${needed} ${normSubject} problems. Average difficulty must be exactly ${studentDifficulty} (range [${Math.max(0, studentDifficulty - 2)}, ${Math.min(10, studentDifficulty + 2)}]).\nFollow these strict rules:\n1. ${typeInstruction}\n2. <important>STRICT QUALITY CONSISTENCY: Maintain a uniform standard of high quality across ALL generated questions. Do NOT allow quality, creativity, or depth to drop in later questions. Every question must receive identical rigor, effort, and attention.</important>`;
       };
 
       // Fetch 1 pregenerated question as seed

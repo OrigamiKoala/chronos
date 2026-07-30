@@ -1161,6 +1161,7 @@ ${examples}
     <rule>Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with '['.</rule>
     <rule>For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Keep simple, purely qualitative text options that do not contain mathematical or chemical terms in plain, un-delimited text format.</rule>
     <rule>CRITICAL FOR MULTIPLE CHOICE QUESTIONS: You MUST mix up and randomize the correct answer choice ('answer') evenly across 'A', 'B', 'C', and 'D'. NOT all or most answers should be "A". Ensure a balanced and unpredictable distribution of correct answer letters (A, B, C, D) across all generated multiple choice questions.</rule>
+    <rule><important>UNIFORM HIGH QUALITY MANDATE: You MUST NOT allow question quality, depth, or creativity to degrade in later questions. Treat every single question in the generated batch with equal rigor. The last question in the list must be just as creative, challenging, hyper-realistic, and meticulously crafted as the first question.</important></rule>
   </general_rules>
 
   <schema_type>json_array</schema_type>
@@ -1190,7 +1191,8 @@ Generate exactly ${needed} ${normSubject} problems. The average difficulty of th
 
 <rules>
 1. ${typeInstruction}
-2. CRITICAL FOR MULTIPLE CHOICE QUESTIONS: Mix up the correct answer choice ('answer') positions evenly across 'A', 'B', 'C', and 'D'. NOT all or most answers should be "A".`;
+2. CRITICAL FOR MULTIPLE CHOICE QUESTIONS: Mix up the correct answer choice ('answer') positions evenly across 'A', 'B', 'C', and 'D'. NOT all or most answers should be "A".
+3. <important>STRICT QUALITY CONSISTENCY: Maintain a uniform standard of high quality across ALL generated questions. Do NOT allow quality, creativity, or depth to drop in later questions. Every question must receive identical rigor, effort, and attention.</important>`;
 
       if (topics && typeof topics === 'string' && topics.trim()) {
         prompt += `\n3. The generated questions MUST be about the following topics: ${topics.trim()}.`;
@@ -1299,7 +1301,6 @@ Generate exactly ${needed} ${normSubject} problems. The average difficulty of th
             input: dynamicPrompt,
             system_instruction: systemInstruction,
             response_format: { type: 'text', mime_type: 'application/json' },
-            generation_config: { thinking_level: 'low' }
           }).then(r => r.output_text)
         );
 
