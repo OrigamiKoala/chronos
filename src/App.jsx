@@ -1406,7 +1406,7 @@ function App() {
               <ReviewScreen user={user} onBack={restart} />
             )}
             {currentScreen === 'check-in' && (
-              <CheckInScreen onBack={restart} />
+              <CheckInScreen onBack={restart} user={user} />
             )}
           </>
         )}

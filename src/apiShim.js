@@ -2,7 +2,7 @@
 // so the browser never talks to chronos-bot.vercel.app directly. Every existing
 // fetch('/api/...') call site is left untouched; only window.fetch itself is patched.
 
-function runGoogleScript(fn, ...args) {
+export function runGoogleScript(fn, ...args) {
   return new Promise((resolve, reject) => {
     if (typeof google === 'undefined' || !google.script || !google.script.run) {
       reject(new Error('google.script.run is unavailable (not running inside Apps Script)'));
