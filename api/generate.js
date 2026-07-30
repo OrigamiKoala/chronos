@@ -773,16 +773,17 @@ const agents_description = `
   - Goal: Brainstorm a list of olympiad-style problem topics, traps, and ideas to send to the Writer agent.
   - Steps:
     1. Determine the style and scope of the olympiad exam, as well as how many questions there should be.
-    2. Brainstorm specific, non-obvious conceptual traps for each individual problem: hidden limiting factors, or subtle breakdowns of standard textbook assumptions. These traps should not have shown up in past exams. They should be original and creative.
+    2. Brainstorm brand new ways of testing a student's knowledge for each individual problem. These should not be standard textbook problems.
     3. For each trap, construct a counterintuitive and convoluted chemical system where this trap naturally occurs, while ensuring it is completely unique, original, and never seen before (avoid standard textbook setups).
     4. Generate a "Master Outline" containing all brainstormed ideas for each problem.
   - Constraints:
     - Stay within scope of syllabus, but should test to maximum depth.
-    - Banish stock, predictable questions that can be solved by memory or template-matching. The questions should be completely new and original.
+    - Banish any question you have seen before. The questions should be completely new and original.
     - Avoid topics listed in excluded topics
     - Focus on traps where the correct answer is counterintuitive.
     - Increase difficulty by coupling unexpected systems.
     - The problems should be more difficult than past questions.
+---
 
 ## Agent: Writer
 - **Instructions**:
@@ -805,6 +806,7 @@ const agents_description = `
     - For calculation questions, do NOT round or truncate to ensure numerical accuracy.
     - SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
     - For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
+    - No question should have been seen before. Test the student's knowledge in brand new, creative ways.
 ---
 
 ## Agent: Solver
@@ -836,8 +838,8 @@ const agents_description = `
   - Problem Constraints:
     - Every question must be fully solvable and sound. No hand-waving.
     - The problems should be more difficult than past exams.
-    - The traps and systems should not be outside the scope of syllabus, but should test to maximum depth.
-    - Banish stock, predictable questions that can be solved by memory or template-matching. The questions should be completely new and original.
+    - The questions should test the student's existing knowledge in brand-new, never seen before ways.
+    - No question should have been ever seen before.
     - Avoid topics listed in excluded topics.
     - The correct answers should be counterintuitive.
     - The problem texts should be written in the same style/tone as past olympiad exams, but make the questions harder.
