@@ -571,6 +571,9 @@ Output format must be a JSON object matching this schema:
         `);
       }
 
+      const examResultUpdates = [];
+      const wrongProblemUpdates = [];
+
       // Update user_exam_results for subtopic merges and parent reclassification
       if (Object.keys(subtopicRenameMap).length > 0 || Object.keys(parentReclassMap).length > 0) {
         const [examResultRows] = await bq.query({
@@ -628,8 +631,10 @@ Output format must be a JSON object matching this schema:
           }
 
           if (changed) {
-            const safeExamId = escapeSqlStr(row.exam_id);
-            statements.push(`UPDATE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` SET results_json = ${escapeSqlStr(JSON.stringify(resultsList))} WHERE user_id = ${safeUser} AND exam_id = ${safeExamId};`);
+            examResultUpdates.push({
+              examId: row.exam_id,
+              resultsJson: JSON.stringify(resultsList)
+            });
           }
         }
       }
@@ -669,10 +674,38 @@ Output format must be a JSON object matching this schema:
           if (changed) {
             const seen = new Set();
             const deduped = newParts.filter(p => { const l = p.toLowerCase(); if (seen.has(l)) return false; seen.add(l); return true; });
-            const safeQuestionId = escapeSqlStr(row.question_id);
-            statements.push(`UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` SET topic = ${escapeSqlStr(deduped.join(', '))} WHERE user_id = ${safeUser} AND question_id = ${safeQuestionId};`);
+            wrongProblemUpdates.push({
+              questionId: row.question_id,
+              topic: deduped.join(', ')
+            });
           }
         }
+      }
+
+      if (examResultUpdates.length > 0) {
+        const selects = examResultUpdates.map(u =>
+          `SELECT ${safeUser} AS user_id, ${escapeSqlStr(u.examId)} AS exam_id, ${escapeSqlStr(u.resultsJson)} AS results_json`
+        ).join('\nUNION ALL\n');
+
+        statements.push(`
+          MERGE \`${projectId}\`.\`chronos_users\`.\`user_exam_results\` T
+          USING (${selects}) S
+          ON T.user_id = S.user_id AND T.exam_id = S.exam_id
+          WHEN MATCHED THEN UPDATE SET results_json = S.results_json;
+        `);
+      }
+
+      if (wrongProblemUpdates.length > 0) {
+        const selects = wrongProblemUpdates.map(u =>
+          `SELECT ${safeUser} AS user_id, ${escapeSqlStr(u.questionId)} AS question_id, ${escapeSqlStr(u.topic)} AS topic`
+        ).join('\nUNION ALL\n');
+
+        statements.push(`
+          MERGE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` T
+          USING (${selects}) S
+          ON T.user_id = S.user_id AND T.question_id = S.question_id
+          WHEN MATCHED THEN UPDATE SET topic = S.topic;
+        `);
       }
 
       if (statements.length > 0) {
