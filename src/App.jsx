@@ -7,7 +7,8 @@ import { AdminScreen } from './components/AdminScreen';
 import { TeacherScreen } from './components/TeacherScreen';
 import { TestScreen } from './components/TestScreen';
 import { ReviewScreen } from './components/ReviewScreen';
-import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
+import { CheckInScreen } from './components/CheckInScreen';
+import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen, UserCheck } from 'lucide-react';
 
 // Cookie helpers
 function setCookie(name, value, days = 90) {
@@ -46,6 +47,7 @@ function App() {
     if (path === '/admin') return 'admin';
     if (path === '/test') return 'test';
     if (path === '/review') return 'review';
+    if (path === '/check-in' || path === '/checkin') return 'check-in';
     return 'setup';
   });
   const [examConfig, setExamConfig] = useState(null);
@@ -176,6 +178,8 @@ function App() {
       setCurrentScreen('test');
     } else if (path === '/review') {
       setCurrentScreen('review');
+    } else if (path === '/check-in' || path === '/checkin') {
+      setCurrentScreen('check-in');
     } else {
       setCurrentScreen('setup');
     }
@@ -192,6 +196,8 @@ function App() {
         setCurrentScreen('test');
       } else if (path === '/review') {
         setCurrentScreen('review');
+      } else if (path === '/check-in' || path === '/checkin') {
+        setCurrentScreen('check-in');
       } else {
         setCurrentScreen('setup');
       }
@@ -987,7 +993,13 @@ function App() {
           >
             <BookOpen size={16} /> Review
           </button>
-
+          <button
+            className={`btn ${currentScreen === 'check-in' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            onClick={() => navigateTo(currentScreen === 'check-in' ? '/' : '/check-in')}
+          >
+            <UserCheck size={16} /> Check-In
+          </button>
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <button
@@ -1386,6 +1398,9 @@ function App() {
             )}
             {currentScreen === 'review' && (
               <ReviewScreen user={user} onBack={restart} />
+            )}
+            {currentScreen === 'check-in' && (
+              <CheckInScreen onBack={restart} />
             )}
 
           </>
