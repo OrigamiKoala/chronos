@@ -152,7 +152,7 @@ export function normalizeLaTeX(str) {
   cleaned = cleaned.replace(/([0-9.]+)\s*\\?\t?times/gi, '$1 \\\\times ');
 
   // 3. Fix unescaped chemical formulas like ceH2A, ceNa2CO3, ceNaHCO3, ceAgCl, ce[ML2]+ outside or inside math mode
-  cleaned = cleaned.replace(/(^|[^a-zA-Z0-9\\])ce([A-Z][a-zA-Z0-9_{}+\-]*|\{[^}]+\})/g, '$1\\\\ce{$2}');
+  cleaned = cleaned.replace(/(^|[^a-zA-Z0-9\\])ce([A-Z][a-zA-Z0-9_{}+\-]*|\[[^\]]+\][a-zA-Z0-9_{}+\-]*|\{[^}]+\})/g, '$1\\\\ce{$2}');
 
   // 4. Unescape literal string escapes for newlines/tabs if present as literal "\n", "\r", "\t",
   // while preserving valid LaTeX commands like \nu, \rho, \tau, \text, \times, \tilde, \triangle, \theta, \rightarrow, \rightharpoonup, etc.

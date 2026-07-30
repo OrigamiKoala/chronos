@@ -201,30 +201,36 @@ export default async function handler(req, res) {
       const sanitizedUser = username.trim().toLowerCase();
 
       try {
-        for (const review of reviews) {
-          const { questionId, isCorrect } = review;
-          if (!questionId) continue;
+        const validReviews = reviews.filter(r => r.questionId);
+        if (validReviews.length === 0) {
+          return res.status(200).json({ success: true });
+        }
 
-          // Fetch current SM-2 state
-          const stateQuery = `
-            SELECT repetitions, interval_days, ease_factor
-            FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-            WHERE user_id = @username AND question_id = @questionId
-            LIMIT 1
-          `;
-          const [rows] = await bq.query({
-            query: stateQuery,
-            params: { username: sanitizedUser, questionId }
-          });
+        const questionIds = validReviews.map(r => r.questionId);
+        const stateQuery = `
+          SELECT question_id, repetitions, interval_days, ease_factor
+          FROM \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
+          WHERE user_id = @username AND question_id IN UNNEST(@questionIds)
+        `;
+        const [rows] = await bq.query({
+          query: stateQuery,
+          params: { username: sanitizedUser, questionIds }
+        });
+
+        const updates = [];
+
+        for (const review of validReviews) {
+          const { questionId, isCorrect } = review;
 
           let repetitions = 0;
           let interval_days = 0;
           let ease_factor = 2.5;
 
-          if (rows && rows.length > 0) {
-            repetitions = rows[0].repetitions !== null ? Number(rows[0].repetitions) : 0;
-            interval_days = rows[0].interval_days !== null ? Number(rows[0].interval_days) : 0;
-            ease_factor = rows[0].ease_factor !== null ? Number(rows[0].ease_factor) : 2.5;
+          const row = rows?.find(r => r.question_id === questionId);
+          if (row) {
+            repetitions = row.repetitions !== null ? Number(row.repetitions) : 0;
+            interval_days = row.interval_days !== null ? Number(row.interval_days) : 0;
+            ease_factor = row.ease_factor !== null ? Number(row.ease_factor) : 2.5;
           }
 
           // Apply SM-2 algorithm
@@ -245,25 +251,33 @@ export default async function handler(req, res) {
           }
           ease_factor = Math.min(3.0, Math.max(1.3, ease_factor));
 
-          // Update user_wrong_problems row
-          const updateQuery = `
-            UPDATE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\`
-            SET repetitions = @repetitions,
-                interval_days = @intervalDays,
-                ease_factor = @easeFactor,
-                next_review_at = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL @intervalDays DAY)
-            WHERE user_id = @username AND question_id = @questionId
-          `;
-          await bq.query({
-            query: updateQuery,
-            params: {
-              username: sanitizedUser,
-              questionId,
-              repetitions,
-              intervalDays: interval_days,
-              easeFactor: ease_factor
-            }
+          updates.push({
+            questionId,
+            repetitions,
+            intervalDays: interval_days,
+            easeFactor: ease_factor
           });
+        }
+
+        if (updates.length > 0) {
+          const escapeSqlStr = (s) => `'${String(s).replace(/'/g, "''")}'`;
+          const selectValues = updates.map(u =>
+            `SELECT ${escapeSqlStr(sanitizedUser)} AS user_id, ${escapeSqlStr(u.questionId)} AS question_id, ${u.repetitions} AS repetitions, ${u.intervalDays} AS interval_days, ${u.easeFactor} AS ease_factor`
+          ).join('\nUNION ALL\n');
+
+          const updateQuery = `
+            MERGE \`${projectId}\`.\`chronos_users\`.\`user_wrong_problems\` T
+            USING (${selectValues}) S
+            ON T.user_id = S.user_id AND T.question_id = S.question_id
+            WHEN MATCHED THEN
+              UPDATE SET
+                repetitions = S.repetitions,
+                interval_days = S.interval_days,
+                ease_factor = S.ease_factor,
+                next_review_at = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL S.interval_days DAY)
+          `;
+
+          await bq.query({ query: updateQuery });
         }
 
         return res.status(200).json({ success: true });
