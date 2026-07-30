@@ -740,7 +740,7 @@ const chem_syllabus = `
 `
 
 const chem_excluded_topics = `
-***CRITICAL: DO NOT INCLUDE ANY OF THE FOLLOWING TOPICS***
+<important>CRITICAL: DO NOT INCLUDE ANY OF THE FOLLOWING TOPICS</important>
 
 - Named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g., Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
 - Advanced stereochemical control and transition-state geometry (e.g., Bürgi-Dunitz trajectories, advanced diastereoselectivity, stereospecific enolate alkylations).
@@ -785,7 +785,7 @@ const agents_description = `
     - NEVER hint at the problem solution or trap. 
     - Do not include any commentary.
     - Questions must be solvable with a scientific calculator ONLY. Excessive computation is beyond the scope of olympiads.
-    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. ***CRITICAL***You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>). Use LaTeX for all equations, formulas, units, and variables.
+    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. <important>CRITICAL: You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>).</important> Use LaTeX for all equations, formulas, units, and variables.
     - The traps should be well hidden and not immediately obvious to the student.
     - For calculation questions, do NOT round or truncate to ensure numerical accuracy.
     - SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
@@ -831,7 +831,7 @@ const agents_description = `
     - NEVER hint at the problem solution or trap. 
     - Do not include any commentary.
     - Questions must be solvable with a scientific calculator ONLY. Excessive computation is beyond the scope of olympiads.
-    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. ***CRITICAL***You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>). Use LaTeX for all equations, formulas, units, and variables.
+    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. <important>CRITICAL: You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>).</important> Use LaTeX for all equations, formulas, units, and variables.
     - The traps should be well hidden and not immediately obvious to the student.
     - For calculation questions, do NOT round or truncate to ensure numerical accuracy.
     - SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.

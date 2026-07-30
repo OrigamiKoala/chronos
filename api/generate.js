@@ -753,7 +753,7 @@ const chem_syllabus = `
 
 const chem_excluded_topics = `
 <excluded_topics>
-***CRITICAL: DO NOT INCLUDE ANY OF THE FOLLOWING TOPICS***
+<important>CRITICAL: DO NOT INCLUDE ANY OF THE FOLLOWING TOPICS</important>
 
 - Named physical chemistry rules/equations outside standard AP/USNCO curricula (e.g., Trouton's rule, Eyring-Polanyi equation, explicit activity coefficients).
 - Advanced stereochemical control and transition-state geometry (e.g., Bürgi-Dunitz trajectories, advanced diastereoselectivity, stereospecific enolate alkylations).
@@ -773,8 +773,8 @@ const agents_description = `
   - Goal: Brainstorm a list of olympiad-style problem topics, traps, and ideas to send to the Writer agent.
   - Steps:
     1. Determine the style and scope of the olympiad exam, as well as how many questions there should be.
-    2. Brainstorm brand new ways of testing a student's knowledge for each individual problem. These should not be standard textbook problems.
-    3. For each trap, construct a counterintuitive and convoluted chemical system where this trap naturally occurs, while ensuring it is completely unique, original, and never seen before (avoid standard textbook setups).
+    2. Brainstorm <important>brand new ways of testing a student's knowledge for each individual problem.</important> These should not be standard textbook problems. These ideas should be completely original and creative.
+    3. For each idea, construct a counterintuitive and convoluted chemical system where this idea naturally occurs, while ensuring it is completely unique, original, and never seen before (avoid standard textbook setups).
     4. Generate a "Master Outline" containing all brainstormed ideas for each problem.
   - Constraints:
     - Stay within scope of syllabus, but should test to maximum depth.
@@ -791,7 +791,7 @@ const agents_description = `
   - Goal: Write out the problem text for each olympiad problem, as well as answer choices for multiple choice questions.
   - Steps:
     1. Read through the "Master Outline" document created by the Brainstorm agent for the problem sketches.
-    2. For each problem, write out the problem text using proper LaTeX formatting, using mhchem for chemical formulas. Use SMILES to draw chemical structures and SVG for diagrams. ANY SVG graphs ***MUST HAVE SCALES*** on the axes. Write all problems live into a "Problems" document.
+    2. For each problem, write out the problem text using proper LaTeX formatting, using mhchem for chemical formulas. Use SMILES to draw chemical structures and SVG for diagrams. ANY SVG graphs <important>MUST HAVE SCALES</important> on the axes. Write all problems live into a "Problems" document.
     3. For multiple choice questions ONLY, calculate or derive 3 incorrect answer choices that result directly from falling into the conceptual trap. Then, write the LaTeX, SMILES, and/or SVG code for these answer choices and the correct answer choice. Add these to the "Problems" document.
   - Constraints:
     - Use the sketches from the "Master Outline" document.
@@ -801,12 +801,12 @@ const agents_description = `
     - NEVER hint at the problem solution or trap. 
     - Do not include any commentary.
     - Questions must be solvable with a scientific calculator ONLY. Excessive computation is beyond the scope of olympiads.
-    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. ***CRITICAL***You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>). Use LaTeX for all equations, formulas, units, and variables.
+    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. <important>CRITICAL: You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>).</important> Use LaTeX for all equations, formulas, units, and variables.
     - The traps should be well hidden and not immediately obvious to the student.
     - For calculation questions, do NOT round or truncate to ensure numerical accuracy.
     - SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
     - For free_response questions, especially at high difficulty levels (such as IMO, USAMO, IPhO, IChO, etc.), the question MUST require the user to write out a comprehensive mathematical proof, detailed step-by-step physics derivation, or organic chemistry synthesis mechanism/conceptual proof, rather than just calculating a final numerical value.
-    - No question should have been seen before. Test the student's knowledge in brand new, creative ways.
+    - <important>No question should have been seen before. Test the student's knowledge in brand new, creative ways.</important>
 ---
 
 ## Agent: Solver
@@ -838,8 +838,8 @@ const agents_description = `
   - Problem Constraints:
     - Every question must be fully solvable and sound. No hand-waving.
     - The problems should be more difficult than past exams.
-    - The questions should test the student's existing knowledge in brand-new, never seen before ways.
-    - No question should have been ever seen before.
+    - <important>The questions should test the student's existing knowledge in brand-new, never seen before ways.</important>
+    - <important>No question should have been ever seen before.</important>
     - Avoid topics listed in excluded topics.
     - The correct answers should be counterintuitive.
     - The problem texts should be written in the same style/tone as past olympiad exams, but make the questions harder.
@@ -848,8 +848,8 @@ const agents_description = `
     - NEVER hint at the problem solution or trap. 
     - Do not include any commentary.
     - Questions must be solvable with a scientific calculator ONLY. Excessive computation is beyond the scope of olympiads.
-    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. ***CRITICAL***You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>). Use LaTeX for all equations, formulas, units, and variables.
-    - ANY SVG GRAPHS ***MUST HAVE SCALES*** on the axes.
+    - All organic chemical species should be drawn as their 2D or 3D representations (zigzag carbon chains) using SMILES. <important>CRITICAL: You MUST wrap any SMILES string in <smiles>...</smiles> tags (e.g., <smiles>C(C)O</smiles> or <smiles>CC(=O)O</smiles>).</important> Use LaTeX for all equations, formulas, units, and variables.
+    - ANY SVG GRAPHS <important>MUST HAVE SCALES</important> on the axes.
     - The traps should be well hidden and not immediately obvious to the student.
     - For calculation questions, do NOT round or truncate to ensure numerical accuracy.
     - SVG Diagrams: You are STRONGLY ENCOURAGED to include SVG diagrams in a large proportion of your questions — aim for at least half of all questions to contain an SVG figure. Titration curves, phase diagrams, energy-level diagrams, orbital diagrams, reaction coordinate plots, crystallographic unit cells, and spectroscopy traces are all excellent candidates. Embed the SVG directly in the question text using [[SVG: <svg ...>...</svg>]] markers. Use primitive shapes (<line>, <circle>, <rect>, <path>, <text>, <polygon>), inline attributes only (no CSS <style> blocks), transparent or dark background (do NOT use white background or rects, use light strokes like white or light gray), and single-quotes (') for all attribute values for JSON compatibility.
