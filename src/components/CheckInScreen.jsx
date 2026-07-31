@@ -12,10 +12,16 @@ function getCookie(name) {
 export function CheckInScreen({ onBack, user }) {
   const isGuest = !user || user.user_id === GUEST_USER;
 
-  // Student ID is never typed in — it's the account password, resolved server-side
-  // from the login token by /api/student-id.
+  // Student ID is the login password, stored in chronos_student_id cookie on login.
   const [idInfo, setIdInfo] = useState(() => {
-    if (isGuest || !getCookie('chronos_logged_token')) {
+    const cookieId = getCookie('chronos_student_id');
+    if (cookieId) {
+      return { loading: false, studentId: cookieId, error: '' };
+    }
+    if (isGuest) {
+      return { loading: false, studentId: null, error: '' };
+    }
+    if (!getCookie('chronos_logged_token')) {
       return { loading: false, studentId: null, error: 'Log in to check in — your student ID comes from your account.' };
     }
     return { loading: true, studentId: null, error: '' };
@@ -26,12 +32,28 @@ export function CheckInScreen({ onBack, user }) {
   const [leavingEarly, setLeavingEarly] = useState(false);
   const [leavingTime, setLeavingTime] = useState('');
 
+  const [manualStudentId, setManualStudentId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState('Fill in the form to check-in and get your schedule for the day.');
   const [result, setResult] = useState(null);
 
+  // Sync idInfo when user state changes (login/logout while on this screen)
+  useEffect(() => {
+    const cookieId = getCookie('chronos_student_id');
+    if (cookieId) {
+      setIdInfo({ loading: false, studentId: cookieId, error: '' });
+    } else if (isGuest) {
+      setIdInfo({ loading: false, studentId: null, error: '' });
+    } else if (!getCookie('chronos_logged_token')) {
+      setIdInfo({ loading: false, studentId: null, error: 'Log in to check in — your student ID comes from your account.' });
+    } else {
+      setIdInfo({ loading: true, studentId: null, error: '' });
+    }
+  }, [user?.user_id]);
+
   useEffect(() => {
     if (!idInfo.loading) return;
+    if (getCookie('chronos_student_id')) return;
 
     let cancelled = false;
     (async () => {
@@ -71,7 +93,8 @@ export function CheckInScreen({ onBack, user }) {
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!idInfo.studentId || submitting) return;
+    const sid = idInfo.studentId || manualStudentId.trim();
+    if (!sid || submitting) return;
 
     setSubmitting(true);
     setStatus('Loading...');
@@ -79,7 +102,7 @@ export function CheckInScreen({ onBack, user }) {
     try {
       const response = await runGoogleScript(
         'query',
-        idInfo.studentId,
+        sid,
         message,
         leavingEarly ? leavingTime : ''
       );
@@ -88,16 +111,16 @@ export function CheckInScreen({ onBack, user }) {
         setResult(response);
         setStatus('Thanks for checking in.');
       } else {
-        setStatus('Something went wrong — your account’s student ID was not found on the roster. Please see a coach.');
+        setStatus('Something went wrong — your account\'s student ID was not found on the roster. Please see a coach.');
       }
     } catch {
       setStatus('Check-in is unavailable right now. It only works on the Apps Script deployment.');
     } finally {
       setSubmitting(false);
     }
-  }, [idInfo.studentId, message, leavingEarly, leavingTime, submitting]);
+  }, [idInfo.studentId, manualStudentId, message, leavingEarly, leavingTime, submitting]);
 
-  const canSubmit = !!idInfo.studentId && !submitting;
+  const canSubmit = (!!idInfo.studentId || manualStudentId.trim().length > 0) && !submitting;
 
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '1rem 0.5rem' }}>
@@ -269,6 +292,32 @@ export function CheckInScreen({ onBack, user }) {
                   style={{ flex: '0 0 auto', width: '50%', visibility: leavingEarly ? 'visible' : 'hidden' }}
                 />
               </div>
+
+              {(!idInfo.studentId) && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label
+                    htmlFor="checkin-studentid"
+                    style={{
+                      display: 'block',
+                      marginBottom: '0.4rem',
+                      fontWeight: 500,
+                      color: 'var(--text-primary)',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    Student ID
+                  </label>
+                  <input
+                    id="checkin-studentid"
+                    className="input-field"
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Enter your student ID"
+                    value={manualStudentId}
+                    onChange={(e) => setManualStudentId(e.target.value)}
+                  />
+                </div>
+              )}
 
               <button
                 type="button"

@@ -351,6 +351,7 @@ function App() {
           if (data.token) {
             setCookie('chronos_logged_token', data.token);
           }
+          document.cookie = 'chronos_student_id=' + encodeURIComponent(loginPassword) + '; path=/; max-age=86400';
           localStorage.setItem('chronos_cache_ratings', JSON.stringify(userRatings));
           localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
           localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
@@ -468,6 +469,7 @@ function App() {
     eraseCookie('chronos_logged_user');
     eraseCookie('chronos_logged_token');
     eraseCookie('chronos_user_data');
+    document.cookie = 'chronos_student_id=; path=/; max-age=0';
     localStorage.removeItem('chronos_cache_ratings');
     localStorage.removeItem('chronos_cache_strengths');
     localStorage.removeItem('chronos_cache_weaknesses');
