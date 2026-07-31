@@ -49,40 +49,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Resolves the caller's student ID (stored as their account password) from their
-  // login token, so the check-in screen never has to ask them to type it in.
-  const isStudentIdLookup = req.query.route === 'student-id' || req.body?.studentIdLookup === true;
-
-  if (isStudentIdLookup) {
-    const tokenUsername = req.body?.token ? verifyToken(req.body.token) : null;
-    if (!tokenUsername) {
-      return res.status(401).json({ error: 'Token expired or invalid' });
-    }
-
-    try {
-      const [rows] = await bq.query({
-        query: `
-          SELECT password
-          FROM \`${projectId}\`.\`chronos_users\`.\`users\`
-          WHERE user_id = @username
-        `,
-        params: { username: tokenUsername.trim().toLowerCase() }
-      });
-
-      if (rows.length === 0) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      if (!rows[0].password) {
-        return res.status(400).json({ error: 'No student ID on file for this account' });
-      }
-
-      return res.status(200).json({ studentId: rows[0].password });
-    } catch (err) {
-      console.error('Student ID lookup error:', err);
-      return res.status(500).json({ error: err.message || 'Internal Server Error' });
-    }
-  }
-
   const isResetPassword = req.query.route === 'reset-password' || req.body?.step !== undefined;
 
   if (isResetPassword) {
