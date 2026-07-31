@@ -7,6 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+.agents
+.claude
+.nanocoder
 node_modules
 dist
 dist-ssr
@@ -24,7 +27,3 @@ dist-ssr
 *.sw?
 .vercel
 .env*
-
-.agents
-.claude
-.nanocoder
