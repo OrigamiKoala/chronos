@@ -7,24 +7,31 @@ import { AdminScreen } from './components/AdminScreen';
 import { TeacherScreen } from './components/TeacherScreen';
 import { TestScreen } from './components/TestScreen';
 import { ReviewScreen } from './components/ReviewScreen';
-import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
+import { CheckInScreen } from './components/CheckInScreen';
+import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen, UserCheck } from 'lucide-react';
 
-// Cookie helpers
-function setCookie(name, value, days = 90) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+// Persisted identity helpers (localStorage-backed, not cookies).
+// Apps Script serves this app inside a cross-origin (googleusercontent.com)
+// iframe nested under script.google.com, so document.cookie is third-party
+// storage there and gets blocked/wiped by Chrome's cookie restrictions.
+// localStorage isn't subject to that same blocking, so these keep the
+// original getCookie/setCookie/eraseCookie call sites working unchanged.
+function setCookie(name, value) {
+  try {
+    localStorage.setItem(name, value);
+  } catch (e) {
+    // storage unavailable (e.g. quota, private browsing) - ignore
+  }
 }
 
 function getCookie(name) {
-  if (typeof document === 'undefined') return '';
-  return document.cookie.split('; ').reduce((r, v) => {
-    const parts = v.split('=');
-    return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-  }, '');
+  if (typeof localStorage === 'undefined') return '';
+  return localStorage.getItem(name) || '';
 }
 
 function eraseCookie(name) {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(name);
 }
 
 // Cache helper
@@ -41,11 +48,12 @@ const getCachedItem = (key, fallback) => {
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
-    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+    const path = typeof window !== 'undefined' ? (window.location.hash.slice(1) || '/') : '/';
     if (path === '/teacher') return 'teacher';
     if (path === '/admin') return 'admin';
     if (path === '/test') return 'test';
     if (path === '/review') return 'review';
+    if (path === '/check-in' || path === '/checkin') return 'check-in';
     return 'setup';
   });
   const [examConfig, setExamConfig] = useState(null);
@@ -167,7 +175,7 @@ function App() {
 
 
   const navigateTo = (path) => {
-    window.history.pushState({}, '', path);
+    window.location.hash = path;
     if (path === '/teacher') {
       setCurrentScreen('teacher');
     } else if (path === '/admin') {
@@ -176,14 +184,16 @@ function App() {
       setCurrentScreen('test');
     } else if (path === '/review') {
       setCurrentScreen('review');
+    } else if (path === '/check-in' || path === '/checkin') {
+      setCurrentScreen('check-in');
     } else {
       setCurrentScreen('setup');
     }
   };
 
   useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
+    const handleHashChange = () => {
+      const path = window.location.hash.slice(1) || '/';
       if (path === '/teacher') {
         setCurrentScreen('teacher');
       } else if (path === '/admin') {
@@ -192,12 +202,14 @@ function App() {
         setCurrentScreen('test');
       } else if (path === '/review') {
         setCurrentScreen('review');
+      } else if (path === '/check-in' || path === '/checkin') {
+        setCurrentScreen('check-in');
       } else {
         setCurrentScreen('setup');
       }
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
 
@@ -339,6 +351,7 @@ function App() {
           if (data.token) {
             setCookie('chronos_logged_token', data.token);
           }
+          document.cookie = 'chronos_student_id=' + encodeURIComponent(loginPassword) + '; path=/; max-age=86400';
           localStorage.setItem('chronos_cache_ratings', JSON.stringify(userRatings));
           localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
           localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
@@ -456,6 +469,7 @@ function App() {
     eraseCookie('chronos_logged_user');
     eraseCookie('chronos_logged_token');
     eraseCookie('chronos_user_data');
+    document.cookie = 'chronos_student_id=; path=/; max-age=0';
     localStorage.removeItem('chronos_cache_ratings');
     localStorage.removeItem('chronos_cache_strengths');
     localStorage.removeItem('chronos_cache_weaknesses');
@@ -987,7 +1001,13 @@ function App() {
           >
             <BookOpen size={16} /> Review
           </button>
-
+          <button
+            className={`btn ${currentScreen === 'check-in' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            onClick={() => navigateTo(currentScreen === 'check-in' ? '/' : '/check-in')}
+          >
+            <UserCheck size={16} /> Check-In
+          </button>
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <button
@@ -1386,6 +1406,9 @@ function App() {
             )}
             {currentScreen === 'review' && (
               <ReviewScreen user={user} onBack={restart} />
+            )}
+            {currentScreen === 'check-in' && (
+              <CheckInScreen onBack={restart} user={user} />
             )}
 
           </>
