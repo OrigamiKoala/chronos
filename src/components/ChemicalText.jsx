@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import SmilesDrawer from 'smiles-drawer';
 
-import { isSmiles, isReactionSmiles, smilesThemes } from './chemicalHelpers';
+import { smilesThemes } from './chemicalHelpers';
+import DOMPurify from 'dompurify';
 
 export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dark' }) {
   const svgRef = useRef(null);
@@ -248,7 +249,7 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
                   overflow: 'auto',
                   lineHeight: 'normal',
                 }}
-                dangerouslySetInnerHTML={{ __html: cleanedSvg }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cleanedSvg) }}
               />
             </span>
           );

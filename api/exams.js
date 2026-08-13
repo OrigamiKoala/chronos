@@ -1083,7 +1083,8 @@ export default async function handler(req, res) {
                   isRated,
                   assignmentId,
                   results: gradedResults.map(r => {
-                    const { frqSubmission, ...rest } = r; // eslint-disable-line no-unused-vars
+                    const rest = { ...r };
+                    delete rest.frqSubmission;
                     return rest;
                   }),
                   geminiApiKeys: getGeminiApiKeys()
@@ -1186,7 +1187,8 @@ export default async function handler(req, res) {
                 isRated,
                 assignmentId,
                 results: results.map(r => {
-                  const { frqSubmission, ...rest } = r; // eslint-disable-line no-unused-vars
+                  const rest = { ...r };
+                  delete rest.frqSubmission;
                   return rest;
                 }),
                 geminiApiKeys: getGeminiApiKeys()

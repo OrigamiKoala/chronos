@@ -88,7 +88,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
     } else {
       setTimeout(() => setHomeworks([]), 0);
     }
-  }, [user?.user_id, user?.user_organization, user?.user_role]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, ratings]);
 
   const [selectedPreset, setSelectedPreset] = useState('custom');
 
