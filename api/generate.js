@@ -1231,7 +1231,7 @@ Generate exactly ${needed} ${normSubject} problems. The average difficulty of th
 
     const geminiModels = count > 40
       ? ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
-      : ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+      : ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
 
     let attempts = 0;
     const maxAttempts = 3;

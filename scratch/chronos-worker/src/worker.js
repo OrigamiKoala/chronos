@@ -1293,7 +1293,7 @@ The output must be a pure JSON array with the following schema for each object:
         const needed = aiCount - allQuestions.length;
         const dynamicPrompt = buildDynamicPrompt(needed);
 
-        let responseText = await drainGemini(dynamicPrompt, ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'], 1.5, systemInstruction, drainCtx);
+        let responseText = await drainGemini(dynamicPrompt, ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'], 1.5, systemInstruction, drainCtx);
 
         if (responseText) {
           try {

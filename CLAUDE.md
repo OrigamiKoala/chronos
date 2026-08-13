@@ -44,7 +44,7 @@ Never construct a `GoogleGenAI` client directly. `executeWithRetry(models, fn)` 
 
 - **Key rotation**: collects keys from `GEMINI_API_KEYS` (comma-separated), `GEMINI_API_KEY`, and numbered `api_1`…`api_100` env vars; picks a random start index and rotates on failure.
 - **Error classification**: `429` marks that (model, key) pair rate-limited for the rest of the day in an in-memory registry; `503`/overload breaks out of the key loop immediately and falls through to the *next model* in the list (trying more keys against an overloaded model doesn't help).
-- **Model cascade**: callers pass an ordered array, cheapest-viable-first. Convention across the codebase is `['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']` for analysis/explanation work; `api/generate.js` uses the stronger `['gemini-3.6-flash', 'gemini-3.5-flash', ...]` cascade for small batches and downgrades to lite-only when `count > 40`.
+- **Model cascade**: callers pass an ordered array, cheapest-viable-first. Convention across the codebase is `['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']` for analysis/explanation work; `api/generate.js` uses the stronger `['gemini-3.7-flash', 'gemini-3.6-flash', ...]` cascade for small batches and downgrades to lite-only when `count > 40`.
 
 Calls use the **Interactions API** (`ai.interactions.create({ model, input, system_instruction, response_format })` → `.output_text`), not `generateContent`.
 
