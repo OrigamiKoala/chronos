@@ -24,6 +24,24 @@ function generateToken(username) {
   return `${payload}.${signature}`;
 }
 
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedHash) {
+  if (!storedHash || !storedHash.includes(':')) {
+    // Legacy plaintext password fallback.
+    // We compare directly to allow legacy users to log in,
+    // although ideally they should be migrated on login.
+    return password === storedHash;
+  }
+  const [salt, key] = storedHash.split(':');
+  const derivedKey = crypto.scryptSync(password, salt, 64).toString('hex');
+  return key === derivedKey;
+}
+
 function verifyToken(token) {
   if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
   try {
@@ -96,6 +114,7 @@ export default async function handler(req, res) {
         }
 
         // Update password
+        const hashedPassword = hashPassword(newPassword);
         const updateQuery = `
           UPDATE \`${projectId}\`.\`chronos_users\`.\`users\`
           SET password = @newPassword
@@ -103,7 +122,7 @@ export default async function handler(req, res) {
         `;
         await bq.query({
           query: updateQuery,
-          params: { username: sanitizedUser, newPassword }
+          params: { username: sanitizedUser, newPassword: hashedPassword }
         });
 
         return res.status(200).json({ success: true });
@@ -257,7 +276,7 @@ export default async function handler(req, res) {
           return res.status(401).json({ error: 'Account requires password setup or reset' });
         } else {
           // Verify password
-          if (dbUser.password !== password) {
+          if (!verifyPassword(password, dbUser.password)) {
             return res.status(401).json({ error: 'Incorrect password' });
           }
         }
@@ -288,6 +307,7 @@ export default async function handler(req, res) {
     } else {
       // User is new
       if (isSettingRecovery && recoveryQuestion && recoveryAnswer) {
+        const hashedPassword = hashPassword(password);
         const insertUserQuery = `
           INSERT INTO \`${projectId}\`.\`chronos_users\`.\`users\` (user_id, created_at, password, recovery_question, recovery_answer, math_rating, physics_rating, chemistry_rating, elo_version, user_role, user_organization)
           VALUES (@username, CURRENT_TIMESTAMP(), @password, @recoveryQuestion, @recoveryAnswer, 100, 100, 100, @eloVersion, @userRole, @userOrganization)
@@ -296,7 +316,7 @@ export default async function handler(req, res) {
           query: insertUserQuery,
           params: {
             username: sanitizedUser,
-            password,
+            password: hashedPassword,
             recoveryQuestion,
             recoveryAnswer,
             eloVersion: ELO_ALGORITHM_VERSION,

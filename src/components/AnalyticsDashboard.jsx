@@ -365,7 +365,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         })
       });
       if (res.ok) {
-        fetchOrgMembers();
+        setOrgMembers(prev => prev.map(m => m.user_id === targetUser ? { ...m, user_role: newRole } : m));
       } else {
         const d = await res.json();
         alert(d.error || 'Failed to update member role');

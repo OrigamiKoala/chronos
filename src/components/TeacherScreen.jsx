@@ -36,9 +36,6 @@ async function sendChatMessage({ message, teacherId, selectedStudentIds, session
     }
 
     const data = await response.json();
-    if (data._debug) {
-      console.log('[Chat API Debug]', data._debug);
-    }
     return { text: data.response, interactionId: data.interactionId || null };
   } catch (error) {
     console.error('Error communicating with chatbot API:', error);

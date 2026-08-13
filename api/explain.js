@@ -54,7 +54,12 @@ export default async function handler(req, res) {
     // --- Teacher Chat Logic (formerly chat.js) ---
     try {
       const authHeader = req.headers.authorization;
-      const jwtSecret = process.env.JWT_SECRET || 'development-only-secret-key';
+      const jwtSecret = process.env.JWT_SECRET;
+
+      if (!jwtSecret) {
+        return res.status(500).json({ error: 'Server misconfiguration: missing JWT secret' });
+      }
+
       const tokenClaims = verifyTeacherJwt(authHeader, jwtSecret);
 
       if (!tokenClaims) {
