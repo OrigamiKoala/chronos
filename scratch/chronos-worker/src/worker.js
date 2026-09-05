@@ -1177,46 +1177,46 @@ async function generateHomework(payload, projectId, accessToken, env) {
           doneQuestionIds = r.done_ids ? r.done_ids.split(',').filter(Boolean) : [];
         }
 
-      // Calculate adaptive difficulty
-      const baseDiff = Math.max(1, Math.min(10, difficulty));
-      const eloMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
-      const expectedR = eloMap[Math.round(baseDiff)] || 1000;
-      const rawOffset = (studentRating - expectedR) / 300;
-      const clampedOffset = Math.max(-1.5, Math.min(1.5, rawOffset));
-      const studentDifficulty = Math.max(1, Math.min(10, Math.round(baseDiff + clampedOffset)));
+        // Calculate adaptive difficulty
+        const baseDiff = Math.max(1, Math.min(10, difficulty));
+        const eloMap = { 1: 100, 2: 300, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 2000, 9: 2500, 10: 3000 };
+        const expectedR = eloMap[Math.round(baseDiff)] || 1000;
+        const rawOffset = (studentRating - expectedR) / 300;
+        const clampedOffset = Math.max(-1.5, Math.min(1.5, rawOffset));
+        const studentDifficulty = Math.max(1, Math.min(10, Math.round(baseDiff + clampedOffset)));
 
-      // Build prompt components
-      const allowedTypes = Array.isArray(hw.examFormat) ? hw.examFormat : [hw.examFormat || 'multiple_choice'];
-      const parsedTypes = allowedTypes.map((t) => t.trim()).filter(Boolean);
-      const typeSchemaDesc = parsedTypes.map((t) => `"${t}"`).join(' | ');
-      const optionsSchemaDesc = parsedTypes.includes('multiple_choice')
-        ? `\n  "options": ["Option A", "Option B", "Option C", "Option D"],`
-        : '';
-      const keywordExpressionSchemaDesc = parsedTypes.includes('short_answer')
-        ? `\n  "keywordExpression": "A logical boolean expression (e.g., 'gravity AND newton'). Required ONLY if type is short_answer.",`
-        : '';
-      const answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
+        // Build prompt components
+        const allowedTypes = Array.isArray(hw.examFormat) ? hw.examFormat : [hw.examFormat || 'multiple_choice'];
+        const parsedTypes = allowedTypes.map((t) => t.trim()).filter(Boolean);
+        const typeSchemaDesc = parsedTypes.map((t) => `"${t}"`).join(' | ');
+        const optionsSchemaDesc = parsedTypes.includes('multiple_choice')
+          ? `\n  "options": ["Option A", "Option B", "Option C", "Option D"],`
+          : '';
+        const keywordExpressionSchemaDesc = parsedTypes.includes('short_answer')
+          ? `\n  "keywordExpression": "A logical boolean expression (e.g., 'gravity AND newton'). Required ONLY if type is short_answer.",`
+          : '';
+        const answerSchemaDesc = `"For multiple_choice, exactly 'A', 'B', 'C', or 'D'. For short_answer, the exact correct short text or number. For free_response, an empty string ''."`;
 
-      let lessonInstructions = '';
-      if (lessonTitle || lessonDescription) {
-        lessonInstructions = `\nAdditionally, this exam is a homework assignment for the lesson "${lessonTitle || ''}".\nThe teacher set the following lesson plan/content:\n"${lessonDescription || ''}"\n\nYou MUST generate questions that are directly related to the content and concepts outlined in this lesson plan/content.\n`;
-      }
+        let lessonInstructions = '';
+        if (lessonTitle || lessonDescription) {
+          lessonInstructions = `\nAdditionally, this exam is a homework assignment for the lesson "${lessonTitle || ''}".\nThe teacher set the following lesson plan/content:\n"${lessonDescription || ''}"\n\nYou MUST generate questions that are directly related to the content and concepts outlined in this lesson plan/content.\n`;
+        }
 
-      let syllabus = '';
-      let examples = '';
+        let syllabus = '';
+        let examples = '';
 
-      if (normSubject === 'math') {
-        syllabus = `Syllabus Boundaries\n- Restrict to algebra, combinatorics, geometry, number theory. No calculus.\n\nDifficulty scale: 0=simplest MATHCOUNTS School, 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 10=hardest IMO.`;
-        examples = formatExemplarsForPrompt(mathExemplars);
-      } else if (normSubject === 'physics') {
-        syllabus = `Syllabus Boundaries\n- DIFFICULTY < 8 (F=ma/AP Physics C): Classical mechanics, E&M, thermodynamics, fluid dynamics, waves, optics.\n- DIFFICULTY >= 8 (USAPhO/IPhO): Original concept-first designs. May introduce SR, QM basics, stat mech — MUST define all concepts from first principles.\n\nDifficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest IPhO.`;
-        examples = formatExemplarsForPrompt(physicsExemplars);
-      } else if (normSubject === 'chemistry') {
-        syllabus = `# Syllabus Boundaries\n\n## USNCO Style (Difficulty < 8):\n${chem_syllabus}\n\nExcluded topics:\n${chem_excluded_topics}\n\n## IChO Style (Difficulty 8+):\nAll of the above plus advanced HS knowledge on a first-principles approach.`;
-        examples = formatExemplarsForPrompt(chemistryExemplars);
-      }
+        if (normSubject === 'math') {
+          syllabus = `Syllabus Boundaries\n- Restrict to algebra, combinatorics, geometry, number theory. No calculus.\n\nDifficulty scale: 0=simplest MATHCOUNTS School, 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 10=hardest IMO.`;
+          examples = formatExemplarsForPrompt(mathExemplars);
+        } else if (normSubject === 'physics') {
+          syllabus = `Syllabus Boundaries\n- DIFFICULTY < 8 (F=ma/AP Physics C): Classical mechanics, E&M, thermodynamics, fluid dynamics, waves, optics.\n- DIFFICULTY >= 8 (USAPhO/IPhO): Original concept-first designs. May introduce SR, QM basics, stat mech — MUST define all concepts from first principles.\n\nDifficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest IPhO.`;
+          examples = formatExemplarsForPrompt(physicsExemplars);
+        } else if (normSubject === 'chemistry') {
+          syllabus = `# Syllabus Boundaries\n\n## USNCO Style (Difficulty < 8):\n${chem_syllabus}\n\nExcluded topics:\n${chem_excluded_topics}\n\n## IChO Style (Difficulty 8+):\nAll of the above plus advanced HS knowledge on a first-principles approach.`;
+          examples = formatExemplarsForPrompt(chemistryExemplars);
+        }
 
-      const systemInstruction = `# Role: You are an expert coach for students competing in advanced high school Olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus.
+        const systemInstruction = `# Role: You are an expert coach for students competing in advanced high school Olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus.
 
 # Context: You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale).
 
@@ -1255,12 +1255,12 @@ The output must be a pure JSON array with the following schema for each object:
   "difficulty": a number in [${Math.max(0, studentDifficulty - 2)}, ${Math.min(10, studentDifficulty + 2)}]
 }`;
 
-      const buildDynamicPrompt = (needed) => {
-        const typeInstruction = needed >= parsedTypes.length
-          ? `You MUST ensure the output contains a mix of all requested types: ${parsedTypes.join(', ')}. Every type MUST appear at least once.`
-          : `Each question MUST be one of: ${parsedTypes.join(', ')}.`;
-        return `Generate exactly ${needed} ${normSubject} problems. Average difficulty must be exactly ${studentDifficulty} (range [${Math.max(0, studentDifficulty - 2)}, ${Math.min(10, studentDifficulty + 2)}]).\nFollow these strict rules:\n1. ${typeInstruction}\n2. <important>STRICT QUALITY CONSISTENCY: Maintain a uniform standard of high quality across ALL generated questions. Do NOT allow quality, creativity, or depth to drop in later questions. Every question must receive identical rigor, effort, and attention.</important>`;
-      };
+        const buildDynamicPrompt = (needed) => {
+          const typeInstruction = needed >= parsedTypes.length
+            ? `You MUST ensure the output contains a mix of all requested types: ${parsedTypes.join(', ')}. Every type MUST appear at least once.`
+            : `Each question MUST be one of: ${parsedTypes.join(', ')}.`;
+          return `Generate exactly ${needed} ${normSubject} problems. Average difficulty must be exactly ${studentDifficulty} (range [${Math.max(0, studentDifficulty - 2)}, ${Math.min(10, studentDifficulty + 2)}]).\nFollow these strict rules:\n1. ${typeInstruction}\n2. <important>STRICT QUALITY CONSISTENCY: Maintain a uniform standard of high quality across ALL generated questions. Do NOT allow quality, creativity, or depth to drop in later questions. Every question must receive identical rigor, effort, and attention.</important>`;
+        };
 
         // Fast random selection with minimal parsing to avoid blocking event loop
         if (pregenPool[normSubject] && pregenPool[normSubject].questions) {
@@ -1285,33 +1285,33 @@ The output must be a pure JSON array with the following schema for each object:
           }
         }
 
-      const allQuestions = pregeneratedQuestion ? [pregeneratedQuestion] : [];
-      let attempts = 0;
+        const allQuestions = pregeneratedQuestion ? [pregeneratedQuestion] : [];
+        let attempts = 0;
 
-      while (allQuestions.length < aiCount && attempts < 2) {
-        attempts++;
-        const needed = aiCount - allQuestions.length;
-        const dynamicPrompt = buildDynamicPrompt(needed);
+        while (allQuestions.length < aiCount && attempts < 2) {
+          attempts++;
+          const needed = aiCount - allQuestions.length;
+          const dynamicPrompt = buildDynamicPrompt(needed);
 
-        let responseText = await drainGemini(dynamicPrompt, ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'], 1.5, systemInstruction, drainCtx);
+          let responseText = await drainGemini(dynamicPrompt, ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'], 1.5, systemInstruction, drainCtx);
 
-        if (responseText) {
-          try {
-            const cleanText = responseText.trim().replace(/^```json/, '').replace(/```$/, '').trim();
-            const questionsList = JSON.parse(cleanText);
-            const list = Array.isArray(questionsList) ? questionsList : [questionsList];
+          if (responseText) {
+            try {
+              const cleanText = responseText.trim().replace(/^```json/, '').replace(/```$/, '').trim();
+              const questionsList = JSON.parse(cleanText);
+              const list = Array.isArray(questionsList) ? questionsList : [questionsList];
 
-            for (const q of list) {
-              if (q?.question) {
-                q.id = generateQuestionId(q.question, normSubject);
-                if (allQuestions.length < aiCount) allQuestions.push(q);
+              for (const q of list) {
+                if (q?.question) {
+                  q.id = generateQuestionId(q.question, normSubject);
+                  if (allQuestions.length < aiCount) allQuestions.push(q);
+                }
               }
+            } catch (err) {
+              console.error('Failed to parse homework questions:', err);
             }
-          } catch (err) {
-            console.error('Failed to parse homework questions:', err);
           }
         }
-      }
 
         // Fallback to DB if still short using pregenPool
         if (allQuestions.length < aiCount) {
@@ -1337,12 +1337,12 @@ The output must be a pure JSON array with the following schema for each object:
           }
         }
 
-      // Save final question set (batched)
-      batchedSaves.push({
-        assignmentId: hw.assignmentId,
-        studentId: sanitizedStudent,
-        questionsJson: JSON.stringify(allQuestions)
-      });
+        // Save final question set (batched)
+        batchedSaves.push({
+          assignmentId: hw.assignmentId,
+          studentId: sanitizedStudent,
+          questionsJson: JSON.stringify(allQuestions)
+        });
 
         if (drainCtx.skipped || allQuestions.length === 0) {
           console.warn(`No questions/drain skipped for student ${sanitizedStudent}, assignment ${hw.assignmentId}. Will trigger fallback.`);
