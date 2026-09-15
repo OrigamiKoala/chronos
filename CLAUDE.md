@@ -121,3 +121,12 @@ The whiteboard (`src/components/Whiteboard.jsx`) uses Fabric.js loaded as a CDN 
 - Subjects are lowercased server-side, and `ochem` / `organic chemistry` are folded into `chemistry`.
 - Lint scopes differ by directory (browser globals for `src/`, node+jest for `api/` and `test/`); `dist` and `scratch` are ignored.
 - `scratch/` holds unrelated side experiments (a Cloudflare worker, an Apps Script) — it is out of the lint and build path and generally shouldn't be touched when working on the app.
+
+### UI Styling & Design System
+
+The application features a minimalist, soft cream-themed aesthetic with unrounded corners:
+- Global `border-radius: 0 !important` enforced across all inputs, buttons, badges, modals, cards, and canvas elements.
+- Soft cream canvas (`--bg-primary: #f6f1e3`, `--bg-secondary: #fcf9f2`, `--bg-tertiary: #ede5d3`) with warm espresso typography (`--text-primary: #262018`, `--text-secondary: #635647`).
+- Hairline cream borders (`--bg-glass-border: #e0d6c3`) and clean dark accents (`--accent-primary: #262018`).
+- Chemical structure renderers (`ChemicalText` / `SmilesRenderer`) and Chart.js tooltips match the soft cream theme.
+

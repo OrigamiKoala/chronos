@@ -127,9 +127,9 @@ export function TestScreen({ onBack }) {
             height: '240px',
             fontFamily: 'monospace',
             fontSize: '0.85rem',
-            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--bg-glass-border)',
-            borderRadius: '8px',
+            borderRadius: 0,
             color: 'var(--text-primary)',
             padding: '12px',
             marginBottom: '16px',
@@ -156,10 +156,10 @@ export function TestScreen({ onBack }) {
           <div style={{ 
             marginTop: '16px', 
             padding: '12px', 
-            backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+            backgroundColor: 'rgba(239, 68, 68, 0.08)', 
             border: '1px solid rgba(239, 68, 68, 0.2)', 
-            borderRadius: '6px',
-            color: '#f87171',
+            borderRadius: 0,
+            color: '#dc2626',
             display: 'flex',
             alignItems: 'start',
             gap: '8px',
@@ -192,11 +192,11 @@ export function TestScreen({ onBack }) {
                       Question {idx + 1} of {parsedQuestions.length}
                     </span>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
                         Level {q.difficulty !== undefined ? q.difficulty : 5}
                       </span>
                       {q.topic && (
-                        <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)', color: 'var(--text-secondary)' }}>
                           Topic: {q.topic}
                         </span>
                       )}
@@ -210,9 +210,9 @@ export function TestScreen({ onBack }) {
                         alignItems: 'center',
                         gap: '0.4rem',
                         padding: '0.4rem 0.8rem',
-                        background: 'rgba(255, 255, 255, 0.02)',
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                        borderRadius: 'var(--radius-sm)',
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--bg-glass-border)',
+                        borderRadius: 0,
                         fontSize: '0.85rem',
                         color: 'var(--text-muted)'
                       }}>
@@ -223,7 +223,7 @@ export function TestScreen({ onBack }) {
                 </div>
 
                 <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
-                  <p><ChemicalText text={q.question} theme="dark" /></p>
+                  <p><ChemicalText text={q.question} theme="light" /></p>
                 </div>
 
                 {q.type === 'multiple_choice' && q.options && (
@@ -257,9 +257,9 @@ export function TestScreen({ onBack }) {
                             {letter}.
                           </span>
                           {isSmiles(opt) ? (
-                            <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" />
+                            <SmilesRenderer smiles={opt} width={90} height={90} theme="light" />
                           ) : (
-                            <ChemicalText text={opt} theme="dark" defaultWidth={90} defaultHeight={90} />
+                            <ChemicalText text={opt} theme="light" defaultWidth={90} defaultHeight={90} />
                           )}
                           {isCorrect && (
                             <span style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 'bold', marginLeft: 'auto' }}>
@@ -300,12 +300,12 @@ export function TestScreen({ onBack }) {
                     <div style={{
                       height: '240px',
                       border: '2px dashed var(--bg-glass-border)',
-                      borderRadius: 'var(--radius-md)',
+                      borderRadius: 0,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: 'var(--text-muted)',
-                      background: 'rgba(255,255,255,0.01)',
+                      background: 'var(--bg-tertiary)',
                       fontSize: '0.95rem'
                     }}>
                       [ Exam Whiteboard / Drawing Canvas Mockup ]

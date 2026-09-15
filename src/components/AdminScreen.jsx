@@ -261,19 +261,19 @@ export function AdminScreen({ user, onBack, autoLoginLoading }) {
             return (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Students / Coaches / Admins</span>
                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{students.length}S / {teachers.length}T / {admins.length}A</span>
                   </div>
-                  <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Avg Math ELO</span>
                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#6366f1' }}>{avgMath}</span>
                   </div>
-                  <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Avg Physics ELO</span>
                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#f59e0b' }}>{avgPhys}</span>
                   </div>
-                  <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Avg Chem ELO</span>
                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#10b981' }}>{avgChem}</span>
                   </div>
@@ -282,7 +282,7 @@ export function AdminScreen({ user, onBack, autoLoginLoading }) {
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-secondary)' }}>
+                      <tr style={{ borderBottom: '1px solid var(--bg-glass-border)', color: 'var(--text-secondary)' }}>
                         <th style={{ padding: '0.75rem 0.5rem' }}>Rank</th>
                         <th style={{ padding: '0.75rem 0.5rem' }}>Username</th>
                         <th style={{ padding: '0.75rem 0.5rem' }}>Role</th>
@@ -298,7 +298,7 @@ export function AdminScreen({ user, onBack, autoLoginLoading }) {
                         const isSelf = m.user_id === user.user_id;
                         const overall = getOverallElo(m);
                         return (
-                          <tr key={m.user_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: isSelf ? 'rgba(99, 102, 241, 0.08)' : 'transparent' }}>
+                          <tr key={m.user_id} style={{ borderBottom: '1px solid var(--bg-glass-border)', background: isSelf ? 'var(--bg-tertiary)' : 'transparent' }}>
                             <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold', color: idx === 0 ? 'var(--warning)' : 'var(--text-secondary)' }}>
                               #{idx + 1}
                             </td>
@@ -308,10 +308,10 @@ export function AdminScreen({ user, onBack, autoLoginLoading }) {
                             <td style={{ padding: '0.75rem 0.5rem' }}>
                               <span style={{
                                 fontSize: '0.75rem',
-                                background: m.user_role === 'admin' ? 'rgba(239, 68, 68, 0.15)' : m.user_role === 'teacher' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(74, 222, 128, 0.15)',
-                                color: m.user_role === 'admin' ? '#ef4444' : m.user_role === 'teacher' ? '#f59e0b' : '#4ade80',
+                                background: m.user_role === 'admin' ? 'rgba(239, 68, 68, 0.15)' : m.user_role === 'teacher' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                color: m.user_role === 'admin' ? '#ef4444' : m.user_role === 'teacher' ? '#d97706' : '#059669',
                                 padding: '0.15rem 0.4rem',
-                                borderRadius: '4px',
+                                borderRadius: 0,
                                 textTransform: 'uppercase',
                                 fontWeight: '600'
                               }}>

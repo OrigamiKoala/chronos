@@ -1127,7 +1127,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                       {!isUser ? (
                         <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'flex-start' }}>
                           <Sparkles size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: '2px' }} />
-                          <ChemicalText text={msg.text} theme="dark" />
+                          <ChemicalText text={msg.text} theme="light" />
                         </div>
                       ) : (
                         msg.text
@@ -1240,19 +1240,19 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
             </div>
 
             {reviewExam.mistakePatterns && (
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.03)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: 'var(--radius-md)' }}>
-                <h4 style={{ color: '#ef4444', margin: '0 0 0.5rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 0 }}>
+                <h4 style={{ color: 'var(--danger)', margin: '0 0 0.5rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <ShieldAlert size={16} /> AI mistake analysis / Pattern gaps:
                 </h4>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-                  <ChemicalText text={reviewExam.mistakePatterns} theme="dark" />
+                  <ChemicalText text={reviewExam.mistakePatterns} theme="light" />
                 </p>
               </div>
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {reviewExam.results.map((r, idx) => (
-                <div key={r.id || idx} style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                <div key={r.id || idx} style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Q{idx + 1} - {r.topic || 'General'}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -1275,10 +1275,10 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                   </div>
 
                   <p style={{ color: 'var(--text-primary)', fontSize: '0.9rem', marginBottom: '0.75rem', whiteSpace: 'pre-wrap' }}>
-                    <ChemicalText text={r.question} theme="dark" />
+                    <ChemicalText text={r.question} theme="light" />
                   </p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', background: 'rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', borderRadius: '4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', background: 'var(--bg-secondary)', padding: '0.5rem 0.75rem', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
                     <div>
                       <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.15rem' }}>Student Answer:</span>
                       <span style={{ color: r.isCorrect === null ? 'var(--text-muted)' : (r.isCorrect ? 'var(--success)' : 'var(--danger)'), fontWeight: 'bold' }}>
@@ -1286,10 +1286,10 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                           if (r.type === 'free_response' && r.frqSubmission) {
                             const sub = r.frqSubmission;
                             if (sub.value && (sub.value.startsWith('data:image/') || sub.value.startsWith('blob:'))) {
-                              return <img src={sub.value} alt="Student FRQ submission" style={{ maxWidth: '300px', maxHeight: '200px', borderRadius: '4px', border: '1px solid var(--border-color)' }} />;
+                              return <img src={sub.value} alt="Student FRQ submission" style={{ maxWidth: '300px', maxHeight: '200px', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }} />;
                             }
                             if (sub.type === 'text' && sub.value) {
-                              return <ChemicalText text={sub.value} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                              return <ChemicalText text={sub.value} theme="light" defaultWidth={70} defaultHeight={70} />;
                             }
                           }
                           const ans = r.userAnswer;
@@ -1297,10 +1297,10 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                             const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
                             if (letterIdx !== -1 && r.options[letterIdx]) {
                               const opt = r.options[letterIdx];
-                              return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                              return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="light" /> : <ChemicalText text={opt} theme="light" defaultWidth={70} defaultHeight={70} />;
                             }
                           }
-                          return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                          return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="light" /> : <ChemicalText text={ans} theme="light" defaultWidth={70} defaultHeight={70} />;
                         })()}
                       </span>
                     </div>
@@ -1313,10 +1313,10 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                             const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
                             if (letterIdx !== -1 && r.options[letterIdx]) {
                               const opt = r.options[letterIdx];
-                              return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                              return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="light" /> : <ChemicalText text={opt} theme="light" defaultWidth={70} defaultHeight={70} />;
                             }
                           }
-                          return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                          return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="light" /> : <ChemicalText text={ans} theme="light" defaultWidth={70} defaultHeight={70} />;
                         })()}
                       </span>
                     </div>
@@ -1326,7 +1326,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
                     <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
                       <button
                         className="btn btn-outline"
-                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem', height: 'auto', minHeight: 'auto', color: 'var(--success)', borderColor: 'var(--success)' }}
+                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem', height: 'auto', minHeight: 'auto', color: 'var(--success)', borderColor: 'var(--success)', borderRadius: 0 }}
                         disabled={remarkingQuestionId === r.id}
                         onClick={async () => {
                           setRemarkingQuestionId(r.id);
@@ -1371,7 +1371,7 @@ export function TeacherScreen({ user, onBack, autoLoginLoading }) {
 
                   {r.feedback && (
                     <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', borderLeft: '3px solid var(--accent-primary)', paddingLeft: '0.75rem', color: 'var(--text-secondary)' }}>
-                      <strong>AI Grading Note:</strong> <ChemicalText text={r.feedback} theme="dark" />
+                      <strong>AI Grading Note:</strong> <ChemicalText text={r.feedback} theme="light" />
                     </div>
                   )}
                 </div>

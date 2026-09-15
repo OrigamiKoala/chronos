@@ -350,9 +350,9 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
 
       {homeworks.length > 0 && (
         <div style={{
-          background: 'rgba(99, 102, 241, 0.05)',
-          border: '1px solid rgba(99, 102, 241, 0.2)',
-          borderRadius: 'var(--radius-md)',
+          background: 'var(--bg-tertiary)',
+          border: '1px solid var(--bg-glass-border)',
+          borderRadius: 0,
           padding: '1rem',
           marginBottom: '1.5rem',
           boxSizing: 'border-box'
@@ -385,9 +385,9 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                 <div
                   key={hw.assignment_id}
                   style={{
-                    background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-tertiary)',
-                    border: isSelected ? '1px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.03)',
-                    borderRadius: 'var(--radius-sm)',
+                    background: isSelected ? 'var(--bg-secondary)' : 'var(--bg-secondary)',
+                    border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--bg-glass-border)',
+                    borderRadius: 0,
                     padding: '0.5rem 0.75rem',
                     cursor: 'pointer',
                     display: 'flex',
@@ -408,10 +408,10 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                     {isSelected && (
                       <span style={{
                         fontSize: '0.65rem',
-                        background: 'rgba(99, 102, 241, 0.2)',
-                        color: 'var(--accent-primary)',
+                        background: 'var(--text-primary)',
+                        color: 'var(--bg-primary)',
                         padding: '0.1rem 0.35rem',
-                        borderRadius: '4px',
+                        borderRadius: 0,
                         fontWeight: 'bold'
                       }}>
                         PREFILLED
@@ -517,7 +517,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
 
             <div>
               <label style={{ display: 'block', marginBottom: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Exam Format</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
                   <input
                     type="checkbox"
@@ -593,7 +593,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             </div>
 
             {config.subject === 'Math' && (
-              <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)', fontSize: '0.85rem' }}>
                 <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
                   <div><strong>0:</strong> MATHCOUNTS School</div>
@@ -609,7 +609,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             )}
 
             {config.subject === 'Physics' && (
-              <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)', fontSize: '0.85rem' }}>
                 <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
                   <div><strong>1:</strong> Introductory level</div>
@@ -622,7 +622,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             )}
 
             {config.subject === 'Chemistry' && (
-              <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.85rem' }}>
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)', fontSize: '0.85rem' }}>
                 <span style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Difficulty Scale:</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', color: 'var(--text-secondary)' }}>
                   <div><strong>1:</strong> Honors and early AP Chem</div>
@@ -633,7 +633,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
               </div>
             )}
 
-            <div style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger-glass)' }}>
+            <div style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--danger-glass)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--danger)' }}>
                 <ShieldAlert size={20} />
                 <h3 style={{ margin: 0 }}>Timer</h3>
@@ -696,7 +696,7 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
             </div>
           </>
         ) : (
-          <div style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ padding: 'var(--card-padding)', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
             <p style={{ color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
               {config.subject} • {config.numQuestions} Qs • Diff {config.difficulty} • {config.examFormat.includes('multiple_choice') ? 'MC ' : ''}{config.examFormat.includes('short_answer') ? 'SA ' : ''}{config.examFormat.includes('free_response') ? 'FR ' : ''}
               {config.timeLimitStyle !== 'none' && `• ${config.timeLimitStyle === 'per_question' ? `${config.timeLimitPerQuestion}s/q` : config.timeLimitStyle === 'whole_test' ? `${config.timeLimitWholeTest} min` : `${config.timeLimitPerSet} min/set`}`}

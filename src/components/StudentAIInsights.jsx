@@ -104,8 +104,8 @@ export function StudentAIInsights({ studentId, teacherId }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
 
       {/* Latest Insight Card */}
-      <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', background: 'rgba(99, 102, 241, 0.03)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem' }}>
+      <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', background: 'var(--bg-secondary)', border: '1px solid var(--bg-glass-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--bg-glass-border)', paddingBottom: '0.5rem' }}>
           <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
             <Sparkles size={18} style={{ color: 'var(--accent-primary)' }} />
             Latest AI Insight
@@ -115,7 +115,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
               onClick={handleManualGenerate}
               disabled={generating}
               className="btn btn-outline"
-              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto', borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)' }}
+              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', height: 'auto', minHeight: 'auto', borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: 0 }}
             >
               {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
               {generating ? 'Generating...' : 'Regenerate / Force Update'}
@@ -138,7 +138,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
               fontSize: '0.75rem',
               fontWeight: 'bold',
               padding: '0.2rem 0.5rem',
-              borderRadius: '4px',
+              borderRadius: 0,
               textTransform: 'capitalize'
             }}>
               {latest.progress_status || 'Unknown'}
@@ -146,22 +146,22 @@ export function StudentAIInsights({ studentId, teacherId }) {
           </div>
 
           {/* Practice Summary */}
-          <div style={{ background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.03)' }}>
+          <div style={{ background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.35rem' }}>
               <AlertCircle size={14} /> Practice Summary
             </span>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-              <ChemicalText text={latest.summary} theme="dark" />
+              <ChemicalText text={latest.summary} theme="light" />
             </p>
           </div>
 
           {/* Suggestions */}
-          <div style={{ background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.03)' }}>
+          <div style={{ background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.35rem' }}>
               <BookOpen size={14} /> Coaching Next Steps
             </span>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-              <ChemicalText text={latest.suggestions} theme="dark" />
+              <ChemicalText text={latest.suggestions} theme="light" />
             </p>
           </div>
         </div>
@@ -169,7 +169,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
 
       {/* History Log */}
       {historyList.length > 0 && (
-        <div className="glass-panel" style={{ padding: 'var(--card-padding)', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="glass-panel" style={{ padding: 'var(--card-padding)', background: 'var(--bg-secondary)', border: '1px solid var(--bg-glass-border)' }}>
           <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
             Previous Insights Log ({historyList.length})
           </h4>
@@ -181,7 +181,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
               const histProgress = getProgressStyle(ins.progress_status);
 
               return (
-                <div key={ins.insight_id} style={{ border: '1px solid rgba(255,255,255,0.04)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+                <div key={ins.insight_id} style={{ border: '1px solid var(--bg-glass-border)', borderRadius: 0, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
                   <div
                     style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', cursor: 'pointer', userSelect: 'none' }}
                     onClick={() => setExpandedId(isExpanded ? null : ins.insight_id)}
@@ -195,7 +195,7 @@ export function StudentAIInsights({ studentId, teacherId }) {
                         fontSize: '0.7rem',
                         fontWeight: 'bold',
                         padding: '0.1rem 0.4rem',
-                        borderRadius: '3px'
+                        borderRadius: 0
                       }}>
                         {(ins.progress_status || 'Unknown').split(' ')[0]}
                       </span>
@@ -204,23 +204,23 @@ export function StudentAIInsights({ studentId, teacherId }) {
                   </div>
 
                   {isExpanded && (
-                    <div style={{ padding: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(0,0,0,0.1)' }}>
+                    <div style={{ padding: '0.75rem', borderTop: '1px solid var(--bg-glass-border)', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'var(--bg-secondary)' }}>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>Practice Summary:</span>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
-                          <ChemicalText text={ins.summary} theme="dark" />
+                          <ChemicalText text={ins.summary} theme="light" />
                         </p>
                       </div>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>Suggestions:</span>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
-                          <ChemicalText text={ins.suggestions} theme="dark" />
+                          <ChemicalText text={ins.suggestions} theme="light" />
                         </p>
                       </div>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>Progress Detail:</span>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
-                          <ChemicalText text={ins.progress_status} theme="dark" />
+                          <ChemicalText text={ins.progress_status} theme="light" />
                         </p>
                       </div>
                     </div>
