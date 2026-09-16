@@ -1132,18 +1132,17 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
         gap: '2rem'
       }}>
         <div style={{
-          width: '72px',
-          height: '72px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1))',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
+          width: '64px',
+          height: '64px',
+          borderRadius: 0,
+          background: 'var(--bg-tertiary)',
+          border: '1px solid var(--bg-glass-border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)',
           color: 'var(--accent-primary)'
         }}>
-          <Clock size={36} style={{ color: 'var(--accent-primary)' }} />
+          <Clock size={32} style={{ color: 'var(--accent-primary)' }} />
         </div>
         <div>
           <h2 className="text-gradient" style={{ marginBottom: '0.75rem', fontSize: '2.2rem', fontWeight: '700' }}>
@@ -1164,15 +1163,15 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             margin: '0 auto 0.5rem',
             textAlign: 'left'
           }}>
-            <div className="glass-panel" style={{ padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+            <div className="glass-panel" style={{ padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block' }}>Subject</span>
               <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{config.subject}</strong>
             </div>
-            <div className="glass-panel" style={{ padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+            <div className="glass-panel" style={{ padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block' }}>Questions</span>
               <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{config.numQuestions} Qs</strong>
             </div>
-            <div className="glass-panel" style={{ padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', gridColumn: 'span 2' }}>
+            <div className="glass-panel" style={{ padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)', gridColumn: 'span 2' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block' }}>Format & Mode</span>
               <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>
                 {config.examFormat === 'free_response' ? 'Free Response' : config.examFormat === 'multiple_choice' ? 'Multiple Choice' : 'Mixed Format'}
@@ -1183,22 +1182,20 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
         </div>
 
         <button
-          className="btn btn-primary animate-pulse-subtle"
+          className="btn btn-primary"
           onClick={() => setHasStarted(true)}
           style={{
-            padding: '1rem 3rem',
-            fontSize: '1.25rem',
-            borderRadius: '14px',
+            padding: '0.875rem 2.5rem',
+            fontSize: '1.1rem',
+            borderRadius: 0,
             display: 'flex',
             alignItems: 'center',
             gap: '0.75rem',
             fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)'
+            cursor: 'pointer'
           }}
         >
-          <Play size={20} fill="currentColor" /> {resumeState ? 'Resume Exam' : 'Start Exam'}
+          <Play size={18} fill="currentColor" /> {resumeState ? 'Resume Exam' : 'Start Exam'}
         </button>
       </div>
     );
@@ -1229,17 +1226,16 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
         gap: '1.5rem'
       }}>
         <div style={{
-          width: '64px',
-          height: '64px',
-          borderRadius: '50%',
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          width: '56px',
+          height: '56px',
+          borderRadius: 0,
+          background: 'var(--bg-tertiary)',
+          border: '1px solid var(--bg-glass-border)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)'
+          justifyContent: 'center'
         }}>
-          <Pause size={32} style={{ color: 'var(--accent-primary)' }} />
+          <Pause size={28} style={{ color: 'var(--accent-primary)' }} />
         </div>
         <div>
           <h2 className="text-gradient" style={{ marginBottom: '0.5rem', fontSize: '1.8rem' }}>Test Paused</h2>
@@ -1377,7 +1373,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             Question {currentQuestionIndex + 1} of {config.numQuestions}
           </span>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-            <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '4px' }}>
+            <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}>
               Level {currentDifficulty}
             </span>
           </div>
@@ -1389,9 +1385,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             alignItems: 'center',
             gap: '0.4rem',
             padding: '0.4rem 0.8rem',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: 'var(--radius-sm)',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--bg-glass-border)',
+            borderRadius: 0,
             fontSize: '0.9rem'
           }}>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>ELO:</span>
@@ -1409,8 +1405,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
               alignItems: 'center',
               gap: '0.4rem',
               fontSize: '0.9rem',
-              borderColor: 'rgba(255, 255, 255, 0.15)',
-              background: 'rgba(255, 255, 255, 0.02)'
+              borderColor: 'var(--bg-glass-border)',
+              background: 'var(--bg-secondary)',
+              borderRadius: 0
             }}
           >
             <Pause size={14} /> Pause
@@ -1423,9 +1420,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
               alignItems: 'center',
               gap: '0.4rem',
               padding: '0.4rem 0.8rem',
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              borderRadius: 'var(--radius-sm)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--bg-glass-border)',
+              borderRadius: 0,
               fontSize: '0.9rem'
             }}>
               <Clock size={14} color="var(--accent-secondary)" />
@@ -1441,9 +1438,9 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
             alignItems: 'center',
             gap: '0.4rem',
             padding: '0.4rem 0.8rem',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: 'var(--radius-sm)',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--bg-glass-border)',
+            borderRadius: 0,
             fontSize: '0.9rem'
           }}>
             {config.timeLimitStyle === 'none' ? (
@@ -1481,19 +1478,17 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       {/* Timer Progress Bar */}
       {config.timeLimitStyle !== 'none' && !isHidden && (
         <div style={{
-          height: '6px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '3px',
+          height: '4px',
+          background: 'var(--bg-tertiary)',
+          borderRadius: 0,
           overflow: 'hidden',
-          marginBottom: '2rem',
-          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)'
+          marginBottom: '2rem'
         }}>
           <div style={{
             height: '100%',
             width: `${percentage}%`,
             background: progressColor,
-            transition: 'width 1s linear, background-color 0.5s ease',
-            boxShadow: `0 0 10px ${progressColor}`
+            transition: 'width 1s linear, background-color 0.5s ease'
           }} />
         </div>
       )}
@@ -1674,7 +1669,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
         <div style={{ display: workSubmitted ? 'none' : 'block' }}>
           <div>
             <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
-              <p><ChemicalText text={problem.question || problem.question_text} theme="dark" /></p>
+              <p><ChemicalText text={problem.question || problem.question_text} theme="light" /></p>
             </div>
 
             <div style={{ marginBottom: '2rem' }}>
@@ -1761,7 +1756,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       {problem.type !== 'free_response' && (
         <>
           <div style={{ marginBottom: '2rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
-            <p><ChemicalText text={problem.question || problem.question_text} theme="dark" /></p>
+            <p><ChemicalText text={problem.question || problem.question_text} theme="light" /></p>
           </div>
 
           {problem.type === 'multiple_choice' && problem.options && (
@@ -1775,7 +1770,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                     className={`btn btn-outline ${isSelected ? 'selected' : ''}`}
                     style={{
                       justifyContent: 'flex-start',
-                      background: isSelected ? 'var(--bg-tertiary)' : 'transparent',
+                      background: isSelected ? 'var(--accent-subtle)' : 'transparent',
                       borderColor: isSelected ? 'var(--accent-primary)' : '',
                       display: 'flex',
                       alignItems: 'center',
@@ -1789,7 +1784,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                     <span style={{ fontWeight: '700', marginRight: '0.5rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
                       {letter}.
                     </span>
-                    {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={90} height={90} theme="dark" /> : <ChemicalText text={opt} theme="dark" defaultWidth={90} defaultHeight={90} />}
+                    {isSmiles(opt) ? <SmilesRenderer smiles={opt} width={90} height={90} theme="light" /> : <ChemicalText text={opt} theme="light" defaultWidth={90} defaultHeight={90} />}
                   </button>
                 );
               })}
@@ -1808,12 +1803,8 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                   if (e.key === 'Enter' && activeAnswer.trim()) {
                     if (config.stressMode === 'strict') {
                       submitStrictAnswer();
-                    } else if (currentQuestionIndex + 1 >= config.numQuestions) {
+                    } else if (currentQuestionIndex + 1 === config.numQuestions) {
                       handleFinishExam();
-                    } else if (currentQuestionIndex + 1 < problems.length) {
-                      recordActiveInterval(currentQuestionIndex);
-                      clearInterval(timerRef.current);
-                      setCurrentQuestionIndex(prev => prev + 1);
                     }
                   }
                 }}
@@ -1832,7 +1823,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                   setCurrentQuestionIndex(prev => prev - 1);
                 }}
               >
-                Previous
+                <ArrowLeft size={18} /> Previous
               </button>
             )}
 
@@ -1867,15 +1858,13 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
 
             {config.stressMode === 'strict' ? (
               currentQuestionIndex + 1 === config.numQuestions ? (
-                (allLoaded || noMoreQuestions) && (
-                  <button
-                    className="btn btn-primary"
-                    disabled={!activeAnswer.trim()}
-                    onClick={() => submitStrictAnswer()}
-                  >
-                    Finish Exam <ArrowRight size={18} />
-                  </button>
-                )
+                <button
+                  className="btn btn-primary"
+                  disabled={!activeAnswer.trim()}
+                  onClick={() => handleFinishExam()}
+                >
+                  Finish Exam <ArrowRight size={18} />
+                </button>
               ) : (
                 <button
                   className="btn btn-primary"
@@ -1900,10 +1889,10 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       )}
 
       {/* Progress Bar */}
-      <div style={{ marginTop: '2rem', height: '4px', background: 'var(--bg-tertiary)', borderRadius: '2px', overflow: 'hidden' }}>
+      <div style={{ marginTop: '2rem', height: '4px', background: 'var(--bg-tertiary)', borderRadius: 0, overflow: 'hidden' }}>
         <div style={{
           height: '100%',
-          background: 'var(--accent-primary)',
+          background: 'linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
           width: `${((currentQuestionIndex) / config.numQuestions) * 100}%`,
           transition: 'width 0.3s ease'
         }} />

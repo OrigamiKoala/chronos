@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import SmilesDrawer from 'smiles-drawer';
 
-import { isSmiles, isReactionSmiles, smilesThemes } from './chemicalHelpers';
+import { smilesThemes } from './chemicalHelpers';
+import DOMPurify from 'dompurify';
 
-export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dark' }) {
+export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'light' }) {
   const svgRef = useRef(null);
   const [hasError, setHasError] = useState(false);
 
@@ -32,7 +33,7 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
       const sanitized = cleanSmiles.replace(/\\/g, '/');
       SmilesDrawer.parse(sanitized, (tree) => {
         Promise.resolve().then(() => setHasError(false));
-        drawer.draw(tree, svgRef.current, 'dark', false);
+        drawer.draw(tree, svgRef.current, theme || 'light', false);
       }, () => {
         Promise.resolve().then(() => setHasError(true));
       });
@@ -61,7 +62,7 @@ export function SmilesRenderer({ smiles, width = 140, height = 140, theme = 'dar
  * reaction SMILES as a pure SVG diagram (reactants → arrow → products).
  * No Ketcher editor, no toolbar, just the rendered structure.
  */
-export function ReactionRenderer({ reaction, theme = 'dark' }) {
+export function ReactionRenderer({ reaction, theme = 'light' }) {
   const svgRef = useRef(null);
   const [hasError, setHasError] = useState(false);
 
@@ -107,7 +108,7 @@ export function ReactionRenderer({ reaction, theme = 'dark' }) {
 
       SmilesDrawer.parseReaction(cleanReaction, (rxn) => {
         Promise.resolve().then(() => setHasError(false));
-        reactionDrawer.draw(rxn, svgRef.current, 'dark');
+        reactionDrawer.draw(rxn, svgRef.current, theme || 'light');
       }, () => {
         Promise.resolve().then(() => setHasError(true));
       });
@@ -173,7 +174,7 @@ export function normalizeLaTeX(str) {
   return cleaned;
 }
 
-export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, defaultHeight = 130 }) {
+export function ChemicalText({ text, theme = 'light', defaultWidth = 130, defaultHeight = 130 }) {
   const containerRef = useRef(null);
 
   const cleanText = normalizeLaTeX(text);
@@ -241,14 +242,14 @@ export function ChemicalText({ text, theme = 'dark', defaultWidth = 130, default
               <span
                 style={{
                   display: 'block',
-                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '10px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--bg-glass-border)',
+                  borderRadius: 0,
                   padding: '16px',
                   overflow: 'auto',
                   lineHeight: 'normal',
                 }}
-                dangerouslySetInnerHTML={{ __html: cleanedSvg }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cleanedSvg) }}
               />
             </span>
           );

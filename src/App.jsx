@@ -7,31 +7,24 @@ import { AdminScreen } from './components/AdminScreen';
 import { TeacherScreen } from './components/TeacherScreen';
 import { TestScreen } from './components/TestScreen';
 import { ReviewScreen } from './components/ReviewScreen';
-import { CheckInScreen } from './components/CheckInScreen';
-import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen, UserCheck } from 'lucide-react';
+import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
 
-// Persisted identity helpers (localStorage-backed, not cookies).
-// Apps Script serves this app inside a cross-origin (googleusercontent.com)
-// iframe nested under script.google.com, so document.cookie is third-party
-// storage there and gets blocked/wiped by Chrome's cookie restrictions.
-// localStorage isn't subject to that same blocking, so these keep the
-// original getCookie/setCookie/eraseCookie call sites working unchanged.
-function setCookie(name, value) {
-  try {
-    localStorage.setItem(name, value);
-  } catch (e) {
-    // storage unavailable (e.g. quota, private browsing) - ignore
-  }
+// Cookie helpers
+function setCookie(name, value, days = 90) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
 }
 
 function getCookie(name) {
-  if (typeof localStorage === 'undefined') return '';
-  return localStorage.getItem(name) || '';
+  if (typeof document === 'undefined') return '';
+  return document.cookie.split('; ').reduce((r, v) => {
+    const parts = v.split('=');
+    return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+  }, '');
 }
 
 function eraseCookie(name) {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.removeItem(name);
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 }
 
 // Cache helper
@@ -48,12 +41,11 @@ const getCachedItem = (key, fallback) => {
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
-    const path = typeof window !== 'undefined' ? (window.location.hash.slice(1) || '/') : '/';
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
     if (path === '/teacher') return 'teacher';
     if (path === '/admin') return 'admin';
     if (path === '/test') return 'test';
     if (path === '/review') return 'review';
-    if (path === '/check-in' || path === '/checkin') return 'check-in';
     return 'setup';
   });
   const [examConfig, setExamConfig] = useState(null);
@@ -175,7 +167,7 @@ function App() {
 
 
   const navigateTo = (path) => {
-    window.location.hash = path;
+    window.history.pushState({}, '', path);
     if (path === '/teacher') {
       setCurrentScreen('teacher');
     } else if (path === '/admin') {
@@ -184,16 +176,14 @@ function App() {
       setCurrentScreen('test');
     } else if (path === '/review') {
       setCurrentScreen('review');
-    } else if (path === '/check-in' || path === '/checkin') {
-      setCurrentScreen('check-in');
     } else {
       setCurrentScreen('setup');
     }
   };
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const path = window.location.hash.slice(1) || '/';
+    const handlePopState = () => {
+      const path = window.location.pathname;
       if (path === '/teacher') {
         setCurrentScreen('teacher');
       } else if (path === '/admin') {
@@ -202,14 +192,12 @@ function App() {
         setCurrentScreen('test');
       } else if (path === '/review') {
         setCurrentScreen('review');
-      } else if (path === '/check-in' || path === '/checkin') {
-        setCurrentScreen('check-in');
       } else {
         setCurrentScreen('setup');
       }
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
 
@@ -351,7 +339,6 @@ function App() {
           if (data.token) {
             setCookie('chronos_logged_token', data.token);
           }
-          document.cookie = 'chronos_student_id=' + encodeURIComponent(loginPassword) + '; path=/; max-age=86400';
           localStorage.setItem('chronos_cache_ratings', JSON.stringify(userRatings));
           localStorage.setItem('chronos_cache_strengths', JSON.stringify(data.strengths));
           localStorage.setItem('chronos_cache_weaknesses', JSON.stringify(data.weaknesses));
@@ -469,7 +456,6 @@ function App() {
     eraseCookie('chronos_logged_user');
     eraseCookie('chronos_logged_token');
     eraseCookie('chronos_user_data');
-    document.cookie = 'chronos_student_id=; path=/; max-age=0';
     localStorage.removeItem('chronos_cache_ratings');
     localStorage.removeItem('chronos_cache_strengths');
     localStorage.removeItem('chronos_cache_weaknesses');
@@ -1001,13 +987,7 @@ function App() {
           >
             <BookOpen size={16} /> Review
           </button>
-          <button
-            className={`btn ${currentScreen === 'check-in' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            onClick={() => navigateTo(currentScreen === 'check-in' ? '/' : '/check-in')}
-          >
-            <UserCheck size={16} /> Check-In
-          </button>
+
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <button
@@ -1027,12 +1007,13 @@ function App() {
                   {user.user_organization && (
                     <span style={{
                       fontSize: '0.7rem',
-                      background: 'rgba(99, 102, 241, 0.2)',
+                      background: 'var(--accent-subtle)',
                       color: 'var(--accent-primary)',
                       padding: '0.1rem 0.35rem',
-                      borderRadius: '4px',
+                      borderRadius: 0,
+                      border: '1px solid var(--accent-border)',
                       marginLeft: '0.4rem',
-                      fontWeight: '600',
+                      fontWeight: '700',
                       textTransform: 'uppercase'
                     }}>
                       {user.user_role}
@@ -1046,12 +1027,12 @@ function App() {
                     top: '100%',
                     marginTop: '0.5rem',
                     background: 'var(--bg-secondary)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--bg-glass-border)',
+                    borderRadius: 0,
                     padding: '0.25rem',
                     zIndex: 100,
                     minWidth: '150px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                    boxShadow: 'var(--shadow-md)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.25rem'
@@ -1153,9 +1134,9 @@ function App() {
                           <div
                             key={exam.exam_id || index}
                             style={{
-                              background: 'rgba(99, 102, 241, 0.08)',
-                              border: '1px solid rgba(99, 102, 241, 0.3)',
-                              borderRadius: 'var(--radius-md)',
+                              background: 'var(--accent-subtle)',
+                              border: '1px solid var(--accent-border)',
+                              borderRadius: 0,
                               padding: '1rem',
                               marginBottom: '1rem',
                               display: 'flex',
@@ -1200,7 +1181,7 @@ function App() {
                       })}
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                        <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(5, 150, 105, 0.04)', border: '1px solid rgba(5, 150, 105, 0.2)', borderRadius: 0 }}>
                           <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Strengths</h4>
                           {filteredStrengths.length > 0 ? (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
@@ -1208,10 +1189,10 @@ function App() {
                                 <span
                                   key={i}
                                   style={{
-                                    background: 'rgba(74, 222, 128, 0.1)',
+                                    background: 'rgba(5, 150, 105, 0.08)',
                                     color: 'var(--success)',
                                     padding: '0.25rem 0.6rem',
-                                    borderRadius: '4px',
+                                    borderRadius: 0,
                                     fontSize: '0.75rem',
                                     cursor: 'pointer',
                                     border: selectedTopicDetail?.topic === s && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent',
@@ -1228,7 +1209,7 @@ function App() {
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Keep practicing to reveal strengths!</span>
                           )}
                         </div>
-                        <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(220, 38, 38, 0.04)', border: '1px solid rgba(220, 38, 38, 0.2)', borderRadius: 0 }}>
                           <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', fontSize: '0.95rem' }}>{selectedSubject} Weaknesses</h4>
                           {filteredWeaknesses.length > 0 ? (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
@@ -1236,10 +1217,10 @@ function App() {
                                 <span
                                   key={i}
                                   style={{
-                                    background: 'rgba(248, 113, 113, 0.1)',
+                                    background: 'rgba(220, 38, 38, 0.08)',
                                     color: 'var(--danger)',
                                     padding: '0.25rem 0.6rem',
-                                    borderRadius: '4px',
+                                    borderRadius: 0,
                                     fontSize: '0.75rem',
                                     cursor: 'pointer',
                                     border: selectedTopicDetail?.topic === w && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent',
@@ -1262,9 +1243,9 @@ function App() {
                         <div style={{
                           marginBottom: '1.5rem',
                           padding: 'var(--card-padding-sm)',
-                          background: selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.03)' : 'rgba(248, 113, 113, 0.03)',
-                          border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)'}`,
-                          borderRadius: 'var(--radius-md)',
+                          background: selectedTopicDetail.type === 'strength' ? 'rgba(5, 150, 105, 0.03)' : 'rgba(220, 38, 38, 0.03)',
+                          border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(5, 150, 105, 0.2)' : 'rgba(220, 38, 38, 0.2)'}`,
+                          borderRadius: 0,
                           animation: 'fade-in 0.3s ease'
                         }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -1311,10 +1292,10 @@ function App() {
                                   display: 'flex',
                                   justifyContent: 'space-between',
                                   alignItems: 'center',
-                                  background: 'var(--bg-tertiary)',
+                                  background: 'var(--bg-secondary)',
                                   padding: '0.75rem',
-                                  borderRadius: 'var(--radius-sm)',
-                                  border: '1px solid rgba(255,255,255,0.05)',
+                                  borderRadius: 0,
+                                  border: '1px solid var(--bg-glass-border)',
                                   fontSize: '0.85rem',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s ease',
@@ -1407,9 +1388,6 @@ function App() {
             {currentScreen === 'review' && (
               <ReviewScreen user={user} onBack={restart} />
             )}
-            {currentScreen === 'check-in' && (
-              <CheckInScreen onBack={restart} user={user} />
-            )}
 
           </>
         )}
@@ -1420,18 +1398,18 @@ function App() {
         padding: '1.5rem',
         color: 'var(--text-muted)',
         fontSize: '0.85rem',
-        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+        borderTop: '1px solid var(--bg-glass-border)',
         marginTop: '2rem'
       }}>
         <div>Contact: Discord @origamikoala</div>
-        <div style={{ marginTop: '0.35rem' }}>Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a></div>
-        <div style={{ marginTop: '0.35rem' }}>Like this project? Consider supporting me on <a href="https://www.patreon.com/cw/origamikoala" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Patreon</a>.</div>
+        <div style={{ marginTop: '0.35rem' }}>Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-secondary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a></div>
+        <div style={{ marginTop: '0.35rem' }}>Like this project? Consider supporting me on <a href="https://www.patreon.com/cw/origamikoala" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-secondary)', textDecoration: 'none' }}>Patreon</a>.</div>
       </footer>
 
       {/* Sign-In Conversion Warning Modal */}
       {showConversionPrompt && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '440px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.35)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '440px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--bg-glass-border)', borderRadius: 0 }}>
             <BrainCircuit size={40} color="var(--accent-primary)" style={{ margin: '0 auto 1rem' }} />
             <h3 className="text-gradient" style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>Save Your Progress?</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '2rem' }}>
@@ -1470,8 +1448,8 @@ function App() {
 
       {/* Login Modal */}
       {showLoginModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '420px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.35)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '420px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--bg-glass-border)', borderRadius: 0 }}>
 
             {loginModalMode === 'login' && (
               <>
@@ -1607,7 +1585,7 @@ function App() {
                 <h3 className="text-gradient" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                   <User size={24} /> Reset Password
                 </h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem', background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem', background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 0 }}>
                   Question: <strong>{resetQuestion}</strong>
                 </p>
                 {loginError && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{loginError}</p>}
@@ -1646,8 +1624,8 @@ function App() {
 
       {/* Profile Settings Modal */}
       {showProfileModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '420px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.35)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="glass-panel animate-fade-in" style={{ padding: 'var(--card-padding)', width: '90%', maxWidth: '420px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--bg-glass-border)', borderRadius: 0 }}>
             <h3 className="text-gradient" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
               <User size={24} /> Profile Settings
             </h3>

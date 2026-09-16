@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run dev        # Vite dev server (frontend only; /api routes are NOT served)
 npm run build      # production build to dist/
+npm run build:appsscript # production build inlined to apps-script/Index.html
 npm run lint       # eslint
 npx jest           # run all tests (no `test` script in package.json)
 npx jest test/latex.test.js          # single file

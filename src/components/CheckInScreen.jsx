@@ -5,6 +5,10 @@ import { runGoogleScript } from '../apiShim.js';
 const GUEST_USER = 'default_user';
 
 function getCookie(name) {
+  try {
+    const val = localStorage.getItem(name);
+    if (val) return val;
+  } catch {}
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? decodeURIComponent(match[2]) : null;
 }
@@ -54,8 +58,6 @@ export function CheckInScreen({ onBack, user }) {
   useEffect(() => {
     if (!idInfo.loading) return;
     if (getCookie('chronos_student_id')) return;
-  useEffect(() => {
-    if (!idInfo.loading) return;
 
     let cancelled = false;
     (async () => {
@@ -75,7 +77,7 @@ export function CheckInScreen({ onBack, user }) {
         }
       } catch {
         if (!cancelled) {
-          setIdInfo({ loading: false, studentId: null, error: 'Could not reach the server to read your student ID.' });
+          setIdInfo({ loading: false, studentId: null, error: 'Enter your password below to check in.' });
         }
       }
     })();
@@ -97,7 +99,6 @@ export function CheckInScreen({ onBack, user }) {
   const handleSubmit = useCallback(async () => {
     const sid = idInfo.studentId || manualStudentId.trim();
     if (!sid || submitting) return;
-    if (!idInfo.studentId || submitting) return;
 
     setSubmitting(true);
     setStatus('Loading...');
@@ -106,7 +107,6 @@ export function CheckInScreen({ onBack, user }) {
       const response = await runGoogleScript(
         'query',
         sid,
-        idInfo.studentId,
         message,
         leavingEarly ? leavingTime : ''
       );
@@ -116,7 +116,6 @@ export function CheckInScreen({ onBack, user }) {
         setStatus('Thanks for checking in.');
       } else {
         setStatus('Something went wrong — your account\'s student ID was not found on the roster. Please see a coach.');
-        setStatus('Something went wrong — your account’s student ID was not found on the roster. Please see a coach.');
       }
     } catch {
       setStatus('Check-in is unavailable right now. It only works on the Apps Script deployment.');
@@ -126,9 +125,6 @@ export function CheckInScreen({ onBack, user }) {
   }, [idInfo.studentId, manualStudentId, message, leavingEarly, leavingTime, submitting]);
 
   const canSubmit = (!!idInfo.studentId || manualStudentId.trim().length > 0) && !submitting;
-  }, [idInfo.studentId, message, leavingEarly, leavingTime, submitting]);
-
-  const canSubmit = !!idInfo.studentId && !submitting;
 
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '1rem 0.5rem' }}>
@@ -301,7 +297,7 @@ export function CheckInScreen({ onBack, user }) {
                 />
               </div>
 
-              {(!idInfo.studentId) && (
+              {isGuest && (
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label
                     htmlFor="checkin-studentid"

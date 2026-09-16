@@ -242,27 +242,27 @@ const baseChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { labels: { color: '#a0a0b0', font: { family: 'Inter', size: 11 } } },
+    legend: { labels: { color: '#665646', font: { family: 'Nunito', size: 11, weight: '600' } } },
     tooltip: {
-      backgroundColor: 'rgba(26, 26, 33, 0.95)',
-      titleColor: '#f0f0f5',
-      bodyColor: '#a0a0b0',
-      borderColor: 'rgba(255,255,255,0.1)',
+      backgroundColor: '#fcf9f2',
+      titleColor: '#28201a',
+      bodyColor: '#665646',
+      borderColor: '#ded5c2',
       borderWidth: 1,
-      cornerRadius: 8,
+      cornerRadius: 0,
       padding: 10,
-      bodyFont: { family: 'Inter' },
-      titleFont: { family: 'Outfit', weight: '600' }
+      bodyFont: { family: 'Nunito' },
+      titleFont: { family: 'Nunito', weight: '700' }
     }
   },
   scales: {
     x: {
-      ticks: { color: '#666677', font: { size: 10 } },
-      grid: { color: 'rgba(255,255,255,0.04)' }
+      ticks: { color: '#71717a', font: { family: 'Nunito', size: 10 } },
+      grid: { color: 'rgba(0,0,0,0.06)' }
     },
     y: {
-      ticks: { color: '#666677', font: { size: 10 } },
-      grid: { color: 'rgba(255,255,255,0.04)' }
+      ticks: { color: '#71717a', font: { family: 'Nunito', size: 10 } },
+      grid: { color: 'rgba(0,0,0,0.06)' }
     }
   }
 };
@@ -365,7 +365,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         })
       });
       if (res.ok) {
-        fetchOrgMembers();
+        setOrgMembers(prev => prev.map(m => m.user_id === targetUser ? { ...m, user_role: newRole } : m));
       } else {
         const d = await res.json();
         alert(d.error || 'Failed to update member role');
@@ -871,7 +871,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
         backgroundColor: subjects.map(s => getSubjectColor(s).bg),
         borderColor: subjects.map(s => getSubjectColor(s).line),
         borderWidth: 1,
-        borderRadius: 6,
+        borderRadius: 0,
         barPercentage: 0.6
       }]
     };
@@ -1622,11 +1622,11 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: selectedTopicDetail ? '0.75rem' : 0 }}>
                   {filteredS.length > 0 && (
-                    <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 0 }}>
                       <h5 style={{ color: 'var(--success)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Strengths</h5>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                         {filteredS.map((s, i) => (
-                          <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === s.topic && prev?.type === 'strength' ? null : { topic: s.topic, subject: s.subject, type: 'strength' })} style={{ background: 'rgba(74,222,128,0.1)', color: 'var(--success)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === s.topic && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent', transition: 'all 0.2s' }}>
+                          <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === s.topic && prev?.type === 'strength' ? null : { topic: s.topic, subject: s.subject, type: 'strength' })} style={{ background: 'rgba(16, 185, 129, 0.08)', color: 'var(--success)', padding: '0.2rem 0.55rem', borderRadius: 0, fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === s.topic && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid var(--bg-glass-border)', transition: 'all 0.2s' }}>
                             {s.topic}
                           </span>
                         ))}
@@ -1634,11 +1634,11 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                     </div>
                   )}
                   {filteredW.length > 0 && (
-                    <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 0 }}>
                       <h5 style={{ color: 'var(--danger)', marginBottom: '0.6rem', fontSize: '0.85rem' }}>Weaknesses</h5>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                         {filteredW.map((w, i) => (
-                          <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === w.topic && prev?.type === 'weakness' ? null : { topic: w.topic, subject: w.subject, type: 'weakness' })} style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--danger)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === w.topic && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent', transition: 'all 0.2s' }}>
+                          <span key={i} onClick={() => setSelectedTopicDetail(prev => prev?.topic === w.topic && prev?.type === 'weakness' ? null : { topic: w.topic, subject: w.subject, type: 'weakness' })} style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', padding: '0.2rem 0.55rem', borderRadius: 0, fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none', border: selectedTopicDetail?.topic === w.topic && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid var(--bg-glass-border)', transition: 'all 0.2s' }}>
                             {w.topic}
                           </span>
                         ))}
@@ -1647,7 +1647,7 @@ export function AnalyticsDashboard({ user, onBack, strengths = [], weaknesses = 
                   )}
                 </div>
                 {selectedTopicDetail && (
-                  <div style={{ marginTop: '0.75rem', padding: 'var(--card-padding-sm)', background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)', border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ marginTop: '0.75rem', padding: 'var(--card-padding-sm)', background: selectedTopicDetail.type === 'strength' ? 'rgba(16, 185, 129, 0.03)' : 'rgba(239, 68, 68, 0.03)', border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`, borderRadius: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                       <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                         <strong style={{ color: selectedTopicDetail.type === 'strength' ? 'var(--success)' : 'var(--danger)' }}>{selectedTopicDetail.topic}</strong>

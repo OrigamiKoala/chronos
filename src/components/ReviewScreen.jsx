@@ -6,9 +6,9 @@ import { isSmiles } from './chemicalHelpers.js';
 const renderChemicalValue = (val, size = 70) => {
   if (!val) return 'No answer';
   if (isSmiles(val)) {
-    return <SmilesRenderer smiles={val} width={size} height={size} theme="dark" />;
+    return <SmilesRenderer smiles={val} width={size} height={size} theme="light" />;
   }
-  return <ChemicalText text={val} theme="dark" defaultWidth={size} defaultHeight={size} />;
+  return <ChemicalText text={val} theme="light" defaultWidth={size} defaultHeight={size} />;
 };
 
 const getAnswerContent = (answer, options) => {
@@ -453,7 +453,7 @@ export function ReviewScreen({ user, onBack }) {
 
         <div className="glass-panel animate-fade-in" style={{ padding: '2rem', marginBottom: '1.5rem', position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)' }}>
+            <span className="badge" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
               {q.subject}
             </span>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -478,9 +478,9 @@ export function ReviewScreen({ user, onBack }) {
                     style={{
                       textAlign: 'left',
                       padding: '1rem 1.5rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.08)',
-                      background: isSelected ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                      borderRadius: 0,
+                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--bg-glass-border)',
+                      background: isSelected ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
                       color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                       cursor: submittedCurrent ? 'default' : 'pointer',
                       display: 'flex',
@@ -495,13 +495,14 @@ export function ReviewScreen({ user, onBack }) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      background: isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.08)',
-                      color: isSelected ? 'white' : 'var(--text-primary)',
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: 0,
+                      background: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                      border: '1px solid var(--bg-glass-border)',
+                      color: isSelected ? '#ffffff' : 'var(--text-primary)',
                       fontWeight: 'bold',
-                      fontSize: '0.9rem'
+                      fontSize: '0.85rem'
                     }}>
                       {label}
                     </span>
@@ -524,9 +525,9 @@ export function ReviewScreen({ user, onBack }) {
                 style={{
                   width: '100%',
                   padding: 'var(--input-padding)',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderRadius: 0,
+                  border: '1px solid var(--bg-glass-border)',
+                  background: 'var(--bg-secondary)',
                   color: 'var(--text-primary)',
                   fontSize: '1.05rem',
                   outline: 'none'
@@ -545,7 +546,7 @@ export function ReviewScreen({ user, onBack }) {
               Submit Answer
             </button>
           ) : (
-            <div className="animate-fade-in" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
+            <div className="animate-fade-in" style={{ borderTop: '1px solid var(--bg-glass-border)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                 {currentIsCorrect ? (
                   <>
@@ -560,7 +561,7 @@ export function ReviewScreen({ user, onBack }) {
                 )}
               </div>
 
-              <div style={{ background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', padding: '1rem 1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+              <div style={{ background: 'var(--bg-tertiary)', borderRadius: 0, padding: '1rem 1.5rem', marginBottom: '1.5rem', border: '1px solid var(--bg-glass-border)' }}>
                 <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Correct Answer:</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
                   {renderChemicalValue(getAnswerContent(q.correct_answer, q.options))}
@@ -575,7 +576,7 @@ export function ReviewScreen({ user, onBack }) {
                     <span style={{ color: 'var(--text-secondary)' }}>Generating AI explanation...</span>
                   </div>
                 ) : (
-                  <div style={{ background: 'rgba(99, 102, 241, 0.04)', borderRadius: 'var(--radius-md)', padding: '1.2rem', border: '1px solid rgba(99, 102, 241, 0.1)', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                  <div style={{ background: 'var(--bg-secondary)', borderRadius: 0, padding: '1.2rem', border: '1px solid var(--bg-glass-border)', lineHeight: '1.6', fontSize: '0.95rem' }}>
                     <ChemicalText text={currentExplanation} />
                   </div>
                 )}
@@ -823,7 +824,7 @@ export function ReviewScreen({ user, onBack }) {
                 <div key={idx} className="glass-panel" style={{ padding: '1.5rem', transition: 'var(--transition-fast)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                      <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)' }}>
+                      <span className="badge" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
                         {q.subject}
                       </span>
                       <span className="badge" style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)' }}>
@@ -855,9 +856,9 @@ export function ReviewScreen({ user, onBack }) {
                     <div style={{
                       marginBottom: '1.5rem',
                       padding: '1rem',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid rgba(255,255,255,0.06)'
+                      borderRadius: 0,
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--bg-glass-border)'
                     }}>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.6rem', fontWeight: '500' }}>
                         Your Submitted Answer:
@@ -866,13 +867,13 @@ export function ReviewScreen({ user, onBack }) {
                         <img
                           src={q.frq_submission.value}
                           alt="Student whiteboard submission"
-                          style={{ maxWidth: '100%', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.08)' }}
+                          style={{ maxWidth: '100%', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}
                         />
                       ) : q.frq_submission?.type === 'upload' && q.frq_submission.value?.startsWith('data:image/') ? (
                         <img
                           src={q.frq_submission.value}
                           alt="Student uploaded submission"
-                          style={{ maxWidth: '100%', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.08)' }}
+                          style={{ maxWidth: '100%', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }}
                         />
                       ) : q.frq_submission?.value && q.frq_submission.value !== '[Time Out]' ? (
                         <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
@@ -895,10 +896,10 @@ export function ReviewScreen({ user, onBack }) {
                     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                     gap: '1rem',
                     marginBottom: '1.5rem',
-                    background: 'rgba(255, 255, 255, 0.02)',
+                    background: 'var(--bg-tertiary)',
                     padding: '1rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid rgba(255,255,255,0.04)'
+                    borderRadius: 0,
+                    border: '1px solid var(--bg-glass-border)'
                   }}>
                     <div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Your Attempted Answer:</div>
@@ -918,9 +919,9 @@ export function ReviewScreen({ user, onBack }) {
                       <div style={{
                         marginTop: '1rem',
                         padding: '1.2rem',
-                        borderRadius: 'var(--radius-md)',
-                        background: 'rgba(99, 102, 241, 0.03)',
-                        border: '1px solid rgba(99, 102, 241, 0.08)',
+                        borderRadius: 0,
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--bg-glass-border)',
                         lineHeight: '1.6',
                         fontSize: '0.95rem',
                         cursor: 'default'

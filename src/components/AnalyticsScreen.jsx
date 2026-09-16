@@ -683,24 +683,24 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             plugins: {
               legend: { display: false },
               tooltip: {
-                backgroundColor: 'rgba(26, 26, 33, 0.95)',
-                titleColor: '#f0f0f5',
-                bodyColor: '#a0a0b0',
-                borderColor: 'rgba(255,255,255,0.1)',
+                backgroundColor: '#fcf9f2',
+                titleColor: '#262018',
+                bodyColor: '#635647',
+                borderColor: '#e0d6c3',
                 borderWidth: 1,
-                cornerRadius: 8,
+                cornerRadius: 0,
                 callbacks: {
                   label: ctx => `Interval Value: ${ctx.parsed.y} pts`
                 }
               }
             },
             scales: {
-              x: { ticks: { color: '#666677', font: { size: 10 } }, grid: { display: false } },
+              x: { ticks: { color: '#71717a', font: { size: 10 } }, grid: { display: false } },
               y: {
                 min: 0,
-                ticks: { color: '#666677', font: { size: 10 } },
-                grid: { color: 'rgba(255,255,255,0.04)' },
-                title: { display: true, text: 'points', color: '#666677', font: { size: 9 } }
+                ticks: { color: '#71717a', font: { size: 10 } },
+                grid: { color: 'rgba(0,0,0,0.06)' },
+                title: { display: true, text: 'points', color: '#71717a', font: { size: 9 } }
               }
             }
           }} />
@@ -708,17 +708,17 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       </div>
 
       {panicPoints.length > 0 && (
-        <div style={{ padding: 'var(--card-padding)', background: 'var(--danger-glass)', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger)', marginBottom: '2.5rem' }}>
-          <h3 style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <Activity size={20} /> Panic Points
+        <div className="glass-panel" style={{ padding: 'var(--panel-padding)', marginBottom: '2rem' }}>
+          <h3 style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <AlertTriangle /> Panic Points Detected
           </h3>
           <p style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>
             You spent significantly longer than average on these questions but still answered incorrectly.
           </p>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {panicPoints.map((p, i) => (
-              <li key={i} style={{ background: 'var(--bg-primary)', padding: 'var(--card-padding-sm)', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem' }}>
-                <strong>Q:</strong> <ChemicalText text={p.question} theme="dark" /> <br />
+              <li key={i} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-glass-border)', padding: 'var(--card-padding-sm)', borderRadius: 0, marginBottom: '0.5rem' }}>
+                <strong>Q:</strong> <ChemicalText text={p.question} theme="light" /> <br />
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Time Spent: {p.timeSpent}s (Avg: {avgTime}s)</span>
               </li>
             ))}
@@ -731,7 +731,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: selectedTopicDetail ? '0.75rem' : 0 }}>
             {subjectStrengths.length > 0 && (
-              <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.2)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 0 }}>
                 <h4 style={{ color: 'var(--success)', marginBottom: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <CheckCircle2 size={15} /> {subject} Strengths
                 </h4>
@@ -741,10 +741,10 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                       key={i}
                       onClick={() => setSelectedTopicDetail(prev => prev?.topic === s && prev?.type === 'strength' ? null : { topic: s, type: 'strength' })}
                       style={{
-                        background: 'rgba(74,222,128,0.1)', color: 'var(--success)',
-                        padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem',
+                        background: 'rgba(16, 185, 129, 0.08)', color: 'var(--success)',
+                        padding: '0.2rem 0.55rem', borderRadius: 0, fontSize: '0.75rem',
                         cursor: 'pointer', userSelect: 'none', transition: 'all 0.2s ease',
-                        border: selectedTopicDetail?.topic === s && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid transparent'
+                        border: selectedTopicDetail?.topic === s && selectedTopicDetail?.type === 'strength' ? '1px solid var(--success)' : '1px solid var(--bg-glass-border)'
                       }}
                     >{s}</span>
                   ))}
@@ -752,7 +752,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
               </div>
             )}
             {subjectWeaknesses.length > 0 && (
-              <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(248, 113, 113, 0.05)', border: '1px solid rgba(248, 113, 113, 0.2)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ padding: 'var(--card-padding-sm)', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 0 }}>
                 <h4 style={{ color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <XCircle size={15} /> {subject} Weaknesses
                 </h4>
@@ -762,10 +762,10 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                       key={i}
                       onClick={() => setSelectedTopicDetail(prev => prev?.topic === w && prev?.type === 'weakness' ? null : { topic: w, type: 'weakness' })}
                       style={{
-                        background: 'rgba(248,113,113,0.1)', color: 'var(--danger)',
-                        padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.75rem',
+                        background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)',
+                        padding: '0.2rem 0.55rem', borderRadius: 0, fontSize: '0.75rem',
                         cursor: 'pointer', userSelect: 'none', transition: 'all 0.2s ease',
-                        border: selectedTopicDetail?.topic === w && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid transparent'
+                        border: selectedTopicDetail?.topic === w && selectedTopicDetail?.type === 'weakness' ? '1px solid var(--danger)' : '1px solid var(--bg-glass-border)'
                       }}
                     >{w}</span>
                   ))}
@@ -778,9 +778,9 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
             <div style={{
               marginTop: '0.75rem',
               padding: 'var(--card-padding-sm)',
-              background: selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.03)' : 'rgba(248,113,113,0.03)',
-              border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`,
-              borderRadius: 'var(--radius-md)'
+              background: selectedTopicDetail.type === 'strength' ? 'rgba(16, 185, 129, 0.03)' : 'rgba(239, 68, 68, 0.03)',
+              border: `1px solid ${selectedTopicDetail.type === 'strength' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+              borderRadius: 0
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                 <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
@@ -811,17 +811,16 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       {subjectDiagnosis && (
         <div style={{
           padding: 'var(--card-padding)',
-          background: 'rgba(168, 85, 247, 0.05)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid rgba(168, 85, 247, 0.2)',
-          marginBottom: '2.5rem',
-          boxShadow: '0 4px 20px -2px rgba(168, 85, 247, 0.1)'
+          background: 'var(--bg-tertiary)',
+          borderRadius: 0,
+          border: '1px solid var(--bg-glass-border)',
+          marginBottom: '2rem'
         }}>
           <h3 style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', margin: 0 }}>
             <BrainCircuit size={20} /> Overall Analysis
           </h3>
           <p style={{ fontSize: '0.9rem', lineHeight: '1.65', color: 'var(--text-secondary)', marginTop: '0.75rem', marginBottom: 0, whiteSpace: 'pre-line' }}>
-            <ChemicalText text={subjectDiagnosis} theme="dark" />
+            <ChemicalText text={subjectDiagnosis} theme="light" />
           </p>
         </div>
       )}
@@ -829,17 +828,16 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
       {resultsObj.mistakePatterns && (
         <div style={{
           padding: 'var(--card-padding)',
-          background: 'rgba(168, 85, 247, 0.05)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid rgba(168, 85, 247, 0.2)',
-          marginBottom: '2.5rem',
-          boxShadow: '0 4px 20px -2px rgba(168, 85, 247, 0.1)'
+          background: 'var(--bg-tertiary)',
+          borderRadius: 0,
+          border: '1px solid var(--bg-glass-border)',
+          marginBottom: '2rem'
         }}>
           <h3 style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', margin: 0 }}>
             <BrainCircuit size={20} /> Mistake Analysis
           </h3>
           <p style={{ fontSize: '0.925rem', lineHeight: '1.6', color: 'var(--text-secondary)', marginTop: '0.75rem', marginBottom: 0, whiteSpace: 'pre-line' }}>
-            <ChemicalText text={resultsObj.mistakePatterns} theme="dark" />
+            <ChemicalText text={resultsObj.mistakePatterns} theme="light" />
           </p>
         </div>
       )}
@@ -920,7 +918,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                      )}
                   </span>
                 </div>
-                <p style={{ marginBottom: '1rem' }}><ChemicalText text={r.question} theme="dark" /></p>
+                <p style={{ marginBottom: '1rem' }}><ChemicalText text={r.question} theme="light" /></p>
 
                 <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem', alignItems: 'center' }}>
                   <div>
@@ -930,10 +928,10 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                         if (r.type === 'free_response' && r.frqSubmission) {
                           const sub = r.frqSubmission;
                           if (sub.value && (sub.value.startsWith('data:image/') || sub.value.startsWith('blob:'))) {
-                            return <img src={sub.value} alt="Your FRQ submission" style={{ maxWidth: '300px', maxHeight: '200px', borderRadius: '4px', border: '1px solid var(--border-color)' }} />;
+                            return <img src={sub.value} alt="Your FRQ submission" style={{ maxWidth: '300px', maxHeight: '200px', borderRadius: 0, border: '1px solid var(--bg-glass-border)' }} />;
                           }
                           if (sub.type === 'text' && sub.value) {
-                            return <ChemicalText text={sub.value} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                            return <ChemicalText text={sub.value} theme="light" defaultWidth={70} defaultHeight={70} />;
                           }
                         }
                         const ans = r.userAnswer;
@@ -941,10 +939,10 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                           const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
                           if (letterIdx !== -1 && r.options[letterIdx]) {
                             const opt = r.options[letterIdx];
-                            return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                            return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="light" /> : <ChemicalText text={opt} theme="light" defaultWidth={70} defaultHeight={70} />;
                           }
                         }
-                        return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                        return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="light" /> : <ChemicalText text={ans} theme="light" defaultWidth={70} defaultHeight={70} />;
                       })()}
                     </span>
                   </div>
@@ -958,10 +956,10 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                             const letterIdx = ['A', 'B', 'C', 'D'].indexOf(String(ans).trim().toUpperCase());
                             if (letterIdx !== -1 && r.options[letterIdx]) {
                               const opt = r.options[letterIdx];
-                              return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="dark" /> : <ChemicalText text={opt} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                              return isSmiles(opt) ? <SmilesRenderer smiles={opt} width={70} height={70} theme="light" /> : <ChemicalText text={opt} theme="light" defaultWidth={70} defaultHeight={70} />;
                             }
                           }
-                          return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="dark" /> : <ChemicalText text={ans} theme="dark" defaultWidth={70} defaultHeight={70} />;
+                          return isSmiles(ans) ? <SmilesRenderer smiles={ans} width={70} height={70} theme="light" /> : <ChemicalText text={ans} theme="light" defaultWidth={70} defaultHeight={70} />;
                         })()}
                       </span>
                     </div>
@@ -972,16 +970,16 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                   <div style={{
                     marginTop: '1rem',
                     padding: 'var(--card-padding-sm)',
-                    background: 'rgba(255, 255, 255, 0.01)',
+                    background: 'var(--bg-tertiary)',
                     border: `1px dashed ${statusColor}`,
-                    borderRadius: 'var(--radius-sm)',
+                    borderRadius: 0,
                     fontSize: '0.875rem'
                   }}>
                     <div style={{ fontWeight: '600', color: statusColor, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <BrainCircuit size={16} /> Grading & Partial Credit Feedback:
                     </div>
                     <p style={{ margin: 0, color: 'var(--text-secondary)', whiteSpace: 'pre-line', lineHeight: '1.5' }}>
-                      <ChemicalText text={r.feedback} theme="dark" />
+                      <ChemicalText text={r.feedback} theme="light" />
                     </p>
                   </div>
                 )}
@@ -1104,7 +1102,7 @@ export function AnalyticsScreen({ results: resultsObj, onRestart, user, examId, 
                                   {isUser ? 'You' : 'Tutor Bot'}
                                 </div>
                                 <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
-                                  <ChemicalText text={msg.text} theme="dark" defaultWidth={110} defaultHeight={110} />
+                                  <ChemicalText text={msg.text} theme="light" defaultWidth={110} defaultHeight={110} />
                                 </p>
                               </div>
                             );

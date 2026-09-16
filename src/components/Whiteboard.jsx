@@ -5,11 +5,11 @@ const VISIBLE_HEIGHT = 450;        // px — clipping viewport
 const WORKSPACE_MULTIPLIER = 3;    // canvas is 3× taller
 
 const COLORS = [
-  { value: '#ffffff', label: 'White' },
-  { value: '#6366f1', label: 'Indigo' },
-  { value: '#10b981', label: 'Emerald' },
-  { value: '#f59e0b', label: 'Amber' },
-  { value: '#ef4444', label: 'Rose' },
+  { value: '#09090b', label: 'Charcoal' },
+  { value: '#4338ca', label: 'Indigo' },
+  { value: '#059669', label: 'Emerald' },
+  { value: '#d97706', label: 'Amber' },
+  { value: '#dc2626', label: 'Rose' },
 ];
 
 // Unique canvas ID per mount (avoids conflicts if component is re-used)
@@ -21,7 +21,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
   const canvasId = useRef(`wb-canvas-${++instanceCounter}`);
 
   const [isEraser, setIsEraser] = useState(false);
-  const [color, setColor] = useState('#ffffff');
+  const [color, setColor] = useState('#09090b');
   const [lineWidth, setLineWidth] = useState(4);
   const [history, setHistory] = useState([]);  // array of JSON snapshots
   const historyRef = useRef([]);
@@ -47,7 +47,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
     });
 
     fc.freeDrawingBrush = new window.fabric.PencilBrush(fc);
-    fc.freeDrawingBrush.color = '#ffffff';
+    fc.freeDrawingBrush.color = '#09090b';
     fc.freeDrawingBrush.width = 4;
     fc.freeDrawingBrush.strokeLineCap = 'round';
     fc.freeDrawingBrush.strokeLineJoin = 'round';
@@ -171,7 +171,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
     const fc = fabricRef.current;
     if (!fc || !window.fabric) return;
     fc.freeDrawingBrush = new window.fabric.PencilBrush(fc);
-    fc.freeDrawingBrush.color = isEraser ? '#0a0a0c' : color;
+    fc.freeDrawingBrush.color = isEraser ? '#ffffff' : color;
     fc.freeDrawingBrush.width = isEraser ? lineWidth * 4 : lineWidth;
     fc.freeDrawingBrush.strokeLineCap = 'round';
     fc.freeDrawingBrush.strokeLineJoin = 'round';
@@ -220,7 +220,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
       if (!fc) return null;
       
       const origBg = fc.backgroundColor;
-      fc.backgroundColor = '#0a0a0c';
+      fc.backgroundColor = '#ffffff';
 
       // Save the current viewport transform
       const origVpt = [...fc.viewportTransform];
@@ -288,7 +288,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
       if (!fc) return null;
       
       const origBg = fc.backgroundColor;
-      fc.backgroundColor = '#0a0a0c';
+      fc.backgroundColor = '#ffffff';
 
       // Save the current viewport transform
       const origVpt = [...fc.viewportTransform];
@@ -323,9 +323,9 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
         style={{
           position: 'relative',
           border: '1px solid var(--bg-glass-border)',
-          borderRadius: 'var(--radius-md)',
-          background: 'rgba(10, 10, 12, 0.8)',
-          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)',
+          borderRadius: 0,
+          background: 'var(--bg-secondary)',
+          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.04)',
           height: `${VISIBLE_HEIGHT}px`,
           overflow: 'hidden',
           touchAction: 'none',
@@ -341,9 +341,9 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
         display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
         alignItems: 'center', gap: '1rem',
         padding: 'var(--input-padding)',
-        background: 'var(--bg-tertiary)',
+        background: 'var(--bg-secondary)',
         border: '1px solid var(--bg-glass-border)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 0,
         userSelect: 'none', WebkitUserSelect: 'none',
       }}>
         {/* Pencil / Eraser */}
@@ -367,10 +367,10 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
               <button key={c.value} type="button"
                 onClick={() => setColor(c.value)}
                 style={{
-                  width: '24px', height: '24px', borderRadius: '50%',
+                  width: '22px', height: '22px', borderRadius: 0,
                   backgroundColor: c.value,
-                  border: color === c.value ? '2px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.2)',
-                  boxShadow: color === c.value ? '0 0 8px rgba(99,102,241,0.8)' : 'none',
+                  border: color === c.value ? '2px solid var(--accent-primary)' : '1px solid var(--bg-glass-border)',
+                  boxShadow: color === c.value ? '0 0 0 1px var(--accent-primary)' : 'none',
                   cursor: 'pointer', padding: 0,
                 }}
                 title={c.label}
@@ -385,7 +385,7 @@ export const Whiteboard = forwardRef(({ initialImage, onChange }, ref) => {
           <input type="range"
             min={2} max={isEraser ? 40 : 15}
             value={lineWidth} onChange={(e) => setLineWidth(Number(e.target.value))}
-            style={{ cursor: 'pointer', accentColor: 'var(--accent-primary)', width: '80px', height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.1)' }}
+            style={{ cursor: 'pointer', accentColor: 'var(--accent-primary)', width: '80px', height: '4px', borderRadius: 0, background: 'var(--bg-glass-border)' }}
           />
           <span style={{ minWidth: '20px', textAlign: 'center' }}>{lineWidth}px</span>
         </div>
