@@ -242,26 +242,26 @@ const baseChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { labels: { color: '#635647', font: { family: 'Inter', size: 11 } } },
+    legend: { labels: { color: '#665646', font: { family: 'Nunito', size: 11, weight: '600' } } },
     tooltip: {
       backgroundColor: '#fcf9f2',
-      titleColor: '#262018',
-      bodyColor: '#635647',
-      borderColor: '#e0d6c3',
+      titleColor: '#28201a',
+      bodyColor: '#665646',
+      borderColor: '#ded5c2',
       borderWidth: 1,
       cornerRadius: 0,
       padding: 10,
-      bodyFont: { family: 'Inter' },
-      titleFont: { family: 'Inter', weight: '600' }
+      bodyFont: { family: 'Nunito' },
+      titleFont: { family: 'Nunito', weight: '700' }
     }
   },
   scales: {
     x: {
-      ticks: { color: '#71717a', font: { size: 10 } },
+      ticks: { color: '#71717a', font: { family: 'Nunito', size: 10 } },
       grid: { color: 'rgba(0,0,0,0.06)' }
     },
     y: {
-      ticks: { color: '#71717a', font: { size: 10 } },
+      ticks: { color: '#71717a', font: { family: 'Nunito', size: 10 } },
       grid: { color: 'rgba(0,0,0,0.06)' }
     }
   }

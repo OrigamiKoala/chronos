@@ -1,31 +1,36 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
 
 :root {
-  /* Colors - High-End Minimalist Soft Cream Theme */
+  /* Colors - High-End Minimalist Warm Terracotta & Cream Theme */
   --bg-primary: #f6f1e3;
   --bg-secondary: #fcf9f2;
   --bg-tertiary: #ede5d3;
   --bg-glass: rgba(252, 249, 242, 0.96);
-  --bg-glass-border: #e0d6c3;
+  --bg-glass-border: #ded5c2;
   
-  --text-primary: #262018;
-  --text-secondary: #635647;
-  --text-muted: #9c8e7c;
+  --text-primary: #28201a;
+  --text-secondary: #665646;
+  --text-muted: #998875;
 
-  --accent-primary: #262018;
-  --accent-primary-hover: #3d3327;
-  --accent-secondary: #4f46e5;
+  /* Cohesive Warm Accent Family (Analogous Terracotta, Russet Amber & Golden Sienna) */
+  --accent-primary: #a8471e;
+  --accent-primary-hover: #8f3713;
+  --accent-secondary: #c56227;
+  --accent-secondary-hover: #a84f1b;
+  --accent-tertiary: #d97706;
+  --accent-subtle: rgba(168, 71, 30, 0.08);
+  --accent-border: rgba(168, 71, 30, 0.22);
   
   --danger: #dc2626;
   --danger-hover: #b91c1c;
-  --danger-glass: rgba(220, 38, 38, 0.05);
-  --success: #059669;
-  --success-glass: rgba(5, 150, 105, 0.05);
+  --danger-glass: rgba(220, 38, 38, 0.06);
+  --success: #15803d;
+  --success-glass: rgba(21, 128, 61, 0.06);
   --warning: #d97706;
 
   /* Typography */
-  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Borders & Shadows - Strictly Unrounded */
   --radius-sm: 0px;
@@ -137,12 +142,12 @@ input, select, textarea {
 
 /* Typography Utilities */
 .text-gradient {
-  background: linear-gradient(135deg, var(--accent-primary) 0%, #574b3d 100%);
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  color: var(--text-primary);
-  letter-spacing: -0.03em;
+  color: var(--accent-primary);
+  letter-spacing: -0.02em;
 }
 
 /* Buttons */
@@ -154,7 +159,7 @@ input, select, textarea {
   padding: var(--btn-padding);
   border-radius: 0 !important;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.01em;
   user-select: none;
   border: 1px solid transparent;
@@ -165,14 +170,14 @@ input, select, textarea {
   background: var(--accent-primary);
   color: #ffffff;
   border-color: var(--accent-primary);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(168, 71, 30, 0.16);
 }
 
 .btn-primary:hover {
   background: var(--accent-primary-hover);
   border-color: var(--accent-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 10px rgba(168, 71, 30, 0.22);
 }
 
 .btn-primary:active {
@@ -200,8 +205,8 @@ input, select, textarea {
 
 .btn-outline:hover {
   background: var(--bg-tertiary);
-  border-color: #d8cdb8;
-  color: var(--text-primary);
+  border-color: var(--accent-border);
+  color: var(--accent-primary);
 }
 
 /* Animations */
@@ -295,7 +300,7 @@ select.input-field {
 
 .history-row:hover {
   background: var(--bg-tertiary) !important;
-  border-color: #d8cdb8 !important;
+  border-color: var(--accent-border) !important;
 }
 
 /* Lesson Card styles */
@@ -312,7 +317,7 @@ select.input-field {
   background: var(--bg-tertiary);
   border-color: var(--accent-primary);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(168, 71, 30, 0.08);
 }
 
 /* Minimalist Rectangular Tag Buttons */
@@ -322,7 +327,7 @@ select.input-field {
   gap: 0.35rem;
   padding: 0.25rem 0.65rem;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-radius: 0 !important;
@@ -337,13 +342,14 @@ select.input-field {
 
 .tag-btn:hover {
   background: var(--bg-tertiary);
-  border-color: #d8cdb8;
-  color: var(--text-primary);
+  border-color: var(--accent-border);
+  color: var(--accent-primary);
 }
 
 .tag-btn-active {
+  background: var(--accent-primary) !important;
   color: #ffffff !important;
-  border-color: transparent !important;
+  border-color: var(--accent-primary) !important;
 }
 
 .tag-unsure {

@@ -124,9 +124,11 @@ The whiteboard (`src/components/Whiteboard.jsx`) uses Fabric.js loaded as a CDN 
 
 ### UI Styling & Design System
 
-The application features a minimalist, soft cream-themed aesthetic with unrounded corners:
+The application features a minimalist, soft cream-themed aesthetic with unrounded corners and warm, cohesive accents:
+- Typography: switched to **Nunito** (`--font-heading` and `--font-body`) loaded via Google Fonts.
 - Global `border-radius: 0 !important` enforced across all inputs, buttons, badges, modals, cards, and canvas elements.
-- Soft cream canvas (`--bg-primary: #f6f1e3`, `--bg-secondary: #fcf9f2`, `--bg-tertiary: #ede5d3`) with warm espresso typography (`--text-primary: #262018`, `--text-secondary: #635647`).
-- Hairline cream borders (`--bg-glass-border: #e0d6c3`) and clean dark accents (`--accent-primary: #262018`).
-- Chemical structure renderers (`ChemicalText` / `SmilesRenderer`) and Chart.js tooltips match the soft cream theme.
+- Soft cream canvas (`--bg-primary: #f6f1e3`, `--bg-secondary: #fcf9f2`, `--bg-tertiary: #ede5d3`) with warm espresso typography (`--text-primary: #28201a`, `--text-secondary: #665646`).
+- Hairline cream borders (`--bg-glass-border: #ded5c2`).
+- Cohesive warm accent family replacing plain black on white: rich terracotta (`--accent-primary: #a8471e`), russet amber (`--accent-secondary: #c56227`), golden amber (`--accent-tertiary: #d97706`), with subtle tinted surfaces (`--accent-subtle: rgba(168, 71, 30, 0.08)`) and borders (`--accent-border: rgba(168, 71, 30, 0.22)`).
+- Chemical structure renderers (`ChemicalText` / `SmilesRenderer`) and Chart.js tooltips/legends match the soft cream & Nunito theme.
 

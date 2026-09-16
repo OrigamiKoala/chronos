@@ -1007,13 +1007,13 @@ function App() {
                   {user.user_organization && (
                     <span style={{
                       fontSize: '0.7rem',
-                      background: 'rgba(79, 70, 229, 0.08)',
-                      color: 'var(--accent-secondary)',
+                      background: 'var(--accent-subtle)',
+                      color: 'var(--accent-primary)',
                       padding: '0.1rem 0.35rem',
                       borderRadius: 0,
-                      border: '1px solid rgba(79, 70, 229, 0.2)',
+                      border: '1px solid var(--accent-border)',
                       marginLeft: '0.4rem',
-                      fontWeight: '600',
+                      fontWeight: '700',
                       textTransform: 'uppercase'
                     }}>
                       {user.user_role}
@@ -1134,8 +1134,8 @@ function App() {
                           <div
                             key={exam.exam_id || index}
                             style={{
-                              background: 'rgba(79, 70, 229, 0.04)',
-                              border: '1px solid rgba(79, 70, 229, 0.18)',
+                              background: 'var(--accent-subtle)',
+                              border: '1px solid var(--accent-border)',
                               borderRadius: 0,
                               padding: '1rem',
                               marginBottom: '1rem',

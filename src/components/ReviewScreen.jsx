@@ -453,7 +453,7 @@ export function ReviewScreen({ user, onBack }) {
 
         <div className="glass-panel animate-fade-in" style={{ padding: '2rem', marginBottom: '1.5rem', position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)' }}>
+            <span className="badge" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
               {q.subject}
             </span>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -824,7 +824,7 @@ export function ReviewScreen({ user, onBack }) {
                 <div key={idx} className="glass-panel" style={{ padding: '1.5rem', transition: 'var(--transition-fast)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                      <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)' }}>
+                      <span className="badge" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
                         {q.subject}
                       </span>
                       <span className="badge" style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)' }}>

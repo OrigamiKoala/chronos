@@ -1770,7 +1770,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
                     className={`btn btn-outline ${isSelected ? 'selected' : ''}`}
                     style={{
                       justifyContent: 'flex-start',
-                      background: isSelected ? 'var(--bg-tertiary)' : 'transparent',
+                      background: isSelected ? 'var(--accent-subtle)' : 'transparent',
                       borderColor: isSelected ? 'var(--accent-primary)' : '',
                       display: 'flex',
                       alignItems: 'center',
@@ -1892,7 +1892,7 @@ export function ExamScreen({ config, onFinish, onCancel, resumeState }) {
       <div style={{ marginTop: '2rem', height: '4px', background: 'var(--bg-tertiary)', borderRadius: 0, overflow: 'hidden' }}>
         <div style={{
           height: '100%',
-          background: 'var(--accent-primary)',
+          background: 'linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
           width: `${((currentQuestionIndex) / config.numQuestions) * 100}%`,
           transition: 'width 0.3s ease'
         }} />
