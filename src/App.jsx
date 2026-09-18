@@ -54,9 +54,8 @@ function App() {
     if (path === '/test') return 'test';
     if (path === '/review') return 'review';
     if (path === '/hello' || path === '/check-in' || path === '/checkin') return 'check-in';
-    if (path === '/hw' || path === '/homework') return 'homework';
+    if (path === '/hw' || path === '/homework' || path === '/practice' || path === '/sandbox') return 'setup';
     if (path === '/faq') return 'faq';
-    if (path === '/practice' || path === '/sandbox') return 'setup';
     if (isChromebook()) return 'check-in';
     return 'home';
   });
@@ -301,12 +300,10 @@ function App() {
       setCurrentScreen('review');
     } else if (normalized === '/hello' || normalized === '/check-in' || normalized === '/checkin') {
       setCurrentScreen('check-in');
-    } else if (normalized === '/hw' || normalized === '/homework') {
-      setCurrentScreen('homework');
+    } else if (normalized === '/hw' || normalized === '/homework' || normalized === '/practice' || normalized === '/sandbox') {
+      setCurrentScreen('setup');
     } else if (normalized === '/faq') {
       setCurrentScreen('faq');
-    } else if (normalized === '/practice' || normalized === '/sandbox') {
-      setCurrentScreen('setup');
     } else {
       setCurrentScreen('home');
     }
@@ -326,12 +323,10 @@ function App() {
         setCurrentScreen('review');
       } else if (normalized === '/hello' || normalized === '/check-in' || normalized === '/checkin') {
         setCurrentScreen('check-in');
-      } else if (normalized === '/hw' || normalized === '/homework') {
-        setCurrentScreen('homework');
+      } else if (normalized === '/hw' || normalized === '/homework' || normalized === '/practice' || normalized === '/sandbox') {
+        setCurrentScreen('setup');
       } else if (normalized === '/faq') {
         setCurrentScreen('faq');
-      } else if (normalized === '/practice' || normalized === '/sandbox') {
-        setCurrentScreen('setup');
       } else {
         setCurrentScreen('home');
       }
@@ -1101,7 +1096,11 @@ function App() {
   const restart = () => {
     setExamConfig(null);
     setExamResults(null);
-    navigateTo('/');
+    if (typeof window !== 'undefined' && (window.location.pathname.startsWith('/hw') || window.location.pathname.startsWith('/practice') || window.location.pathname.startsWith('/homework'))) {
+      navigateTo('/hw');
+    } else {
+      navigateTo('/');
+    }
   };
 
   const filteredStrengths = strengths
