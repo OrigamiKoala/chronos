@@ -1169,13 +1169,15 @@ function App() {
             {tNav.home}
           </button>
 
-          <button
-            className={`btn ${currentScreen === 'check-in' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-            onClick={() => navigateTo(currentScreen === 'check-in' ? '/' : '/hello')}
-          >
-            <UserCheck size={15} /> {tNav.checkIn}
-          </button>
+          {currentScreen === 'check-in' && (
+            <button
+              className="btn btn-primary"
+              style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+              onClick={() => navigateTo('/hello')}
+            >
+              <UserCheck size={15} /> {tNav.checkIn}
+            </button>
+          )}
 
           <button
             className={`btn ${currentScreen === 'homework' ? 'btn-gold' : 'btn-outline'}`}

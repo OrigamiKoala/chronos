@@ -96,7 +96,7 @@ Ratings live per subject on `users` (`math_rating`, `physics_rating`, `chemistry
 
 ### Frontend structure
 
-`src/App.jsx` is the stateful root: it manages routes (`/` public home, `/hello` check-in, `/hw` homework, `/faq` FAQ, `/practice` sandbox, `/teacher`, `/admin`, `/test`, `/review`), user/auth, student passcode session (`mc_student_id`, `mc_passcode`), ratings, history, and bilingual language state (`en` / `zh` via `src/utils/i18n.js`). Chromebook devices automatically default to `/hello` (`check-in`) on launch (overridable via `?chromebook=1` or `?chromebook=0`).
+`src/App.jsx` is the stateful root: it manages routes (`/` public home, `/hello` check-in, `/hw` homework, `/faq` FAQ, `/practice` sandbox, `/teacher`, `/admin`, `/test`, `/review`), user/auth, student passcode session (`mc_student_id`, `mc_passcode`), ratings, history, and bilingual language state (`en` / `zh` via `src/utils/i18n.js`). Check-in (`/hello`) is isolated from the main homepage and only displayed directly at `/hello` or on Chromebook detection (overridable via `?chromebook=1` or `?chromebook=0`).
 
 Auth supports both hand-rolled JWT for teacher/admin/chronos accounts and lightweight Student ID + 3-digit passcode authentication for shared Check-In and Homework access (`/api/student-auth`).
 

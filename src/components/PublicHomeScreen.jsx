@@ -188,13 +188,13 @@ export function PublicHomeScreen({ onNavigate, onStartPreset, lang = 'en' }) {
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <button
-              onClick={() => onNavigate('/hello')}
+            <a
+              href="#tests"
               className="btn btn-primary"
-              style={{ padding: '0.75rem 1.6rem', fontSize: '0.95rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+              style={{ padding: '0.75rem 1.6rem', fontSize: '0.95rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
             >
-              <CheckCircle2 size={18} /> {t.checkInCta}
-            </button>
+              <FileText size={18} /> {lang === 'zh' ? '查看历年真题' : 'Explore Past Tests'}
+            </a>
 
             <button
               onClick={() => onNavigate('/hw')}
@@ -223,32 +223,32 @@ export function PublicHomeScreen({ onNavigate, onStartPreset, lang = 'en' }) {
         gap: '1.25rem',
         marginBottom: '3rem'
       }}>
-        {/* Check-In Card */}
-        <div 
+        {/* Past Tests Archive Card */}
+        <a 
+          href="#tests"
           className="double-bezel" 
-          style={{ cursor: 'pointer', transition: 'transform 0.15s ease', borderTop: '3px solid var(--accent-primary)' }}
-          onClick={() => onNavigate('/hello')}
+          style={{ cursor: 'pointer', transition: 'transform 0.15s ease', borderTop: '3px solid var(--accent-primary)', textDecoration: 'none' }}
         >
           <div className="double-bezel-inner" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Weekly Routine
+                  {lang === 'zh' ? '真题资源' : 'Competition Archive'}
                 </span>
-                <CheckCircle2 size={20} color="var(--accent-primary)" />
+                <Award size={20} color="var(--accent-primary)" />
               </div>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                {t.quickCheckInTitle}
+                {t.testsTitle}
               </h3>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                {t.quickCheckInDesc}
+                {t.testsSubtitle}
               </p>
             </div>
             <div style={{ marginTop: '1.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-primary)', fontWeight: 600, fontSize: '0.85rem' }}>
-              {t.checkInCta} <ArrowRight size={15} />
+              {lang === 'zh' ? '浏览真题' : 'Browse Tests'} <ArrowRight size={15} />
             </div>
           </div>
-        </div>
+        </a>
 
         {/* Homework Card */}
         <div 
