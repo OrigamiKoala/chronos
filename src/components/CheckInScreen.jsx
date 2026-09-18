@@ -159,33 +159,15 @@ export function CheckInScreen({
         </button>
       )}
 
-      <div className="double-bezel animate-fade-in" style={{ borderTop: '4px solid var(--accent-primary)' }}>
-        <div className="double-bezel-inner" style={{ padding: 0, overflow: 'hidden' }}>
-          
-          {/* Header banner */}
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #1d4ed8 0%, #b45309 100%)',
-              padding: '1.75rem 1.5rem',
-              textAlign: 'center',
-              color: '#ffffff',
-              boxShadow: '0 2px 8px rgba(29, 78, 216, 0.25)'
-            }}
-          >
-            <h1 style={{
-              fontSize: 'clamp(1.4rem, 1.1rem + 1.2vw, 1.85rem)',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              margin: 0
-            }}>
-              {t.title}
-            </h1>
-            <p style={{ color: 'rgba(255,255,255,0.9)', margin: '0.35rem 0 0', fontSize: '0.9rem' }}>
-              {t.subTitle}
-            </p>
-          </div>
-
-          <div style={{ padding: '1.75rem' }}>
+      <div className="glass-panel animate-fade-in" style={{ padding: '2rem' }}>
+        <h1 style={{
+          fontSize: '1.4rem',
+          fontWeight: 700,
+          color: 'var(--text-primary)',
+          marginBottom: '1.5rem'
+        }}>
+          {lang === 'zh' ? '签到' : 'Check In'}
+        </h1>
             {information && (
               <div
                 className="animate-fade-in"
@@ -323,9 +305,6 @@ export function CheckInScreen({
                       value={passcode}
                       onChange={(e) => setPasscode(e.target.value)}
                     />
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                      {t.passcodeHint}
-                    </p>
                   </div>
                 )}
 
@@ -408,19 +387,7 @@ export function CheckInScreen({
                 )}
               </>
             )}
-          </div>
-        </div>
       </div>
-
-      <p style={{
-        marginTop: '1.5rem',
-        textAlign: 'center',
-        color: 'var(--text-muted)',
-        fontSize: '0.8rem',
-        lineHeight: 1.6
-      }}>
-        {t.advisorContact}
-      </p>
     </div>
   );
 }

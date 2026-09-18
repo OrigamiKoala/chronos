@@ -124,15 +124,13 @@ The whiteboard (`src/components/Whiteboard.jsx`) uses Fabric.js loaded as a CDN 
 
 ### UI Styling & Design System
 
-The application features a University High School & MATHCOUNTS **Blue and Gold** theme with unrounded corners and double-bezel card architecture:
+The application features a minimalist **Blue and Gold** theme with unrounded corners and clean single-panel architecture:
 - Typography: **Nunito** (`--font-heading` and `--font-body`) loaded via Google Fonts.
 - Global `border-radius: 0 !important` enforced across all inputs, buttons, badges, modals, cards, and canvas elements.
-- Soft ice-mist canvas (`--bg-primary: #f0f4f9`, `--bg-secondary: #ffffff`, `--bg-tertiary: #e2ecf9`) with deep midnight navy typography (`--text-primary: #0a192f`, `--text-secondary: #1e3a5f`, `--text-muted: #536e8e`).
-- Subtle hairline borders (`--bg-glass-border: #cbd9ea`).
-- Royal Blue (`--accent-primary: #1d4ed8`, `--accent-primary-hover: #1e40af`, `--accent-primary-light: #3b82f6`) and Competition Gold (`--accent-secondary: #d97706`, `--accent-gold: #d97706`, `--accent-gold-hover: #b45309`, `--accent-tertiary: #f59e0b`).
-- Double-bezel structural framing (`.double-bezel`, `.double-bezel-inner`, `.double-bezel-gold`, `.double-bezel-blue`) for cards, form containers, and modal dialogs.
-- Custom button utilities: `.btn-primary` (Royal Blue) and `.btn-gold` (Competition Gold).
-- Status chip utilities: `.badge-gold` and `.badge-blue`.
-- Top blue-and-gold gradient brand stripe on header.
+- Soft minimalist canvas (`--bg-primary: #f8fafc`, `--bg-secondary: #ffffff`, `--bg-tertiary: #f1f5f9`) with slate typography (`--text-primary: #0f172a`, `--text-secondary: #475569`, `--text-muted: #94a3b8`).
+- Subtle hairline borders (`--bg-glass-border: #e2e8f0`).
+- Royal Blue (`--accent-primary: #1d4ed8`, `--accent-primary-hover: #1e40af`) and Gold (`--accent-secondary: #d97706`, `--accent-gold: #d97706`, `--accent-gold-hover: #b45309`).
+- Minimalist panels (`.glass-panel`) without nested borders or decorative stripes.
+- Clean, unadorned interface without extra descriptors, marketing text, or classifiers.
 - Chemical structure renderers (`ChemicalText` / `SmilesRenderer`) and Chart.js tooltips/legends match the Blue & Gold theme.
 

@@ -1116,14 +1116,6 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* University High & MATHCOUNTS Blue and Gold Accent Stripe */}
-      <div style={{
-        height: '4px',
-        width: '100%',
-        background: 'linear-gradient(90deg, #1d4ed8 0%, #d97706 45%, #f59e0b 55%, #1d4ed8 100%)',
-        marginBottom: '0.75rem'
-      }} />
-
       <header className="app-header" style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -1131,33 +1123,16 @@ function App() {
         padding: 'var(--header-padding)',
         flexWrap: 'wrap',
         gap: '0.75rem',
-        borderBottom: '2px solid rgba(217, 119, 6, 0.28)'
+        borderBottom: '1px solid var(--bg-glass-border)'
       }}>
         <div
-          style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
           onClick={() => navigateTo('/')}
         >
-          <div style={{
-            width: '38px',
-            height: '38px',
-            background: 'linear-gradient(135deg, #1d4ed8 0%, #b45309 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ffffff',
-            boxShadow: '0 2px 8px rgba(29, 78, 216, 0.3)',
-            border: '1px solid rgba(245, 158, 11, 0.5)'
-          }}>
-            <BrainCircuit size={22} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: '1.08rem', color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-              mc.uhsmathclub.org
-            </div>
-            <div style={{ fontSize: '0.66rem', color: 'var(--accent-gold)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {tNav.subBrand}
-            </div>
-          </div>
+          <BrainCircuit size={26} color="var(--accent-primary)" />
+          <span style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            mc.uhsmathclub.org
+          </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
