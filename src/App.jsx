@@ -7,12 +7,9 @@ import { AdminScreen } from './components/AdminScreen';
 import { TeacherScreen } from './components/TeacherScreen';
 import { TestScreen } from './components/TestScreen';
 import { ReviewScreen } from './components/ReviewScreen';
-import { CheckInScreen } from './components/CheckInScreen';
-import { PublicHomeScreen } from './components/PublicHomeScreen';
 import { HomeworkScreen } from './components/HomeworkScreen';
 import { FAQScreen } from './components/FAQScreen';
 import { getStoredLanguage, setStoredLanguage, translations } from './utils/i18n';
-import { isChromebook } from './utils/device';
 import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen, Globe } from 'lucide-react';
 
 // Cookie helpers
@@ -53,11 +50,13 @@ function App() {
     if (path === '/admin') return 'admin';
     if (path === '/test') return 'test';
     if (path === '/review') return 'review';
-    if (path === '/hello' || path === '/check-in' || path === '/checkin') return 'check-in';
-    if (path === '/hw' || path === '/homework' || path === '/practice' || path === '/sandbox') return 'setup';
     if (path === '/faq') return 'faq';
-    if (isChromebook()) return 'check-in';
-    return 'home';
+    if (path === '/hw' || path === '/homework' || path === '/practice' || path === '/sandbox' || path === '/hello' || path === '/check-in' || path === '/checkin') {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/');
+      }
+    }
+    return 'setup';
   });
   const [examConfig, setExamConfig] = useState(null);
   const [examResults, setExamResults] = useState(null);
@@ -298,14 +297,13 @@ function App() {
       setCurrentScreen('test');
     } else if (normalized === '/review') {
       setCurrentScreen('review');
-    } else if (normalized === '/hello' || normalized === '/check-in' || normalized === '/checkin') {
-      setCurrentScreen('check-in');
-    } else if (normalized === '/hw' || normalized === '/homework' || normalized === '/practice' || normalized === '/sandbox') {
-      setCurrentScreen('setup');
     } else if (normalized === '/faq') {
       setCurrentScreen('faq');
     } else {
-      setCurrentScreen('home');
+      if (normalized === '/hw' || normalized === '/homework' || normalized === '/practice' || normalized === '/sandbox' || normalized === '/hello' || normalized === '/check-in' || normalized === '/checkin') {
+        window.history.replaceState({}, '', '/');
+      }
+      setCurrentScreen('setup');
     }
   };
 
@@ -321,14 +319,13 @@ function App() {
         setCurrentScreen('test');
       } else if (normalized === '/review') {
         setCurrentScreen('review');
-      } else if (normalized === '/hello' || normalized === '/check-in' || normalized === '/checkin') {
-        setCurrentScreen('check-in');
-      } else if (normalized === '/hw' || normalized === '/homework' || normalized === '/practice' || normalized === '/sandbox') {
-        setCurrentScreen('setup');
       } else if (normalized === '/faq') {
         setCurrentScreen('faq');
       } else {
-        setCurrentScreen('home');
+        if (normalized === '/hw' || normalized === '/homework' || normalized === '/practice' || normalized === '/sandbox' || normalized === '/hello' || normalized === '/check-in' || normalized === '/checkin') {
+          window.history.replaceState({}, '', '/');
+        }
+        setCurrentScreen('setup');
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -1096,11 +1093,7 @@ function App() {
   const restart = () => {
     setExamConfig(null);
     setExamResults(null);
-    if (typeof window !== 'undefined' && (window.location.pathname.startsWith('/hw') || window.location.pathname.startsWith('/practice') || window.location.pathname.startsWith('/homework'))) {
-      navigateTo('/hw');
-    } else {
-      navigateTo('/');
-    }
+    navigateTo('/');
   };
 
   const filteredStrengths = strengths
@@ -1135,7 +1128,7 @@ function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {currentScreen !== 'home' && (
+          {currentScreen !== 'setup' && (
             <button
               className="btn btn-outline"
               style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem' }}
@@ -1589,9 +1582,6 @@ function App() {
             {currentScreen === 'review' && (
               <ReviewScreen user={user} onBack={restart} />
             )}
-            {currentScreen === 'home' && (
-              <PublicHomeScreen lang={lang} />
-            )}
             {currentScreen === 'homework' && (
               <HomeworkScreen
                 studentSession={studentSession}
@@ -1605,21 +1595,12 @@ function App() {
             {currentScreen === 'faq' && (
               <FAQScreen onNavigate={navigateTo} lang={lang} />
             )}
-            {currentScreen === 'check-in' && (
-              <CheckInScreen
-                user={user}
-                studentSession={studentSession}
-                onLoginStudent={loginStudent}
-                onBack={() => navigateTo('/')}
-                lang={lang}
-              />
-            )}
 
           </>
         )}
       </main>
 
-      {currentScreen !== 'home' && (
+      {currentScreen !== 'exam' && (
         <footer style={{
           textAlign: 'center',
           padding: '1.5rem',

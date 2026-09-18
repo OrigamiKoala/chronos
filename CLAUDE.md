@@ -96,9 +96,9 @@ Ratings live per subject on `users` (`math_rating`, `physics_rating`, `chemistry
 
 ### Frontend structure
 
-`src/App.jsx` is the stateful root: it manages routes (`/` public home displaying only 'Rancho MATHCOUNTS' and a collapsible accordion FAQ list for the NHD/MATHCOUNTS policy, with Chinese toggle and login; `/hw` opening the original exam setup screen to start a new exam; `/hello` check-in, `/faq` FAQ, `/practice` sandbox, `/teacher`, `/admin`, `/test`, `/review`), user/auth, student passcode session (`mc_student_id`, `mc_passcode`), ratings, history, and bilingual language state (`en` / `zh` via `src/utils/i18n.js`). Check-in (`/hello`) is isolated from the main homepage and only displayed directly at `/hello` or on Chromebook detection (overridable via `?chromebook=1` or `?chromebook=0`).
+`src/App.jsx` is the stateful root: it manages routes (`/` main page displaying the exam setup screen to configure and start exams; `/faq` FAQ, `/teacher`, `/admin`, `/test`, `/review`; legacy paths like `/hw`, `/practice`, `/hello`, `/check-in` normalize to `/`), user/auth, student passcode session (`mc_student_id`, `mc_passcode`), ratings, history, and bilingual language state (`en` / `zh` via `src/utils/i18n.js`). The standalone homepage and check-in screens have been removed.
 
-Auth supports both hand-rolled JWT for teacher/admin/chronos accounts and lightweight Student ID + 3-digit passcode authentication for shared Check-In and Homework access (`/api/student-auth`).
+Auth supports both hand-rolled JWT for teacher/admin/chronos accounts and lightweight Student ID + 3-digit passcode authentication (`/api/student-auth`).
 
 **Guest mode** is pervasive: the sentinel username is `'default_user'`. Guests get analysis but no BigQuery persistence, and client state is namespaced into a separate set of localStorage keys (`chronos_guest_*` / `mock_exam_ratings` vs `chronos_cache_*` for logged-in users). When adding cached state, add both branches.
 
