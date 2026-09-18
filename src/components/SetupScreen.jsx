@@ -408,8 +408,8 @@ export function SetupScreen({ onStart, ratings = { Math: 100, Physics: 100, Chem
                     {isSelected && (
                       <span style={{
                         fontSize: '0.65rem',
-                        background: 'var(--text-primary)',
-                        color: 'var(--bg-primary)',
+                        background: 'var(--accent-gold)',
+                        color: '#ffffff',
                         padding: '0.1rem 0.35rem',
                         borderRadius: 0,
                         fontWeight: 'bold'

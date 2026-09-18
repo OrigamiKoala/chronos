@@ -37,6 +37,14 @@
       "destination": "/api/login?route=reset-password"
     },
     {
+      "source": "/api/student-id",
+      "destination": "/api/login?route=student-id"
+    },
+    {
+      "source": "/api/student-auth",
+      "destination": "/api/login?route=student-auth"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*"
     },

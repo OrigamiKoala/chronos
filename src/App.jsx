@@ -7,7 +7,13 @@ import { AdminScreen } from './components/AdminScreen';
 import { TeacherScreen } from './components/TeacherScreen';
 import { TestScreen } from './components/TestScreen';
 import { ReviewScreen } from './components/ReviewScreen';
-import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen } from 'lucide-react';
+import { CheckInScreen } from './components/CheckInScreen';
+import { PublicHomeScreen } from './components/PublicHomeScreen';
+import { HomeworkScreen } from './components/HomeworkScreen';
+import { FAQScreen } from './components/FAQScreen';
+import { getStoredLanguage, setStoredLanguage, translations } from './utils/i18n';
+import { isChromebook } from './utils/device';
+import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen, UserCheck, Globe, FileText, HelpCircle, Compass } from 'lucide-react';
 
 // Cookie helpers
 function setCookie(name, value, days = 90) {
@@ -41,12 +47,18 @@ const getCachedItem = (key, fallback) => {
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
-    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+    const rawPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+    const path = rawPath.replace(/\/+$/, '') || '/';
     if (path === '/teacher') return 'teacher';
     if (path === '/admin') return 'admin';
     if (path === '/test') return 'test';
     if (path === '/review') return 'review';
-    return 'setup';
+    if (path === '/hello' || path === '/check-in' || path === '/checkin') return 'check-in';
+    if (path === '/hw' || path === '/homework') return 'homework';
+    if (path === '/faq') return 'faq';
+    if (path === '/practice' || path === '/sandbox') return 'setup';
+    if (isChromebook()) return 'check-in';
+    return 'home';
   });
   const [examConfig, setExamConfig] = useState(null);
   const [examResults, setExamResults] = useState(null);
@@ -164,36 +176,164 @@ function App() {
     }
   }, [ratings, user]);
 
+  // Language state (EN / ZH)
+  const [lang, setLang] = useState(() => getStoredLanguage());
+  const toggleLang = () => {
+    const nextLang = lang === 'en' ? 'zh' : 'en';
+    setLang(nextLang);
+    setStoredLanguage(nextLang);
+  };
 
+  // Linked Student Session (Student ID + 3-digit passcode)
+  const [studentSession, setStudentSession] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    const sid = localStorage.getItem('mc_student_id') || getCookie('chronos_student_id');
+    const pin = localStorage.getItem('mc_passcode');
+    return sid ? { studentId: sid, passcode: pin || '', organization: 'Rancho MATHCOUNTS' } : null;
+  });
+
+  const loginStudent = async (studentId, passcode) => {
+    const sid = studentId.trim().toLowerCase();
+    const pin = String(passcode).trim();
+
+    try {
+      const res = await fetch('/api/student-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: sid, passcode: pin, isStudentAuth: true })
+      });
+      const data = await res.json();
+      if (!res.ok && !data.fallback) {
+        throw new Error(data.error || 'Failed to authenticate student');
+      }
+
+      const sessionObj = { studentId: sid, passcode: pin, organization: 'Rancho MATHCOUNTS' };
+      setStudentSession(sessionObj);
+      localStorage.setItem('mc_student_id', sid);
+      localStorage.setItem('mc_passcode', pin);
+      setCookie('chronos_student_id', sid);
+
+      if (data.token) {
+        setCookie('chronos_logged_token', data.token);
+      }
+      if (data.user) {
+        setUser(data.user);
+        setCookie('chronos_logged_user', data.user.user_id);
+        setCookie('chronos_user_data', JSON.stringify(data.user));
+      }
+      return sessionObj;
+    } catch {
+      // Local session fallback if backend or BigQuery is offline
+      const sessionObj = { studentId: sid, passcode: pin, organization: 'Rancho MATHCOUNTS' };
+      setStudentSession(sessionObj);
+      localStorage.setItem('mc_student_id', sid);
+      localStorage.setItem('mc_passcode', pin);
+      setCookie('chronos_student_id', sid);
+      return sessionObj;
+    }
+  };
+
+  const logoutStudent = () => {
+    setStudentSession(null);
+    localStorage.removeItem('mc_student_id');
+    localStorage.removeItem('mc_passcode');
+    eraseCookie('chronos_student_id');
+  };
+
+  const handleStartPreset = (preset) => {
+    let presetConfig = {
+      subject: 'Math',
+      stressMode: 'calm',
+      difficulty: 3,
+      numQuestions: 25,
+      examFormat: ['multiple_choice'],
+      timeLimitStyle: 'whole_test',
+      timeLimitWholeTest: 40,
+      contentBased: false
+    };
+    if (preset === 'amc10') {
+      presetConfig = {
+        ...presetConfig,
+        difficulty: 4,
+        timeLimitWholeTest: 75
+      };
+    }
+    startExam(presetConfig);
+  };
+
+  const handleStartHomework = (hw) => {
+    let format = ['multiple_choice'];
+    if (hw.exam_format) {
+      try {
+        format = typeof hw.exam_format === 'string' ? JSON.parse(hw.exam_format) : hw.exam_format;
+      } catch {
+        format = ['multiple_choice'];
+      }
+    }
+    const hwConfig = {
+      subject: hw.subject || 'Math',
+      difficulty: hw.difficulty || 3,
+      numQuestions: hw.num_questions || 10,
+      stressMode: hw.stress_mode || 'calm',
+      timeLimitStyle: hw.time_limit_style || 'per_question',
+      timeLimitValue: hw.time_limit_value || 60,
+      contentBased: hw.content_based || false,
+      examFormat: format,
+      assignmentId: hw.assignment_id,
+      lessonTitle: hw.lesson_title,
+      lessonDescription: hw.lesson_description,
+      sharedQuestionsJson: hw.shared_questions_json,
+      questionsPerSet: hw.questions_per_set
+    };
+    startExam(hwConfig);
+  };
 
   const navigateTo = (path) => {
     window.history.pushState({}, '', path);
-    if (path === '/teacher') {
+    const normalized = path.replace(/\/+$/, '') || '/';
+    if (normalized === '/teacher') {
       setCurrentScreen('teacher');
-    } else if (path === '/admin') {
+    } else if (normalized === '/admin') {
       setCurrentScreen('admin');
-    } else if (path === '/test') {
+    } else if (normalized === '/test') {
       setCurrentScreen('test');
-    } else if (path === '/review') {
+    } else if (normalized === '/review') {
       setCurrentScreen('review');
-    } else {
+    } else if (normalized === '/hello' || normalized === '/check-in' || normalized === '/checkin') {
+      setCurrentScreen('check-in');
+    } else if (normalized === '/hw' || normalized === '/homework') {
+      setCurrentScreen('homework');
+    } else if (normalized === '/faq') {
+      setCurrentScreen('faq');
+    } else if (normalized === '/practice' || normalized === '/sandbox') {
       setCurrentScreen('setup');
+    } else {
+      setCurrentScreen('home');
     }
   };
 
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname;
-      if (path === '/teacher') {
+      const rawPath = window.location.pathname;
+      const normalized = rawPath.replace(/\/+$/, '') || '/';
+      if (normalized === '/teacher') {
         setCurrentScreen('teacher');
-      } else if (path === '/admin') {
+      } else if (normalized === '/admin') {
         setCurrentScreen('admin');
-      } else if (path === '/test') {
+      } else if (normalized === '/test') {
         setCurrentScreen('test');
-      } else if (path === '/review') {
+      } else if (normalized === '/review') {
         setCurrentScreen('review');
-      } else {
+      } else if (normalized === '/hello' || normalized === '/check-in' || normalized === '/checkin') {
+        setCurrentScreen('check-in');
+      } else if (normalized === '/hw' || normalized === '/homework') {
+        setCurrentScreen('homework');
+      } else if (normalized === '/faq') {
+        setCurrentScreen('faq');
+      } else if (normalized === '/practice' || normalized === '/sandbox') {
         setCurrentScreen('setup');
+      } else {
+        setCurrentScreen('home');
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -336,6 +476,9 @@ function App() {
           // Store login credentials and data in cookies and cache
           setCookie('chronos_logged_user', data.user.user_id);
           setCookie('chronos_user_data', JSON.stringify(data.user));
+          if (loginPassword) {
+            setCookie('chronos_student_id', loginPassword);
+          }
           if (data.token) {
             setCookie('chronos_logged_token', data.token);
           }
@@ -456,6 +599,7 @@ function App() {
     eraseCookie('chronos_logged_user');
     eraseCookie('chronos_logged_token');
     eraseCookie('chronos_user_data');
+    eraseCookie('chronos_student_id');
     localStorage.removeItem('chronos_cache_ratings');
     localStorage.removeItem('chronos_cache_strengths');
     localStorage.removeItem('chronos_cache_weaknesses');
@@ -968,51 +1112,164 @@ function App() {
     .filter(w => w.subject === selectedSubject)
     .map(w => w.topic);
 
+  const tNav = translations[lang]?.nav || translations.en.nav;
+
   return (
     <div className="app-container">
-      <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--header-padding)' }}>
+      {/* University High & MATHCOUNTS Blue and Gold Accent Stripe */}
+      <div style={{
+        height: '4px',
+        width: '100%',
+        background: 'linear-gradient(90deg, #1d4ed8 0%, #d97706 45%, #f59e0b 55%, #1d4ed8 100%)',
+        marginBottom: '0.75rem'
+      }} />
+
+      <header className="app-header" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 'var(--header-padding)',
+        flexWrap: 'wrap',
+        gap: '0.75rem',
+        borderBottom: '2px solid rgba(217, 119, 6, 0.28)'
+      }}>
         <div
-          className="logo text-gradient"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
-          onClick={restart}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer' }}
+          onClick={() => navigateTo('/')}
         >
-          <BrainCircuit size={32} color="var(--accent-primary)" />
-          Chronos
+          <div style={{
+            width: '38px',
+            height: '38px',
+            background: 'linear-gradient(135deg, #1d4ed8 0%, #b45309 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            boxShadow: '0 2px 8px rgba(29, 78, 216, 0.3)',
+            border: '1px solid rgba(245, 158, 11, 0.5)'
+          }}>
+            <BrainCircuit size={22} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '1.08rem', color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+              mc.uhsmathclub.org
+            </div>
+            <div style={{ fontSize: '0.66rem', color: 'var(--accent-gold)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {tNav.subBrand}
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button
-            className={`btn ${currentScreen === 'review' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            onClick={() => navigateTo(currentScreen === 'review' ? '/' : '/review')}
+            className={`btn ${currentScreen === 'home' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem' }}
+            onClick={() => navigateTo('/')}
           >
-            <BookOpen size={16} /> Review
+            {tNav.home}
           </button>
 
+          <button
+            className={`btn ${currentScreen === 'check-in' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            onClick={() => navigateTo(currentScreen === 'check-in' ? '/' : '/hello')}
+          >
+            <UserCheck size={15} /> {tNav.checkIn}
+          </button>
+
+          <button
+            className={`btn ${currentScreen === 'homework' ? 'btn-gold' : 'btn-outline'}`}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            onClick={() => navigateTo(currentScreen === 'homework' ? '/' : '/hw')}
+          >
+            <FileText size={15} /> {tNav.homework}
+          </button>
+
+          <button
+            className={`btn ${currentScreen === 'faq' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            onClick={() => navigateTo(currentScreen === 'faq' ? '/' : '/faq')}
+          >
+            <HelpCircle size={15} /> {tNav.faq}
+          </button>
+
+          <button
+            className={`btn ${currentScreen === 'setup' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            onClick={() => navigateTo(currentScreen === 'setup' ? '/' : '/practice')}
+          >
+            <Compass size={15} /> {tNav.practice}
+          </button>
+
+          {/* Language Toggle Button */}
+          <button
+            className="btn btn-outline"
+            style={{
+              padding: '0.35rem 0.65rem',
+              fontSize: '0.8rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              fontWeight: 700,
+              borderColor: 'var(--accent-gold-border)',
+              color: 'var(--accent-primary)'
+            }}
+            onClick={toggleLang}
+            title="Switch Language / 切换中英文"
+          >
+            <Globe size={14} color="var(--accent-gold)" />
+            {lang === 'en' ? '中文' : 'EN'}
+          </button>
+
+          {/* Student session indicator if authenticated via PIN */}
+          {studentSession && !user && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span style={{
+                fontSize: '0.75rem',
+                background: 'var(--accent-gold-subtle)',
+                color: 'var(--accent-gold)',
+                border: '1px solid var(--accent-gold-border)',
+                padding: '0.35rem 0.6rem',
+                fontWeight: 700
+              }}>
+                ID: {studentSession.studentId}
+              </span>
+              <button
+                onClick={logoutStudent}
+                className="btn btn-outline"
+                style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}
+                title="Sign out of student PIN session"
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+          )}
+
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button
                 className={`btn ${currentScreen === 'dashboard' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                 onClick={() => setCurrentScreen(currentScreen === 'dashboard' ? 'setup' : 'dashboard')}
               >
-                <BarChart3 size={16} /> Analytics
+                <BarChart3 size={15} /> Analytics
               </button>
               <div style={{ position: 'relative' }}>
                 <button
                   className="btn btn-outline"
-                  style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                 >
                   <User size={14} /> {user.user_id}
                   {user.user_organization && (
                     <span style={{
-                      fontSize: '0.7rem',
+                      fontSize: '0.65rem',
                       background: 'var(--accent-subtle)',
                       color: 'var(--accent-primary)',
-                      padding: '0.1rem 0.35rem',
+                      padding: '0.1rem 0.3rem',
                       borderRadius: 0,
                       border: '1px solid var(--accent-border)',
-                      marginLeft: '0.4rem',
+                      marginLeft: '0.3rem',
                       fontWeight: '700',
                       textTransform: 'uppercase'
                     }}>
@@ -1090,17 +1347,17 @@ function App() {
           ) : (
             <button
               className="btn btn-primary"
-              style={{ padding: '0.4rem 1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              style={{ padding: '0.35rem 0.85rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
               onClick={() => !autoLoginLoading && setShowLoginModal(true)}
               disabled={autoLoginLoading}
             >
               {autoLoginLoading ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" /> Logging in
+                  <Loader2 size={15} className="animate-spin" /> Logging in
                 </>
               ) : (
                 <>
-                  <LogIn size={16} /> Login
+                  <LogIn size={15} /> Login
                 </>
               )}
             </button>
@@ -1387,6 +1644,31 @@ function App() {
             )}
             {currentScreen === 'review' && (
               <ReviewScreen user={user} onBack={restart} />
+            )}
+            {currentScreen === 'home' && (
+              <PublicHomeScreen onNavigate={navigateTo} onStartPreset={handleStartPreset} lang={lang} />
+            )}
+            {currentScreen === 'homework' && (
+              <HomeworkScreen
+                studentSession={studentSession}
+                onLoginStudent={loginStudent}
+                onLogoutStudent={logoutStudent}
+                onNavigate={navigateTo}
+                onStartHomework={handleStartHomework}
+                lang={lang}
+              />
+            )}
+            {currentScreen === 'faq' && (
+              <FAQScreen onNavigate={navigateTo} lang={lang} />
+            )}
+            {currentScreen === 'check-in' && (
+              <CheckInScreen
+                user={user}
+                studentSession={studentSession}
+                onLoginStudent={loginStudent}
+                onBack={() => navigateTo('/')}
+                lang={lang}
+              />
             )}
 
           </>

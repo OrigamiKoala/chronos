@@ -1,31 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
 
 :root {
-  /* Colors - High-End Minimalist Warm Terracotta & Cream Theme */
-  --bg-primary: #f6f1e3;
-  --bg-secondary: #fcf9f2;
-  --bg-tertiary: #ede5d3;
-  --bg-glass: rgba(252, 249, 242, 0.96);
-  --bg-glass-border: #ded5c2;
+  /* Colors - University High & MATHCOUNTS Blue & Gold Theme */
+  --bg-primary: #f0f4f9;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e2ecf9;
+  --bg-glass: rgba(255, 255, 255, 0.96);
+  --bg-glass-border: #cbd9ea;
   
-  --text-primary: #28201a;
-  --text-secondary: #665646;
-  --text-muted: #998875;
+  /* Text - Rich deep midnight navy and slate blue instead of black */
+  --text-primary: #0a192f;
+  --text-secondary: #1e3a5f;
+  --text-muted: #536e8e;
 
-  /* Cohesive Warm Accent Family (Analogous Terracotta, Russet Amber & Golden Sienna) */
-  --accent-primary: #a8471e;
-  --accent-primary-hover: #8f3713;
-  --accent-secondary: #c56227;
-  --accent-secondary-hover: #a84f1b;
-  --accent-tertiary: #d97706;
-  --accent-subtle: rgba(168, 71, 30, 0.08);
-  --accent-border: rgba(168, 71, 30, 0.22);
+  /* Blue & Gold Accent Family */
+  --accent-primary: #1d4ed8;       /* Royal Blue */
+  --accent-primary-hover: #1e40af;
+  --accent-primary-light: #3b82f6;
+  --accent-secondary: #d97706;     /* Deep Athletic Gold */
+  --accent-secondary-hover: #b45309;
+  --accent-tertiary: #f59e0b;      /* Bright Warm Gold */
+  --accent-gold: #d97706;
+  --accent-gold-hover: #b45309;
+  --accent-gold-light: #f59e0b;
+  --accent-gold-subtle: rgba(217, 119, 6, 0.12);
+  --accent-gold-border: rgba(217, 119, 6, 0.35);
+  --accent-subtle: rgba(29, 78, 216, 0.09);
+  --accent-border: rgba(29, 78, 216, 0.28);
   
   --danger: #dc2626;
   --danger-hover: #b91c1c;
   --danger-glass: rgba(220, 38, 38, 0.06);
-  --success: #15803d;
-  --success-glass: rgba(21, 128, 61, 0.06);
+  --success: #16a34a;
+  --success-glass: rgba(22, 163, 74, 0.06);
   --warning: #d97706;
 
   /* Typography */
@@ -37,9 +44,9 @@
   --radius-md: 0px;
   --radius-lg: 0px;
   --radius-full: 0px;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-  --shadow-glow: none;
+  --shadow-sm: 0 1px 3px 0 rgba(10, 25, 47, 0.06);
+  --shadow-md: 0 4px 14px -2px rgba(10, 25, 47, 0.08), 0 2px 5px -1px rgba(10, 25, 47, 0.04);
+  --shadow-glow: 0 0 16px rgba(217, 119, 6, 0.28);
   --shadow-danger-glow: none;
 
   /* Transitions */
@@ -65,7 +72,12 @@
   padding: 0;
   border-radius: 0 !important;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.16) transparent;
+  scrollbar-color: rgba(29, 78, 216, 0.28) transparent;
+}
+
+::selection {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 /* Global scrollbar styling */
@@ -79,12 +91,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.16);
+  background: rgba(29, 78, 216, 0.22);
   border-radius: 0 !important;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.28);
+  background: rgba(217, 119, 6, 0.45);
 }
 
 body {
@@ -130,6 +142,21 @@ input, select, textarea {
   box-shadow: var(--shadow-sm);
 }
 
+/* Double-Bezel Architectural Enclosures */
+.double-bezel {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--bg-glass-border);
+  padding: 6px;
+  box-shadow: 0 1px 4px rgba(10, 25, 47, 0.04);
+}
+
+.double-bezel-inner {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-glass-border);
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(10, 25, 47, 0.02);
+}
+
 /* Base App Layout */
 .app-container {
   width: 100%;
@@ -142,12 +169,16 @@ input, select, textarea {
 
 /* Typography Utilities */
 .text-gradient {
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #d97706 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  color: var(--accent-primary);
+  color: #1d4ed8;
   letter-spacing: -0.02em;
+}
+
+.text-gold {
+  color: var(--accent-gold);
 }
 
 /* Buttons */
@@ -170,17 +201,35 @@ input, select, textarea {
   background: var(--accent-primary);
   color: #ffffff;
   border-color: var(--accent-primary);
-  box-shadow: 0 1px 3px rgba(168, 71, 30, 0.16);
+  box-shadow: 0 1px 3px rgba(29, 78, 216, 0.2);
 }
 
 .btn-primary:hover {
   background: var(--accent-primary-hover);
   border-color: var(--accent-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(168, 71, 30, 0.22);
+  box-shadow: 0 3px 10px rgba(29, 78, 216, 0.28);
 }
 
 .btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-gold {
+  background: var(--accent-gold);
+  color: #ffffff;
+  border-color: var(--accent-gold);
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.25);
+}
+
+.btn-gold:hover {
+  background: var(--accent-gold-hover);
+  border-color: var(--accent-gold-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(217, 119, 6, 0.35);
+}
+
+.btn-gold:active {
   transform: translateY(0);
 }
 
@@ -264,7 +313,7 @@ select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23635647' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231d4ed8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 1rem;
@@ -317,7 +366,50 @@ select.input-field {
   background: var(--bg-tertiary);
   border-color: var(--accent-primary);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(168, 71, 30, 0.08);
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.12);
+}
+
+/* Blue & Gold Utility Enclosures */
+.double-bezel-gold {
+  background: #faf5ea;
+  border: 1px solid var(--accent-gold-border);
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.08);
+}
+
+.double-bezel-blue {
+  background: #eaf1fb;
+  border: 1px solid var(--accent-border);
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(29, 78, 216, 0.08);
+}
+
+.badge-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--accent-gold-subtle);
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold-border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-blue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--accent-subtle);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Minimalist Rectangular Tag Buttons */

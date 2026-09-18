@@ -34,7 +34,7 @@ Jest runs in a `node` environment with babel-jest. Backend tests mock `@google-c
 - `/api/submit-exam`, `/api/get-exam`, `/api/remark-correct`, `/api/save-tags`, `/api/save-explanation` → `api/exams.js`
 - `/api/lessons`, `/api/student-homework` → `api/teacher-data.js`
 - `/api/chat` → `api/explain.js`
-- `/api/reset-password` → `api/login.js`
+- `/api/reset-password`, `/api/student-id`, `/api/student-auth` → `api/login.js`
 
 **Add new endpoints as a `route` branch in an existing file plus a rewrite**, not as a new file — the function count is deliberately kept low. Some handlers also infer the route from a body field when `route` is absent (e.g. `login.js` treats `body.step !== undefined` as reset-password), so keep both detection paths in sync.
 
@@ -96,9 +96,9 @@ Ratings live per subject on `users` (`math_rating`, `physics_rating`, `chemistry
 
 ### Frontend structure
 
-`src/App.jsx` is the single stateful root: it holds user/auth, ratings, strengths, weaknesses, history, and topic breakdowns, and switches screens via a `currentScreen` string rather than a router. Path → screen mapping happens in the initializer and on popstate (`/teacher`, `/admin`, `/test`, `/review`, `/check-in`, else setup).
+`src/App.jsx` is the stateful root: it manages routes (`/` public home, `/hello` check-in, `/hw` homework, `/faq` FAQ, `/practice` sandbox, `/teacher`, `/admin`, `/test`, `/review`), user/auth, student passcode session (`mc_student_id`, `mc_passcode`), ratings, history, and bilingual language state (`en` / `zh` via `src/utils/i18n.js`). Chromebook devices automatically default to `/hello` (`check-in`) on launch (overridable via `?chromebook=1` or `?chromebook=0`).
 
-Auth is a hand-rolled JWT: `base64url(payload).hmac-sha256` signed with `JWT_SECRET`, 90-day expiry, verified with `crypto.timingSafeEqual` (`api/login.js`). It's stored in the `chronos_logged_token` cookie alongside `chronos_user_data`.
+Auth supports both hand-rolled JWT for teacher/admin/chronos accounts and lightweight Student ID + 3-digit passcode authentication for shared Check-In and Homework access (`/api/student-auth`).
 
 **Guest mode** is pervasive: the sentinel username is `'default_user'`. Guests get analysis but no BigQuery persistence, and client state is namespaced into a separate set of localStorage keys (`chronos_guest_*` / `mock_exam_ratings` vs `chronos_cache_*` for logged-in users). When adding cached state, add both branches.
 
@@ -124,11 +124,15 @@ The whiteboard (`src/components/Whiteboard.jsx`) uses Fabric.js loaded as a CDN 
 
 ### UI Styling & Design System
 
-The application features a minimalist, soft cream-themed aesthetic with unrounded corners and warm, cohesive accents:
-- Typography: switched to **Nunito** (`--font-heading` and `--font-body`) loaded via Google Fonts.
+The application features a University High School & MATHCOUNTS **Blue and Gold** theme with unrounded corners and double-bezel card architecture:
+- Typography: **Nunito** (`--font-heading` and `--font-body`) loaded via Google Fonts.
 - Global `border-radius: 0 !important` enforced across all inputs, buttons, badges, modals, cards, and canvas elements.
-- Soft cream canvas (`--bg-primary: #f6f1e3`, `--bg-secondary: #fcf9f2`, `--bg-tertiary: #ede5d3`) with warm espresso typography (`--text-primary: #28201a`, `--text-secondary: #665646`).
-- Hairline cream borders (`--bg-glass-border: #ded5c2`).
-- Cohesive warm accent family replacing plain black on white: rich terracotta (`--accent-primary: #a8471e`), russet amber (`--accent-secondary: #c56227`), golden amber (`--accent-tertiary: #d97706`), with subtle tinted surfaces (`--accent-subtle: rgba(168, 71, 30, 0.08)`) and borders (`--accent-border: rgba(168, 71, 30, 0.22)`).
-- Chemical structure renderers (`ChemicalText` / `SmilesRenderer`) and Chart.js tooltips/legends match the soft cream & Nunito theme.
+- Soft ice-mist canvas (`--bg-primary: #f0f4f9`, `--bg-secondary: #ffffff`, `--bg-tertiary: #e2ecf9`) with deep midnight navy typography (`--text-primary: #0a192f`, `--text-secondary: #1e3a5f`, `--text-muted: #536e8e`).
+- Subtle hairline borders (`--bg-glass-border: #cbd9ea`).
+- Royal Blue (`--accent-primary: #1d4ed8`, `--accent-primary-hover: #1e40af`, `--accent-primary-light: #3b82f6`) and Competition Gold (`--accent-secondary: #d97706`, `--accent-gold: #d97706`, `--accent-gold-hover: #b45309`, `--accent-tertiary: #f59e0b`).
+- Double-bezel structural framing (`.double-bezel`, `.double-bezel-inner`, `.double-bezel-gold`, `.double-bezel-blue`) for cards, form containers, and modal dialogs.
+- Custom button utilities: `.btn-primary` (Royal Blue) and `.btn-gold` (Competition Gold).
+- Status chip utilities: `.badge-gold` and `.badge-blue`.
+- Top blue-and-gold gradient brand stripe on header.
+- Chemical structure renderers (`ChemicalText` / `SmilesRenderer`) and Chart.js tooltips/legends match the Blue & Gold theme.
 
