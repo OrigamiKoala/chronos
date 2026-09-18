@@ -13,7 +13,7 @@ import { HomeworkScreen } from './components/HomeworkScreen';
 import { FAQScreen } from './components/FAQScreen';
 import { getStoredLanguage, setStoredLanguage, translations } from './utils/i18n';
 import { isChromebook } from './utils/device';
-import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen, UserCheck, Globe, FileText, HelpCircle, Compass } from 'lucide-react';
+import { BrainCircuit, LogIn, LogOut, User, Loader2, BarChart3, Settings, Shield, BookOpen, Globe } from 'lucide-react';
 
 // Cookie helpers
 function setCookie(name, value, days = 90) {
@@ -1131,52 +1131,20 @@ function App() {
         >
           <BrainCircuit size={26} color="var(--accent-primary)" />
           <span style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-            mc.uhsmathclub.org
+            Rancho MATHCOUNTS
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            className={`btn ${currentScreen === 'home' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem' }}
-            onClick={() => navigateTo('/')}
-          >
-            {tNav.home}
-          </button>
-
-          {currentScreen === 'check-in' && (
+          {currentScreen !== 'home' && (
             <button
-              className="btn btn-primary"
-              style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-              onClick={() => navigateTo('/hello')}
+              className="btn btn-outline"
+              style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem' }}
+              onClick={() => navigateTo('/')}
             >
-              <UserCheck size={15} /> {tNav.checkIn}
+              {tNav.home}
             </button>
           )}
-
-          <button
-            className={`btn ${currentScreen === 'homework' ? 'btn-gold' : 'btn-outline'}`}
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-            onClick={() => navigateTo(currentScreen === 'homework' ? '/' : '/hw')}
-          >
-            <FileText size={15} /> {tNav.homework}
-          </button>
-
-          <button
-            className={`btn ${currentScreen === 'faq' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-            onClick={() => navigateTo(currentScreen === 'faq' ? '/' : '/faq')}
-          >
-            <HelpCircle size={15} /> {tNav.faq}
-          </button>
-
-          <button
-            className={`btn ${currentScreen === 'setup' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-            onClick={() => navigateTo(currentScreen === 'setup' ? '/' : '/practice')}
-          >
-            <Compass size={15} /> {tNav.practice}
-          </button>
 
           {/* Language Toggle Button */}
           <button
@@ -1623,7 +1591,7 @@ function App() {
               <ReviewScreen user={user} onBack={restart} />
             )}
             {currentScreen === 'home' && (
-              <PublicHomeScreen onNavigate={navigateTo} onStartPreset={handleStartPreset} lang={lang} />
+              <PublicHomeScreen lang={lang} />
             )}
             {currentScreen === 'homework' && (
               <HomeworkScreen
@@ -1652,18 +1620,20 @@ function App() {
         )}
       </main>
 
-      <footer style={{
-        textAlign: 'center',
-        padding: '1.5rem',
-        color: 'var(--text-muted)',
-        fontSize: '0.85rem',
-        borderTop: '1px solid var(--bg-glass-border)',
-        marginTop: '2rem'
-      }}>
-        <div>Contact: Discord @origamikoala</div>
-        <div style={{ marginTop: '0.35rem' }}>Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-secondary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a></div>
-        <div style={{ marginTop: '0.35rem' }}>Like this project? Consider supporting me on <a href="https://www.patreon.com/cw/origamikoala" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-secondary)', textDecoration: 'none' }}>Patreon</a>.</div>
-      </footer>
+      {currentScreen !== 'home' && (
+        <footer style={{
+          textAlign: 'center',
+          padding: '1.5rem',
+          color: 'var(--text-muted)',
+          fontSize: '0.85rem',
+          borderTop: '1px solid var(--bg-glass-border)',
+          marginTop: '2rem'
+        }}>
+          <div>Contact: Discord @origamikoala</div>
+          <div style={{ marginTop: '0.35rem' }}>Docs: <a href="https://bit.ly/chronos-docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-secondary)', textDecoration: 'none' }}>https://bit.ly/chronos-docs</a></div>
+          <div style={{ marginTop: '0.35rem' }}>Like this project? Consider supporting me on <a href="https://www.patreon.com/cw/origamikoala" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-secondary)', textDecoration: 'none' }}>Patreon</a>.</div>
+        </footer>
+      )}
 
       {/* Sign-In Conversion Warning Modal */}
       {showConversionPrompt && (

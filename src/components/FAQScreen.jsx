@@ -26,7 +26,7 @@ export function FAQScreen({ onNavigate, lang = 'en' }) {
           color: 'var(--danger)',
           margin: 0
         }}>
-          {isZh ? '不行。绝对不行。' : 'No. Emphatically no.'}
+          {isZh ? '绝对不行。' : 'Emphatically no.'}
         </p>
       </div>
     </div>
