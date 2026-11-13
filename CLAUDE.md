@@ -77,7 +77,7 @@ Two recurring patterns worth matching:
 
 `generateProblems()` in `src/components/ExamScreen.jsx` degrades three times before giving up:
 
-1. `POST /api/generate` — pulls the user's weaknesses, prior analysis, topic breakdown, mistake patterns, and already-seen question IDs from BigQuery, builds a dynamic prompt, and loops up to 3 attempts until it has `count` questions. Generated questions are also merged into `pregenerated_questions` so they can be recycled. The client handles both a `text/event-stream` response and a plain JSON array; the handler currently returns JSON, so the SSE branch is dormant but intentionally retained.
+1. `POST /api/generate` — pulls the user's weaknesses, prior analysis, topic breakdown, mistake patterns, and already-seen question IDs from BigQuery, builds a dynamic prompt, and loops up to 3 attempts until it has `count` questions. Prompts strictly emphasize 100% original authorship and anti-recitation/copyright guardrails so Gemini API does not trigger copyright/recitation filters against published contest problems. Generated questions are also merged into `pregenerated_questions` so they can be recycled. The client handles both a `text/event-stream` response and a plain JSON array; the handler currently returns JSON, so the SSE branch is dormant but intentionally retained.
 2. `POST /api/fallback-questions` — draws from `pregenerated_questions`, excluding questions the user has already seen, ordered by closeness to the requested difficulty.
 3. Locally generated mock questions, so the UI stays testable without any backend.
 

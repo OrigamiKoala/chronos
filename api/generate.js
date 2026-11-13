@@ -771,8 +771,8 @@ Binding on every role below.
 
 Content
 1. Stay within the syllabus, but test to maximum conceptual depth. Avoid every excluded topic.
-2. BANISH any question, setup, or testing format seen in past exams or standard textbooks. Questions must be 100% original and test known concepts from completely unprecedented angles - never solvable by memory or template-matching.
-3. Problems must be significantly harder than past exams.
+2. STRICT ORIGINALITY & COPYRIGHT NON-INFRINGEMENT: All questions, scenarios, numbers, and systems must be 100% original, novel creations authored from scratch. Under NO circumstances should any generated question reproduce, recite, copy, or closely paraphrase copyrighted questions, published contest problems, past examination papers, or textbook problems. Questions must test known concepts from completely unprecedented angles - never solvable by memory or template-matching.
+3. Problems must exhibit significantly elevated conceptual difficulty, demanding deep analytical reasoning rather than routine formulas.
 4. Traps must be deeply hidden and non-obvious, engineered so an advanced student falls in without realizing. The correct answer should feel counterintuitive because of the trap.
 5. Increase difficulty by coupling unexpected systems.
 6. Every question must be fully solvable and sound. No hand-waving.
@@ -781,7 +781,7 @@ Content
 9. free_response at high difficulty (IMO, USAMO, IPhO, IChO): the question MUST require a comprehensive proof, step-by-step derivation, or synthesis mechanism, NOT just a final numerical value.
 
 Voice
-10. Match the style and tone of past olympiad exams, at higher difficulty.
+10. Maintain an authentic, rigorous academic competition tone and formal scientific style at elevated difficulty, while ensuring completely original and non-infringing phrasing.
 11. Strictly neutral. NEVER include hints, warnings, or clarifying instructions (e.g. "Do not assume...", "Account for...", "Do not rely on..."). NEVER hint at the solution or the trap. No commentary.
 
 Formatting
@@ -810,7 +810,7 @@ Advanced science olympiad student at international level. Solve each problem in 
 </agent>
 
 <agent name="Reviewer">
-Expert olympiad test writer, very nitpicky, hates bad or mediocre questions. Audit every problem and its solution against SC item by item, and verify each solution is correct. Anything that fails is fixed or replaced.
+Expert olympiad test reviewer, very nitpicky, hates bad, mediocre, or unoriginal questions. Audit every problem and its solution against SC item by item, verify each solution is mathematically and scientifically sound, and strictly ensure absolute originality with zero recitation or copyright infringement of existing contest or textbook problems. Anything that fails or resembles existing material is fixed or replaced with a completely original problem.
 </agent>
 
 <agent name="Compiler">
@@ -993,7 +993,7 @@ export default async function handler(req, res) {
 - Restrict to algebra, combinatorics, geometry, number theory. No calculus. Increase difficulty by coupling topics.
 - NO research level math (e.g. differential equations, topology, etc.)
 
-Difficulty scale: 0=simplest part of MATHCOUNTS (MATHCOUNTS School), 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 10=hardest IMO.
+Difficulty scale benchmark (for difficulty calibration only; all problems must be 100% original): 0=simplest part of MATHCOUNTS (MATHCOUNTS School), 1=MATHCOUNTS, 4=AMC 12 Q21-25, 5=AIME Q11-13, 8=medium USAMO, 10=hardest IMO.
 </syllabus>
 `;
       examples = formatExemplarsForPrompt(mathExemplars);
@@ -1001,37 +1001,37 @@ Difficulty scale: 0=simplest part of MATHCOUNTS (MATHCOUNTS School), 1=MATHCOUNT
       syllabus = `
 <syllabus>
 Syllabus Boundaries
-- DIFFICULTY < 8 (F=ma/AP Physics C): Restrict to classical mechanics, electromagnetism, thermodynamics, fluid dynamics, waves, optics. Increase difficulty by coupling unexpected systems.
-- DIFFICULTY >= 8 (USAPhO/IPhO): Original concept-first designs. May introduce special relativity, quantum basics, statistical mechanics, etc. but MUST define all concepts from scratch (first-principles guardrail). free_response MUST require comprehensive derivation, not just a final number.
+- DIFFICULTY < 8 (F=ma/AP Physics C level): Restrict to classical mechanics, electromagnetism, thermodynamics, fluid dynamics, waves, optics. Increase difficulty by coupling unexpected systems.
+- DIFFICULTY >= 8 (USAPhO/IPhO level): Original concept-first designs. May introduce special relativity, quantum basics, statistical mechanics, etc. but MUST define all concepts from scratch (first-principles guardrail). free_response MUST require comprehensive derivation, not just a final number.
 
-Difficulty scale: 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest IPhO.
+Difficulty scale benchmark (for difficulty calibration only; all problems must be 100% original): 1=introductory, 3=AP Physics C, 5=F=ma, 8=USAPhO, 10=hardest IPhO.
 </syllabus>
 `;
       examples = formatExemplarsForPrompt(physicsExemplars);
     } else if (normSubject === 'chemistry') {
       syllabus = `
 
-<usnco_description>
-## USNCO Style Exams (Difficulty < 8):
+<national_level_description>
+## National Olympiad Style Exams (Difficulty < 8, USNCO-level rigor):
 
-- Difficulty 1 (AP Chem Exam): Straightforward applications of concepts and formulas. Minimal thinking.
-- Difficulty 2-3 (ACS Local Exam): More convoluted applications of concepts and formulas. Some thinking required.
-- Difficulty 4-7 (USNCO): Difficult, advanced and confusing applications.
+- Difficulty 1 (AP Chem level): Straightforward applications of concepts and formulas. Minimal thinking.
+- Difficulty 2-3 (ACS Local level): More convoluted applications of concepts and formulas. Some thinking required.
+- Difficulty 4-7 (USNCO level): Difficult, advanced and confusing applications.
 
-The syllabus for USNCO-style exams (Difficulty < 8) is below:
+The syllabus for National Olympiad style exams (Difficulty < 8) is below:
 
 ${chem_syllabus}
 
-The following topics are excluded from USNCO-style exams:
+The following topics are excluded from National Olympiad style exams:
 
 ${chem_excluded_topics}
-</usnco_description>
+</national_level_description>
 
-<icho_description>
-## IChO Style Exams (Difficulty 8+):
+<international_level_description>
+## International Olympiad Style Exams (Difficulty 8+, IChO-level rigor):
 
-Difficulty 8-9 (IChO Exam): ALl of the above, plus other more advanced high school knowldge (e.g. simple spectroscopy, organic chemistry mechanisms). You can also bring in more advanced knowledge (like in the USNCO excluded topics), but it must be on a first-principles approach: you have to introduce the new concepts/ideas the student should not already know as a high school student.
-</icho_description>
+Difficulty 8-9 (IChO level): All of the above, plus other more advanced high school knowledge (e.g. simple spectroscopy, organic chemistry mechanisms). You can also bring in more advanced knowledge (like in the excluded topics), but it must be on a first-principles approach: you have to introduce the new concepts/ideas the student should not already know as a high school student.
+</international_level_description>
 `;
       examples = formatExemplarsForPrompt(chemistryExemplars);
     }
@@ -1069,12 +1069,16 @@ You MUST prioritize generating questions that are directly related to these spec
     }
 
     const systemInstruction = `<role>
-You are an expert coach for students competing in advanced high school Olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. The goal is to prepare them for future iterations of the exam, which are anticipated to increase significantly in difficulty.
+You are an expert coach and original problem creator for students competing in advanced high school Olympiads. Your objective is to design 100% original, high-difficulty mock exam questions that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. All generated content must be bespoke, novel creations completely free from copyright infringement or recitation of published exam problems.
 </role>
 
 <context>
-You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Rely on the style and structural formatting of that exam's past papers.
+You are generating original mock questions for student practice appropriate to the target difficulty level (see the syllabus boundaries/difficulty scale). Adopt the formal academic tone, rigorous mathematical notation, and structural precision of advanced academic competitions, while authoring every scenario, context, and question entirely from scratch.
 </context>
+
+<copyright_and_originality_policy>
+CRITICAL COPYRIGHT DIRECTIVE: To comply with copyright protections and avoid automated recitation blocks, you must NEVER reproduce, recite, quote, or closely paraphrase copyrighted materials, published competition problems (such as AMC, AIME, USAMO, IMO, USAPhO, IPhO, USNCO, IChO, AP exams, or JEE), or textbook questions. All problem narratives, data, figures, numbers, and phrasing must be original and created entirely by you.
+</copyright_and_originality_policy>
 
 ${topicsInstructions}
 
@@ -1087,7 +1091,7 @@ ${lessonInstructions}
 </user_information>
 
 <goal>
-Write questions for a user's practice tests that perfectly mirror official styling but features significantly elevated problem difficulty, demanding deep structural, thermodynamic, and mechanistic insight. The exam must be indistinguishable from an official paper in tone, typography, formatting, style, and difficulty. Target the user's weak areas ( ${weaknesses} ).
+Write completely original practice questions that exhibit the high academic rigor and elevated difficulty of national and international competitions, demanding deep structural, thermodynamic, and mechanistic insight. Maintain authentic competition-grade typography, formatting, and difficulty, while ensuring all content is 100% newly created and strictly avoids any reproduction or recitation of copyrighted or published examination problems. Target the user's weak areas ( ${weaknesses} ).
 </goal>
 
 ${syllabus}
@@ -1102,6 +1106,7 @@ ${agents_description}
 </generation_pipeline>
 
 <examples>
+<!-- NOTE: The following items are provided SOLELY as formatting and schema references to demonstrate the JSON structure, field formatting, and difficulty tiers. Do NOT copy, adapt, quote, or recite any scenarios, numbers, or texts from these reference items or any existing published exams. -->
 
 ${examples}
 
@@ -1109,6 +1114,7 @@ ${examples}
 
 <output_requirements>
   <general_rules>
+    <rule>Strict Originality: Every question must be fully original and newly written. Do NOT recite or copy any published, copyrighted, or textbook questions.</rule>
     <rule>Do NOT output your thought process in any field of the JSON. Only output the final, fully refined question parameters.</rule>
     <rule>Do NOT output any markdown, explanations, or text outside the JSON array structures. Output ONLY the valid JSON array starting with '['.</rule>
     <rule>For multiple_choice questions, any mathematical expressions, chemical formulas, equations, physical units, or numerical values in the options list MUST be wrapped in LaTeX delimiters (e.g., $...$). Keep simple, purely qualitative text options that do not contain mathematical or chemical terms in plain, un-delimited text format.</rule>
@@ -1142,10 +1148,11 @@ Generate exactly ${needed} ${normSubject} problems. The average difficulty of th
 <rules>
 1. ${typeInstruction}
 2. CRITICAL FOR MULTIPLE CHOICE QUESTIONS: Mix up the correct answer choice ('answer') positions evenly across 'A', 'B', 'C', and 'D'. NOT all or most answers should be "A".
-3. <important>STRICT QUALITY CONSISTENCY: Maintain a uniform standard of high quality across ALL generated questions. Do NOT allow quality, creativity, or depth to drop in later questions. Every question must receive identical rigor, effort, and attention.</important>`;
+3. <important>STRICT QUALITY CONSISTENCY: Maintain a uniform standard of high quality across ALL generated questions. Do NOT allow quality, creativity, or depth to drop in later questions. Every question must receive identical rigor, effort, and attention.</important>
+4. <important>STRICT ORIGINALITY AND COPYRIGHT COMPLIANCE: Every question must be an entirely original, newly authored problem. Do NOT recite, copy, or closely paraphrase any copyrighted exam questions, published contest problems, or textbook problems. All problem scenarios, numbers, and texts must be invented from scratch.</important>`;
 
       if (topics && typeof topics === 'string' && topics.trim()) {
-        prompt += `\n4. The generated questions MUST be about the following topics: ${topics.trim()}.`;
+        prompt += `\n5. The generated questions MUST be about the following topics: ${topics.trim()}.`;
       }
 
       prompt += `

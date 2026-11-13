@@ -109,6 +109,9 @@ export async function executeWithRetry(models, apiCallFn) {
         } else if (status === 429) {
           console.warn(`[429] Rate limit hit for ${currentModel} on key.`);
           markKeyRateLimited(currentModel, apiKey);
+        } else if (status === 400 || msg.includes('copyright') || msg.includes('recitation') || msg.includes('safety') || msg.includes('blocked')) {
+          console.warn(`[API Rotation] Content/request block for ${currentModel}: ${err.message}. Trying next model.`);
+          break; // Prompt/content-level block will not succeed on another key for the same model
         } else {
           console.warn(`[API Rotation] Error for ${currentModel}: ${err.message}. Trying next key...`);
         }

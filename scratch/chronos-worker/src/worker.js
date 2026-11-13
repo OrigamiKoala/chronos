@@ -821,7 +821,7 @@ const agents_description = `
   - Problem Constraints:
     - Every question must be fully solvable and sound. No hand-waving.
     - The problems should be significantly more difficult than past exams.
-    - BANISH any question or testing format seen in past exams or standard textbooks. Questions must be 100% brand-new, original, and test concepts in completely unprecedented ways.
+    - STRICT COPYRIGHT COMPLIANCE & ORIGINALITY: Questions must be 100% brand-new, original, authored from scratch, and test concepts in completely unprecedented ways. Strictly NEVER copy, recite, or closely paraphrase copyrighted questions, published contest problems, past exam papers, or textbook exercises.
     - Conceptual traps must be deeply hidden and non-obvious—specifically engineered so an advanced student falls into them without realizing (traps they have never encountered before).
     - Avoid topics listed in excluded topics.
     - The correct answers should be counterintuitive due to the subtle, hidden trap.
@@ -1216,9 +1216,13 @@ async function generateHomework(payload, projectId, accessToken, env) {
           examples = formatExemplarsForPrompt(chemistryExemplars);
         }
 
-        const systemInstruction = `# Role: You are an expert coach for students competing in advanced high school Olympiads. Your objective is to design hyper-realistic, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus.
+        const systemInstruction = `# Role: You are an expert coach and problem author for students competing in advanced high school Olympiads. Your objective is to design original, high-difficulty mock exams that push advanced students to their absolute conceptual limits without breaking the boundaries of the syllabus. All generated questions must be completely original, bespoke creations that do not infringe on or recite any copyrighted materials.
 
-# Context: You are generating mock questions for an exam appropriate to the difficulty level (see the syllabus boundaries/difficulty scale).
+# Context: You are generating original mock questions for student practice appropriate to the difficulty level (see the syllabus boundaries/difficulty scale). Adopt the formal academic tone, rigorous mathematical notation, and structural precision of advanced competitions, while authoring every scenario, context, and question entirely from scratch.
+
+<copyright_and_originality_policy>
+CRITICAL DIRECTIVE: You must NEVER reproduce, recite, quote, or closely paraphrase copyrighted materials, published competition problems (such as AMC, AIME, USAMO, IMO, USAPhO, IPhO, USNCO, IChO, AP exams, or JEE), or textbook questions. All problem narratives, data, figures, numbers, and phrasing must be original and created entirely by you.
+</copyright_and_originality_policy>
 
 ${lessonInstructions}
 
@@ -1227,7 +1231,7 @@ Utilize the following diagnostic information about the user to tailor the test:
 - User Topic Breakdown:\n${topicBreakdown}
 - Recent Mistake Patterns:\n${mistakeAnalysis}
 
-# Goal: Write questions that perfectly mirror official styling but features significantly elevated problem difficulty. Target the user's weak areas (${weaknesses}).
+# Goal: Write completely original practice questions that exhibit the high academic rigor and elevated difficulty of national and international competitions. Maintain authentic competition-grade typography, formatting, and difficulty, while ensuring all content is 100% newly created and strictly avoids any reproduction or recitation of copyrighted or published examination problems. Target the user's weak areas (${weaknesses}).
 
 ${syllabus}
 
@@ -1236,6 +1240,7 @@ ${syllabus}
 ${agents_description}
 
 # Examples:
+<!-- NOTE: The following items are provided SOLELY as formatting and schema references to demonstrate the JSON structure, field formatting, and difficulty tiers. Do NOT copy, adapt, quote, or recite any scenarios, numbers, or texts from these reference items or any existing published exams. -->
 
 ${examples}
 
@@ -1259,7 +1264,7 @@ The output must be a pure JSON array with the following schema for each object:
           const typeInstruction = needed >= parsedTypes.length
             ? `You MUST ensure the output contains a mix of all requested types: ${parsedTypes.join(', ')}. Every type MUST appear at least once.`
             : `Each question MUST be one of: ${parsedTypes.join(', ')}.`;
-          return `Generate exactly ${needed} ${normSubject} problems. Average difficulty must be exactly ${studentDifficulty} (range [${Math.max(0, studentDifficulty - 2)}, ${Math.min(10, studentDifficulty + 2)}]).\nFollow these strict rules:\n1. ${typeInstruction}\n2. <important>STRICT QUALITY CONSISTENCY: Maintain a uniform standard of high quality across ALL generated questions. Do NOT allow quality, creativity, or depth to drop in later questions. Every question must receive identical rigor, effort, and attention.</important>`;
+          return `Generate exactly ${needed} ${normSubject} problems. Average difficulty must be exactly ${studentDifficulty} (range [${Math.max(0, studentDifficulty - 2)}, ${Math.min(10, studentDifficulty + 2)}]).\nFollow these strict rules:\n1. ${typeInstruction}\n2. <important>STRICT QUALITY CONSISTENCY: Maintain a uniform standard of high quality across ALL generated questions. Do NOT allow quality, creativity, or depth to drop in later questions. Every question must receive identical rigor, effort, and attention.</important>\n3. <important>STRICT ORIGINALITY AND COPYRIGHT COMPLIANCE: Every question must be 100% newly authored and original. Do NOT recite, copy, or closely paraphrase any copyrighted exam questions, published contest problems, or textbook problems. All problem scenarios, numbers, and texts must be invented from scratch.</important>`;
         };
 
         // Fast random selection with minimal parsing to avoid blocking event loop
